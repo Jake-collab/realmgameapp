@@ -616,7 +616,184 @@ features/<mode>/
 
 ---
 
-## 16. UI/UX Direction
+## 16. Authentication & Navigation Architecture
+
+> Added: Build 1 — Authentication and Navigation Clarification. These rules are permanent.
+
+### Launch Sequence
+
+```
+Native Splash Screen
+        ↓
+Authentication Check  (AuthProvider + NavigationGuard)
+        ↓
+Welcome / Login / Sign Up  ← (auth) route group
+        ↓
+First-Time Onboarding      ← (onboarding) route group
+        ↓
+Main Worlds Application    ← (main) route group
+```
+
+The app must never open directly into Quest or Hunt without first checking authentication.
+
+### Route Group Architecture
+
+```
+app/
+├── (auth)/           → unauthenticated users only
+│   ├── welcome       → brand entry point; Sign Up + Log In
+│   ├── login         → email + password; social auth slots reserved
+│   ├── signup        → display name, username, email, password, ToS/PP
+│   ├── forgot-password
+│   └── reset-password
+│
+├── (onboarding)/     → authenticated, first-time users only
+│   ├── welcome       → personalized greeting
+│   ├── interests     → interest bubble selection (skippable)
+│   ├── location      → location permission explanation + request (skippable)
+│   └── starting-mode → choose Quest or Hunt as default
+│
+└── (main)/           → authenticated + onboarded users
+    ├── quest/        → 5-tab Quest navigator
+    └── hunt/         → 4-tab Hunt navigator
+```
+
+### NavigationGuard Rules
+- Unauthenticated → `(auth)/welcome`
+- Authenticated + `hasOnboarded: false` → `(onboarding)/welcome`
+- Authenticated + `hasOnboarded: true` → `(main)/<activeMode>`
+- After logout: clear session, clear sensitive cache, redirect to `(auth)/welcome`
+- Authenticated users must never see the welcome/auth screens on return launch
+
+### Welcome Screen
+- Shows: Worlds logo, "Worlds" wordmark, tagline, Sign Up (primary), Log In (outline)
+- Feels like the entrance to a game platform
+- No login fields on this screen
+- Subtle blue-and-green decorative treatment
+
+### Sign-Up Screen
+- Fields: display name, username, email, password, confirm password, ToS acceptance, Privacy Policy acceptance
+- Future slots: Sign in with Apple, Sign in with Google
+- No phone-number auth unless explicitly requested
+- States: field validation, password requirements, loading, error, email-verification pending
+
+### Login Screen
+- Fields: email, password
+- Links: Forgot password, Sign Up
+- Future slots: Sign in with Apple, Sign in with Google
+- States: loading, invalid credentials, unverified account, network error
+- Never expose raw server error strings to users
+
+### Password Recovery
+- Forgot Password → email input → "Send reset link"
+- Reset Password → new password + confirm → deep link: `worlds://reset-password?token=...`
+- Deep link scheme `worlds` is already configured in app.json
+
+### First-Time Onboarding
+Steps (all skippable except final):
+1. Welcome — personalized greeting
+2. Interests — interest bubble selection; saved to profile (Build 4+)
+3. Location — explains WHY location is useful before requesting; permission deferred to Build 5
+4. Starting Mode — choose Quest or Hunt as default world
+
+### Navigation Architecture: Two Layers
+
+```
+Top Game-Mode Switcher    ← compact header control
+        +
+Game-Specific Bottom Navigation  ← replaces based on active mode
+```
+
+### Top Game-Mode Switcher
+
+- Location: left side of the shared header, present in both Quest and Hunt tab layouts
+- Shows current mode name + chevron: `[ Quest ▼ ]`
+- Tapping opens a modal: "Choose a World" → Quest / Hunt / (future modes)
+- Selection calls `router.replace('/(main)/<mode>')`
+- Zustand `activeMode` and `lastQuestTab`/`lastHuntTab` preserve state across switches
+
+**The mode switcher replaces the old Game Selector home screen.** Quest and Hunt are modes, not bottom-nav destinations.
+
+### Quest Bottom Navigation (exactly 5 tabs — permanent)
+
+| # | Tab | Route | Icon | Purpose |
+|---|-----|-------|------|---------|
+| 1 | Home | index | house | Active quest + daily/monthly/geo summaries |
+| 2 | Quests | quests | compass | Daily, Monthly, Geo-Quest browse |
+| 3 | Map | map | map | Quest waypoints (Build 5) |
+| 4 | Progress | progress | bar-chart | Leaderboards, In Action, Completed |
+| 5 | Profile | profile | user | Shared player profile + settings |
+
+**Forbidden tabs:** Discover · Geo · Hunt · Notifications · Settings
+
+### Hunt Bottom Navigation (exactly 4 tabs — permanent)
+
+| # | Tab | Route | Icon | Purpose |
+|---|-----|-------|------|---------|
+| 1 | Map | index | map-pin | PRIMARY — live hunt map (Build 5+) |
+| 2 | My Hunts | my-hunts | flag | In Action, Ready, Completed, Invitations |
+| 3 | Progress | progress | bar-chart | Personal stats and leaderboards |
+| 4 | Profile | profile | user | Shared player profile + settings |
+
+**Forbidden tabs:** Discover · Quest · Create · Notifications · Settings
+
+The **+ Create** action for Custom Games lives inside the My Hunts tab — not in the bottom navigation.
+
+### Switching Between Modes
+
+- Switching mode replaces the bottom navigation with the new mode's tabs
+- Each mode's last-visited tab is preserved in Zustand (`lastQuestTab`, `lastHuntTab`)
+- The last active mode is stored in Zustand (`activeMode`) — persisted to AsyncStorage in Build 2
+- Switching does not reset both modes to their first tab
+
+Example:
+```
+User on: Quest → Progress
+Switches to: Hunt → Map (default)
+Returns to Quest: Quest → Progress (restored)
+```
+
+### Shared Profile
+
+Quest Profile and Hunt Profile point to the same underlying user data.
+Screens may show mode-specific stats but must not create separate user identities.
+Settings are accessed through Profile — never through a dedicated Settings bottom tab.
+
+### Header Behavior
+
+```
+[ Mode ▼ ]              [Notifications Bell]
+```
+
+- Left: GameModeSwitcher (compact pill button)
+- Right: NotificationBell (with unread count badge)
+- Map screens: header may use transparent/floating variant so map remains dominant
+
+Do not add: large Worlds branding on every screen · search on every screen · too many action icons
+
+---
+
+## 17. Permanent Navigation Rules
+
+These rules are binding. Deviation requires explicit written instruction.
+
+1. Quest and Hunt are switched through the compact top-level GameModeSwitcher.
+2. Quest and Hunt must **never** be added as bottom-navigation tabs.
+3. Bottom navigation changes entirely when the game mode changes.
+4. Quest has exactly **five** bottom tabs: Home, Quests, Map, Progress, Profile.
+5. Hunt has exactly **four** bottom tabs: Map, My Hunts, Progress, Profile.
+6. Notifications are accessed from the top header bell — not a bottom tab.
+7. Settings are accessed through Profile — not a bottom tab.
+8. Hunt creation (+ Create) is accessed through My Hunts — not the bottom nav.
+9. The selected game mode and last tab in each mode must be preserved across switches.
+10. Splash, authentication, onboarding, and the main application use separate route groups.
+11. Do not invent additional tabs without explicit approval from the project owner.
+12. Unauthenticated users must be redirected to `(auth)/welcome` — never see main app screens.
+13. Authenticated returning users must never see the welcome/auth screens.
+
+---
+
+## 18. UI/UX Direction
 
 > Added: Build 1 — UI Direction Addendum. This section supersedes any prior visual direction notes.
 
@@ -820,7 +997,7 @@ The following components are defined in the design system. Feature build steps m
 
 ---
 
-## 17. Permanent UX Rules
+## 19. Permanent UX Rules
 
 These rules are binding on all future build steps. Deviating from them requires explicit written instruction from the project owner.
 
@@ -839,5 +1016,5 @@ These rules are binding on all future build steps. Deviating from them requires 
 
 ---
 
-*Last updated: Build 1 — UI Direction Addendum*
+*Last updated: Build 1 — Authentication and Navigation Clarification*
 *This document supersedes all prior architectural notes in individual doc files.*

@@ -27,7 +27,7 @@ import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
 import { shadows } from '@/constants/theme';
 import PointsBadge from '@/components/ui/PointsBadge';
-import Button from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 
 // ─── Data shape ───────────────────────────────────────────────────────────────
 

@@ -1,0 +1,502 @@
+# Worlds — Authentication, Splash Screen, and Navigation Clarification
+
+Update `/docs/PROJECT_CONSTITUTION.md`, `replit.md`, and the existing application shell to explicitly define the following permanent navigation and authentication structure.
+
+Do not implement Supabase authentication yet unless it is already part of the current foundation. Placeholder screens and navigation behavior are sufficient for this step.
+
+The app name is:
+
+**Worlds**
+
+---
+
+# 1. Launch Sequence
+
+The application launch sequence should be:
+
+```text
+Native Splash Screen
+        ↓
+Authentication Check
+        ↓
+Welcome / Login / Sign Up
+        ↓
+Optional First-Time Onboarding
+        ↓
+Main Worlds Application
+```
+
+The app must not immediately open into Quest or Hunt before checking whether the user is authenticated.
+
+---
+
+# 2. Native Splash Screen
+
+Create or prepare a polished native splash screen for Worlds.
+
+It should display:
+
+* Worlds logo or temporary logo placeholder
+* The name **Worlds**
+* A clean blue-and-green visual direction
+* A simple loading state when authentication is being checked
+
+The splash screen should be minimal.
+
+Do not place login fields directly on the native splash screen.
+
+The native splash should transition into either:
+
+* The welcome/authentication flow, or
+* The main application for an authenticated user
+
+Avoid displaying a blank white screen while the app initializes.
+
+---
+
+# 3. Welcome Screen
+
+After the native splash, unauthenticated users should reach a dedicated Worlds welcome screen.
+
+The welcome screen should include:
+
+* Worlds logo
+* App name: Worlds
+* A short tagline or brief explanation
+* A primary **Sign Up** button
+* A secondary **Log In** button
+* Optional **Continue as Guest** only if guest access is later approved
+
+Suggested visual structure:
+
+```text
+[Worlds Logo]
+
+Worlds
+
+Explore. Complete quests. Create adventures.
+
+[Sign Up]
+
+[Log In]
+```
+
+The welcome screen should feel like the entrance to a game platform, not a business application.
+
+Use a clean, immersive background or subtle blue-and-green visual treatment.
+
+Do not overcrowd it with feature explanations.
+
+---
+
+# 4. Sign-Up Screen
+
+Prepare a sign-up screen supporting:
+
+* Display name
+* Username
+* Email
+* Password
+* Confirm password
+* Acceptance of Terms of Service
+* Acceptance of Privacy Policy
+* Sign Up button
+* Link to Log In
+
+Reserve architecture for future options such as:
+
+* Sign in with Apple
+* Sign in with Google
+
+Do not add phone-number authentication unless specifically requested later.
+
+Show:
+
+* Field-level validation
+* Password requirements
+* Loading state
+* Clear error messages
+* Success or email-verification state
+
+The UI should remain visually consistent with Worlds.
+
+---
+
+# 5. Login Screen
+
+Prepare a login screen supporting:
+
+* Email
+* Password
+* Log In button
+* Forgot Password link
+* Link to Sign Up
+
+Reserve space for future:
+
+* Sign in with Apple
+* Sign in with Google
+
+Show clear states for:
+
+* Loading
+* Invalid credentials
+* Account not verified
+* Network error
+* Successful login
+
+Do not expose technical error messages directly to users.
+
+---
+
+# 6. Password Recovery
+
+Prepare placeholder routes or screens for:
+
+* Forgot Password
+* Reset Password
+* Password Reset Confirmation
+
+These may remain nonfunctional until authentication is connected.
+
+---
+
+# 7. First-Time Onboarding
+
+After account creation, the user may complete a short onboarding flow.
+
+Reserve the following steps:
+
+1. Welcome to Worlds
+2. Choose interests using interest bubbles
+3. Allow or skip location access
+4. Choose whether to begin with Quest or Hunt
+5. Enter the main application
+
+Do not request location permission immediately on the native splash screen.
+
+Explain why location is useful before requesting permission.
+
+The user should be able to skip nonessential onboarding steps.
+
+---
+
+# 8. Main Worlds Application Structure
+
+The main application has two navigation layers:
+
+```text
+Top Game-Mode Switcher
+        +
+Game-Specific Bottom Navigation
+```
+
+These layers serve different purposes and must not be combined.
+
+---
+
+# 9. Top Game-Mode Switcher
+
+Quest and Hunt are game modes, not bottom-navigation destinations.
+
+Place the game-mode switcher near the top of the main application.
+
+Preferred design:
+
+* A compact control in the top header
+* Displays the currently selected game mode
+* Tapping it opens a dropdown, popover, or bottom sheet
+* Options initially include:
+
+  * Quest
+  * Hunt
+* Future game modes may be added later
+
+Example:
+
+```text
+[ Quest ▼ ]                         [Notifications]
+```
+
+When opened:
+
+```text
+Choose a World
+
+✓ Quest
+  Hunt
+  Future Game Mode
+```
+
+The control may use the label:
+
+* Quest
+* Hunt
+
+It does not need to repeatedly say “Switch Game.”
+
+The top selector should be compact and should not consume excessive vertical space.
+
+---
+
+# 10. Why the Game Switcher Is at the Top
+
+Do not place Quest and Hunt in the bottom navigation.
+
+The bottom navigation is reserved for navigation within the currently selected game mode.
+
+Using Quest and Hunt as bottom tabs would conflict with their separate internal tab structures.
+
+The permanent navigation hierarchy is:
+
+```text
+Worlds
+├── Quest
+│   ├── Home
+│   ├── Quests
+│   ├── Map
+│   ├── Progress
+│   └── Profile
+│
+└── Hunt
+    ├── Map
+    ├── My Hunts
+    ├── Progress
+    └── Profile
+```
+
+---
+
+# 11. Quest Bottom Navigation
+
+When Quest is selected, display exactly these bottom tabs:
+
+1. Home
+2. Quests
+3. Map
+4. Progress
+5. Profile
+
+Use clear icons and labels.
+
+Recommended concepts:
+
+* Home: house
+* Quests: checklist or compass
+* Map: map or location
+* Progress: trophy or chart
+* Profile: person
+
+Do not add:
+
+* Discover
+* Geo
+* Hunt
+* Notifications
+* Settings
+
+Notifications should be accessed from the top header.
+
+Settings should be accessed through Profile.
+
+---
+
+# 12. Hunt Bottom Navigation
+
+When Hunt is selected, display exactly these bottom tabs:
+
+1. Map
+2. My Hunts
+3. Progress
+4. Profile
+
+Recommended concepts:
+
+* Map: map or location
+* My Hunts: flag, trail, or collection
+* Progress: trophy or statistics
+* Profile: person
+
+Do not add:
+
+* Discover
+* Quest
+* Create
+* Notifications
+* Settings
+
+The **+ Create** action belongs inside My Hunts, not in the bottom navigation.
+
+---
+
+# 13. Switching Between Quest and Hunt
+
+When the user changes game mode:
+
+* Replace the bottom navigation with the tabs belonging to the selected game
+* Preserve the user’s most recently visited tab in each game mode
+* Do not reset both game modes to their first tab unnecessarily
+* Maintain appropriate loading and transition states
+* Avoid recreating the entire app session
+
+Example:
+
+```text
+User is on:
+Quest → Progress
+
+User switches to:
+Hunt → Map
+
+User later returns to Quest:
+Quest → Progress
+```
+
+Store the last selected game mode locally so the user can return to it on the next app launch.
+
+---
+
+# 14. Shared Profile Behavior
+
+Quest and Hunt both include a Profile tab.
+
+They should point to the same underlying user account and profile data.
+
+The screens may show game-specific statistics, but they must not create separate user identities.
+
+Profile should provide access to:
+
+* Account details
+* Interests
+* Notifications settings
+* Privacy settings
+* Safety and blocked users
+* Help
+* Terms
+* Privacy Policy
+* Log Out
+
+Do not create duplicated profile systems for Quest and Hunt.
+
+---
+
+# 15. Top Header Behavior
+
+The main application header should generally include:
+
+Left or center:
+
+* Compact Quest/Hunt selector
+
+Right:
+
+* Notifications icon
+* Optional profile avatar only when it does not duplicate the Profile tab unnecessarily
+
+Avoid placing:
+
+* Large Worlds branding on every screen
+* Too many action icons
+* Search on every screen
+* Separate game-switch buttons throughout the interface
+
+Map screens may use a more transparent or floating version of the header so the map remains dominant.
+
+---
+
+# 16. Authentication Navigation Rules
+
+Unauthenticated routes and authenticated routes must be separated.
+
+Unauthenticated users should not access protected screens through deep links without being redirected appropriately.
+
+Authenticated users should not repeatedly see the welcome screen after launching the app.
+
+Logging out should:
+
+* Clear the authenticated session
+* Clear sensitive cached information
+* Return the user to the welcome screen
+* Preserve only safe preferences where appropriate
+
+---
+
+# 17. Permanent Navigation Rules
+
+Add these rules to the Project Constitution:
+
+* Quest and Hunt are switched through a compact top-level selector.
+* Quest and Hunt must never be added as bottom-navigation tabs.
+* Bottom navigation changes according to the selected game.
+* Quest has exactly five bottom tabs.
+* Hunt has exactly four bottom tabs.
+* Notifications are accessed from the top header.
+* Settings are accessed through Profile.
+* Hunt creation is accessed through My Hunts.
+* The selected game mode and last tab in each mode should be preserved.
+* Splash, authentication, onboarding, and the main application must use separate navigation groups.
+* Do not invent additional tabs without explicit approval.
+
+---
+
+# 18. Route Organization
+
+Prepare navigation groups similar to:
+
+```text
+app/
+├── (auth)/
+│   ├── welcome
+│   ├── login
+│   ├── signup
+│   ├── forgot-password
+│   └── reset-password
+│
+├── (onboarding)/
+│   ├── welcome
+│   ├── interests
+│   ├── location
+│   └── starting-mode
+│
+└── (main)/
+    ├── quest/
+    │   ├── home
+    │   ├── quests
+    │   ├── map
+    │   ├── progress
+    │   └── profile
+    │
+    └── hunt/
+        ├── map
+        ├── my-hunts
+        ├── progress
+        └── profile
+```
+
+Adapt this structure appropriately to Expo Router conventions.
+
+Do not duplicate shared profile implementation unnecessarily.
+
+---
+
+# Deliverables
+
+When finished, report:
+
+1. Authentication routes prepared
+2. Splash-screen configuration updated
+3. Welcome, login, and sign-up placeholders created
+4. Exact Quest bottom tabs
+5. Exact Hunt bottom tabs
+6. Game-mode selector location and behavior
+7. Route groups created or updated
+8. Constitution and replit.md updates
+9. Any assumptions made
+
+Do not begin Supabase implementation.
+
+Do not implement Quest or Hunt feature logic.
+
+Create a checkpoint named:
+
+**Build 1 — Authentication and Navigation Clarification**

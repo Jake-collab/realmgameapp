@@ -11,8 +11,11 @@ export default function AuthLayout() {
         animation: 'fade',
       }}
     >
-      <Stack.Screen name="sign-in" />
-      <Stack.Screen name="sign-up" />
+      <Stack.Screen name="welcome" />
+      <Stack.Screen name="login" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="signup" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="forgot-password" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="reset-password" options={{ animation: 'slide_from_right' }} />
     </Stack>
   );
 }

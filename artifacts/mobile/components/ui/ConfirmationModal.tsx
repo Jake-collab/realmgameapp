@@ -31,7 +31,7 @@ import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
-import Button from './Button';
+import { Button } from './Button';
 
 interface Props {
   visible: boolean;

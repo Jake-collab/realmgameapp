@@ -6,6 +6,41 @@ A scalable mobile game platform for exploration, learning, and real-world advent
 
 ---
 
+## Launch Sequence
+
+```
+Native Splash → Auth Check → (auth)/welcome OR (onboarding)/welcome OR (main)/<mode>
+```
+
+The `NavigationGuard` component in `app/_layout.tsx` handles all redirects automatically based on `isAuthenticated` + `hasOnboarded`.
+
+---
+
+## Route Groups
+
+| Group | Path | Who sees it |
+|-------|------|-------------|
+| `(auth)` | welcome, login, signup, forgot/reset-password | Unauthenticated |
+| `(onboarding)` | welcome, interests, location, starting-mode | Authenticated, first-time |
+| `(main)/quest` | index, quests, map, progress, profile | Authenticated + onboarded |
+| `(main)/hunt` | index (Map), my-hunts, progress, profile | Authenticated + onboarded |
+
+---
+
+## Permanent Navigation Rules (binding)
+
+1. **Quest and Hunt are game modes** — switched via the `GameModeSwitcher` in the top header
+2. **Quest and Hunt must never be bottom-nav tabs**
+3. **Quest has exactly 5 tabs**: Home · Quests · Map · Progress · Profile
+4. **Hunt has exactly 4 tabs**: Map · My Hunts · Progress · Profile
+5. **Notifications** → top header bell only (not a tab)
+6. **Settings** → inside Profile (not a tab)
+7. **+ Create (Hunt)** → inside My Hunts (not in the nav bar)
+8. Game mode and last-visited tab are preserved in Zustand (`activeMode`, `lastQuestTab`, `lastHuntTab`)
+9. Never add extra tabs without explicit approval
+
+---
+
 ## Run & Operate
 
 - `pnpm --filter @workspace/mobile run dev` — Expo dev server (mobile preview + QR code)
