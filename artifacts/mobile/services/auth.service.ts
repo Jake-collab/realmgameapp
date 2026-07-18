@@ -6,7 +6,7 @@
  * Use the useAuth() hook in components — do not import this service directly.
  */
 
-import { isSupabaseConfigured, requireSupabase } from './supabase';
+import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase/client';
 import type {
   AuthError,
   AuthUser,

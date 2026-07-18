@@ -50,8 +50,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AuthState>({ ...UNAUTHENTICATED, isLoading: true });
 
   useEffect(() => {
-    // If Supabase is not configured, skip the session check
+    // If Supabase is not configured, run in offline-safe mode.
+    // Authentication setup is pending — account creation will be
+    // enabled after Supabase is connected.
     if (!authService.isConfigured()) {
+      if (__DEV__) {
+        console.info(
+          '[Worlds] Authentication setup is pending. Account creation will be enabled after Supabase is connected.'
+        );
+      }
       setState(UNAUTHENTICATED);
       return;
     }

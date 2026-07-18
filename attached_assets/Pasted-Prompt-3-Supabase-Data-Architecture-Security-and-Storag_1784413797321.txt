@@ -1,0 +1,1563 @@
+Prompt 3 — Supabase Data Architecture, Security, and Storage
+
+Copy this into Replit AI:
+
+# Worlds — Build 1, Prompt 3
+# Supabase Data Architecture, Security, Storage, and Backend Foundation
+Continue from the current Worlds project and follow these documents as authoritative:
+- /docs/PROJECT_CONSTITUTION.md
+- replit.md
+- the approved UI/UX addendum
+- the approved authentication and navigation clarification
+Do not redesign the UI, navigation, route groups, splash screen, authentication screens, Quest tabs, Hunt tabs, or game-mode selector during this prompt.
+The application is named:
+Worlds
+This prompt is for the complete Supabase backend foundation only.
+Do not implement the finished authentication flow yet. That belongs in Prompt 4.
+Do not implement the finished Quest, Hunt, Mapbox, AI, payment, or admin interfaces yet.
+---
+# Primary Objective
+Design and implement a scalable Supabase data architecture for Worlds that supports:
+- User accounts and profiles
+- Onboarding
+- Quest
+- Geo-Quests
+- Hunt
+- Custom Games
+- Invitations
+- Progress and completion
+- Proof submissions
+- Points
+- Achievements
+- Leaderboards
+- Notifications
+- Reports
+- Moderation
+- Admin operations
+- Media storage
+- Future AI-generated content
+- Future social and monetization extensions without requiring a major rewrite
+The schema must be normalized, secure, understandable, and practical.
+Avoid unnecessary complexity.
+Do not create separate duplicate systems for Quest and Hunt when a shared system is appropriate.
+---
+# 1. Supabase Project Configuration
+Prepare the application to use Supabase through environment variables.
+Expected variables:
+```env
+EXPO_PUBLIC_SUPABASE_URL=
+EXPO_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+
+Rules:
+
+* The mobile client may use only the public URL and anon key.
+* The service-role key must never be bundled into the mobile application.
+* Server-only secrets must remain server-side.
+* Add safe environment typing and validation.
+* Do not hardcode keys.
+* Do not commit real secrets.
+* Update .env.example.
+* Update relevant setup documentation.
+
+If credentials are not present, the app must continue using a safe development or disconnected state rather than crashing.
+
+Do not use the service-role key from client-side code.
+
+⸻
+
+2. Supabase Client and Service Structure
+
+Create or finalize shared Supabase infrastructure.
+
+Use a clear structure similar to:
+
+/lib/supabase/
+  client.ts
+  database.types.ts
+  helpers.ts
+/services/auth/
+  auth.service.ts
+/services/profile/
+  profile.service.ts
+/services/quests/
+  quest.service.ts
+/services/hunts/
+  hunt.service.ts
+/services/progress/
+  progress.service.ts
+/services/points/
+  points.service.ts
+/services/notifications/
+  notification.service.ts
+/services/media/
+  media.service.ts
+/services/reports/
+  report.service.ts
+
+Exact filenames may be adapted to the existing architecture, but responsibilities must remain separated.
+
+Requirements:
+
+* UI components must not contain raw Supabase queries.
+* Database calls must go through services or repositories.
+* Shared query keys should be prepared for React Query.
+* Centralize error normalization.
+* Avoid duplicated query logic.
+* Prepare type-safe database access.
+* Add concise documentation for each backend service.
+
+⸻
+
+3. Database Extensions and Conventions
+
+Use UUID primary keys.
+
+Use created_at and updated_at timestamps consistently.
+
+Use UTC timestamps.
+
+Use database-generated timestamps where practical.
+
+Use soft deletion or archival states where deleting records would damage history.
+
+Use restrictive foreign-key deletion behavior for financial, moderation, completion, points, and audit records.
+
+Enable appropriate PostgreSQL extensions where useful, such as:
+
+* pgcrypto
+* PostGIS only if justified for geospatial storage and queries
+
+Do not add extensions without a clear purpose.
+
+Use snake_case database naming.
+
+Use TypeScript-friendly enums or constrained status fields.
+
+Add comments to important tables and columns where they improve maintainability.
+
+⸻
+
+4. Authentication Identity and Profiles
+
+Supabase Auth owns private authentication credentials.
+
+Create a public application profile system linked one-to-one with:
+
+auth.users.id
+
+Create a profiles table with fields such as:
+
+* id
+* username
+* display_name
+* bio
+* avatar_path
+* role
+* account_status
+* onboarding_status
+* onboarding_completed_at
+* preferred_game_mode
+* last_active_at
+* created_at
+* updated_at
+
+Requirements:
+
+* Username must be unique.
+* Username comparison should be case-insensitive.
+* Normalize usernames safely.
+* Reserve architecture for restricted usernames.
+* Display names do not need to be unique.
+* Email must not be copied into publicly readable profile data.
+* Public profiles must expose only safe fields.
+* Private settings must be stored separately.
+
+Prepare roles:
+
+* user
+* creator
+* moderator
+* admin
+
+Do not let users promote themselves.
+
+Prepare account statuses such as:
+
+* active
+* restricted
+* suspended
+* deactivated
+
+⸻
+
+5. Private User Settings
+
+Create a separate user_settings table linked one-to-one with profiles.
+
+Include fields or structured settings for:
+
+* Notification preferences
+* Privacy preferences
+* Location preferences
+* Measurement units
+* Theme preference
+* Last selected game mode
+* Last selected Quest tab
+* Last selected Hunt tab
+* Marketing communication preference
+* Reduced-motion preference
+* Profile visibility
+* Leaderboard visibility
+* Allow invitations
+* Created and updated timestamps
+
+Do not place private settings in the public profile table.
+
+Only the owning user and authorized administrators may access private settings.
+
+⸻
+
+6. Onboarding and Interests
+
+Create an interests table containing admin-managed interest options.
+
+Fields may include:
+
+* id
+* slug
+* name
+* description
+* icon_key
+* is_active
+* sort_order
+
+Create a many-to-many relation:
+
+user_interests
+
+Include:
+
+* user_id
+* interest_id
+* created_at
+
+Prevent duplicate selections.
+
+Prepare an onboarding state model capable of representing:
+
+* Not started
+* In progress
+* Completed
+* Last completed step
+* Location explanation completed
+* Location permission choice
+* Starting game mode selected
+
+Do not store precise continuous location history during onboarding.
+
+⸻
+
+7. Shared Media Architecture
+
+Create a centralized media_assets table rather than placing unrelated raw URLs throughout every feature table.
+
+Include fields such as:
+
+* id
+* owner_user_id
+* bucket
+* storage_path
+* media_type
+* mime_type
+* file_size
+* width
+* height
+* alt_text
+* purpose
+* visibility
+* moderation_status
+* moderation_reason
+* created_at
+* updated_at
+* deleted_at
+
+Prepare moderation statuses:
+
+* pending
+* scanning
+* approved
+* rejected
+* manual_review
+
+Prepare visibility values such as:
+
+* private
+* restricted
+* public
+
+Do not make user-uploaded files publicly accessible merely because a storage URL exists.
+
+Use signed URLs for private content where appropriate.
+
+⸻
+
+8. Quest Core Tables
+
+Create a quests table supporting:
+
+* Daily Quest
+* Monthly Quest Drop
+* Geo-Quest
+
+Recommended fields include:
+
+* id
+* slug
+* title
+* summary
+* description
+* quest_type
+* status
+* difficulty
+* estimated_duration_minutes
+* points_reward
+* indoor_outdoor
+* accessibility_notes
+* safety_notes
+* proof_type
+* location_requirement_type
+* available_from
+* available_until
+* published_at
+* created_by
+* approved_by
+* source_type
+* ai_generation_id
+* is_repeatable
+* repeat_cooldown_hours
+* created_at
+* updated_at
+* archived_at
+
+Quest types:
+
+* daily
+* monthly
+* geo
+
+Quest statuses should support:
+
+* draft
+* pending_review
+* approved
+* scheduled
+* published
+* paused
+* expired
+* archived
+* rejected
+
+Source types should support:
+
+* admin
+* ai
+* system
+
+The published mobile experience must only show appropriately published and currently available quests.
+
+⸻
+
+9. Quest Point Values and Calibration
+
+Every Quest must have an explicit point reward.
+
+Use a required integer field:
+
+points_reward
+
+Points must be positive and validated.
+
+Prepare a configurable point-calibration table or admin-managed configuration rather than permanently hardcoding all ranges.
+
+Create something similar to:
+
+point_reward_guidelines
+
+Fields may include:
+
+* id
+* activity_type
+* difficulty
+* minimum_minutes
+* maximum_minutes
+* suggested_min_points
+* suggested_max_points
+* is_active
+* created_at
+* updated_at
+
+Initial guideline examples may include:
+
+* Very easy, 5–10 minutes: 25–50 points
+* Easy, 10–20 minutes: 75–125 points
+* Medium, 20–45 minutes: 150–250 points
+* Hard, 45–90 minutes: 300–500 points
+* Epic, 120+ minutes: 750–2,000 points
+
+These are recommendations, not automatic fixed rewards.
+
+Admins must eventually be able to override suggested values.
+
+The architecture must support AI suggesting a reward later without automatically approving or publishing it.
+
+Do not build the admin editor yet.
+
+⸻
+
+10. Quest Objectives and Steps
+
+Create a quest_objectives or quest_steps table.
+
+Support:
+
+* Single-step quests
+* Multi-step quests
+* Ordered steps
+* Optional steps
+* Required steps
+* Text instructions
+* Completion rules
+* Proof requirements by step
+* Location requirements by step
+* Sort order
+* Point allocation strategy if future partial rewards are enabled
+
+For Build 1, default to awarding the main Quest reward only once after valid final completion unless explicitly configured otherwise later.
+
+Do not overcomplicate partial rewards now.
+
+⸻
+
+11. Quest Categories and Tags
+
+Create manageable Quest classification tables.
+
+Possible structure:
+
+* quest_categories
+* quest_tags
+* quest_category_assignments
+* quest_tag_assignments
+
+Categories should support future filtering and AI generation.
+
+Examples may include:
+
+* Creativity
+* Fitness
+* Nature
+* Learning
+* Community
+* Mindfulness
+* Exploration
+* Photography
+* Skills
+
+Do not hardcode categories only inside the client.
+
+⸻
+
+12. Quest Media Relations
+
+Create a relationship between Quests and media_assets.
+
+Support purposes such as:
+
+* Cover image
+* Detail image
+* Instructional image
+* Proof example
+
+Use a relation table such as:
+
+quest_media
+
+Include sort order and purpose.
+
+⸻
+
+13. Geo-Quest Locations
+
+Create secure geospatial support for Geo-Quests.
+
+Possible tables:
+
+* quest_locations
+* quest_geofences
+
+Support:
+
+* Point locations
+* Radius-based geofences
+* Polygon regions if PostGIS is used
+* Display location name
+* Public approximate location
+* Private validation geometry
+* Required accuracy
+* Start validation
+* Completion validation
+* Location availability restrictions
+
+Security principle:
+
+Do not expose private validation details when an approximate public location is sufficient.
+
+Precise completion geometry should be protected where revealing it would undermine gameplay.
+
+Document how location validation will be performed server-side in a later prompt.
+
+⸻
+
+14. Quest Participation
+
+Create a quest_participations table representing a user’s relationship to a Quest.
+
+Include:
+
+* id
+* quest_id
+* user_id
+* status
+* started_at
+* last_progress_at
+* submitted_at
+* completed_at
+* abandoned_at
+* expires_at
+* awarded_points
+* completion_version
+* created_at
+* updated_at
+
+Statuses may include:
+
+* started
+* in_progress
+* awaiting_proof
+* under_review
+* needs_resubmission
+* completed
+* rejected
+* abandoned
+* expired
+
+Prevent duplicate active participation where the Quest is not repeatable.
+
+Create appropriate uniqueness constraints for non-repeatable completion.
+
+⸻
+
+15. Quest Step Progress
+
+Create a quest_step_progress table.
+
+Include:
+
+* participation_id
+* quest_step_id
+* status
+* completed_at
+* progress_value
+* notes
+* created_at
+* updated_at
+
+Prevent users from updating progress they do not own.
+
+Prepare the system for server validation.
+
+⸻
+
+16. Proof Submissions
+
+Create a shared proof-submission system that can support Quest and Hunt without duplicating infrastructure.
+
+Use tables such as:
+
+* proof_submissions
+* proof_media
+
+A proof submission should support:
+
+* User
+* Quest participation or Hunt stop progress
+* Submission type
+* Text response
+* Location evidence
+* Device-reported accuracy
+* Submission status
+* Review notes
+* Reviewer
+* Submitted timestamp
+* Reviewed timestamp
+* Resubmission relationship
+* Moderation state
+
+Statuses:
+
+* draft
+* uploading
+* submitted
+* under_review
+* approved
+* rejected
+* needs_resubmission
+
+Proof files must remain private by default.
+
+Users should only access their own proof unless they are an authorized moderator or administrator.
+
+Do not expose proof submissions through public profile data.
+
+⸻
+
+17. Hunt Core Tables
+
+Create a hunts table supporting:
+
+* Official Hunts
+* Custom Games
+* Future Community Hunts
+
+Include fields such as:
+
+* id
+* slug
+* title
+* summary
+* description
+* hunt_type
+* status
+* creator_user_id
+* created_by_admin_id
+* privacy
+* join_policy
+* points_reward
+* estimated_duration_minutes
+* difficulty
+* max_participants
+* starts_at
+* ends_at
+* registration_deadline
+* published_at
+* cover_media_id
+* created_at
+* updated_at
+* archived_at
+
+Hunt types:
+
+* official
+* custom
+* Reserve community for future use
+
+Privacy values may include:
+
+* public
+* unlisted
+* invite_only
+* private
+
+Statuses should support:
+
+* draft
+* pending_review
+* ready
+* scheduled
+* active
+* paused
+* completed
+* cancelled
+* expired
+* archived
+* rejected
+
+Do not implement public paid Hunts or creator payouts.
+
+⸻
+
+18. Hunt Stops and Clues
+
+Create hunt_stops.
+
+Support:
+
+* Ordered and unordered stops
+* Hidden stops
+* Start location
+* Final location
+* Optional stops
+* Required stops
+* Estimated radius
+* Completion method
+* Proof requirement
+* Server-reveal state
+* Sort order
+
+Create hunt_clues.
+
+Support:
+
+* Clue text
+* Image clue
+* Hint
+* Reveal rules
+* Reveal timing
+* Penalty-ready architecture
+* Sort order
+
+Security requirement:
+
+Hidden stop coordinates and unrevealed clues must not be publicly readable from the client.
+
+Create a safe public representation separate from private gameplay details where necessary.
+
+⸻
+
+19. Hunt Geofences
+
+Create Hunt geospatial records separately from public display metadata when necessary.
+
+Support:
+
+* Validation latitude and longitude
+* Radius
+* Polygon-ready architecture
+* Minimum accuracy
+* Public approximate location
+* Private exact target
+* Reveal state
+* Server validation
+
+Document the security boundary between:
+
+* Public map marker
+* Authorized active-player data
+* Server-only validation data
+
+⸻
+
+20. Hunt Participants
+
+Create hunt_participants.
+
+Include:
+
+* hunt_id
+* user_id
+* role
+* status
+* joined_at
+* ready_at
+* started_at
+* completed_at
+* left_at
+* awarded_points
+* created_at
+* updated_at
+
+Participant roles may include:
+
+* creator
+* player
+* co_host
+
+Statuses may include:
+
+* invited
+* accepted
+* ready
+* active
+* paused
+* completed
+* declined
+* removed
+* left
+* expired
+
+Prevent unauthorized users from joining private or invite-only Hunts.
+
+⸻
+
+21. Hunt Invitations
+
+Create hunt_invitations.
+
+Include:
+
+* id
+* hunt_id
+* inviter_user_id
+* invitee_user_id
+* status
+* message
+* expires_at
+* responded_at
+* created_at
+
+Statuses:
+
+* pending
+* accepted
+* declined
+* revoked
+* expired
+
+Only relevant participants and authorized administrators should access invitation details.
+
+Prevent duplicate active invitations for the same user and Hunt.
+
+⸻
+
+22. Hunt Stop Progress
+
+Create hunt_stop_progress.
+
+Include:
+
+* hunt_participant_id
+* hunt_stop_id
+* status
+* revealed_at
+* arrived_at
+* completed_at
+* validation_method
+* proof_submission_id
+* attempt_count
+* created_at
+* updated_at
+
+Users must not be able to mark arbitrary hidden stops complete directly from the client.
+
+Prepare secure RPC or server-function patterns for later validation.
+
+⸻
+
+23. Points Ledger
+
+Create one shared, append-only points_ledger.
+
+Do not store points only as a mutable total.
+
+Include:
+
+* id
+* user_id
+* amount
+* transaction_type
+* source_type
+* source_id
+* quest_participation_id
+* hunt_participant_id
+* achievement_id
+* reason
+* idempotency_key
+* created_by
+* created_at
+* reversed_transaction_id
+
+Transaction types may include:
+
+* quest_reward
+* hunt_reward
+* achievement_reward
+* admin_adjustment
+* reversal
+
+Requirements:
+
+* Prevent duplicate rewards with unique idempotency keys.
+* Point awards should eventually be performed by trusted server logic.
+* Users may read their own point history.
+* Users may not directly insert or alter point transactions.
+* Admin adjustments must be audited.
+* Never delete ledger transactions to correct mistakes; reverse them.
+
+Prepare an efficient total-points view or materialized strategy without making the mutable total the sole source of truth.
+
+⸻
+
+24. Leaderboards
+
+Prepare leaderboard views or query architecture for:
+
+* Global rankings
+* Time-period rankings
+* Quest rankings
+* Hunt rankings
+* Future local rankings
+* Future friends rankings
+
+Do not create a redundant permanent leaderboard table unless justified.
+
+Prefer views or calculated summaries from the points ledger.
+
+Respect the user’s leaderboard privacy setting.
+
+Prepare for pagination and current-user rank retrieval.
+
+Do not implement the UI yet.
+
+⸻
+
+25. Achievements
+
+Create:
+
+* achievements
+* user_achievements
+
+Achievements should include:
+
+* Slug
+* Name
+* Description
+* Category
+* Icon key
+* Point reward
+* Criteria configuration
+* Active status
+* Hidden status
+* Created and updated timestamps
+
+Categories may include:
+
+* Quest
+* Hunt
+* Exploration
+* Milestone
+* Community
+* Future event
+
+Prevent duplicate achievement awards.
+
+Do not create an unnecessarily complex achievement rules engine yet.
+
+Use a criteria JSON structure only where it improves flexibility and remains documented.
+
+⸻
+
+26. Notifications
+
+Create a notifications table.
+
+Include:
+
+* id
+* user_id
+* type
+* title
+* body
+* data
+* deep_link
+* read_at
+* created_at
+* expires_at
+
+Prepare notification types such as:
+
+* Quest available
+* Monthly drop
+* Hunt invitation
+* Hunt accepted
+* Hunt starting
+* Proof approved
+* Proof rejected
+* Needs resubmission
+* Achievement earned
+* Administrative message
+* Safety action
+
+Users may only read and update their own notifications.
+
+Users must not directly create arbitrary system notifications.
+
+External push-notification integration is not part of this prompt.
+
+⸻
+
+27. Reports and User Safety
+
+Create a flexible reports table.
+
+Allow reports against:
+
+* User profile
+* Quest
+* Hunt
+* Hunt stop
+* Custom Game
+* Media asset
+* Proof submission
+* Other supported content
+
+Include:
+
+* Reporter
+* Reported entity type
+* Reported entity ID
+* Reason
+* Description
+* Evidence media
+* Status
+* Priority
+* Assigned moderator
+* Resolution
+* Created and updated timestamps
+* Resolved timestamp
+
+Statuses:
+
+* submitted
+* triaged
+* under_review
+* action_taken
+* dismissed
+* appealed
+* closed
+
+Protect the reporter’s identity from the reported user.
+
+⸻
+
+28. Blocking
+
+Create user_blocks.
+
+Include:
+
+* blocker_user_id
+* blocked_user_id
+* created_at
+
+Prevent self-blocking.
+
+Prevent duplicate block records.
+
+Prepare service logic so blocked users cannot:
+
+* Invite each other
+* View restricted profile content
+* Interact through future social systems
+
+Do not build chat.
+
+⸻
+
+29. Moderation Records
+
+Create a moderation_cases or similarly named table.
+
+Support:
+
+* Media moderation
+* Quest moderation
+* Hunt moderation
+* Custom Game moderation
+* Proof moderation
+* User safety actions
+
+Include:
+
+* Entity type
+* Entity ID
+* Status
+* Automated-provider result placeholder
+* Risk categories
+* Moderator
+* Notes
+* Decision
+* Appeal-ready fields
+* Created and updated timestamps
+
+Do not connect a third-party moderation provider yet.
+
+⸻
+
+30. Admin Actions and Audit Logs
+
+Create an append-only audit_logs table.
+
+Include:
+
+* Actor user ID
+* Actor role
+* Action
+* Entity type
+* Entity ID
+* Before snapshot where appropriate
+* After snapshot where appropriate
+* Metadata
+* IP or request metadata only when safely available server-side
+* Created timestamp
+
+Users must not be able to insert or modify audit records directly.
+
+Log sensitive administrative actions such as:
+
+* Role changes
+* Suspensions
+* Quest publishing
+* Hunt publishing
+* Proof decisions
+* Point adjustments
+* Content removal
+* Moderation decisions
+
+Do not store secrets or full sensitive proof files in logs.
+
+⸻
+
+31. Future AI Generation Tables
+
+Prepare, but do not activate, AI-generation data architecture.
+
+Create tables such as:
+
+* ai_prompt_templates
+* ai_prompt_versions
+* ai_generation_requests
+* ai_generated_content
+
+Support:
+
+* Prompt type
+* Version
+* System instructions
+* User-template content
+* Active version
+* Generation status
+* Provider
+* Model placeholder
+* Input parameters
+* Output draft
+* Suggested points
+* Quality score
+* Safety score
+* Cost metadata
+* Error details
+* Approval status
+* Reviewer
+
+No AI API calls should be implemented in this prompt.
+
+AI-generated Quests must never be treated as published content automatically.
+
+⸻
+
+32. Future Feature-Ready Fields
+
+Prepare reasonable extension points for:
+
+* Friends
+* Teams
+* Guilds
+* Events
+* Creator Mode
+* Premium membership
+* Paid Custom Games
+* Sponsored Hunts
+* Cosmetics
+
+Do not create full unused table systems for these features now.
+
+Prefer documented extension points over speculative overbuilding.
+
+Do not add Stripe tables yet.
+
+⸻
+
+33. Storage Buckets
+
+Prepare or document storage buckets such as:
+
+avatars
+quest-media
+hunt-media
+custom-game-media
+proof-submissions
+moderation-quarantine
+
+Bucket policy expectations:
+
+Avatars
+
+* Authenticated users may upload only to their own folder.
+* Approved avatars may be publicly readable if profile visibility allows.
+* Replaced avatars should be safely handled.
+
+Quest media
+
+* Admin-managed published media may be publicly readable.
+* Draft media remains restricted.
+
+Hunt media
+
+* Official published Hunt media may be publicly readable.
+* Private Hunt media must be access-controlled.
+
+Custom Game media
+
+* Uploads remain private or pending until authorized.
+* Invite-only content must not become globally public.
+
+Proof submissions
+
+* Always private by default.
+* Accessible only to owner and authorized reviewers.
+
+Moderation quarantine
+
+* Never public.
+* Accessible only to trusted moderation services and authorized staff.
+
+Create storage RLS policies or migration instructions where supported.
+
+⸻
+
+34. Row Level Security
+
+Enable RLS on all exposed application tables.
+
+Create explicit policies.
+
+Do not rely on the absence of UI controls for security.
+
+At minimum, enforce:
+
+Profiles
+
+* Public access only to approved safe profile fields through a view or controlled query.
+* Users update only their own allowed profile fields.
+* Users cannot update role or account status.
+
+User settings
+
+* Owner-only access.
+* Admin access only where operationally necessary.
+
+Quests
+
+* Public users read only published, active, nonrestricted Quest records.
+* Drafts are visible only to authorized staff.
+* Users cannot create or publish official Quests.
+
+Quest participation
+
+* Users access only their own participation.
+* Trusted server logic handles protected completion and point-award fields.
+
+Proof
+
+* Owner and authorized reviewers only.
+
+Hunts
+
+* Public Hunts may be visible appropriately.
+* Private and invite-only Hunts require membership or invitation.
+* Custom Game creators may manage only their own allowed records.
+* Official Hunt publishing requires admin authority.
+
+Invitations
+
+* Only inviter, invitee, Hunt creator where appropriate, and staff.
+
+Points
+
+* Users can read their own ledger.
+* Users cannot insert, update, or delete point records.
+
+Reports
+
+* Reporters can create reports.
+* Reporters may access only their own report status where appropriate.
+* Reported users cannot access reporter identity.
+
+Notifications
+
+* Owner-only read and update.
+* System-created only.
+
+Audit logs
+
+* No ordinary user access.
+* Authorized staff read-only.
+* Trusted backend inserts.
+
+Test all policies with representative roles.
+
+⸻
+
+35. Database Functions and Triggers
+
+Create only functions and triggers that provide clear value.
+
+Potential functions:
+
+* Automatically create a basic profile after a new Auth user is created
+* Update updated_at
+* Normalize usernames
+* Verify username uniqueness
+* Safely calculate point totals
+* Validate reward idempotency
+* Expire invitations
+* Expire scheduled content
+* Determine public Quest availability
+* Determine Hunt access
+* Retrieve current-user leaderboard position
+
+Sensitive mutations should use secure functions or future Edge Functions.
+
+Avoid insecure security definer functions.
+
+When using security definer:
+
+* Set a safe search path.
+* Validate caller identity.
+* Restrict execution permissions.
+* Document the security reason.
+
+Do not create automatic point awarding based solely on client-written completion fields.
+
+⸻
+
+36. Indexing and Performance
+
+Add indexes for common access patterns, including where appropriate:
+
+* Username lookup
+* Published Quest availability
+* Quest type and status
+* Quest scheduling
+* Geo-Quest map retrieval
+* User Quest participation
+* Hunt status and schedule
+* Hunt creator
+* Hunt invitations by invitee
+* Hunt participants
+* Notifications by user and unread state
+* Points ledger by user and date
+* Reports by status and priority
+* Moderation status
+* Foreign keys commonly used in joins
+
+Use partial indexes where helpful.
+
+Avoid excessive indexes on low-use fields.
+
+Document major query patterns.
+
+⸻
+
+37. Seed Data
+
+Create a safe development seed strategy.
+
+Include example:
+
+* Interest options
+* Quest categories
+* Point reward guidelines
+* Achievements
+* Daily Quest drafts
+* Monthly Quest drafts
+* Geo-Quest drafts
+* Official Hunt drafts
+* Custom Game examples
+* Notification examples
+* Test profiles only if the authentication environment supports them safely
+
+Seed data must be clearly marked as development content.
+
+Do not publish real-world precise Geo-Quest or Hunt locations as production content.
+
+Use fictional or obviously sample locations where appropriate.
+
+⸻
+
+38. Generated Database Types
+
+Configure Supabase database type generation.
+
+Create or update:
+
+database.types.ts
+
+Requirements:
+
+* Services use generated types where practical.
+* Avoid hand-writing incompatible duplicate database types.
+* Add instructions for regenerating types after migrations.
+* Create domain-level app types only where they intentionally differ from raw database rows.
+
+⸻
+
+39. Migration Files
+
+Create ordered SQL migration files rather than one undocumented SQL dump.
+
+Organize migrations into clear logical stages, for example:
+
+001_extensions_and_types.sql
+002_profiles_and_settings.sql
+003_interests_and_onboarding.sql
+004_media_and_storage.sql
+005_quests.sql
+006_quest_participation_and_proofs.sql
+007_hunts.sql
+008_hunt_participation.sql
+009_points_and_achievements.sql
+010_notifications_and_safety.sql
+011_admin_and_audit.sql
+012_ai_foundation.sql
+013_indexes_and_views.sql
+014_rls_policies.sql
+015_seed_data.sql
+
+Adapt numbering to the current project if migrations already exist.
+
+Each migration should be rerunnable only where appropriate and should fail clearly on invalid assumptions.
+
+Do not silently destroy existing data.
+
+⸻
+
+40. Documentation
+
+Create or update:
+
+/docs/DATABASE_ARCHITECTURE.md
+/docs/SUPABASE_SETUP.md
+/docs/ROW_LEVEL_SECURITY.md
+/docs/STORAGE_ARCHITECTURE.md
+/docs/POINTS_SYSTEM.md
+/docs/GEO_DATA_SECURITY.md
+
+Documentation must explain:
+
+* Main entities
+* Relationships
+* Public versus private data
+* RLS principles
+* Storage policies
+* Points integrity
+* Hidden Hunt location protection
+* How to configure Supabase credentials
+* How to apply migrations
+* How to generate types
+* What remains for Prompt 4
+* What requires server-side implementation later
+
+Include an entity-relationship summary in text or Mermaid syntax.
+
+⸻
+
+41. Development Fallback Behavior
+
+Because Supabase may still be unconfigured:
+
+* Do not break the current UI preview.
+* Keep a clearly isolated mock or disconnected-development mode.
+* Do not display a red error as though the user caused a failure merely because credentials are absent.
+* Replace the current aggressive authentication warning with a neutral development-only message, or hide it outside development mode.
+
+Suggested development-only wording:
+
+“Authentication setup is pending. Account creation will be enabled after Supabase is connected.”
+
+Production builds must not display development notices.
+
+Do not implement fake successful account creation.
+
+⸻
+
+42. Validation and Verification
+
+Before finishing:
+
+* Apply or validate migrations locally where possible.
+* Check foreign keys.
+* Check unique constraints.
+* Check status constraints.
+* Check RLS is enabled.
+* Test ownership policies.
+* Test private Hunt access.
+* Test proof privacy.
+* Test that users cannot award themselves points.
+* Test that users cannot change roles.
+* Test that hidden Hunt data is not publicly readable.
+* Test that draft Quests are not publicly readable.
+* Test storage path ownership policies.
+* Verify the app still compiles.
+
+Do not proceed while known migration errors remain unresolved.
+
+⸻
+
+43. Out of Scope for This Prompt
+
+Do not implement:
+
+* Finished signup and login behavior
+* Email verification UI logic
+* Apple login
+* Google login
+* Quest gameplay UI
+* Hunt gameplay UI
+* Mapbox
+* AI API calls
+* Automated image moderation
+* Stripe
+* Memberships
+* Payments
+* Creator payouts
+* Chat
+* Friends
+* Guilds
+* Full admin UI
+* Push notifications
+* Production deployment
+
+Only prepare the backend foundation required for those systems.
+
+⸻
+
+Deliverables
+
+When complete, provide:
+
+1. All migration files created
+2. All tables, views, functions, triggers, and enums created
+3. Storage buckets and policies prepared
+4. RLS policy summary by table
+5. Generated or prepared database types
+6. Service and repository files created
+7. Seed data created
+8. Documentation created
+9. Environment variables required
+10. Mock or disconnected-mode behavior
+11. Tests or policy checks performed
+12. Assumptions made
+13. Any security concerns identified
+14. Exact remaining work for Prompt 4
+
+Do not begin Prompt 4.
+
+Do not redesign the application.
+
+Create a checkpoint named:
+
+Build 1 — Prompt 3 — Supabase Architecture and Security
+
+This prompt also fixes the red authentication notice appropriately: it prepares Supabase but keeps account creation inactive until Prompt 4 connects the forms and session flow.
