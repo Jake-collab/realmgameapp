@@ -15,6 +15,7 @@ export default function OnboardingLayout() {
       <Stack.Screen name="interests" />
       <Stack.Screen name="location" />
       <Stack.Screen name="starting-mode" />
+      <Stack.Screen name="complete" options={{ animation: 'fade' }} />
     </Stack>
   );
 }

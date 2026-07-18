@@ -1,0 +1,1311 @@
+Prompt 4 — Authentication and Onboarding Implementation
+
+Copy this into Replit AI:
+
+# Worlds — Build 1, Prompt 4
+# Authentication, Session Management, and First-Time Onboarding
+Continue from the current Worlds project and follow these documents as authoritative:
+- /docs/PROJECT_CONSTITUTION.md
+- /docs/DATABASE_ARCHITECTURE.md
+- /docs/SUPABASE_SETUP.md
+- /docs/ROW_LEVEL_SECURITY.md
+- replit.md
+- the approved UI/UX addendum
+- the approved authentication and navigation clarification
+The application is named:
+Worlds
+Prompt 3 established the Supabase schema, storage architecture, security policies, generated types, and backend services.
+This prompt must connect the existing authentication UI to the backend and complete the first-time onboarding flow.
+Do not redesign the approved UI or navigation.
+Do not build Quest gameplay, Hunt gameplay, Mapbox, admin management, AI generation, payments, or creator-economy features in this prompt.
+---
+# Primary Objective
+Implement a complete, secure, production-ready authentication and onboarding system for Worlds.
+The finished flow should support:
+```text
+Native Splash
+    ↓
+Session Check
+    ↓
+Unauthenticated Welcome Screen
+    ↓
+Sign Up or Log In
+    ↓
+Email Verification When Required
+    ↓
+First-Time Onboarding
+    ↓
+Main Worlds Application
+
+Returning authenticated users who have completed onboarding should bypass the welcome and onboarding screens and enter the main application.
+
+⸻
+
+1. Preserve Existing UI and Navigation
+
+Use the authentication screens, route groups, visual direction, and navigation structure already created.
+
+Do not replace working screens with generic templates.
+
+Do not alter:
+
+* Worlds branding
+* Welcome-screen layout
+* Sign-up layout
+* Login layout
+* Blue-and-green visual direction
+* Top Quest/Hunt selector
+* Quest bottom tabs
+* Hunt bottom tabs
+* Approved route hierarchy
+
+Improve existing screens only where necessary to make them functional, accessible, and secure.
+
+⸻
+
+2. Required Route Groups
+
+Ensure the application has clearly separated route groups similar to:
+
+app/
+├── (auth)/
+│   ├── welcome
+│   ├── login
+│   ├── signup
+│   ├── verify-email
+│   ├── forgot-password
+│   ├── reset-password
+│   └── auth-callback
+│
+├── (onboarding)/
+│   ├── welcome
+│   ├── interests
+│   ├── location
+│   ├── starting-mode
+│   └── complete
+│
+└── (main)/
+    ├── quest/
+    └── hunt/
+
+Adapt this to current Expo Router conventions and the existing file structure.
+
+Do not duplicate existing routes unnecessarily.
+
+⸻
+
+3. Supabase Authentication Connection
+
+Connect the existing authentication service to Supabase Auth.
+
+Implement:
+
+* Email and password sign-up
+* Email and password login
+* Logout
+* Session restoration
+* Session refresh
+* Auth-state subscription
+* Password-reset request
+* Password update after recovery
+* Email-verification handling
+* Protected routing
+* Authentication error normalization
+
+Use the existing shared Supabase client and service architecture.
+
+UI components must not call raw Supabase methods directly.
+
+Use:
+
+auth.service.ts
+
+or the equivalent existing service.
+
+⸻
+
+4. Environment and Disconnected Development Mode
+
+Read Supabase configuration from:
+
+EXPO_PUBLIC_SUPABASE_URL=
+EXPO_PUBLIC_SUPABASE_ANON_KEY=
+
+Requirements:
+
+* Do not hardcode credentials.
+* Do not expose service-role credentials.
+* Validate environment configuration.
+* Keep the app from crashing when credentials are missing.
+* Preserve a safe disconnected-development state.
+
+When Supabase is not configured:
+
+* Sign-up and login should remain visibly unavailable.
+* Do not pretend authentication succeeded.
+* Do not navigate into a fake authenticated session.
+* Use a neutral development-only message.
+* Do not display a frightening red account error merely because the backend is not connected.
+
+Suggested wording:
+
+Authentication setup is pending. Account creation and login will be enabled after Supabase is connected.
+
+Production builds must not show development messages.
+
+⸻
+
+5. Authentication State Provider
+
+Create a centralized authentication state layer.
+
+It should expose:
+
+* Current session
+* Current authenticated user
+* Current profile
+* Loading state
+* Auth initialization state
+* Onboarding status
+* Sign-up method
+* Login method
+* Logout method
+* Refresh profile method
+* Password recovery method
+
+Use a provider, store, or hook consistent with the existing architecture.
+
+Avoid duplicating session state between React Context, Zustand, and React Query.
+
+Choose clear ownership:
+
+* Supabase Auth is the source of truth for session identity.
+* React Query may cache profile data.
+* Zustand may hold lightweight UI preferences if already established.
+
+Document this ownership.
+
+⸻
+
+6. Splash and Startup Session Check
+
+Implement startup behavior so the native splash screen remains visible while the app determines:
+
+* Whether Supabase is configured
+* Whether a stored session exists
+* Whether the session is valid
+* Whether the user’s profile exists
+* Whether onboarding is complete
+* Which route should open
+
+Do not show a blank white screen.
+
+Do not briefly flash the welcome screen for authenticated users.
+
+Do not briefly flash the main app for unauthenticated users.
+
+Use a deterministic startup state such as:
+
+initializing
+unauthenticated
+authenticated_needs_verification
+authenticated_needs_onboarding
+authenticated_ready
+configuration_missing
+error
+
+Hide the native splash only after routing is resolved.
+
+Add a reasonable timeout and retry behavior so the app cannot remain indefinitely stuck on the splash screen.
+
+⸻
+
+7. Welcome Screen
+
+Connect the existing Welcome screen.
+
+It should show:
+
+* Worlds logo or current placeholder
+* Worlds
+* Short approved tagline
+* Sign Up button
+* Log In button
+
+Optional guest access must remain disabled unless explicitly approved later.
+
+Do not add:
+
+* Continue as Guest
+* Social-media login that is not functional
+* Long marketing copy
+* Quest or Hunt bottom navigation
+
+The Welcome screen is outside the main application navigation.
+
+⸻
+
+8. Sign-Up Form
+
+Implement sign-up using:
+
+* Display name
+* Username
+* Email
+* Password
+* Confirm password
+* Terms acceptance
+* Privacy Policy acceptance
+
+Use:
+
+* React Hook Form
+* Zod
+* Existing form components
+* Field-level validation
+* Accessible error messages
+
+Validation requirements:
+
+Display name
+
+* Required
+* Sensible minimum and maximum length
+* Trim surrounding whitespace
+
+Username
+
+* Required
+* Unique
+* Case-insensitive
+* Normalized
+* Allowed characters clearly defined
+* No leading or trailing separators
+* No repeated invalid punctuation patterns
+* Reserved-name validation
+* Friendly availability feedback
+
+Email
+
+* Required
+* Valid email format
+* Normalize safely
+
+Password
+
+* Required
+* Minimum secure length
+* Password requirements shown before submission
+* Confirm password must match
+
+Legal acceptance
+
+* Terms must be accepted
+* Privacy Policy must be accepted
+* Store the accepted version and timestamp if the schema supports it
+* Use clickable placeholder routes or documents until final legal text is added
+
+Do not enable the submit button while the form is invalid or already submitting.
+
+⸻
+
+9. Username Availability
+
+Implement a safe username-availability check.
+
+Requirements:
+
+* Debounce requests
+* Do not query on every keystroke
+* Normalize before checking
+* Do not expose unnecessary user information
+* Show states such as:
+    * Checking
+    * Available
+    * Unavailable
+    * Invalid
+    * Unable to check
+
+The database constraint remains the final source of truth.
+
+Handle race conditions gracefully if the username is taken between checking and account creation.
+
+Do not rely only on the client-side availability check.
+
+⸻
+
+10. Account Creation Flow
+
+Implement the sign-up transaction carefully.
+
+Expected sequence:
+
+1. Validate the form.
+2. Confirm Supabase is configured.
+3. Check normalized username.
+4. Call Supabase Auth sign-up.
+5. Allow the database trigger or secure backend function to create the base profile.
+6. Update allowed profile fields such as username and display name.
+7. Record onboarding state as not started or in progress.
+8. Route to email verification if required.
+9. Otherwise route to onboarding.
+10. Show clear success or recoverable failure states.
+
+Do not insert privileged fields from the client.
+
+The user must never choose:
+
+* Role
+* Account status
+* Moderation state
+* Administrative permissions
+
+Default role must remain user.
+
+⸻
+
+11. Partial Sign-Up Failure Handling
+
+Account creation can partially succeed.
+
+Handle cases such as:
+
+* Auth user created but profile update failed
+* Profile exists but username assignment failed
+* Network disconnect after Auth success
+* Email confirmation required
+* Duplicate username
+* Duplicate email
+* Rate limit
+* Password policy rejection
+
+Create recovery behavior.
+
+For example:
+
+* On the next session load, detect a missing or incomplete profile.
+* Route the user to a profile-completion screen or resume sign-up state.
+* Do not create a second Auth user.
+* Do not strand the user permanently.
+* Do not expose raw database errors.
+
+Document the recovery strategy.
+
+⸻
+
+12. Email Verification
+
+Support Supabase email verification where enabled.
+
+Create or connect a Verify Email screen that shows:
+
+* Email address used
+* Explanation that a verification link was sent
+* Resend verification email
+* Change email or return to sign-up where safe
+* Refresh verification status
+* Open email-app action where supported
+* Loading and error states
+
+Requirements:
+
+* Add resend cooldown.
+* Avoid unlimited resend requests.
+* Do not enter the main app until verification requirements are satisfied.
+* Allow configuration so development environments can use disabled email confirmation when appropriate.
+* Correctly handle users who verify through an external email app and return to Worlds.
+
+⸻
+
+13. Deep Links and Auth Callback
+
+Configure authentication deep links for Expo and Supabase.
+
+Prepare support for:
+
+* Email verification callback
+* Password recovery callback
+* Future Apple sign-in callback
+* Future Google sign-in callback
+
+Use a dedicated callback route.
+
+Requirements:
+
+* Parse callback state safely.
+* Restore or exchange the session as required by the installed Supabase SDK.
+* Reject malformed callbacks.
+* Show a clear loading state.
+* Route to the correct destination.
+* Prevent callback loops.
+* Document required Supabase redirect URLs for development and production.
+
+Update:
+
+app.json
+
+or:
+
+app.config.ts
+
+as appropriate.
+
+Do not add real production URLs that have not been supplied.
+
+Use documented placeholders.
+
+⸻
+
+14. Login Form
+
+Implement login using:
+
+* Email
+* Password
+* Log In button
+* Forgot Password link
+* Link to Sign Up
+
+Requirements:
+
+* Normalize email.
+* Disable repeat submission.
+* Show a loading state.
+* Avoid account-enumeration language where possible.
+* Handle invalid credentials.
+* Handle unverified email.
+* Handle suspended or restricted account status.
+* Handle network failure.
+* Handle rate limiting.
+* Route authenticated users according to onboarding status.
+
+Do not display raw Supabase error messages.
+
+Example user-facing messages:
+
+We couldn’t sign you in with those details.
+Please verify your email before continuing.
+This account is currently unavailable. Contact support for assistance.
+
+Choose messaging that is secure and understandable.
+
+⸻
+
+15. Forgot Password
+
+Implement the Forgot Password screen.
+
+Include:
+
+* Email input
+* Send Reset Link button
+* Confirmation state
+* Link back to Login
+
+Requirements:
+
+* Use a neutral success response even when the email may not exist.
+* Add resend cooldown.
+* Use configured auth redirect URLs.
+* Handle network errors.
+* Do not expose whether a specific email is registered.
+
+Suggested success wording:
+
+If an account exists for that email, a password-reset link has been sent.
+
+⸻
+
+16. Reset Password
+
+Implement the password-recovery callback and Reset Password screen.
+
+Include:
+
+* New password
+* Confirm new password
+* Password requirements
+* Update Password button
+* Success state
+* Route back to login or into the authenticated flow as appropriate
+
+Requirements:
+
+* Verify that a valid recovery session exists.
+* Reject expired or invalid links cleanly.
+* Do not accept mismatched passwords.
+* Clear recovery state after completion.
+* Prevent accidental reuse of stale recovery state.
+
+⸻
+
+17. Logout
+
+Implement logout from the shared Profile or Settings screen.
+
+On logout:
+
+* Call Supabase sign-out.
+* Clear sensitive React Query caches.
+* Clear sensitive local state.
+* Cancel active protected requests where practical.
+* Return to the Welcome screen.
+* Preserve only safe preferences where appropriate, such as theme.
+* Do not preserve private proof or account data across users on shared devices.
+
+If logout fails because of network conditions:
+
+* Clear the local session safely when appropriate.
+* Show a clear message.
+* Avoid leaving the app in an ambiguous state.
+
+⸻
+
+18. Protected Routing
+
+Implement route guards.
+
+Rules:
+
+Unauthenticated user
+
+May access:
+
+* Welcome
+* Login
+* Sign Up
+* Forgot Password
+* Reset Password callback routes
+
+Must not access:
+
+* Main Quest routes
+* Main Hunt routes
+* Profile
+* Settings
+* Notifications
+* Protected onboarding data
+
+Authenticated but unverified user
+
+May access:
+
+* Verification flow
+* Logout
+* Limited account-recovery actions
+
+Must not access the full application if verification is required.
+
+Authenticated and verified but onboarding incomplete
+
+May access:
+
+* Onboarding routes
+* Logout
+* Necessary profile completion
+
+Must not bypass onboarding through ordinary deep links.
+
+Authenticated and onboarding complete
+
+May access:
+
+* Main Worlds app
+* Shared Profile
+* Settings
+* Notifications
+
+Should not be shown Welcome or onboarding again unless their account state requires it.
+
+Avoid redirect loops.
+
+⸻
+
+19. Account Status Enforcement
+
+Read account status from the protected profile record.
+
+Support:
+
+* Active
+* Restricted
+* Suspended
+* Deactivated
+
+Behavior:
+
+Active
+
+Normal access.
+
+Restricted
+
+Allow only the features permitted by the current restriction model.
+
+For now, show a clear restricted-account notice and prevent prohibited protected mutations.
+
+Suspended
+
+Prevent access to the main app.
+
+Show:
+
+* Account unavailable message
+* Support path placeholder
+* Logout option
+
+Deactivated
+
+Prevent normal login or main-app access according to the backend state.
+
+Do not rely solely on client checks.
+
+Document that future server functions must also enforce account status for sensitive operations.
+
+⸻
+
+20. First-Time Onboarding State
+
+Implement resumable onboarding using the Prompt 3 database model.
+
+Track:
+
+* Current step
+* Completed steps
+* Started timestamp
+* Completed timestamp
+* Location explanation acknowledged
+* Location permission choice
+* Starting game mode
+* Selected interests
+
+Requirements:
+
+* Save after every meaningful step.
+* Resume at the last incomplete step.
+* Avoid losing selections after app restart.
+* Prevent a completed user from repeating onboarding on every login.
+* Allow profile editing later without resetting onboarding.
+* Use the database as the durable source of truth.
+* Use local temporary state only for unsaved form values.
+
+⸻
+
+21. Onboarding Step 1 — Welcome to Worlds
+
+Implement or connect the onboarding welcome screen.
+
+It should briefly explain:
+
+* Worlds contains different game experiences.
+* Quest focuses on completing activities and challenges.
+* Hunt focuses on map-based adventures and Custom Games.
+* More game modes may be added later.
+
+Keep this screen concise.
+
+Include:
+
+* Continue button
+* Skip only if skipping does not create missing required data
+
+Do not repeat the full marketing Welcome screen.
+
+⸻
+
+22. Onboarding Step 2 — Interest Bubbles
+
+Implement interest selection using the admin-managed interests table.
+
+Requirements:
+
+* Load only active interests.
+* Display as accessible selectable bubbles or chips.
+* Support multiple selections.
+* Show selected state clearly.
+* Save to user_interests.
+* Prevent duplicates.
+* Allow deselection.
+* Include loading, empty, and error states.
+* Allow retry.
+* Use development seed interests when in properly isolated mock mode.
+
+Suggested initial interests may include:
+
+* Creativity
+* Fitness
+* Nature
+* Learning
+* Community
+* Mindfulness
+* Exploration
+* Photography
+* Food
+* History
+* Skills
+* Social activities
+
+Do not hardcode the app so these can never be changed from the backend.
+
+Decide and document whether at least one interest is required.
+
+A reasonable Build 1 rule is:
+
+* Recommend at least three.
+* Require at least one.
+* Allow users to edit them later.
+
+⸻
+
+23. Onboarding Step 3 — Location Explanation and Permission
+
+Create a location onboarding screen before the native permission request.
+
+Explain why location is useful:
+
+* Showing nearby Geo-Quests
+* Showing nearby Hunts
+* Measuring distance
+* Validating certain location-based objectives
+
+Also explain:
+
+* Worlds does not need continuous background tracking for ordinary use.
+* Users can deny or skip permission.
+* Permission can be changed later in settings.
+* Some location-based features may be unavailable without permission.
+
+Buttons:
+
+* Enable Location
+* Not Now
+
+Only request the operating-system permission after the user taps Enable Location.
+
+Use the appropriate Expo location-permission APIs.
+
+Do not request background-location permission.
+
+Do not request precise continuous location history.
+
+Store the user’s onboarding choice, but treat the operating-system permission state as the source of truth.
+
+Handle:
+
+* Granted
+* Denied
+* Restricted
+* Blocked
+* Unavailable
+
+Do not repeatedly prompt users who have denied permission.
+
+⸻
+
+24. Onboarding Step 4 — Starting Game Mode
+
+Allow the user to choose:
+
+* Quest
+* Hunt
+
+Explain briefly:
+
+Quest
+
+Complete activities, build progress, and earn points.
+
+Hunt
+
+Join map-based adventures or create Custom Games.
+
+Requirements:
+
+* Save the choice as the preferred or last selected game mode.
+* Use this choice when first entering the main application.
+* The user can switch modes later through the compact top selector.
+* Choosing here does not lock the user into one game mode permanently.
+
+Do not present Quest and Hunt as subscription plans or separate accounts.
+
+⸻
+
+25. Onboarding Completion
+
+Create a completion step or transition.
+
+On completion:
+
+* Validate required onboarding data.
+* Mark onboarding complete server-side.
+* Store completion timestamp.
+* Set the preferred game mode.
+* Route into the corresponding main game mode.
+* Avoid showing onboarding again.
+
+Use a short, polished completion state such as:
+
+You’re ready to enter Worlds.
+
+Do not add a lengthy tutorial yet.
+
+Feature-specific tutorials can be added later within Quest and Hunt.
+
+⸻
+
+26. Main-App Entry
+
+After onboarding:
+
+* Open Quest if Quest was selected.
+* Open Hunt if Hunt was selected.
+* Use the correct bottom navigation for that mode.
+* Preserve the top game-mode switcher already implemented.
+* Do not create a new main-shell architecture.
+* Do not add Quest or Hunt as bottom tabs.
+
+Returning users should open:
+
+1. Their last selected game mode, where available.
+2. Their last selected tab within that mode, where available.
+3. A safe default if saved navigation state is invalid.
+
+Safe defaults:
+
+Quest → Home
+Hunt → Map
+
+⸻
+
+27. Profile Creation and Recovery
+
+Ensure every authenticated user has an application profile.
+
+Use the database trigger from Prompt 3 where available.
+
+On session startup:
+
+* Fetch the profile.
+* If the profile is missing, attempt a safe recovery path.
+* If profile setup is incomplete, route to profile completion.
+* Do not allow ordinary authenticated use with a missing critical profile.
+* Do not insert privileged fields from the client.
+
+Create a minimal profile-completion state for users whose Auth account exists but whose username or display name was not successfully saved.
+
+⸻
+
+28. Legal Acceptance Records
+
+Use the database architecture to record acceptance of:
+
+* Terms of Service
+* Privacy Policy
+
+Store:
+
+* User ID
+* Document type
+* Document version
+* Accepted timestamp
+
+If Prompt 3 did not create a dedicated legal-acceptance table, add a focused migration now.
+
+Do not store acceptance only as a temporary checkbox.
+
+Use placeholder document versions such as:
+
+terms_v1_draft
+privacy_v1_draft
+
+Clearly mark them as placeholders until final legal text is approved.
+
+Do not represent draft legal documents as final production terms.
+
+⸻
+
+29. Form Components and User Experience
+
+Use shared components for:
+
+* Text input
+* Password input
+* Validation message
+* Primary button
+* Secondary button
+* Loading state
+* Error notice
+* Success notice
+* Legal checkbox
+* Password requirements
+* Username status
+
+Requirements:
+
+* Large touch targets
+* Keyboard-safe layout
+* Appropriate textContentType
+* Appropriate autoComplete
+* Password visibility toggle
+* Return-key behavior
+* Scroll handling on small screens
+* No fields hidden under the keyboard
+* Accessible labels
+* Screen-reader announcements for errors
+* Focus the first invalid field after submission
+
+Do not introduce a new visual design system.
+
+⸻
+
+30. Error Handling
+
+Normalize Supabase and network errors into safe application errors.
+
+Create categories such as:
+
+* Configuration missing
+* Validation
+* Invalid credentials
+* Email already registered
+* Username unavailable
+* Verification required
+* Rate limited
+* Network unavailable
+* Account restricted
+* Account suspended
+* Recovery link invalid
+* Unknown server error
+
+Requirements:
+
+* Log technical details safely in development.
+* Show concise user-facing messages.
+* Do not expose SQL, policy names, table names, stack traces, or internal identifiers.
+* Do not reveal unnecessary account-existence information.
+* Provide retry actions where appropriate.
+
+⸻
+
+31. Rate-Limit and Abuse Preparation
+
+Prepare the UI and service layer for rate limits.
+
+Include cooldown or disabled states for:
+
+* Repeated sign-up attempts
+* Verification email resend
+* Password-reset request
+* Username availability checks
+* Repeated login attempts
+
+Do not build a complex custom anti-abuse service yet.
+
+Respect Supabase rate-limit responses.
+
+Do not automatically retry credential submissions repeatedly.
+
+⸻
+
+32. Secure Storage
+
+Use the appropriate secure storage approach for Supabase session persistence in Expo.
+
+Do not store passwords.
+
+Do not store service-role credentials.
+
+Protect:
+
+* Session tokens
+* Refresh tokens
+* Sensitive temporary recovery state
+
+Use the storage adapter recommended for the installed Expo and Supabase versions.
+
+Document platform differences if web and native use different storage mechanisms.
+
+⸻
+
+33. React Query Integration
+
+Use React Query for profile and onboarding server state where appropriate.
+
+Create stable query keys for:
+
+* Current profile
+* User settings
+* Interests
+* Selected interests
+* Onboarding state
+
+Requirements:
+
+* Clear auth-scoped caches on logout.
+* Do not leak one user’s cached data into another user’s session.
+* Avoid unnecessary refetch loops.
+* Invalidate profile data after edits.
+* Handle app foregrounding appropriately.
+
+Do not use React Query as the source of truth for the authentication token itself.
+
+⸻
+
+34. Test and Development Accounts
+
+Create a safe test strategy.
+
+If local Supabase is available:
+
+* Document how to create test users.
+* Seed test interests.
+* Use nonproduction emails.
+* Do not commit real credentials.
+
+If Supabase is not connected:
+
+* Keep forms visibly disabled or in disconnected mode.
+* Do not simulate a fake account in the normal production path.
+* A dedicated mock-auth development flag is acceptable only if it is isolated, clearly documented, and impossible to enable accidentally in production.
+
+Do not make mock authentication the default production behavior.
+
+⸻
+
+35. Analytics and Logging Boundaries
+
+Do not add a third-party analytics provider yet.
+
+Prepare internal event hooks for future events such as:
+
+* Welcome viewed
+* Sign-up started
+* Sign-up completed
+* Verification required
+* Login completed
+* Password reset requested
+* Onboarding started
+* Interest selection completed
+* Location permission choice
+* Starting mode selected
+* Onboarding completed
+
+Do not log:
+
+* Passwords
+* Session tokens
+* Full reset links
+* Sensitive legal form values
+* Precise location
+* Raw Auth error payloads in production
+
+⸻
+
+36. Accessibility
+
+Verify all authentication and onboarding screens support:
+
+* Screen-reader labels
+* Logical focus order
+* Dynamic text
+* Sufficient color contrast
+* Error announcements
+* Password requirement announcements
+* Selected-interest state
+* Keyboard navigation where applicable
+* Reduced motion preference where transitions exist
+
+Do not communicate errors only through color.
+
+The existing red disconnected-auth notice should be replaced or restyled so it does not look like the user made a mistake.
+
+⸻
+
+37. Automated Tests
+
+Add tests for critical authentication and onboarding behavior.
+
+At minimum test:
+
+Auth service
+
+* Sign-up request
+* Login request
+* Logout
+* Session initialization
+* Password recovery
+* Error normalization
+
+Sign-up form
+
+* Required fields
+* Email validation
+* Password confirmation
+* Legal acceptance
+* Username normalization
+* Disabled submitting state
+
+Routing
+
+* Unauthenticated user goes to Welcome
+* Verified user with incomplete onboarding goes to Onboarding
+* Completed user goes to Main
+* Suspended user does not enter Main
+* Logout returns to Welcome
+
+Onboarding
+
+* Interest selection saves
+* Interrupted onboarding resumes
+* Location denial does not block completion
+* Starting mode saves
+* Completion routes correctly
+
+Use mocks where needed, but keep integration points testable against local Supabase.
+
+⸻
+
+38. Security Verification
+
+Verify:
+
+* Users cannot assign themselves roles.
+* Users cannot change their account status.
+* Users cannot edit another profile.
+* Users can access only their private settings.
+* Legal acceptance is recorded for the authenticated user.
+* Protected routes reject unauthenticated access.
+* Unverified users cannot bypass verification when required.
+* Onboarding cannot be marked complete for another user.
+* Logout clears protected state.
+* Service-role credentials are absent from the mobile bundle.
+* Raw Supabase errors are not shown to users.
+
+Do not proceed with known critical auth or routing vulnerabilities.
+
+⸻
+
+39. Documentation
+
+Create or update:
+
+/docs/AUTHENTICATION.md
+/docs/ONBOARDING.md
+/docs/AUTH_DEEP_LINKS.md
+/docs/AUTH_TESTING.md
+/docs/ENVIRONMENT_CONFIGURATION.md
+
+Document:
+
+* Startup state machine
+* Auth service responsibilities
+* Session persistence
+* Profile creation
+* Partial sign-up recovery
+* Email verification
+* Password recovery
+* Deep-link configuration
+* Onboarding state
+* Location-permission behavior
+* Route-guard logic
+* Account-status handling
+* Disconnected-development behavior
+* Test procedures
+* Remaining work for Prompt 5
+
+Update:
+
+/docs/PROJECT_CONSTITUTION.md
+replit.md
+
+only where needed to reflect the implemented system.
+
+Do not rewrite approved navigation rules.
+
+⸻
+
+40. Out of Scope
+
+Do not implement:
+
+* Quest content or gameplay
+* Geo-Quest map
+* Hunt discovery or gameplay
+* Custom Game creation
+* Leaderboards
+* Achievements logic
+* Finished notification center
+* Admin panel
+* AI generation
+* Automated media scanning
+* Push notifications
+* Friends
+* Teams
+* Chat
+* Stripe
+* Memberships
+* Creator payouts
+* Apple sign-in connection
+* Google sign-in connection
+* Production legal documents
+
+Prepare inactive Apple and Google sign-in placeholders only if they already exist in the approved UI.
+
+⸻
+
+41. Final Verification
+
+Before finishing:
+
+* Confirm the project compiles.
+* Confirm authentication screens render correctly.
+* Confirm startup routing does not flash incorrect screens.
+* Confirm missing Supabase credentials do not crash the app.
+* Confirm disconnected mode is neutral and development-only.
+* Confirm signup works when Supabase is configured.
+* Confirm login works.
+* Confirm logout works.
+* Confirm verification routing works.
+* Confirm password recovery works.
+* Confirm onboarding resumes correctly.
+* Confirm completed onboarding enters the selected game mode.
+* Confirm Quest/Hunt top selector and bottom navigation were not redesigned.
+* Confirm protected data is cleared on logout.
+* Confirm tests pass or document any blocked integration tests.
+
+Resolve known errors that are within scope before stopping.
+
+⸻
+
+Deliverables
+
+When complete, provide:
+
+1. Authentication files created or updated
+2. Auth service methods implemented
+3. Session-state architecture
+4. Startup-routing state machine
+5. Welcome, sign-up, login, verification, recovery, and reset behavior
+6. Onboarding screens and persistence
+7. Location-permission behavior
+8. Preferred starting-mode behavior
+9. Legal-acceptance implementation
+10. Deep-link configuration
+11. Environment variables required
+12. Disconnected-development behavior
+13. Tests added and results
+14. Security checks completed
+15. Documentation created or updated
+16. Assumptions made
+17. Known limitations
+18. Exact remaining work for Prompt 5
+
+Do not begin Prompt 5.
+
+Do not redesign the application.
+
+Create a checkpoint named:
+
+Build 1 — Prompt 4 — Authentication and Onboarding
+
+After this prompt, the red “authentication is not connected” notice should either disappear once your Supabase credentials are supplied or become a neutral development-only notice when they are absent.

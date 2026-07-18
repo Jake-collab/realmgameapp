@@ -138,6 +138,27 @@ export interface UserInterestRow {
   created_at: string;
 }
 
+/**
+ * Append-only record of user acceptance of Terms of Service and Privacy Policy.
+ * Added in migration 016. No UPDATE or DELETE operations are permitted.
+ *
+ * Current placeholder versions:
+ *   terms_v1_draft   — draft Terms of Service (not final)
+ *   privacy_v1_draft — draft Privacy Policy (not final)
+ * When final legal text is approved, increment versions and re-present to users.
+ */
+export interface LegalAcceptanceRow {
+  id: string;
+  user_id: string;
+  document_type: 'terms' | 'privacy';
+  document_version: string;
+  accepted_at: string;
+  /** Optional: set by server if available */
+  client_ip: string | null;
+  /** Optional: user-agent string for audit trail */
+  user_agent: string | null;
+}
+
 export interface MediaAssetRow {
   id: string;
   owner_user_id: string;

@@ -1,14 +1,17 @@
 /**
  * Reset Password screen — Worlds
  *
- * Reached via the password-reset email link (deep link: worlds://reset-password?token=...).
- * Allows the user to set a new password.
+ * Reached via the auth-callback screen after a valid password-recovery
+ * deep link is exchanged for a session.
  *
- * Nonfunctional until Supabase is connected (Build 2) and deep linking
- * is configured (scheme: "worlds" in app.json is already set).
+ * Security:
+ *   - Verifies that an active recovery session exists before accepting input
+ *   - Rejects mismatched passwords at the form level
+ *   - Calls supabase.auth.updateUser() to set the new password
+ *   - After success, the session returns to normal (not recovery mode)
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -22,11 +25,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useAuthContext } from '@/features/auth/AuthProvider';
 import { useColors } from '@/hooks/useColors';
+import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase/client';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { analytics } from '@/lib/auth/analyticsHooks';
 
 const schema = z
   .object({
@@ -48,7 +54,23 @@ export default function ResetPasswordScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { updatePassword } = useAuthContext();
+
   const [done, setDone] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [hasSession, setHasSession] = useState<boolean | null>(null);
+
+  // Verify a valid recovery session exists before showing the form
+  useEffect(() => {
+    if (!isSupabaseConfigured()) {
+      setHasSession(false);
+      return;
+    }
+    const client = requireSupabase();
+    client.auth.getSession().then(({ data }) => {
+      setHasSession(!!data.session);
+    });
+  }, []);
 
   const {
     control,
@@ -59,29 +81,55 @@ export default function ResetPasswordScreen() {
     defaultValues: { password: '', confirmPassword: '' },
   });
 
-  async function onSubmit(_values: FormValues) {
-    // TODO (Build 2): supabase.auth.updateUser({ password: values.password })
-    await new Promise((r) => setTimeout(r, 600));
+  async function onSubmit(values: FormValues) {
+    setServerError(null);
+    const { error } = await updatePassword(values.password);
+
+    if (error) {
+      setServerError(error);
+      return;
+    }
+
+    analytics.passwordUpdated();
     setDone(true);
   }
 
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 24 : insets.bottom + spacing[4];
 
+  // ── No valid recovery session ─────────────────────────────────────────────
+
+  if (hasSession === false) {
+    return (
+      <View style={[styles.root, styles.centeredRoot, {
+        backgroundColor: colors.background, paddingTop: topPad, paddingBottom: bottomPad,
+      }]}>
+        <View style={[styles.iconWrap, { backgroundColor: colors.destructive + '15', borderRadius: radius.xl }]}>
+          <Feather name="alert-triangle" size={36} color={colors.destructive} />
+        </View>
+        <Text style={[styles.title, { color: colors.foreground }]}>Link has expired</Text>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground, textAlign: 'center' }]}>
+          This password-reset link is no longer valid. Please request a new one.
+        </Text>
+        <Button variant="primary" size="lg" onPress={() => router.replace('/(auth)/forgot-password')}>
+          Request new link
+        </Button>
+      </View>
+    );
+  }
+
+  // ── Success state ─────────────────────────────────────────────────────────
+
   if (done) {
     return (
-      <View
-        style={[
-          styles.root,
-          styles.doneRoot,
-          { backgroundColor: colors.background, paddingTop: topPad, paddingBottom: bottomPad },
-        ]}
-      >
-        <View style={[styles.iconWrap, { backgroundColor: colors.success + '15', borderRadius: radius.xl }]}>
-          <Feather name="check-circle" size={36} color={colors.success} />
+      <View style={[styles.root, styles.centeredRoot, {
+        backgroundColor: colors.background, paddingTop: topPad, paddingBottom: bottomPad,
+      }]}>
+        <View style={[styles.iconWrap, { backgroundColor: colors.accent + '15', borderRadius: radius.xl }]}>
+          <Feather name="check-circle" size={36} color={colors.accent} />
         </View>
         <Text style={[styles.title, { color: colors.foreground }]}>Password updated</Text>
-        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground, textAlign: 'center' }]}>
           Your password has been reset. You can now log in with your new password.
         </Text>
         <Button variant="primary" size="lg" onPress={() => router.replace('/(auth)/login')}>
@@ -90,6 +138,20 @@ export default function ResetPasswordScreen() {
       </View>
     );
   }
+
+  // ── Loading state ─────────────────────────────────────────────────────────
+
+  if (hasSession === null) {
+    return (
+      <View style={[styles.root, styles.centeredRoot, {
+        backgroundColor: colors.background, paddingTop: topPad, paddingBottom: bottomPad,
+      }]}>
+        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>Verifying link…</Text>
+      </View>
+    );
+  }
+
+  // ── Form ──────────────────────────────────────────────────────────────────
 
   return (
     <KeyboardAvoidingView
@@ -107,6 +169,17 @@ export default function ResetPasswordScreen() {
           </Text>
         </View>
 
+        {serverError && (
+          <View style={[styles.errorBanner, {
+            backgroundColor: colors.destructive + '12',
+            borderColor: colors.destructive + '30',
+            borderRadius: radius.md,
+          }]} accessibilityRole="alert">
+            <Feather name="alert-circle" size={15} color={colors.destructive} />
+            <Text style={[styles.errorText, { color: colors.destructive }]}>{serverError}</Text>
+          </View>
+        )}
+
         <View style={styles.form}>
           <Controller
             control={control}
@@ -121,6 +194,7 @@ export default function ResetPasswordScreen() {
                 error={errors.password?.message}
                 secureTextEntry
                 autoComplete="new-password"
+                textContentType="newPassword"
                 leftIcon={<Feather name="lock" size={18} color={colors.mutedForeground} />}
               />
             )}
@@ -138,10 +212,21 @@ export default function ResetPasswordScreen() {
                 error={errors.confirmPassword?.message}
                 secureTextEntry
                 autoComplete="new-password"
+                textContentType="newPassword"
                 leftIcon={<Feather name="lock" size={18} color={colors.mutedForeground} />}
               />
             )}
           />
+
+          {/* Password requirements */}
+          <View style={styles.hints} accessibilityLabel="Password requirements">
+            {['At least 8 characters', 'One uppercase letter', 'One number'].map((h) => (
+              <View key={h} style={styles.hintRow}>
+                <Feather name="check" size={12} color={colors.mutedForeground} />
+                <Text style={[styles.hintText, { color: colors.mutedForeground }]}>{h}</Text>
+              </View>
+            ))}
+          </View>
         </View>
 
         <Button
@@ -161,10 +246,15 @@ export default function ResetPasswordScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   inner: { flex: 1, paddingHorizontal: spacing[5], gap: spacing[5] },
-  doneRoot: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing[5], paddingHorizontal: spacing[8] },
+  centeredRoot: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing[5], paddingHorizontal: spacing[8] },
   header: { gap: spacing[3] },
   iconWrap: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center' },
   title: { fontFamily: fontFamily.bold, fontSize: fontSize['2xl'], letterSpacing: -0.3 },
   subtitle: { fontFamily: fontFamily.regular, fontSize: fontSize.base, lineHeight: fontSize.base * 1.5 },
+  errorBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2], padding: spacing[4], borderWidth: 1 },
+  errorText: { flex: 1, fontFamily: fontFamily.regular, fontSize: fontSize.sm, lineHeight: fontSize.sm * 1.5 },
   form: { gap: spacing[4] },
+  hints: { gap: spacing[1.5], marginTop: -spacing[2] },
+  hintRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[1.5] },
+  hintText: { fontFamily: fontFamily.regular, fontSize: fontSize.xs },
 });

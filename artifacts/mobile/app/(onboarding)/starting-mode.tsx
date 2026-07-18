@@ -1,59 +1,89 @@
 /**
  * Onboarding — Starting mode step
  *
- * The user picks which game mode to begin with.
- * Their choice sets activeMode in the Zustand store and marks onboarding complete.
- * Both modes are shown even though they're placeholder — the user is choosing
- * their default; they can always switch via the top-header mode switcher.
+ * The user chooses which game mode to start with.
+ * Saves the choice to the database (profile + user_settings) and
+ * navigates to the completion screen.
+ *
+ * The choice is not permanent — users can switch modes at any time
+ * via the top-header GameModeSwitcher in the main application.
  */
 
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuthContext } from '@/features/auth/AuthProvider';
 import { useColors } from '@/hooks/useColors';
 import { useAppStore } from '@/lib/store';
 import { GAME_MODES } from '@/types/game.types';
 import type { GameMode } from '@/types/game.types';
+import { updateMyProfile, updateMySettings, updateOnboardingProgress } from '@/services/profile/profile.service';
+import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
 import { shadows } from '@/constants/theme';
 import { Button } from '@/components/ui/Button';
+import { analytics } from '@/lib/auth/analyticsHooks';
 
 export default function OnboardingStartingModeScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { user } = useAuthContext();
   const setActiveMode = useAppStore((s) => s.setActiveMode);
-  const setHasOnboarded = useAppStore((s) => s.setHasOnboarded);
+
   const [selected, setSelected] = useState<GameMode>('quest');
+  const [isSaving, setIsSaving] = useState(false);
 
   const topPad = Platform.OS === 'web' ? 60 : insets.top + spacing[6];
   const bottomPad = Platform.OS === 'web' ? 32 : insets.bottom + spacing[6];
 
-  function handleStart() {
+  const handleStart = useCallback(async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+
+    // Update Zustand immediately for instant UI feedback
     setActiveMode(selected);
-    setHasOnboarded(true);
-    // NavigationGuard in _layout.tsx will redirect to (main) automatically
-    router.replace(selected === 'hunt' ? '/(main)/hunt' : '/(main)/quest');
-  }
+
+    if (user && isSupabaseConfigured()) {
+      try {
+        await Promise.all([
+          updateMyProfile(user.id, {
+            preferred_game_mode: selected as any,
+            onboarding_status: 'in_progress',
+          }),
+          updateMySettings(user.id, {
+            last_game_mode: selected as any,
+          }),
+          updateOnboardingProgress(user.id, {
+            starting_mode_selected: true,
+          }),
+        ]);
+      } catch (err) {
+        if (__DEV__) console.warn('[StartingMode] DB save failed:', err);
+        // Non-fatal — continue to completion
+      }
+    }
+
+    analytics.onboardingModeSelected(selected);
+    setIsSaving(false);
+    router.push('/(onboarding)/complete');
+  }, [isSaving, selected, user, setActiveMode, router]);
 
   return (
     <View
-      style={[
-        styles.root,
-        { backgroundColor: colors.background, paddingTop: topPad, paddingBottom: bottomPad },
-      ]}
+      style={[styles.root, {
+        backgroundColor: colors.background, paddingTop: topPad, paddingBottom: bottomPad,
+      }]}
     >
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.step, { color: colors.mutedForeground }]}>Step 3 of 3</Text>
-        <Text style={[styles.title, { color: colors.foreground }]}>
-          Choose your first world
-        </Text>
+        <Text style={[styles.title, { color: colors.foreground }]}>Choose your first world</Text>
         <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          Don't worry — you can switch between worlds any time using the mode selector at the top of the app.
+          You can switch between worlds any time using the selector at the top of the app.
         </Text>
       </View>
 
@@ -79,43 +109,30 @@ export default function OnboardingStartingModeScreen() {
                 },
               ]}
             >
-              {/* Selection indicator */}
+              {/* Radio indicator */}
               <View
-                style={[
-                  styles.radio,
-                  {
-                    borderColor: isSelected ? mode.color : colors.border,
-                    backgroundColor: isSelected ? mode.color : 'transparent',
-                  },
-                ]}
+                style={[styles.radio, {
+                  borderColor: isSelected ? mode.color : colors.border,
+                  backgroundColor: isSelected ? mode.color : 'transparent',
+                }]}
               >
                 {isSelected && <Feather name="check" size={12} color="#fff" />}
               </View>
 
-              {/* Content */}
               <View style={styles.cardContent}>
-                <View
-                  style={[
-                    styles.modeIcon,
-                    { backgroundColor: mode.color + '15', borderRadius: radius.md },
-                  ]}
-                >
+                <View style={[styles.modeIcon, { backgroundColor: mode.color + '15', borderRadius: radius.md }]}>
                   <Feather
                     name={mode.icon as React.ComponentProps<typeof Feather>['name']}
                     size={28}
                     color={mode.color}
                   />
                 </View>
-
                 <View style={styles.modeText}>
                   <Text
-                    style={[
-                      styles.modeName,
-                      {
-                        color: isSelected ? mode.color : colors.foreground,
-                        fontFamily: isSelected ? fontFamily.bold : fontFamily.semiBold,
-                      },
-                    ]}
+                    style={[styles.modeName, {
+                      color: isSelected ? mode.color : colors.foreground,
+                      fontFamily: isSelected ? fontFamily.bold : fontFamily.semiBold,
+                    }]}
                   >
                     {mode.title}
                   </Text>
@@ -132,8 +149,14 @@ export default function OnboardingStartingModeScreen() {
         })}
       </View>
 
-      {/* Get started */}
-      <Button variant="primary" size="lg" onPress={handleStart}>
+      {/* CTA */}
+      <Button
+        variant="primary"
+        size="lg"
+        onPress={handleStart}
+        loading={isSaving}
+        disabled={isSaving}
+      >
         Start with {GAME_MODES.find((m) => m.id === selected)?.title}
       </Button>
     </View>
@@ -147,21 +170,11 @@ const styles = StyleSheet.create({
   title: { fontFamily: fontFamily.bold, fontSize: fontSize['2xl'], letterSpacing: -0.3 },
   subtitle: { fontFamily: fontFamily.regular, fontSize: fontSize.sm, lineHeight: fontSize.sm * 1.55 },
   cards: { flex: 1, gap: spacing[4], justifyContent: 'center' },
-  card: {
-    padding: spacing[5],
-    borderWidth: 2,
-    gap: spacing[4],
-  },
+  card: { padding: spacing[5], borderWidth: 2, gap: spacing[4] },
   radio: {
-    position: 'absolute',
-    top: spacing[4],
-    right: spacing[4],
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
+    position: 'absolute', top: spacing[4], right: spacing[4],
+    width: 22, height: 22, borderRadius: 11, borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center',
   },
   cardContent: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[4] },
   modeIcon: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center' },

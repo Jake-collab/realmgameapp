@@ -1,2 +1,4 @@
 - [Supabase lazy init](supabase-lazy-init.md) — Supabase client must be null-guarded when credentials are absent; createClient throws on empty URL.
 - [NativeWind v4 conflict](nativewind-conflict.md) — NativeWind v4 needs tailwindcss@~3; workspace catalog pins v4.3.2 — incompatible without override.
+- [Auth startup state machine](auth-startup-state.md) — deterministic 8-state machine drives all routing; NavigationGuard hides splash only after first non-initializing state.
+- [Jest expo version pinning](jest-expo-pinning.md) — jest-expo@~54.0.17 and jest@~29.7.0 must match expo@54; use testEnvironment:node to avoid react-native import errors.

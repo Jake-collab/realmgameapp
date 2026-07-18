@@ -1,11 +1,15 @@
 /**
  * Forgot Password screen — Worlds
  *
- * User enters their email; Supabase sends a password-reset link.
- * Nonfunctional until Supabase credentials are connected (Build 2).
+ * Sends a password-reset email via Supabase Auth.
+ * The success message is intentionally neutral — does not reveal
+ * whether the email address is registered in Worlds.
+ *
+ * Rate-limited: resend cooldown of 60 seconds enforced in UI.
+ * Supabase also enforces its own rate limits server-side.
  */
 
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -20,22 +24,38 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Controller, useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { useAuthContext } from '@/features/auth/AuthProvider';
 import { useColors } from '@/hooks/useColors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
+// ─── Deep link redirect URL (see docs/AUTH_DEEP_LINKS.md) ─────────────────────
+const REDIRECT_URL = 'worlds://auth-callback';
+
+const RESEND_COOLDOWN = 60;
+
 const schema = z.object({
-  email: z.string().email('Enter a valid email address'),
+  email: z
+    .string()
+    .email('Enter a valid email address')
+    .toLowerCase()
+    .transform((v) => v.trim()),
 });
+
 type FormValues = z.infer<typeof schema>;
 
 export default function ForgotPasswordScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { requestPasswordReset } = useAuthContext();
+
   const [sent, setSent] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const [sentEmail, setSentEmail] = useState('');
 
   const {
     control,
@@ -47,45 +67,87 @@ export default function ForgotPasswordScreen() {
     defaultValues: { email: '' },
   });
 
-  async function onSubmit(_values: FormValues) {
-    // TODO (Build 2): supabase.auth.resetPasswordForEmail(values.email)
-    // Simulate success for now
-    await new Promise((r) => setTimeout(r, 600));
+  const startCooldown = useCallback(() => {
+    setCooldown(RESEND_COOLDOWN);
+    const timer = setInterval(() => {
+      setCooldown((prev) => {
+        if (prev <= 1) { clearInterval(timer); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  const onSubmit = useCallback(async (values: FormValues) => {
+    setServerError(null);
+    const { error } = await requestPasswordReset(values.email, REDIRECT_URL);
+    if (error) {
+      setServerError(error);
+      return;
+    }
+    setSentEmail(values.email);
     setSent(true);
-  }
+    startCooldown();
+  }, [requestPasswordReset, startCooldown]);
+
+  const handleResend = useCallback(async () => {
+    if (cooldown > 0) return;
+    setServerError(null);
+    const { error } = await requestPasswordReset(sentEmail, REDIRECT_URL);
+    if (error) { setServerError(error); return; }
+    startCooldown();
+  }, [cooldown, requestPasswordReset, sentEmail, startCooldown]);
 
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 24 : insets.bottom + spacing[4];
 
+  // ── Success state ─────────────────────────────────────────────────────────
+
   if (sent) {
     return (
-      <View
-        style={[
-          styles.root,
-          styles.successRoot,
-          { backgroundColor: colors.background, paddingTop: topPad, paddingBottom: bottomPad },
-        ]}
-      >
-        <View style={[styles.successIcon, { backgroundColor: colors.success + '15', borderRadius: radius.xl }]}>
-          <Feather name="check-circle" size={36} color={colors.success} />
+      <View style={[styles.root, styles.successRoot, {
+        backgroundColor: colors.background, paddingTop: topPad, paddingBottom: bottomPad,
+      }]}>
+        <View style={[styles.successIcon, { backgroundColor: colors.accent + '15', borderRadius: radius.xl }]}>
+          <Feather name="check-circle" size={36} color={colors.accent} />
         </View>
         <Text style={[styles.successTitle, { color: colors.foreground }]}>
           Reset link sent
         </Text>
         <Text style={[styles.successBody, { color: colors.mutedForeground }]}>
-          Check your inbox at{'\n'}
+          If an account exists for{' '}
           <Text style={{ color: colors.foreground, fontFamily: fontFamily.semiBold }}>
-            {getValues('email')}
+            {sentEmail}
           </Text>
-          {'\n\n'}
-          Follow the link in the email to reset your password.
+          , a password-reset link has been sent.{'\n\n'}
+          Check your inbox and follow the link to set a new password.
         </Text>
-        <Button variant="primary" size="lg" onPress={() => router.replace('/(auth)/login')}>
-          Back to Log In
-        </Button>
+
+        {serverError && (
+          <Text style={[styles.errorText, { color: colors.destructive }]}>{serverError}</Text>
+        )}
+
+        <View style={styles.successActions}>
+          <Button
+            variant="primary"
+            size="lg"
+            onPress={() => router.replace('/(auth)/login')}
+          >
+            Back to Log In
+          </Button>
+          <Button
+            variant="ghost"
+            size="md"
+            onPress={handleResend}
+            disabled={cooldown > 0}
+          >
+            {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend reset link'}
+          </Button>
+        </View>
       </View>
     );
   }
+
+  // ── Form state ────────────────────────────────────────────────────────────
 
   return (
     <KeyboardAvoidingView
@@ -113,6 +175,20 @@ export default function ForgotPasswordScreen() {
           </Text>
         </View>
 
+        {serverError && (
+          <View
+            style={[styles.errorBanner, {
+              backgroundColor: colors.destructive + '12',
+              borderColor: colors.destructive + '30',
+              borderRadius: radius.md,
+            }]}
+            accessibilityRole="alert"
+          >
+            <Feather name="alert-circle" size={15} color={colors.destructive} />
+            <Text style={[styles.errorText, { color: colors.destructive }]}>{serverError}</Text>
+          </View>
+        )}
+
         <Controller
           control={control}
           name="email"
@@ -128,6 +204,7 @@ export default function ForgotPasswordScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               autoComplete="email"
+              textContentType="emailAddress"
               leftIcon={<Feather name="mail" size={18} color={colors.mutedForeground} />}
             />
           )}
@@ -143,11 +220,7 @@ export default function ForgotPasswordScreen() {
           Send reset link
         </Button>
 
-        <Pressable
-          onPress={() => router.back()}
-          style={styles.backLink}
-          accessibilityRole="link"
-        >
+        <Pressable onPress={() => router.back()} style={styles.backLink} accessibilityRole="link">
           <Text style={[styles.backLinkText, { color: colors.mutedForeground }]}>
             Back to Log In
           </Text>
@@ -164,11 +237,14 @@ const styles = StyleSheet.create({
   successIcon: { width: 88, height: 88, alignItems: 'center', justifyContent: 'center' },
   successTitle: { fontFamily: fontFamily.bold, fontSize: fontSize['2xl'], textAlign: 'center' },
   successBody: { fontFamily: fontFamily.regular, fontSize: fontSize.base, textAlign: 'center', lineHeight: fontSize.base * 1.6 },
+  successActions: { width: '100%', gap: spacing[3] },
   backBtn: { alignSelf: 'flex-start' },
   header: { gap: spacing[3] },
   iconWrap: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center' },
   title: { fontFamily: fontFamily.bold, fontSize: fontSize['2xl'], letterSpacing: -0.3 },
   subtitle: { fontFamily: fontFamily.regular, fontSize: fontSize.base, lineHeight: fontSize.base * 1.5 },
+  errorBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2], padding: spacing[4], borderWidth: 1 },
+  errorText: { flex: 1, fontFamily: fontFamily.regular, fontSize: fontSize.sm, lineHeight: fontSize.sm * 1.5 },
   backLink: { alignItems: 'center', paddingTop: spacing[2] },
   backLinkText: { fontFamily: fontFamily.medium, fontSize: fontSize.sm },
 });

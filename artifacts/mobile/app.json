@@ -15,14 +15,55 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.worlds.mobile"
+      "bundleIdentifier": "com.worlds.mobile",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Worlds uses your location to find nearby quests and hunts, track your progress, and validate geo-anchored steps. Your location is never shared without your permission.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Worlds uses your location to find nearby quests and hunts, track your progress, and validate geo-anchored steps. Your location is never shared without your permission."
+      },
+      "associatedDomains": [
+        "applinks:worlds.example.com"
+      ]
     },
     "android": {
       "package": "com.worlds.mobile",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#1D4ED8"
-      }
+      },
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "worlds"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "worlds.example.com",
+              "pathPrefix": "/auth/callback"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -35,7 +76,14 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Worlds uses your location to find nearby quests and hunts, track your progress, and validate geo-anchored steps.",
+          "locationAlwaysAndWhenInUsePermission": "Worlds uses your location to find nearby quests and hunts, track your progress, and validate geo-anchored steps."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

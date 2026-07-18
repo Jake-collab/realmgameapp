@@ -1,15 +1,19 @@
 /**
  * Login screen — Worlds
  *
- * Email + password authentication.
- * Social auth slots (Apple, Google) reserved for future activation.
+ * Email + password authentication with full error normalization and
+ * post-login routing via NavigationGuard (startup state machine).
  *
- * States handled:
- *   - Default input
- *   - Loading (submitting)
- *   - Invalid credentials error
- *   - Network error
- *   - Unverified email notice
+ * Error messages avoid account enumeration — generic "couldn't sign you in"
+ * wording is used for both wrong password and unknown email.
+ *
+ * Handles:
+ *   - Invalid credentials
+ *   - Unverified email
+ *   - Suspended account
+ *   - Network failure
+ *   - Rate limiting
+ *   - Supabase not configured (dev mode)
  */
 
 import React, { useState } from 'react';
@@ -30,6 +34,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useColors } from '@/hooks/useColors';
 import { useAuthContext } from '@/features/auth/AuthProvider';
+import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
 import { Button } from '@/components/ui/Button';
@@ -38,7 +43,7 @@ import { Input } from '@/components/ui/Input';
 // ─── Validation ───────────────────────────────────────────────────────────────
 
 const schema = z.object({
-  email: z.string().email('Enter a valid email address'),
+  email: z.string().email('Enter a valid email address').toLowerCase().transform((v) => v.trim()),
   password: z.string().min(1, 'Password is required'),
 });
 
@@ -50,7 +55,9 @@ export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { signIn } = useAuthContext();
+  const { signIn, startupState } = useAuthContext();
+  const configured = isSupabaseConfigured();
+
   const [serverError, setServerError] = useState<string | null>(null);
 
   const {
@@ -64,21 +71,26 @@ export default function LoginScreen() {
 
   async function onSubmit(values: FormValues) {
     setServerError(null);
-    const { error } = await signIn(values);
-    if (error) {
-      // Map technical errors to friendly messages
-      if (error.toLowerCase().includes('invalid') || error.toLowerCase().includes('credentials')) {
-        setServerError('Incorrect email or password. Please try again.');
-      } else if (error.toLowerCase().includes('network') || error.toLowerCase().includes('fetch')) {
-        setServerError('Connection error. Check your internet and try again.');
-      } else if (error.toLowerCase().includes('configured')) {
-        setServerError('Authentication is not yet connected. Check back soon.');
-      } else {
-        setServerError('Something went wrong. Please try again.');
-      }
+
+    if (!configured) {
+      setServerError(
+        __DEV__
+          ? 'Authentication setup is pending. Account creation and login will be enabled after Supabase is connected.'
+          : 'Service is temporarily unavailable. Please try again later.'
+      );
+      return;
     }
-    // On success, NavigationGuard in _layout.tsx handles the redirect
+
+    const { error } = await signIn(values);
+
+    if (error) {
+      setServerError(error);
+    }
+    // On success, NavigationGuard handles redirect via startup state machine
   }
+
+  // Disconnected development notice
+  const showDevNotice = !configured && __DEV__;
 
   const topPad = Platform.OS === 'web' ? 48 : insets.top;
   const bottomPad = Platform.OS === 'web' ? 24 : insets.bottom + spacing[4];
@@ -89,10 +101,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: topPad, paddingBottom: bottomPad },
-        ]}
+        contentContainerStyle={[styles.scroll, { paddingTop: topPad, paddingBottom: bottomPad }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -109,26 +118,38 @@ export default function LoginScreen() {
 
         {/* Header */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.foreground }]}>
-            Welcome back
-          </Text>
+          <Text style={[styles.title, { color: colors.foreground }]}>Welcome back</Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
             Log in to continue your adventures
           </Text>
         </View>
 
+        {/* Dev notice (neutral, development-only) */}
+        {showDevNotice && (
+          <View
+            style={[styles.devNotice, { backgroundColor: colors.muted, borderRadius: radius.md }]}
+            accessibilityRole="status"
+          >
+            <Feather name="info" size={15} color={colors.mutedForeground} />
+            <Text style={[styles.devNoticeText, { color: colors.mutedForeground }]}>
+              Authentication setup is pending. Account creation and login will be enabled after Supabase is connected.
+            </Text>
+          </View>
+        )}
+
         {/* Server error */}
         {serverError && (
           <View
-            style={[
-              styles.errorBanner,
-              { backgroundColor: colors.destructive + '12', borderColor: colors.destructive + '30', borderRadius: radius.md },
-            ]}
+            style={[styles.errorBanner, {
+              backgroundColor: colors.destructive + '12',
+              borderColor: colors.destructive + '30',
+              borderRadius: radius.md,
+            }]}
+            accessibilityLiveRegion="assertive"
+            accessibilityRole="alert"
           >
             <Feather name="alert-circle" size={15} color={colors.destructive} />
-            <Text style={[styles.errorText, { color: colors.destructive }]}>
-              {serverError}
-            </Text>
+            <Text style={[styles.errorText, { color: colors.destructive }]}>{serverError}</Text>
           </View>
         )}
 
@@ -149,6 +170,7 @@ export default function LoginScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
                 autoComplete="email"
+                textContentType="emailAddress"
                 leftIcon={<Feather name="mail" size={18} color={colors.mutedForeground} />}
               />
             )}
@@ -167,20 +189,18 @@ export default function LoginScreen() {
                 error={errors.password?.message}
                 secureTextEntry
                 autoComplete="current-password"
+                textContentType="password"
                 leftIcon={<Feather name="lock" size={18} color={colors.mutedForeground} />}
               />
             )}
           />
 
-          {/* Forgot password */}
           <Pressable
             onPress={() => router.push('/(auth)/forgot-password')}
             style={styles.forgotBtn}
             accessibilityRole="link"
           >
-            <Text style={[styles.forgotText, { color: colors.primary }]}>
-              Forgot password?
-            </Text>
+            <Text style={[styles.forgotText, { color: colors.primary }]}>Forgot password?</Text>
           </Pressable>
         </View>
 
@@ -190,7 +210,7 @@ export default function LoginScreen() {
           size="lg"
           onPress={handleSubmit(onSubmit)}
           loading={isSubmitting}
-          disabled={isSubmitting}
+          disabled={isSubmitting || !configured}
         >
           Log in
         </Button>
@@ -198,13 +218,11 @@ export default function LoginScreen() {
         {/* Social auth divider (reserved) */}
         <View style={styles.dividerRow}>
           <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
-          <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>
-            or
-          </Text>
+          <Text style={[styles.dividerText, { color: colors.mutedForeground }]}>or</Text>
           <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
         </View>
 
-        {/* Social placeholders */}
+        {/* Social placeholders (not yet functional) */}
         <View style={styles.socialButtons}>
           <SocialButton icon="apple" label="Continue with Apple" disabled />
           <SocialButton icon="github" label="Continue with Google" disabled />
@@ -215,13 +233,8 @@ export default function LoginScreen() {
           <Text style={[styles.switchText, { color: colors.mutedForeground }]}>
             Don't have an account?{' '}
           </Text>
-          <Pressable
-            onPress={() => router.replace('/(auth)/signup')}
-            accessibilityRole="link"
-          >
-            <Text style={[styles.switchLink, { color: colors.primary }]}>
-              Sign up
-            </Text>
+          <Pressable onPress={() => router.replace('/(auth)/signup')} accessibilityRole="link">
+            <Text style={[styles.switchLink, { color: colors.primary }]}>Sign up</Text>
           </Pressable>
         </View>
       </ScrollView>
@@ -229,13 +242,9 @@ export default function LoginScreen() {
   );
 }
 
-// ─── Social Button (placeholder) ─────────────────────────────────────────────
+// ─── Social Button (inactive placeholder) ────────────────────────────────────
 
-function SocialButton({
-  icon,
-  label,
-  disabled,
-}: {
+function SocialButton({ icon, label, disabled }: {
   icon: React.ComponentProps<typeof Feather>['name'];
   label: string;
   disabled?: boolean;
@@ -246,98 +255,49 @@ function SocialButton({
       disabled={disabled}
       accessibilityLabel={label}
       accessibilityRole="button"
-      style={[
-        styles.socialBtn,
-        {
-          backgroundColor: colors.card,
-          borderColor: colors.border,
-          borderRadius: radius.md,
-          opacity: disabled ? 0.45 : 1,
-        },
-      ]}
+      style={[styles.socialBtn, {
+        backgroundColor: colors.card,
+        borderColor: colors.border,
+        borderRadius: radius.md,
+        opacity: disabled ? 0.45 : 1,
+      }]}
     >
       <Feather name={icon} size={18} color={colors.foreground} />
-      <Text style={[styles.socialLabel, { color: colors.foreground }]}>
-        {label}
-      </Text>
+      <Text style={[styles.socialLabel, { color: colors.foreground }]}>{label}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  scroll: {
-    paddingHorizontal: spacing[5],
-    gap: spacing[5],
-  },
-  backBtn: {
-    alignSelf: 'flex-start',
-    marginBottom: spacing[2],
-  },
+  scroll: { paddingHorizontal: spacing[5], gap: spacing[5] },
+  backBtn: { alignSelf: 'flex-start', marginBottom: spacing[2] },
   header: { gap: spacing[2] },
-  title: {
-    fontFamily: fontFamily.bold,
-    fontSize: fontSize['3xl'],
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.base,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing[2],
+  title: { fontFamily: fontFamily.bold, fontSize: fontSize['3xl'], letterSpacing: -0.5 },
+  subtitle: { fontFamily: fontFamily.regular, fontSize: fontSize.base },
+  devNotice: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2],
     padding: spacing[4],
-    borderWidth: 1,
   },
-  errorText: {
-    flex: 1,
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.sm,
-    lineHeight: fontSize.sm * 1.5,
+  devNoticeText: { flex: 1, fontFamily: fontFamily.regular, fontSize: fontSize.sm, lineHeight: fontSize.sm * 1.5 },
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2],
+    padding: spacing[4], borderWidth: 1,
   },
+  errorText: { flex: 1, fontFamily: fontFamily.regular, fontSize: fontSize.sm, lineHeight: fontSize.sm * 1.5 },
   form: { gap: spacing[4] },
   forgotBtn: { alignSelf: 'flex-end' },
-  forgotText: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.sm,
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[3],
-  },
+  forgotText: { fontFamily: fontFamily.medium, fontSize: fontSize.sm },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
   dividerLine: { flex: 1, height: 1 },
-  dividerText: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.sm,
-  },
+  dividerText: { fontFamily: fontFamily.regular, fontSize: fontSize.sm },
   socialButtons: { gap: spacing[3] },
   socialBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing[3],
-    height: 52,
-    borderWidth: 1,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: spacing[3], height: 52, borderWidth: 1,
   },
-  socialLabel: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.base,
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: spacing[2],
-  },
-  switchText: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.sm,
-  },
-  switchLink: {
-    fontFamily: fontFamily.semiBold,
-    fontSize: fontSize.sm,
-  },
+  socialLabel: { fontFamily: fontFamily.medium, fontSize: fontSize.base },
+  switchRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingTop: spacing[2] },
+  switchText: { fontFamily: fontFamily.regular, fontSize: fontSize.sm },
+  switchLink: { fontFamily: fontFamily.semiBold, fontSize: fontSize.sm },
 });

@@ -23,7 +23,12 @@ import type {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type UpdateProfilePayload = Partial<Pick<ProfileRow,
-  'display_name' | 'bio' | 'preferred_game_mode' | 'onboarding_status' | 'onboarding_completed_at'
+  | 'username'
+  | 'display_name'
+  | 'bio'
+  | 'preferred_game_mode'
+  | 'onboarding_status'
+  | 'onboarding_completed_at'
 >>;
 
 export type UpdateSettingsPayload = Partial<Omit<
