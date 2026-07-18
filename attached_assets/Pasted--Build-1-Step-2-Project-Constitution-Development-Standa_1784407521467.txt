@@ -1,0 +1,457 @@
+# Build 1 — Step 2: Project Constitution & Development Standards
+
+The application is now named **Worlds**.
+
+Before implementing any features, create the permanent project documentation that will act as the source of truth for every future development step.
+
+Do not implement Quest gameplay, Hunt gameplay, databases, Mapbox, AI generation, payments, or advanced features during this step.
+
+Your objective is to establish the permanent architecture, UI conventions, coding standards, and product rules that all future work must follow.
+
+---
+
+# Create Project Constitution
+
+Create a document named:
+
+```
+/docs/PROJECT_CONSTITUTION.md
+```
+
+This document is the authoritative specification for the project.
+
+Future development should follow it unless explicitly instructed otherwise.
+
+Include the following sections.
+
+---
+
+# 1. Product Overview
+
+Application Name:
+
+**Worlds**
+
+Purpose:
+
+Worlds is a scalable platform containing multiple game modes centered around exploration, learning, community interaction, creativity, and real-world activities.
+
+The initial launch includes:
+
+* Quest
+* Hunt
+
+The architecture must support future game modes without major restructuring.
+
+---
+
+# 2. Architecture Principles
+
+Document principles such as:
+
+* Modular feature-based architecture
+* Reusable components
+* Separation of UI, business logic, networking, and storage
+* Maintainability over shortcuts
+* Performance-first development
+* Mobile-first experience
+* Offline-friendly architecture
+* Accessibility
+* Scalability
+
+---
+
+# 3. Navigation Standards
+
+Document the approved navigation.
+
+## Quest
+
+Bottom navigation:
+
+* Home
+* Quests
+* Map
+* Progress
+* Profile
+
+No Geo tab.
+
+No Discover page.
+
+---
+
+## Hunt
+
+Bottom navigation:
+
+* Map
+* My Hunts
+* Progress
+* Profile
+
+The Hunt map is the primary screen.
+
+No Discover tab.
+
+---
+
+# 4. UI Standards
+
+Document standards for:
+
+Spacing
+
+Typography
+
+Buttons
+
+Cards
+
+Bottom sheets
+
+Lists
+
+Search bars
+
+Loading states
+
+Error states
+
+Icons
+
+Animations
+
+Transitions
+
+Dark mode support
+
+Responsive layouts
+
+Do not implement these yet.
+
+---
+
+# 5. Design Philosophy
+
+Document that the interface should be:
+
+Minimal
+
+Modern
+
+Fast
+
+Clean
+
+Intuitive
+
+Low-friction
+
+Visually consistent
+
+Avoid clutter.
+
+Avoid unnecessary nested menus.
+
+Avoid duplicated screens.
+
+---
+
+# 6. Quest Standards
+
+Document the finalized Quest UX.
+
+Home contains:
+
+* One expanded prioritized active quest
+* Daily Quest summary
+* Monthly Quest summary
+* Geo Quest preview
+
+Quests contains:
+
+* Daily Quest
+* Monthly Quest
+* Geo Quest
+
+Progress contains:
+
+* Leaderboards
+* In Action
+* Completed
+
+Use Start Quest before initiation.
+
+---
+
+# 7. Hunt Standards
+
+Document the finalized Hunt UX.
+
+The Hunt map is the center of the experience.
+
+The map displays:
+
+* Official Hunts
+* Community Hunts (future)
+* Custom Games
+* Active Hunts
+* Invitations
+
+My Hunts contains:
+
+* In Action
+* Ready
+* Completed
+* Invitations
+
+Include a Create button.
+
+Differentiate:
+
+Custom Games
+
+Official Hunts
+
+Document the distinction between them.
+
+---
+
+# 8. Future Systems
+
+Reserve architecture for:
+
+Friends
+
+Teams
+
+Guilds
+
+Events
+
+Future game modes
+
+Creator Mode
+
+Marketplace
+
+Cosmetics
+
+Notifications
+
+Achievements
+
+Without implementing them.
+
+---
+
+# 9. AI Standards
+
+Document that AI generation is server-side only.
+
+Clients never communicate directly with AI providers.
+
+Generated quests are always drafts until approved.
+
+Prompt templates are editable from the admin panel.
+
+---
+
+# 10. Mapping Standards
+
+Document that Mapbox will become the mapping provider.
+
+The application should eventually support:
+
+Markers
+
+GeoJSON
+
+Clustering
+
+Bottom sheets
+
+Geofencing
+
+Location validation
+
+Distance calculations
+
+Search
+
+Overlays
+
+Hidden objectives
+
+Do not implement Mapbox.
+
+---
+
+# 11. Backend Standards
+
+Document intended use of Supabase for:
+
+Authentication
+
+Database
+
+Storage
+
+Security
+
+Row Level Security
+
+Future Edge Functions
+
+Do not connect Supabase yet.
+
+---
+
+# 12. Coding Standards
+
+Create standards for:
+
+Folder organization
+
+Naming conventions
+
+Components
+
+Hooks
+
+Services
+
+State management
+
+Error handling
+
+Logging
+
+Documentation
+
+Testing
+
+Reusable code
+
+Avoid duplicated logic.
+
+---
+
+# 13. Performance Standards
+
+Document goals such as:
+
+Lazy loading
+
+Virtualized lists
+
+Image optimization
+
+Caching
+
+Efficient map rendering
+
+Minimal unnecessary rerenders
+
+Future offline support
+
+---
+
+# 14. Security Standards
+
+Document principles for:
+
+Authentication
+
+Authorization
+
+Secure storage
+
+API secrets
+
+Media uploads
+
+Future moderation
+
+Rate limiting
+
+Validation
+
+Privacy
+
+Least privilege
+
+---
+
+# 15. Future Build Roadmap
+
+Create a roadmap summarizing the planned implementation order without implementing anything.
+
+Include major milestones such as:
+
+Foundation
+
+Supabase
+
+Authentication
+
+Quest
+
+Mapbox
+
+Hunt
+
+Admin
+
+AI
+
+Moderation
+
+Notifications
+
+Testing
+
+Deployment
+
+---
+
+# Update replit.md
+
+Update or create replit.md.
+
+Summarize:
+
+* App name (Worlds)
+* Architecture philosophy
+* Coding standards
+* Navigation
+* Future implementation order
+* Requirement to follow PROJECT_CONSTITUTION.md
+* Requirement to preserve architectural consistency
+
+Keep replit.md concise and reference PROJECT_CONSTITUTION.md for details.
+
+---
+
+# Deliverables
+
+When finished provide:
+
+1. Files created
+
+2. Constitution summary
+
+3. Development standards established
+
+4. Any architectural recommendations
+
+5. Remaining work before Step 3
+
+Do not implement any application features.
+
+Do not begin Step 3.
+
+Create a checkpoint named:
+
+**Build 1 — Step 2 — Project Constitution**
