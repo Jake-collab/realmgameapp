@@ -1,0 +1,504 @@
+# Worlds — UI/UX Direction Addendum
+
+Update the project foundation and `/docs/PROJECT_CONSTITUTION.md` to include the following permanent UI/UX direction.
+
+Do not build the full Quest or Hunt features during this step. This task is to define and, where appropriate, update the shared design system and placeholder application shell so later screens follow the correct visual direction.
+
+The app is named:
+
+**Worlds**
+
+---
+
+# 1. Overall Visual Direction
+
+Worlds should feel like a polished, modern real-world exploration game.
+
+The visual experience should be:
+
+* Immersive
+* Minimal
+* Modern
+* Friendly
+* Adventurous
+* Fast
+* Clean
+* Slightly futuristic
+* Easy to understand immediately
+
+It should not feel like:
+
+* A generic business dashboard
+* A social-media feed
+* A crowded marketplace
+* A children’s cartoon
+* A copy of Pokémon GO
+* A collection of disconnected cards
+* A web page squeezed into a mobile app
+
+Use a game-oriented visual language while remaining professional and accessible.
+
+---
+
+# 2. Brand Presentation
+
+Display the application name as:
+
+**Worlds**
+
+Use “Worlds” on:
+
+* Splash screen
+* Authentication screens
+* App metadata
+* Loading screens
+* Empty states when appropriate
+* Documentation
+* Admin branding
+
+Do not repeatedly place the Worlds name at the top of every gameplay screen when it wastes space.
+
+Gameplay screens should prioritize the game content itself.
+
+---
+
+# 3. Color and Style Direction
+
+Create a cohesive theme based around:
+
+* Deep blue
+* Natural green
+* White or soft neutral backgrounds
+* Dark charcoal text
+* Subtle secondary neutrals
+
+The blue and green should suggest:
+
+* Exploration
+* Earth
+* Movement
+* Discovery
+* Technology
+
+Avoid excessive gradients.
+
+Avoid neon-heavy cyberpunk styling.
+
+Avoid using too many unrelated colors.
+
+Use accent colors purposefully for:
+
+* Active states
+* Points
+* Progress
+* Selected map markers
+* Success
+* Warnings
+* Errors
+
+Support future dark mode through design tokens, even if dark mode is not fully implemented yet.
+
+---
+
+# 4. Layout Philosophy
+
+Use mobile-first layouts with:
+
+* Clear visual hierarchy
+* Generous but efficient spacing
+* Large touch targets
+* Minimal text clutter
+* Consistent rounded corners
+* Concise labels
+* Bottom sheets for map-related details
+* Full-width primary actions
+* Scrollable content only where necessary
+* Persistent bottom navigation inside each game mode
+
+Avoid:
+
+* Excessive nested cards
+* Too many horizontal carousels
+* Overly large headers
+* Redundant section titles
+* Multiple competing primary buttons
+* Deep menu hierarchies
+* Tiny text
+* Desktop-style sidebars in the mobile app
+
+---
+
+# 5. Universal App Shell
+
+The mobile application should have a clean top-level game-mode selector allowing the user to move between:
+
+* Quest
+* Hunt
+* Future Worlds game modes
+
+The selector should feel like switching between game experiences, not ordinary settings tabs.
+
+It may eventually use:
+
+* A compact mode switcher
+* A swipeable selector
+* A polished dropdown or modal
+* Distinct mode iconography
+
+Do not allow the selector to consume excessive vertical space.
+
+Each game mode must preserve the user’s last screen when switching between modes.
+
+---
+
+# 6. Quest UI Direction
+
+Quest should feel focused, encouraging, and activity-oriented.
+
+Approved navigation:
+
+* Home
+* Quests
+* Map
+* Progress
+* Profile
+
+Do not add a Geo tab.
+
+Do not add a Discover tab.
+
+## Quest Home
+
+The Home screen should prioritize one active quest.
+
+When an active quest exists:
+
+* Display one expanded active-quest panel prominently
+* Show its title
+* Show concise instructions or current objective
+* Show points
+* Show status
+* Show progress only when the quest is genuinely multi-step
+* Show one obvious action such as Continue Quest or Submit Proof
+
+Below the active quest, show concise previews for:
+
+* Daily Quest
+* Monthly Quest Drop
+* Geo-Quest
+* Personal point or rank summary where appropriate
+
+Do not turn the screen into a grid of many equal cards.
+
+The current active experience should be visually dominant.
+
+## Quests Screen
+
+The Quests screen contains only:
+
+* Daily Quest
+* Monthly Quest Drop
+* Geo-Quest
+
+These should appear as clear sections or stacked content areas.
+
+Do not add complicated discovery categories.
+
+Do not add unnecessary filters during the first build.
+
+A Geo-Quest item should clearly show:
+
+* Location-pin icon
+* Quest title
+* Referenced location
+* Distance when available
+* Points
+* Availability or access status when necessary
+
+## Quest Detail
+
+The detail screen should include:
+
+* Hero or contextual image when available
+* Quest title
+* Point value
+* Expected duration
+* Difficulty
+* Indoor/outdoor indicator when relevant
+* Accessibility information
+* Location information
+* Clear objective
+* Proof requirements
+* Safety notes when necessary
+* One primary action
+
+Before initiation, the action must say:
+
+**Start Quest**
+
+After initiation, use the appropriate state-specific action.
+
+## Quest Progress
+
+Progress contains:
+
+* Leaderboards
+* In Action
+* Completed
+
+The user’s own point total and rank should be visually prominent.
+
+In Action should use clear status indicators rather than excessive progress bars.
+
+Use progress bars only for genuinely multi-step quests.
+
+---
+
+# 7. Hunt UI Direction
+
+Hunt should feel map-first and immersive.
+
+Approved navigation:
+
+* Map
+* My Hunts
+* Progress
+* Profile
+
+There is no Discover tab.
+
+## Hunt Map
+
+The Hunt Map is the main screen and should open immediately when Hunt is selected.
+
+The map should occupy nearly the entire usable screen.
+
+Use restrained floating controls for:
+
+* Search
+* Filters
+* Current location
+* Optional map orientation or recentering
+
+Do not place a large permanent discovery panel over the map.
+
+The map eventually displays:
+
+* Official Hunts
+* Accessible Custom Games
+* Active Hunts
+* Invitations when appropriate
+* Future Community Hunts
+
+Map markers should be:
+
+* Distinct
+* Readable
+* Consistent
+* Visually controlled
+* Appropriate for clustering
+
+Do not place large user photos directly across the map.
+
+When a marker is tapped, open a bottom sheet showing:
+
+* Hunt image
+* Hunt title
+* Type
+* Distance
+* Estimated time
+* Points or reward
+* Access state
+* One primary action
+
+The interaction can be inspired by the clarity of location-based games such as Pokémon GO, but must not copy its branded visuals or exact interface.
+
+## Active Hunt Gameplay
+
+Once a Hunt begins, the map should transition into an active-play state.
+
+The screen may show:
+
+* Current objective
+* Revealed drop
+* Distance from target
+* Completion zone
+* Clue access
+* Progress through stops
+* A compact exit or pause control
+
+Keep the map visually dominant.
+
+Do not cover most of the map with permanent panels.
+
+## My Hunts
+
+My Hunts contains:
+
+* In Action
+* Ready
+* Completed
+* Invitations
+
+Provide a visible:
+
+**+ Create**
+
+Do not hide Custom Game creation inside an unrelated settings menu or creator dashboard.
+
+## Custom Game Creation
+
+Custom Game creation should feel lightweight and approachable.
+
+Use a guided step-by-step flow rather than one long form.
+
+Likely steps:
+
+1. Basic details
+2. Privacy and scheduling
+3. Starting location
+4. Add stops
+5. Add clues and validation
+6. Invite players
+7. Review and create
+
+The creator should be able to upload:
+
+* A cover image
+* Images for clues or stops
+
+Map markers should initially use a controlled set of approved icons.
+
+---
+
+# 8. Image Presentation
+
+Images may appear in:
+
+* Quest detail pages
+* Hunt detail pages
+* Hunt bottom sheets
+* Custom Game covers
+* Clues and drops
+* User proof submissions
+* Profiles
+
+Use consistent aspect ratios.
+
+Use proper placeholders.
+
+Prevent layout shifts while images load.
+
+Use image compression and optimization.
+
+Do not display low-quality stretched images.
+
+Do not expose pending or unapproved public uploads in the future moderation system.
+
+---
+
+# 9. Map Presentation Rules
+
+Maps should not look like decorative placeholders.
+
+When Mapbox is added later:
+
+* The map should fill its intended area
+* Loading states should be deliberate
+* Markers should use coherent iconography
+* Selected markers should be visually distinguishable
+* Bottom sheets should coordinate with selected map content
+* Controls should not overlap bottom navigation
+* Dense markers should cluster
+* Hidden objectives should not be exposed
+* Private Custom Game locations should remain access-controlled
+
+---
+
+# 10. Motion and Feedback
+
+Use subtle motion for:
+
+* Screen transitions
+* Bottom sheets
+* Marker selection
+* Quest-start confirmation
+* Progress updates
+* Completion feedback
+* Loading placeholders
+
+Avoid excessive animations.
+
+Animations should communicate state, not decorate every interaction.
+
+Support reduced-motion accessibility settings later.
+
+---
+
+# 11. Shared Components to Prepare
+
+Ensure the design system is prepared for reusable components such as:
+
+* PrimaryButton
+* SecondaryButton
+* IconButton
+* GameModeSelector
+* BottomNavigation
+* ScreenHeader
+* QuestCard
+* HuntPreviewSheet
+* StatusBadge
+* PointsBadge
+* ProgressIndicator
+* InterestBubble
+* EmptyState
+* ErrorState
+* SkeletonLoader
+* ImageUploader
+* ConfirmationModal
+* MapFloatingButton
+
+These can remain foundational or placeholder-level until their implementation step.
+
+Do not build feature logic during this addendum.
+
+---
+
+# 12. Permanent UX Rules
+
+Add these rules to `PROJECT_CONSTITUTION.md` and `replit.md`:
+
+* Do not invent additional bottom-navigation tabs.
+* Do not recreate a Hunt Discover screen.
+* Do not create a separate Geo tab for Quest.
+* Do not duplicate the same content across Home, Progress, and My Hunts.
+* The Hunt map must remain the primary Hunt experience.
+* Quest Home must prioritize one active quest.
+* Custom Game creation must be accessible from My Hunts.
+* Use one dominant primary action per screen.
+* Prefer bottom sheets for map-item details.
+* Avoid generic dashboard layouts.
+* Preserve the approved blue-and-green Worlds visual direction.
+* Ask for explicit instruction before materially redesigning established navigation.
+
+---
+
+# Deliverables
+
+When complete, report:
+
+1. Files updated
+2. Theme tokens added or changed
+3. Shared components prepared
+4. Navigation-shell visual changes
+5. Constitution sections added
+6. Any assumptions made
+7. Remaining UI work for later feature steps
+
+Do not begin the Supabase implementation.
+
+Do not begin Quest or Hunt feature implementation.
+
+Create a checkpoint named:
+
+**Build 1 — UI Direction Addendum**

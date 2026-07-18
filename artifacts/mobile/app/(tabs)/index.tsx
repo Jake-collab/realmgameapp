@@ -1,12 +1,16 @@
 /**
- * Home screen — Game Selector.
+ * Worlds — Game Selector screen.
  *
- * Displays the available game modes (Quest, Hunt) as tappable cards.
- * Modes are locked until implemented in later Build steps.
+ * The top-level experience. Displays all available game modes and
+ * allows the user to enter one. Modes are locked until implemented
+ * in their respective build steps.
  *
- * Navigation hierarchy:
- *   Game Selector → Quest (Build 2)
- *   Game Selector → Hunt  (Build 3)
+ * Visual direction: immersive, adventure-oriented, blue-and-green palette.
+ * "Worlds" brand is displayed prominently here (not on gameplay screens).
+ *
+ * Navigation:
+ *   → Quest navigator (Build 4)
+ *   → Hunt navigator  (Build 6)
  */
 
 import React from 'react';
@@ -38,39 +42,47 @@ export default function GameSelectorScreen() {
       style={{ backgroundColor: colors.background }}
       contentContainerStyle={[
         styles.container,
-        { paddingTop: topPad + spacing[4], paddingBottom: bottomPad },
+        { paddingTop: topPad + spacing[6], paddingBottom: bottomPad },
       ]}
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.greeting, { color: colors.mutedForeground }]}>
-          Welcome back
+      {/* Brand header */}
+      <View style={styles.brand}>
+        <View style={[styles.logoMark, { backgroundColor: colors.primary }]}>
+          <Feather name="globe" size={22} color="#FFFFFF" />
+        </View>
+        <Text style={[styles.appName, { color: colors.foreground }]}>
+          Worlds
         </Text>
-        <Text style={[styles.title, { color: colors.foreground }]}>
-          Choose Your Adventure
-        </Text>
-        <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>
-          Select a game mode to begin
+        <Text style={[styles.appTagline, { color: colors.mutedForeground }]}>
+          Real-world adventures, right outside your door
         </Text>
       </View>
 
-      {/* Game Mode Cards */}
+      {/* Divider */}
+      <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
+      {/* Section label */}
+      <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+        Choose your game mode
+      </Text>
+
+      {/* Game mode cards */}
       <View style={styles.modes}>
         {GAME_MODES.map((mode) => (
           <GameModeCard key={mode.id} mode={mode} />
         ))}
       </View>
 
-      {/* Coming Soon Banner */}
+      {/* Coming soon footer */}
       <View
         style={[
-          styles.comingSoon,
+          styles.footer,
           { backgroundColor: colors.secondary, borderColor: colors.border },
         ]}
       >
-        <Feather name="zap" size={16} color={colors.primary} />
-        <Text style={[styles.comingSoonText, { color: colors.mutedForeground }]}>
+        <Feather name="zap" size={14} color={colors.accent} />
+        <Text style={[styles.footerText, { color: colors.mutedForeground }]}>
           More game modes launching soon
         </Text>
       </View>
@@ -90,42 +102,46 @@ function GameModeCard({ mode }: GameModeCardProps) {
   return (
     <Pressable
       disabled={!mode.available}
+      accessibilityLabel={`${mode.title} — ${mode.tagline}`}
+      accessibilityHint={mode.available ? 'Double-tap to enter' : 'Coming soon'}
+      accessibilityRole="button"
       style={({ pressed }) => [
         styles.card,
         {
           backgroundColor: colors.card,
           borderRadius: radius.lg,
           borderWidth: 1,
-          borderColor: mode.available ? mode.color + '40' : colors.border,
-          opacity: pressed ? 0.9 : 1,
+          borderColor: mode.available ? mode.color + '30' : colors.border,
+          opacity: pressed ? 0.88 : 1,
+          transform: [{ scale: pressed ? 0.985 : 1 }],
           ...shadows.md,
         },
       ]}
     >
-      {/* Color accent bar */}
-      <View
-        style={[
-          styles.accentBar,
-          { backgroundColor: mode.color, borderRadius: radius.lg },
-        ]}
-      />
+      {/* Left accent stripe */}
+      <View style={[styles.accentStripe, { backgroundColor: mode.color }]} />
 
-      <View style={styles.cardContent}>
+      <View style={styles.cardBody}>
         {/* Icon */}
         <View
           style={[
-            styles.iconWrap,
-            { backgroundColor: mode.color + '20', borderRadius: radius.md },
+            styles.iconContainer,
+            {
+              backgroundColor: mode.color + '15',
+              borderRadius: radius.md,
+              borderWidth: 1,
+              borderColor: mode.color + '25',
+            },
           ]}
         >
           <Feather
             name={mode.icon as React.ComponentProps<typeof Feather>['name']}
-            size={28}
+            size={26}
             color={mode.color}
           />
         </View>
 
-        {/* Text */}
+        {/* Text content */}
         <View style={styles.cardText}>
           <View style={styles.cardTitleRow}>
             <Text style={[styles.modeName, { color: colors.foreground }]}>
@@ -134,80 +150,102 @@ function GameModeCard({ mode }: GameModeCardProps) {
             {!mode.available && (
               <View
                 style={[
-                  styles.lockBadge,
-                  { backgroundColor: colors.secondary, borderRadius: radius.full },
+                  styles.statusPill,
+                  { backgroundColor: colors.muted, borderRadius: radius.full },
                 ]}
               >
-                <Feather name="lock" size={10} color={colors.mutedForeground} />
-                <Text style={[styles.lockText, { color: colors.mutedForeground }]}>
-                  Coming Soon
+                <Text style={[styles.statusText, { color: colors.mutedForeground }]}>
+                  Coming soon
                 </Text>
               </View>
             )}
           </View>
-          <Text style={[styles.modeTagline, { color: colors.mutedForeground }]}>
+          <Text
+            style={[styles.modeTagline, { color: colors.mutedForeground }]}
+            numberOfLines={2}
+          >
             {mode.tagline}
           </Text>
         </View>
 
+        {/* Chevron */}
         <Feather
           name="chevron-right"
-          size={20}
-          color={mode.available ? colors.foreground : colors.border}
+          size={18}
+          color={mode.available ? colors.primary : colors.border}
         />
       </View>
     </Pressable>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: spacing[5],
-    gap: spacing[6],
+    gap: spacing[5],
   },
-  header: {
-    gap: spacing[1.5],
+
+  // Brand header
+  brand: {
+    alignItems: 'center',
+    gap: spacing[3],
+    paddingTop: spacing[4],
   },
-  greeting: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.sm,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+  logoMark: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  title: {
+  appName: {
     fontFamily: fontFamily.bold,
     fontSize: fontSize['3xl'],
     letterSpacing: -0.5,
   },
-  subtitle: {
+  appTagline: {
     fontFamily: fontFamily.regular,
-    fontSize: fontSize.base,
+    fontSize: fontSize.sm,
+    textAlign: 'center',
+    maxWidth: 260,
   },
+
+  divider: {
+    height: 1,
+    marginHorizontal: -spacing[5],
+  },
+
+  sectionLabel: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: fontSize.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
+
+  // Cards
   modes: {
-    gap: spacing[4],
+    gap: spacing[3],
   },
   card: {
     overflow: 'hidden',
+    flexDirection: 'row',
   },
-  accentBar: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
+  accentStripe: {
     width: 4,
-    borderTopRightRadius: 0,
-    borderBottomRightRadius: 0,
   },
-  cardContent: {
+  cardBody: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing[5],
-    paddingLeft: spacing[5] + 4,
+    paddingVertical: spacing[4],
+    paddingHorizontal: spacing[4],
     gap: spacing[4],
   },
-  iconWrap: {
-    width: 56,
-    height: 56,
+  iconContainer: {
+    width: 52,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -219,27 +257,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[2],
+    flexWrap: 'wrap',
   },
   modeName: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.lg,
   },
-  lockBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[1],
+  statusPill: {
     paddingHorizontal: spacing[2],
-    paddingVertical: spacing[0.5],
+    paddingVertical: 3,
   },
-  lockText: {
+  statusText: {
     fontFamily: fontFamily.medium,
     fontSize: fontSize.xs,
   },
   modeTagline: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
+    lineHeight: fontSize.sm * 1.5,
   },
-  comingSoon: {
+
+  // Footer
+  footer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[2],
@@ -247,7 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
   },
-  comingSoonText: {
+  footerText: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
   },

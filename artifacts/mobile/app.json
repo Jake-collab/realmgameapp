@@ -1,27 +1,27 @@
 {
   "expo": {
-    "name": "GamePlatform",
+    "name": "Worlds",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "gameplatform",
-    "userInterfaceStyle": "dark",
+    "scheme": "worlds",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0A0A12"
+      "backgroundColor": "#F8FAFC"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.gameplatform.mobile"
+      "bundleIdentifier": "com.worlds.mobile"
     },
     "android": {
-      "package": "com.gameplatform.mobile",
+      "package": "com.worlds.mobile",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#0A0A12"
+        "backgroundColor": "#1D4ED8"
       }
     },
     "web": {

@@ -1,11 +1,12 @@
 /**
- * Game-mode types.
+ * Game-mode types — Worlds
  *
  * Currently planned modes:
  *   - Quest: story-driven, location-based puzzles
- *   - Hunt: competitive scavenger hunts
+ *   - Hunt:  competitive scavenger hunts
  *
- * Future modes can be added as additional GameMode values.
+ * Future modes are added as additional GameMode values plus a new
+ * entry in GAME_MODES — no other core changes required.
  */
 
 export type GameMode = 'quest' | 'hunt';
@@ -14,11 +15,12 @@ export interface GameModeConfig {
   id: GameMode;
   title: string;
   tagline: string;
-  /** Hex color for this game mode */
+  description: string;
+  /** Hex color for this game mode — matches colors.ts game-mode tokens */
   color: string;
-  /** Icon name from @expo/vector-icons Feather set */
+  /** Feather icon name */
   icon: string;
-  /** Whether this mode is currently available */
+  /** Whether this mode is currently playable */
   available: boolean;
 }
 
@@ -27,17 +29,19 @@ export const GAME_MODES: GameModeConfig[] = [
     id: 'quest',
     title: 'Quest',
     tagline: 'Follow the story. Solve the mystery.',
-    color: '#FF6B35',
+    description: 'Story-driven puzzles anchored to real places. Daily, monthly, and geo-located adventures.',
+    color: '#F97316',   // warm adventure orange — matches colors.light.quest
     icon: 'compass',
-    available: false, // Unlocked in Build 2
+    available: false,   // Unlocked in Build 4
   },
   {
     id: 'hunt',
     title: 'Hunt',
     tagline: 'Find it before the others do.',
-    color: '#00E5A0',
+    description: 'Competitive scavenger hunts on a live map. Official hunts, community events, and custom games.',
+    color: '#059669',   // forest green — matches colors.light.hunt
     icon: 'map-pin',
-    available: false, // Unlocked in Build 3
+    available: false,   // Unlocked in Build 6
   },
 ];
 
@@ -50,12 +54,13 @@ export interface GameSession {
   completedAt: string | null;
   score: number;
   status: 'active' | 'completed' | 'abandoned';
+  /** Distinguishes platform-published content from user-created content */
+  source: 'official' | 'custom' | 'community';
 }
 
-/** Difficulty levels used across game modes */
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'expert';
 
-/** Geographic location used in maps/game logic */
+/** Geographic coordinate used across game modes */
 export interface GeoLocation {
   latitude: number;
   longitude: number;

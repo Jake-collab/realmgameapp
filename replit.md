@@ -100,6 +100,32 @@ See `artifacts/mobile/docs/PROJECT_CONSTITUTION.md` Section 15 for the full 15-b
 
 ---
 
+## Permanent UX Rules (binding — do not break without explicit instruction)
+
+1. Do not invent additional bottom-nav tabs beyond those in the Constitution
+2. Do not create a Hunt Discover screen — the map is discovery
+3. Do not add a Geo tab to Quest — Geo-Quest lives in the Quests tab
+4. Do not duplicate content across Home, Progress, and My Hunts
+5. The Hunt map must remain the primary Hunt experience (default tab)
+6. Quest Home must prioritize one active quest — no equal-weight card grids
+7. Custom Game creation must be accessible from My Hunts
+8. One dominant primary action per screen — no competing CTAs
+9. Prefer bottom sheets for map-item details
+10. Preserve the blue-and-green Worlds visual direction (`#1D4ED8` primary, `#16A34A` accent)
+11. Ask for explicit instruction before materially redesigning established navigation
+12. Avoid generic dashboard layouts — every screen must feel like part of a game
+
+---
+
+## Visual Direction
+
+**Palette:** Deep blue `#1D4ED8` + natural green `#16A34A` · soft neutral `#F8FAFC` background · charcoal `#111827` text
+**Mode:** Light primary, dark fully tokenized for future activation
+**Quest color:** warm orange `#F97316` · **Hunt color:** forest green `#059669`
+**Do not:** use neon/cyberpunk aesthetics, excessive gradients, or unrelated accent colors
+
+---
+
 ## Critical Constraints
 
 - `EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_ANON_KEY` must be set for auth/DB to work

@@ -1,96 +1,130 @@
 /**
- * Design tokens for the game platform app.
+ * Design tokens — Worlds
  *
- * Dark theme is the primary experience (game aesthetic).
- * Light theme is provided as fallback.
+ * Visual direction: deep blue + natural green palette.
+ * Suggests exploration, earth, movement, discovery, technology.
  *
- * Special game-mode tokens:
- *  - quest: orange (#FF6B35) — used for Quest mode UI
- *  - hunt:  teal  (#00E5A0) — used for Hunt mode UI
+ * Light mode is the primary experience.
+ * Dark mode tokens are fully defined for future activation.
  *
- * Use the useColors() hook to access the current scheme's tokens.
+ * Game-mode specific colors:
+ *   quest: warm adventure orange (#F97316)
+ *   hunt:  forest green (#059669)
+ *
+ * Usage: always via the useColors() hook — never hardcode hex values.
  */
 
 const colors = {
-  dark: {
-    // Core surfaces
-    background: '#0A0A12',
-    foreground: '#F0F0FF',
-
-    // Cards / elevated surfaces
-    card: '#141420',
-    cardForeground: '#F0F0FF',
-
-    // Primary action color (buttons, links, active states) — vivid purple
-    primary: '#7C5CFC',
-    primaryForeground: '#FFFFFF',
-
-    // Secondary / subtle surfaces
-    secondary: '#1E1E30',
-    secondaryForeground: '#A0A0C0',
-
-    // Muted / subdued elements
-    muted: '#1A1A28',
-    mutedForeground: '#6B6B8A',
-
-    // Accent (general highlight)
-    accent: '#00E5A0',
-    accentForeground: '#0A0A12',
-
-    // Game-mode specific colors
-    quest: '#FF6B35',
-    questForeground: '#FFFFFF',
-    hunt: '#00E5A0',
-    huntForeground: '#0A0A12',
-
-    // Semantic
-    destructive: '#FF4D4D',
-    destructiveForeground: '#FFFFFF',
-    success: '#00C980',
-    successForeground: '#FFFFFF',
-    warning: '#FFC107',
-    warningForeground: '#0A0A12',
-
-    // Borders and input outlines
-    border: '#2A2A40',
-    input: '#1A1A28',
-
-    // Legacy aliases (kept for compatibility)
-    text: '#F0F0FF',
-    tint: '#7C5CFC',
-  },
+  // ─── Light Theme (primary) ────────────────────────────────────────────────
 
   light: {
-    background: '#FAFAFA',
-    foreground: '#0A0A12',
+    // Surfaces
+    background: '#F8FAFC',        // soft blue-white
+    foreground: '#111827',        // near-black charcoal
+
+    // Cards / elevated surfaces
     card: '#FFFFFF',
-    cardForeground: '#0A0A12',
-    primary: '#7C5CFC',
+    cardForeground: '#111827',
+
+    // Primary — deep exploration blue
+    primary: '#1D4ED8',
     primaryForeground: '#FFFFFF',
-    secondary: '#F0F0FF',
-    secondaryForeground: '#1A1A2E',
-    muted: '#F0F0FF',
-    mutedForeground: '#6B6B8A',
-    accent: '#00C980',
+
+    // Secondary / subtle tinted surfaces
+    secondary: '#EFF6FF',         // very pale blue
+    secondaryForeground: '#1E3A8A',
+
+    // Muted / subdued elements
+    muted: '#F1F5F9',
+    mutedForeground: '#64748B',
+
+    // Accent — natural exploration green
+    accent: '#16A34A',
     accentForeground: '#FFFFFF',
-    quest: '#FF6B35',
+
+    // Game-mode specific
+    quest: '#F97316',             // warm adventure orange
     questForeground: '#FFFFFF',
-    hunt: '#00C980',
+    hunt: '#059669',              // forest green
     huntForeground: '#FFFFFF',
-    destructive: '#FF4D4D',
+
+    // Semantic states
+    destructive: '#DC2626',
     destructiveForeground: '#FFFFFF',
-    success: '#00C980',
+    success: '#16A34A',
     successForeground: '#FFFFFF',
-    warning: '#FFC107',
-    warningForeground: '#0A0A12',
-    border: '#E5E5F0',
-    input: '#F0F0FF',
-    text: '#0A0A12',
-    tint: '#7C5CFC',
+    warning: '#D97706',
+    warningForeground: '#FFFFFF',
+    info: '#0284C7',
+    infoForeground: '#FFFFFF',
+
+    // Structure
+    border: '#E2E8F0',
+    input: '#F8FAFC',
+    inputBorder: '#CBD5E1',
+
+    // Legacy aliases
+    text: '#111827',
+    tint: '#1D4ED8',
   },
 
-  // Border radius (in px). Applied to cards, buttons, inputs, modals.
-  radius: 12,
-};
+  // ─── Dark Theme (future) ──────────────────────────────────────────────────
 
+  dark: {
+    // Surfaces — deep navy, not pure black
+    background: '#0F172A',        // slate-900
+    foreground: '#F1F5F9',
+
+    // Cards
+    card: '#1E293B',              // slate-800
+    cardForeground: '#F1F5F9',
+
+    // Primary — lighter blue for dark backgrounds
+    primary: '#3B82F6',           // blue-500
+    primaryForeground: '#FFFFFF',
+
+    // Secondary
+    secondary: '#1E293B',
+    secondaryForeground: '#94A3B8',
+
+    // Muted
+    muted: '#0F172A',
+    mutedForeground: '#64748B',
+
+    // Accent — brighter green for dark backgrounds
+    accent: '#22C55E',            // green-500
+    accentForeground: '#0F172A',
+
+    // Game-mode specific
+    quest: '#FB923C',             // orange-400
+    questForeground: '#FFFFFF',
+    hunt: '#34D399',              // emerald-400
+    huntForeground: '#0F172A',
+
+    // Semantic states
+    destructive: '#EF4444',
+    destructiveForeground: '#FFFFFF',
+    success: '#22C55E',
+    successForeground: '#FFFFFF',
+    warning: '#F59E0B',
+    warningForeground: '#0F172A',
+    info: '#38BDF8',
+    infoForeground: '#0F172A',
+
+    // Structure
+    border: '#334155',            // slate-700
+    input: '#1E293B',
+    inputBorder: '#475569',
+
+    // Legacy aliases
+    text: '#F1F5F9',
+    tint: '#3B82F6',
+  },
+
+  // ─── Border radius ────────────────────────────────────────────────────────
+  // Applied to cards, buttons, inputs, modals.
+  radius: 12,
+} as const;
+
+export type ColorScheme = typeof colors.light;
 export default colors;
