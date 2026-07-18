@@ -1,0 +1,2 @@
+- [Supabase lazy init](supabase-lazy-init.md) — Supabase client must be null-guarded when credentials are absent; createClient throws on empty URL.
+- [NativeWind v4 conflict](nativewind-conflict.md) — NativeWind v4 needs tailwindcss@~3; workspace catalog pins v4.3.2 — incompatible without override.

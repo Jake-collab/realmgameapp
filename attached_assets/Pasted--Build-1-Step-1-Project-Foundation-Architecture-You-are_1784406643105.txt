@@ -1,0 +1,272 @@
+# Build 1 — Step 1: Project Foundation & Architecture
+
+You are building a brand-new production-quality mobile application from scratch. There is no legacy code to preserve.
+
+This application must be designed to scale over many years, so prioritize clean architecture, maintainability, modularity, and performance over speed.
+
+Do **not** implement Quest gameplay, Hunt gameplay, Mapbox, AI generation, payments, or advanced features yet. Those will each be implemented in later steps.
+
+Your goal in this step is to create the foundation that every later feature will build upon.
+
+---
+
+## Technology Stack
+
+Use:
+
+* React Native with Expo (latest stable version)
+* Expo Router
+* TypeScript
+* Supabase (authentication, database, storage, row-level security)
+* React Query (TanStack Query)
+* Zustand for lightweight client state
+* React Hook Form
+* Zod validation
+* NativeWind (Tailwind for React Native)
+* React Native Reanimated
+* React Native Gesture Handler
+
+Organize the project using scalable feature-based architecture.
+
+---
+
+## Project Structure
+
+Create a clean folder structure similar to:
+
+/app
+
+/components
+
+/features
+
+/shared
+
+/services
+
+/hooks
+
+/lib
+
+/types
+
+/constants
+
+/assets
+
+/supabase
+
+/docs
+
+Use feature folders wherever appropriate.
+
+Avoid placing everything into one large components folder.
+
+---
+
+## Environment Configuration
+
+Create proper environment support.
+
+Prepare placeholders for:
+
+* Supabase URL
+* Supabase anonymous key
+* Mapbox access token
+* AI API key (server-side only later)
+
+Do not hardcode credentials.
+
+Document where each value belongs.
+
+---
+
+## Supabase Preparation
+
+Prepare the project so Supabase can be connected later.
+
+Do not require actual credentials yet.
+
+Create:
+
+* Supabase client wrapper
+* Authentication service
+* Database service layer
+* Storage service layer
+
+These may initially contain placeholders until credentials are added.
+
+---
+
+## Authentication Foundation
+
+Prepare authentication architecture supporting:
+
+* Anonymous visitor
+* Registered user
+* Moderator
+* Creator
+* Administrator
+
+Do not build the UI yet.
+
+---
+
+## Global Theme
+
+Create the application's design system.
+
+Include:
+
+* Color palette
+* Typography
+* Spacing
+* Border radius
+* Shadows
+* Icons
+* Button variants
+* Cards
+* Inputs
+* Loading indicators
+* Error states
+
+Use reusable theme tokens.
+
+Avoid magic numbers throughout the project.
+
+---
+
+## Navigation Foundation
+
+Build only the shell.
+
+The application will eventually support multiple game modes.
+
+Prepare architecture for:
+
+Game Selector
+
+↓
+
+Quest
+
+↓
+
+Hunt
+
+↓
+
+Future game modes
+
+Do not build their pages yet.
+
+Only prepare the navigation framework.
+
+---
+
+## Shared Screens
+
+Create placeholder screens only for:
+
+* Loading
+* Authentication
+* Home Shell
+* Profile
+* Notifications
+* Settings
+
+Display simple placeholder text.
+
+Do not begin implementing features.
+
+---
+
+## Documentation
+
+Create documentation files explaining:
+
+Project Architecture
+
+Folder Structure
+
+Coding Standards
+
+State Management
+
+Networking Strategy
+
+Future Build Plan
+
+Database Strategy
+
+Map Strategy
+
+AI Strategy
+
+The documentation should help future AI agents understand the project.
+
+---
+
+## Code Quality
+
+Configure:
+
+ESLint
+
+Prettier
+
+TypeScript strict mode
+
+Consistent import aliases
+
+Environment typing
+
+Reusable constants
+
+---
+
+## Performance
+
+Prepare the application for:
+
+Lazy loading
+
+Code splitting
+
+Caching
+
+Offline support
+
+Image optimization
+
+Future Mapbox optimization
+
+Do not implement these systems yet.
+
+---
+
+## Deliverables
+
+At completion provide:
+
+1. Folder structure
+
+2. Installed packages
+
+3. Project architecture summary
+
+4. Documentation files created
+
+5. Any assumptions made
+
+6. Commands executed
+
+7. Remaining setup required before Step 2
+
+Do not begin Step 2.
+
+Stop after the project foundation has been completed.
+
+Create a checkpoint named:
+
+**Build 1 — Step 1 — Project Foundation**
