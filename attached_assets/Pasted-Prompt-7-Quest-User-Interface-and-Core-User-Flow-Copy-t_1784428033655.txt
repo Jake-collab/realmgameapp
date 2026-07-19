@@ -1,0 +1,1683 @@
+Prompt 7 — Quest User Interface and Core User Flow
+
+Copy this into Replit AI:
+
+# Worlds — Build 1, Prompt 7
+# Quest User Interface and Core User Flow
+Continue from the current Worlds project and follow these documents as authoritative:
+- /docs/PROJECT_CONSTITUTION.md
+- /docs/DATABASE_ARCHITECTURE.md
+- /docs/ROW_LEVEL_SECURITY.md
+- /docs/QUEST_DOMAIN.md
+- /docs/QUEST_STATE_MACHINE.md
+- /docs/QUEST_SCHEDULING.md
+- /docs/QUEST_PROOF_SYSTEM.md
+- /docs/QUEST_POINT_AWARDS.md
+- /docs/QUEST_SECURITY.md
+- /docs/PROFILE_AND_SETTINGS.md
+- replit.md
+- the approved UI/UX addendum
+- the approved authentication and navigation clarification
+The application is named:
+Worlds
+Prompt 6 implemented the reusable Quest domain logic, availability evaluation, scheduling, participation lifecycle, proof rules, completion transaction, and point-award integrity.
+This prompt must implement the polished user-facing Quest experience using those existing services and rules.
+Do not recreate or bypass the Prompt 6 business logic.
+Do not redesign the approved navigation.
+Do not build the finished Quest Progress and leaderboard experience in this prompt. That belongs in Prompt 8.
+Do not implement Mapbox or the finished Geo-Quest map. That belongs in Prompts 9 and 10.
+---
+# Primary Objective
+Implement the core Quest user journey:
+```text
+Quest Home
+    ↓
+Quest Summary or Quest List
+    ↓
+Quest Detail
+    ↓
+Start Quest
+    ↓
+Active Quest
+    ↓
+Complete Objectives
+    ↓
+Submit Required Proof
+    ↓
+Completion or Review Status
+
+The finished Quest experience should feel:
+
+* Focused
+* Encouraging
+* Activity-oriented
+* Modern
+* Minimal
+* Game-like without appearing childish
+* Consistent with the blue-and-green Worlds design direction
+
+The active Quest must remain the most visually important part of Quest Home.
+
+⸻
+
+1. Preserve the Approved Quest Navigation
+
+Quest bottom navigation must remain exactly:
+
+1. Home
+2. Quests
+3. Map
+4. Progress
+5. Profile
+
+Do not add:
+
+* Discover
+* Geo as a bottom tab
+* Hunt as a bottom tab
+* Notifications as a bottom tab
+* Settings as a bottom tab
+* Create as a bottom tab
+
+The top Quest/Hunt game-mode selector must remain intact.
+
+The Profile tab must continue using the shared Profile implementation from Prompt 5.
+
+The Progress tab may remain a controlled placeholder until Prompt 8, but its route must remain intact.
+
+The Map tab may remain a controlled placeholder until Prompts 9 and 10.
+
+Do not rebuild the main application shell.
+
+⸻
+
+2. Quest Feature Screens
+
+Implement or complete these user-facing screens:
+
+* Quest Home
+* Quests
+* Quest Detail
+* Active Quest
+* Quest Step Detail where necessary
+* Quest Proof Submission
+* Quest Completion Confirmation
+* Quest Abandonment Confirmation
+* Safe temporary Map placeholder
+* Safe temporary Progress placeholder
+
+Use shared components and Prompt 6 services.
+
+Do not place raw Supabase queries inside screens.
+
+⸻
+
+3. Quest Home Screen
+
+Quest Home should prioritize the user’s most important current Quest state.
+
+Use the Prompt 6 active-Quest selection rules.
+
+The screen should generally contain:
+
+1. Compact screen header
+2. One dominant active or prioritized Quest area
+3. Daily Quest summary
+4. Monthly Quest Drop summary
+5. Geo-Quest preview
+6. Compact personal points or rank summary where data is available
+
+Do not turn Quest Home into a grid of equally weighted cards.
+
+Do not show a long generic feed.
+
+Do not repeat the full Quests list on Home.
+
+⸻
+
+4. Quest Home Header
+
+Use the existing compact top-level header.
+
+Include:
+
+* Current game-mode selector showing Quest
+* Notification icon
+* Unread badge from Prompt 5
+
+Do not add a large “Worlds” title that wastes vertical space.
+
+A concise contextual title such as “Quest” or a welcome phrase may be used only if it does not duplicate the selector unnecessarily.
+
+Do not duplicate Profile controls in the header when Profile already exists in bottom navigation.
+
+⸻
+
+5. Dominant Active Quest Panel
+
+When the user has an active participation, display one expanded active Quest panel prominently.
+
+Include:
+
+* Quest image or controlled placeholder
+* Quest title
+* Quest type
+* Current objective
+* Participation status
+* Points reward
+* Deadline or remaining availability where important
+* Progress only when genuinely measurable
+* One primary action
+
+Possible primary actions include:
+
+* Continue Quest
+* Complete Next Step
+* Submit Proof
+* Resubmit Proof
+* View Submission
+* View Completion
+
+Use the Prompt 6 state machine to determine the action.
+
+Do not create conflicting actions.
+
+Do not show Start Quest for an already active participation.
+
+Do not use progress bars for single-step or nonquantifiable activities.
+
+⸻
+
+6. Home State When No Quest Is Active
+
+When the user has no active Quest:
+
+* Show the current prioritized Daily Quest as the dominant experience.
+* Include title, brief objective, points, estimated time, and difficulty.
+* Use one primary action:
+    * View Quest
+    * Or Start Quest only if sufficient details are already displayed and the user can make an informed decision
+
+Prefer opening Quest Detail before initiation when safety, location, proof, or accessibility information is important.
+
+Do not show an empty dashboard merely because no Quest is active.
+
+⸻
+
+7. Home State Priority
+
+Use this priority order:
+
+1. Proof requiring resubmission
+2. Active Quest requiring user action
+3. Active Quest in progress
+4. Proof under review
+5. Recently completed Quest confirmation when appropriate
+6. Prioritized current Daily Quest
+7. Useful empty or unavailable state
+
+The UI must not show multiple dominant Quest panels simultaneously.
+
+Supporting Daily, Monthly, and Geo sections may still appear below.
+
+⸻
+
+8. Daily Quest Summary
+
+Create a concise Daily Quest summary section.
+
+Display:
+
+* Daily Quest label
+* Quest title
+* Short objective
+* Points
+* Estimated duration
+* Difficulty
+* Availability state
+* Relevant primary or secondary action
+
+Possible states:
+
+* Available
+* Active
+* Completed today
+* Upcoming
+* Unavailable
+* No Daily Quest currently available
+
+Do not make a completed Daily Quest appear startable again within the same occurrence.
+
+Use deterministic Prompt 6 occurrence logic.
+
+⸻
+
+9. Monthly Quest Drop Summary
+
+Create a visually distinct but restrained Monthly Quest Drop summary.
+
+Display:
+
+* Monthly Quest Drop label
+* Quest title
+* Feature image when available
+* Short description
+* Points
+* Availability dates
+* Completion or participation state
+* View action
+
+Monthly content may have slightly stronger visual emphasis than ordinary supporting cards, but it must not compete with an active Quest.
+
+Do not use a countdown unless the timing is accurate and useful.
+
+Use local display time while respecting authoritative UTC scheduling.
+
+⸻
+
+10. Geo-Quest Preview
+
+Create a Geo-Quest preview section without implementing the finished map.
+
+Display a small number of relevant Geo-Quest summaries, such as:
+
+* Nearest available Quest when location permission is granted
+* Featured Geo-Quest
+* Location-required explanation when permission is unavailable
+
+Each preview may include:
+
+* Location-pin icon
+* Quest title
+* Location name
+* Approximate distance when safely available
+* Points
+* Availability state
+* View action
+
+Do not expose protected validation coordinates.
+
+Do not pretend distance is available when location or Mapbox is unconfigured.
+
+Use a clear placeholder state such as:
+
+“Enable location to see nearby Geo-Quests.”
+
+The Map tab itself will be completed later.
+
+⸻
+
+11. Personal Point Summary
+
+Display a concise point summary where appropriate.
+
+May include:
+
+* Total points
+* Points earned recently
+* Future rank placeholder only if real ranking data is unavailable
+
+Do not invent a fake rank.
+
+Do not build the full leaderboard UI.
+
+Use the Prompt 3 points ledger or approved summary view.
+
+The points display should be informational and should not dominate Quest Home.
+
+⸻
+
+12. Quests Screen
+
+Implement the Quests screen with exactly these primary sections:
+
+* Daily Quest
+* Monthly Quest Drop
+* Geo-Quest
+
+Do not add Discover.
+
+Do not add generalized recommendation categories as separate top-level screens.
+
+The screen may use:
+
+* Stacked sections
+* A compact segmented control
+* Tabs inside the screen
+
+Choose the clearest implementation, but keep all three categories within the Quests screen.
+
+Do not confuse these internal categories with bottom-navigation tabs.
+
+⸻
+
+13. Quests Screen Filtering
+
+Keep Build 1 filters minimal.
+
+Allow only clearly useful controls such as:
+
+* Available
+* In Action
+* Completed-ready link to Progress
+* Difficulty
+* Duration
+* Indoor/outdoor
+* Accessibility
+* Interest category
+
+Do not expose every backend field.
+
+Do not build a complex desktop-style filter panel.
+
+Use a compact filter button opening a bottom sheet where filters are needed.
+
+The initial screen should remain understandable without configuring filters.
+
+⸻
+
+14. Quest Cards
+
+Create a reusable QuestCard component.
+
+The card should support variants for:
+
+* Home dominant Quest
+* Daily Quest
+* Monthly Quest
+* Geo-Quest
+* Compact list item
+
+Possible content:
+
+* Image or icon
+* Quest type
+* Title
+* Short objective
+* Points badge
+* Estimated duration
+* Difficulty
+* Location name or distance for Geo-Quests
+* Availability or participation status
+* One clear action or tappable card behavior
+
+Do not show every metadata field on the card.
+
+Do not nest smaller cards inside Quest cards.
+
+Do not place multiple primary buttons on one card.
+
+Use accessible labels describing title, status, points, and action.
+
+⸻
+
+15. Quest Detail Screen
+
+Implement a complete Quest Detail screen.
+
+Display:
+
+* Hero or contextual image when available
+* Quest title
+* Quest type
+* Points reward
+* Estimated duration
+* Difficulty
+* Indoor/outdoor indicator where relevant
+* Accessibility information
+* Location information
+* Availability period where useful
+* Clear objective
+* Full instructions
+* Steps when multi-step
+* Proof requirements
+* Safety notes
+* Relevant category or interest tags
+* Current participation state
+* One dominant primary action
+
+Before initiation, the primary button must say:
+
+Start Quest
+
+Do not use vague wording such as:
+
+* Go
+* Begin Activity
+* Accept
+* Join
+
+Use Start Quest consistently.
+
+⸻
+
+16. Quest Detail Primary Actions
+
+Derive the action from the Prompt 6 availability and participation state.
+
+Examples:
+
+Available and not started
+
+* Start Quest
+
+Active
+
+* Continue Quest
+
+Awaiting proof
+
+* Submit Proof
+
+Under review
+
+* View Submission
+
+Needs resubmission
+
+* Resubmit Proof
+
+Completed
+
+* View Completion
+
+Upcoming
+
+* Disabled action with availability date
+
+Expired
+
+* No start action
+
+Ineligible
+
+* Show clear reason and safe corrective action where available
+
+Do not duplicate business rules in the component.
+
+Use one action resolver based on the domain state.
+
+⸻
+
+17. Start Quest Interaction
+
+When the user taps Start Quest:
+
+1. Prevent repeated taps.
+2. Show a brief loading state.
+3. Call the Prompt 6 startQuest operation.
+4. Handle an existing participation idempotently.
+5. Route to Active Quest on success.
+6. Update Home, Quests, Detail, and participation queries.
+7. Show a safe error if availability changed.
+8. Do not award points.
+9. Do not optimistically pretend the Quest started before the trusted operation succeeds.
+
+For Quests involving meaningful safety, travel, permissions, or proof requirements, show a concise pre-start confirmation.
+
+The confirmation may summarize:
+
+* Expected duration
+* Location requirement
+* Proof requirement
+* Deadline
+* Safety notice
+
+Avoid unnecessary confirmation for trivial low-risk Quests.
+
+⸻
+
+18. Active Quest Screen
+
+Implement the Active Quest screen.
+
+It should display:
+
+* Quest title
+* Current participation state
+* Current objective
+* Instructions
+* Points reward snapshot
+* Started time where useful
+* Deadline where applicable
+* Step progress for multi-step Quests
+* Required proof
+* Location state where relevant
+* Primary next action
+* Secondary abandon action
+
+Keep the current objective visually dominant.
+
+Do not cover the screen with unrelated recommendations.
+
+Do not display other Quests within Active Quest.
+
+⸻
+
+19. Active Quest Header
+
+Use a compact header including:
+
+* Back navigation where appropriate
+* Quest title or concise “Active Quest” label
+* Optional more menu for safe secondary actions
+
+The abandon action should not be a prominent destructive button next to the primary objective action.
+
+Place abandonment in:
+
+* A secondary menu
+* A restrained text action
+* Or the lower part of the screen
+
+Require confirmation before abandonment.
+
+⸻
+
+20. Single-Step Quest Experience
+
+For a single-step Quest:
+
+* Show one clear objective.
+* Show proof requirements.
+* Show completion action.
+* Avoid a meaningless progress bar.
+* Route directly into proof submission when proof is required.
+* Call the trusted completion path when no proof is required and completion is allowed.
+
+Do not let the user directly set the participation to completed.
+
+Use the Prompt 6 service.
+
+⸻
+
+21. Multi-Step Quest Experience
+
+For a multi-step Quest:
+
+Display:
+
+* Current step
+* Completed steps
+* Remaining required steps
+* Optional steps where applicable
+* Step numbers only when ordered
+* Locked state when sequencing is enforced
+* Clear next-step action
+
+Use progress text such as:
+
+“2 of 4 required steps completed”
+
+A progress bar may be used when the denominator is meaningful.
+
+Do not count optional steps as required progress.
+
+Do not let users skip required ordered steps.
+
+Use Prompt 6 transition and sequencing rules.
+
+⸻
+
+22. Quest Step Detail
+
+Create a focused step-detail view or expandable section when a step requires more context.
+
+Include:
+
+* Step title
+* Instructions
+* Completion requirement
+* Proof requirement
+* Location requirement
+* Safety information
+* Current status
+* Primary action
+
+Do not create unnecessary separate screens for simple steps.
+
+Use a dedicated step screen only when it improves clarity.
+
+⸻
+
+23. Client-Allowed Step Actions
+
+For simple steps that Prompt 6 permits the user to mark:
+
+* Show a clear Mark Step Complete or Continue action.
+* Confirm when accidental completion would be difficult to reverse.
+* Call the domain service.
+* Update relevant queries.
+* Advance to the next step.
+
+Do not use this for:
+
+* Proof-required steps
+* Protected location validation
+* Reviewer-approved steps
+* Reward-sensitive final completion without server validation
+
+⸻
+
+24. Proof Submission Interface
+
+Implement the user-facing proof submission flow.
+
+Support only the proof types defined in Prompt 6, such as:
+
+* Text
+* Image
+* Location
+* Image and location
+* Text and image
+* Manual confirmation
+
+The interface should adapt to the Quest’s requirements.
+
+Do not display irrelevant input fields.
+
+For example:
+
+* An image-only proof should not show a required text field.
+* A text-only proof should not request media access.
+* A location-only proof should not request image access.
+
+⸻
+
+25. Proof Submission Flow
+
+Use a guided flow:
+
+1. Explain what proof is required.
+2. Allow the user to provide required evidence.
+3. Show a preview.
+4. Validate evidence.
+5. Confirm submission.
+6. Upload or submit.
+7. Show the correct resulting state.
+
+Do not submit immediately when the user selects an image.
+
+Allow review before final submission.
+
+The user should understand that submitted proof may become immutable and require resubmission to change.
+
+⸻
+
+26. Image Proof
+
+Implement image proof using the protected media architecture.
+
+Support:
+
+* Select image from device library
+* Camera-ready architecture only if already approved and technically available
+* Image preview
+* Remove and replace before submission
+* Multiple images only when the Quest configuration allows it
+* File validation
+* Image compression
+* Upload progress
+* Upload retry
+* Cancellation
+* Protected storage
+
+Do not request camera permission unless the user explicitly chooses a camera action.
+
+Do not make proof images public.
+
+Do not claim automated moderation has occurred.
+
+Use moderation statuses from Prompt 3 where appropriate.
+
+⸻
+
+27. Text Proof
+
+Implement text proof with:
+
+* Clear prompt
+* Minimum and maximum character rules
+* Character count
+* Plain-text validation
+* Safe multiline input
+* Draft preservation during the current session
+* Accessible error messages
+
+Do not allow arbitrary HTML.
+
+Do not include sensitive technical information in error messages.
+
+⸻
+
+28. Location Proof
+
+Prepare the location-proof interface using Expo location services and Prompt 6 rules.
+
+The screen should:
+
+* Explain why location is required
+* Show permission state
+* Request foreground permission only after user action
+* Acquire a current location reading
+* Show accuracy
+* Allow retry
+* Submit evidence through the trusted service
+* Avoid displaying private validation geometry
+* Avoid storing continuous location history
+
+Until the final Prompt 10 validation endpoint exists:
+
+* Use the prepared service contract.
+* Clearly isolate any development stub.
+* Do not mark protected location completion successful based only on a client-side distance calculation.
+* Do not award points through a stub.
+* Show a controlled development-only limitation where server validation is unavailable.
+
+⸻
+
+29. Proof Preview and Confirmation
+
+Before submission, show:
+
+* Quest or step title
+* Evidence previews
+* Text response where applicable
+* Location captured status where applicable
+* Submission warning
+* Submit Proof button
+
+Suggested warning:
+
+“After submission, your proof may need review before points are awarded.”
+
+Do not imply approval is automatic unless the Quest is explicitly configured for trusted automatic validation.
+
+⸻
+
+30. Proof Upload and Submission State
+
+Handle these states clearly:
+
+* Draft
+* Selecting evidence
+* Compressing
+* Uploading
+* Upload failed
+* Ready to submit
+* Submitting
+* Submitted
+* Under review
+* Needs resubmission
+* Rejected
+* Approved
+
+Prompt 8 will provide the complete Progress-area review-state organization.
+
+This prompt should implement the immediate in-flow result after submission and the Active Quest status.
+
+Do not duplicate the future Progress screen.
+
+⸻
+
+31. Proof Submission Success
+
+After valid submission:
+
+* Update participation state.
+* Invalidate relevant queries.
+* Prevent duplicate submission.
+* Show a confirmation.
+* Route to Active Quest status or a concise submission result screen.
+
+Possible messages:
+
+Manual review
+
+“Your proof was submitted for review.”
+
+Automatic validation pending
+
+“Your submission is being validated.”
+
+Approved automatic completion
+
+“Quest complete.”
+
+Do not show points as awarded until the trusted completion transaction confirms the ledger entry.
+
+⸻
+
+32. Needs Resubmission State
+
+When proof requires resubmission, display:
+
+* Clear status
+* Reviewer explanation safe for the user
+* What needs to be corrected
+* Previous submission summary
+* Resubmit Proof action
+
+Do not expose:
+
+* Internal moderator notes
+* Reviewer private identity
+* Raw moderation provider output
+* Database status codes
+
+Link the new submission to the prior one using Prompt 6 logic.
+
+⸻
+
+33. Under Review State
+
+When proof is under review:
+
+* Show the submission timestamp.
+* Show evidence summary where appropriate.
+* Explain that points are awarded after approval.
+* Disable duplicate submission.
+* Allow cancellation only if the domain rules explicitly permit it.
+* Provide a route back to Quest Home.
+
+Do not create an exact review-time promise unless the product has one.
+
+Use wording such as:
+
+“Your proof is under review. You’ll receive a notification when a decision is available.”
+
+⸻
+
+34. Automatic Completion
+
+For a no-proof Quest or automatically validated Quest:
+
+* Confirm required steps are complete.
+* Call the trusted Prompt 6 completion operation.
+* Show a loading state.
+* Handle idempotent repeated requests.
+* Show awarded points only after confirmed success.
+* Update profile point summary and Quest queries.
+
+Do not calculate or insert points directly in the UI.
+
+Do not trust a points_reward value supplied by the screen.
+
+⸻
+
+35. Quest Completion Screen
+
+Implement a polished completion confirmation.
+
+Display:
+
+* Completion acknowledgement
+* Quest title
+* Points awarded
+* Completion date
+* Achievement-ready placeholder only if an achievement was actually awarded
+* Return to Quest Home
+* View Progress action
+
+Keep it concise.
+
+Use subtle completion motion respecting reduced-motion preferences.
+
+Do not add a mandatory social-sharing step.
+
+Do not invent confetti-heavy or childish effects.
+
+Do not show an unconfirmed reward.
+
+⸻
+
+36. Completion Race and Retry Handling
+
+Handle cases where:
+
+* The user taps completion twice.
+* The network response is delayed.
+* The completion succeeded but the client lost the response.
+* The reward was already issued.
+* The participation was already completed on another device.
+
+Use the Prompt 6 idempotent completion result.
+
+On retry, retrieve and show the existing valid completion instead of reporting an error or awarding again.
+
+⸻
+
+37. Quest Abandonment
+
+Implement a confirmation flow.
+
+Explain:
+
+* Progress will be preserved in history.
+* Points will not be awarded.
+* Restart availability depends on the Quest rules.
+* Submitted proof under review may not be abandonable.
+
+Buttons:
+
+* Keep Quest
+* Abandon Quest
+
+Use the Prompt 6 operation.
+
+Do not delete participation records.
+
+After abandonment:
+
+* Update Home
+* Update Quests
+* Route to an appropriate screen
+* Show a concise confirmation
+
+⸻
+
+38. Expired Quest Experience
+
+Handle:
+
+* Content expired before start
+* Participation deadline expired
+* Daily occurrence ended
+* Monthly Quest ended
+* Started-user grace period
+* Hard expiration
+
+Display:
+
+* Clear expired status
+* Relevant date or explanation
+* Whether completion is still allowed
+* Completion history where applicable
+* No invalid Start Quest action
+
+Do not rely solely on the device clock.
+
+If the server reports expiration during an action, refresh the domain state and explain what changed.
+
+⸻
+
+39. Upcoming Quest Experience
+
+For upcoming Daily or Monthly content:
+
+* Show the availability date.
+* Disable Start Quest.
+* Allow viewing details when permitted.
+* Do not expose draft content.
+* Do not create a notification subscription workflow yet unless it already exists in the notification preferences.
+
+Use the user’s local display timezone.
+
+Do not use ambiguous countdowns that drift from server state.
+
+⸻
+
+40. Unavailable and Ineligible States
+
+Map Prompt 6 reason codes into clear UI states.
+
+Examples:
+
+Location permission required
+
+“Enable location to check availability for this Geo-Quest.”
+
+Quest already completed
+
+“You completed this Quest.”
+
+Active participation exists
+
+“Continue your current Quest.”
+
+Repeat cooldown
+
+“This Quest will be available again later.”
+
+Prerequisite not met
+
+“Complete the required Quest first.”
+
+Account restricted
+
+“This action is currently unavailable for your account.”
+
+Do not expose internal security details.
+
+Provide corrective actions only where they are legitimate.
+
+⸻
+
+41. Empty States
+
+Create deliberate empty states.
+
+No current Daily Quest
+
+“No Daily Quest is available right now. Check back soon.”
+
+No Monthly Quest
+
+“The next Monthly Quest Drop is being prepared.”
+
+No Geo-Quests
+
+“No Geo-Quests are available in this area yet.”
+
+Location unavailable
+
+“Enable location to discover nearby Geo-Quests.”
+
+No active Quest
+
+“Choose a Quest to begin your next activity.”
+
+Do not imply content exists when it does not.
+
+⸻
+
+42. Loading States
+
+Create layout-specific skeletons for:
+
+* Quest Home
+* Daily summary
+* Monthly summary
+* Quest cards
+* Quest Detail
+* Active Quest
+* Proof submission
+* Completion confirmation
+
+Do not use one generic full-screen spinner for every query.
+
+Use a blocking loader only for protected mutations such as:
+
+* Starting Quest
+* Submitting proof
+* Completing Quest
+
+Avoid layout shifts.
+
+⸻
+
+43. Error States
+
+Handle:
+
+* Network unavailable
+* Quest unavailable
+* Quest changed after page load
+* Participation conflict
+* Upload failed
+* Proof submission failed
+* Completion status uncertain
+* Permission denied
+* Server validation unavailable
+* Unknown safe error
+
+Provide:
+
+* Retry
+* Return
+* Refresh
+* Open Settings where relevant
+
+Do not expose raw Supabase or SQL errors.
+
+Do not erase locally selected proof evidence after a recoverable upload failure when it can be safely preserved.
+
+⸻
+
+44. Offline Behavior During This Prompt
+
+Prepare safe baseline behavior.
+
+Allow cached viewing of:
+
+* Previously loaded Quest summaries
+* Previously loaded Quest Detail
+* Active Quest instructions
+* Existing step state
+
+Do not allow offline protected mutations to appear complete when server confirmation is required.
+
+For actions such as:
+
+* Start Quest
+* Submit proof
+* Complete Quest
+
+show a clear message when connectivity is required.
+
+A pending upload queue may be prepared, but full offline synchronization belongs in Prompt 22.
+
+Do not create a second offline architecture.
+
+⸻
+
+45. Quest Media Presentation
+
+Use Prompt 3 media relations.
+
+Support:
+
+* Cover image
+* Detail image
+* Instructional image
+* Proof example
+
+Requirements:
+
+* Consistent aspect ratios
+* Placeholder while loading
+* Failed-image fallback
+* Alt text
+* Image caching readiness
+* No stretched images
+* No pending private media shown publicly
+* No direct exposure of protected storage paths
+
+Do not use oversized hero images that force important Quest details below the fold unnecessarily.
+
+⸻
+
+46. Safety Presentation
+
+Display safety notes prominently when the Quest has meaningful risk or location considerations.
+
+Safety notes may include:
+
+* Remain aware of surroundings
+* Do not trespass
+* Follow posted rules
+* Do not use the app while driving
+* Stop if conditions are unsafe
+* Respect privacy and consent
+
+Do not add the same large warning to every harmless Quest.
+
+Use context-sensitive presentation.
+
+Do not create unsafe seed Quest UI examples.
+
+⸻
+
+47. Accessibility Information
+
+Display accessibility notes when available.
+
+Support information such as:
+
+* Wheelchair access
+* Walking distance
+* Standing requirement
+* Outdoor terrain
+* Visual or hearing considerations
+* Alternative completion method where configured
+
+Do not infer accessibility details that are absent from the backend.
+
+Use “Accessibility information unavailable” only when necessary and useful.
+
+⸻
+
+48. Map and Progress Placeholders
+
+The Quest bottom tabs already include Map and Progress.
+
+Until later prompts:
+
+Map placeholder
+
+Show a polished controlled state explaining that Geo-Quest mapping will use the prepared mapping system.
+
+Do not display a fake interactive map.
+
+Do not remove the Map tab.
+
+Progress placeholder
+
+Show a polished controlled state or limited real summary using existing data.
+
+Prompt 8 will implement:
+
+* Leaderboards
+* In Action
+* Completed
+* Full proof-review states
+
+Do not duplicate Prompt 8’s finished interface now.
+
+⸻
+
+49. Deep Linking
+
+Prepare safe routes for:
+
+* Quest Detail
+* Active Quest
+* Proof submission
+* Proof status
+* Completion result
+
+These routes will be used by notifications later.
+
+Requirements:
+
+* Validate IDs.
+* Verify user access.
+* Handle missing or archived content.
+* Redirect unauthorized users safely.
+* Do not expose another user’s participation through a guessed URL.
+* Avoid redirect loops.
+
+⸻
+
+50. Reusable Components
+
+Create or finalize reusable components such as:
+
+* QuestCard
+* ActiveQuestPanel
+* QuestTypeBadge
+* PointsBadge
+* DifficultyBadge
+* DurationLabel
+* LocationSummary
+* AvailabilityNotice
+* QuestObjective
+* QuestStepList
+* QuestStepRow
+* ProofRequirementSummary
+* ProofUploader
+* ProofPreview
+* SubmissionStatus
+* QuestPrimaryAction
+* QuestCompletionSummary
+* SafetyNotice
+* AccessibilityNotice
+* QuestSkeleton
+* QuestEmptyState
+
+Use the existing design system.
+
+Do not create duplicate button, card, modal, or image-upload components when Prompt 5 already created reusable versions.
+
+⸻
+
+51. Action Resolver
+
+Create one reusable function or hook that maps Quest state to UI action.
+
+It should determine:
+
+* Label
+* Enabled state
+* Action type
+* Loading behavior
+* Reason when disabled
+* Destination or mutation
+
+Possible action types:
+
+* View
+* Start
+* Continue
+* Complete step
+* Submit proof
+* View submission
+* Resubmit
+* View completion
+* Unavailable
+
+Do not scatter action-label logic across cards and screens.
+
+⸻
+
+52. React Query Integration
+
+Use Prompt 6 hooks and query keys.
+
+Required behavior:
+
+* Home and Quests should share cached data where appropriate.
+* Starting a Quest updates active Quest state.
+* Step completion updates Active Quest and Home.
+* Proof submission updates Active Quest and relevant summaries.
+* Completion updates:
+    * Quest Detail
+    * Quest Home
+    * Quest lists
+    * Profile point summary
+    * Completion history readiness
+    * Notification readiness
+
+Do not invalidate every application query after each action.
+
+Use targeted invalidation.
+
+Do not use optimistic completion or optimistic reward awarding.
+
+⸻
+
+53. Form and Mutation Safety
+
+For every protected action:
+
+* Disable repeated submission.
+* Show operation state.
+* Handle timeout.
+* Handle server-confirmed idempotency.
+* Restore controls after recoverable failure.
+* Do not create duplicate records.
+* Do not assume success from local state alone.
+
+Use confirmation only where it improves safety.
+
+Avoid unnecessary modal chains.
+
+⸻
+
+54. Development Fixtures
+
+Use the Prompt 6 seed data to render all important states.
+
+Verify UI for:
+
+* Available Daily Quest
+* Available Monthly Quest
+* Available Geo-Quest
+* Active single-step Quest
+* Active multi-step Quest
+* Awaiting proof
+* Under review
+* Needs resubmission
+* Completed
+* Expired
+* Upcoming
+* Location permission unavailable
+* Empty content state
+
+Fixture data must remain development-only.
+
+Do not show fake production activity.
+
+⸻
+
+55. Analytics Event Hooks
+
+Use the prepared event hooks for:
+
+* Quest Home viewed
+* Quests screen viewed
+* Quest Detail viewed
+* Start Quest tapped
+* Quest started
+* Active Quest viewed
+* Step completed
+* Proof submission started
+* Proof submitted
+* Quest completed
+* Quest abandoned
+
+Do not connect a third-party analytics provider.
+
+Do not log proof contents or precise private location.
+
+⸻
+
+56. Security Verification
+
+Verify:
+
+* Screens never directly set completion status.
+* Screens never insert points.
+* Screens never choose authoritative reward amounts.
+* Users cannot access another user’s participation.
+* Users cannot access another user’s proof.
+* Draft Quests do not appear.
+* Hidden Geo validation geometry does not appear.
+* Protected server errors are normalized.
+* Signed media access is used where required.
+* Duplicate Start and Complete actions are safely handled.
+* Under-review proof cannot be edited improperly.
+
+Do not weaken Prompt 6 security to simplify the interface.
+
+⸻
+
+57. Accessibility
+
+Ensure:
+
+* Quest cards have descriptive labels.
+* Points are announced with units.
+* Difficulty and duration are understandable.
+* Buttons have state-specific labels.
+* Disabled actions explain why.
+* Step progress is announced textually.
+* Proof upload controls are accessible.
+* Image previews have remove and replace labels.
+* Submission status uses text, not color alone.
+* Safety notices are screen-reader accessible.
+* Dynamic text does not break layouts.
+* Touch targets are appropriately sized.
+* Reduced-motion preferences are respected.
+
+Test with increased text size.
+
+⸻
+
+58. Automated Tests
+
+Add tests covering:
+
+Quest Home
+
+* Active Quest takes priority
+* Resubmission state takes priority
+* Daily Quest appears when no Quest is active
+* Supporting Monthly and Geo summaries render
+* Empty states render correctly
+
+Quests Screen
+
+* Shows exactly Daily, Monthly, and Geo sections
+* Does not show Discover
+* Displays availability states
+* Applies safe filters
+* Opens Quest Detail
+
+Quest Detail
+
+* Shows required metadata
+* Uses Start Quest before initiation
+* Uses Continue Quest after initiation
+* Disables unavailable Quest
+* Maps reason codes correctly
+
+Starting
+
+* Prevents double submission
+* Routes to Active Quest
+* Handles availability change
+* Reuses existing participation idempotently
+
+Active Quest
+
+* Renders single-step flow
+* Renders multi-step flow
+* Enforces required order
+* Does not display meaningless progress
+* Shows appropriate action
+
+Proof
+
+* Shows only required fields
+* Validates image count
+* Validates text length
+* Handles upload failure
+* Prevents duplicate submission
+* Shows under-review state
+* Supports valid resubmission
+
+Completion
+
+* Does not award points locally
+* Shows confirmed reward
+* Handles duplicate completion response
+* Updates relevant queries
+
+Security and routing
+
+* Rejects unauthorized participation route
+* Does not expose hidden Geo data
+* Handles malformed deep links
+* Does not display draft content
+
+Use component, hook, and integration tests where appropriate.
+
+⸻
+
+59. Documentation
+
+Create or update:
+
+/docs/QUEST_UI.md
+/docs/QUEST_USER_FLOW.md
+/docs/QUEST_PROOF_UI.md
+/docs/QUEST_ACTION_RESOLVER.md
+/docs/QUEST_ACCESSIBILITY.md
+/docs/QUEST_UI_TESTING.md
+
+Document:
+
+* Quest Home hierarchy
+* Quests screen structure
+* Quest cards
+* Quest Detail
+* Start flow
+* Active Quest
+* Single-step versus multi-step presentation
+* Proof submission
+* Completion confirmation
+* Abandonment
+* Expired and unavailable states
+* Action resolver
+* Query invalidation
+* Deep-link behavior
+* Security boundaries
+* Development fixtures
+* Remaining work for Prompt 8
+
+Update:
+
+* /docs/PROJECT_CONSTITUTION.md
+* replit.md
+
+only where required.
+
+Do not alter approved navigation.
+
+⸻
+
+60. Out of Scope
+
+Do not implement:
+
+* Finished Quest Progress experience
+* Leaderboard UI
+* Full completion-history organization
+* Full proof-review history organization
+* Mapbox
+* Finished Quest Geo Map
+* Final server-side geofence validation
+* Hunt
+* Custom Games
+* Admin panel
+* Admin proof review
+* AI generation
+* Automated media moderation provider
+* Push-notification delivery
+* Friends
+* Teams
+* Chat
+* Stripe
+* Memberships
+* Creator payouts
+
+Prompt 8 will implement Quest Progress, In Action, Completed, leaderboards, and complete proof-status organization.
+
+⸻
+
+61. Final Verification
+
+Before finishing:
+
+* Confirm Quest Home follows the approved hierarchy.
+* Confirm only one dominant active Quest is shown.
+* Confirm Quests contains exactly Daily, Monthly, and Geo sections.
+* Confirm Quest Detail uses Start Quest before initiation.
+* Confirm Start Quest uses Prompt 6 domain logic.
+* Confirm Active Quest supports single-step and multi-step flows.
+* Confirm proof submission adapts to configured proof type.
+* Confirm private proof media remains protected.
+* Confirm under-review and resubmission states render correctly.
+* Confirm points appear only after trusted completion.
+* Confirm duplicate completion does not duplicate rewards.
+* Confirm expired and unavailable states are clear.
+* Confirm Map and Progress routes remain intact without fake finished systems.
+* Confirm Profile remains shared.
+* Confirm the top game-mode selector remains intact.
+* Confirm no new bottom tabs were added.
+* Confirm the app compiles.
+* Confirm tests pass or clearly document blocked tests.
+* Confirm no approved UI or navigation was redesigned.
+
+Resolve known in-scope errors before stopping.
+
+⸻
+
+Deliverables
+
+When complete, provide:
+
+1. Quest screens created or updated
+2. Quest Home hierarchy implemented
+3. Daily Quest presentation
+4. Monthly Quest Drop presentation
+5. Geo-Quest preview
+6. Quests screen implementation
+7. QuestCard variants
+8. Quest Detail implementation
+9. State-based primary actions
+10. Start Quest flow
+11. Active Quest experience
+12. Single-step and multi-step behavior
+13. Proof submission interface
+14. Image, text, and location-proof handling
+15. Under-review and resubmission states
+16. Completion confirmation
+17. Abandonment and expiration behavior
+18. Map and Progress placeholder treatment
+19. React Query integration
+20. Deep-link routes
+21. Tests added and results
+22. Documentation created or updated
+23. Assumptions made
+24. Known limitations
+25. Exact remaining work for Prompt 8
+
+Do not begin Prompt 8.
+
+Do not redesign the application.
+
+Create a checkpoint named:
+
+Build 1 — Prompt 7 — Quest User Interface and Core Flow
