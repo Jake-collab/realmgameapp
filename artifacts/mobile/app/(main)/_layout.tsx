@@ -61,6 +61,24 @@ export default function MainLayout() {
         name="quest-point-history"
         options={{ animation: 'slide_from_right' }}
       />
+
+      {/* Hunt flow screens — appear over the tab UI (no tab bar) */}
+      <Stack.Screen
+        name="hunt-detail/[huntId]"
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="hunt-invitation/[invitationId]"
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="hunt-ready/[participationId]"
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="hunt-active/[participationId]"
+        options={{ animation: 'slide_from_right' }}
+      />
     </Stack>
   );
 }

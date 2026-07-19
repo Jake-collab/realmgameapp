@@ -1,0 +1,2254 @@
+Prompt 12 — Hunt Map, Discovery, Hunt Detail, Joining, and Invitations
+
+Copy this into Replit AI:
+
+# Worlds — Build 1, Prompt 12
+# Hunt Map, Discovery, Hunt Detail, Joining, and Invitations
+Continue from the current Worlds project and follow these documents as authoritative:
+- /docs/PROJECT_CONSTITUTION.md
+- /docs/DATABASE_ARCHITECTURE.md
+- /docs/ROW_LEVEL_SECURITY.md
+- /docs/POINTS_SYSTEM.md
+- /docs/GEO_DATA_SECURITY.md
+- /docs/PROFILE_AND_SETTINGS.md
+- /docs/NOTIFICATIONS.md
+- all shared mapping and geospatial documents created by Prompt 9
+- /docs/QUEST_MAP.md
+- /docs/GEO_QUEST_VALIDATION.md
+- /docs/GEO_VALIDATION_PRIVACY.md
+- /docs/GEO_VALIDATION_SECURITY.md
+- /docs/HUNT_DOMAIN.md
+- /docs/HUNT_STATE_MACHINE.md
+- /docs/HUNT_PRIVACY.md
+- /docs/HUNT_INVITATIONS.md
+- /docs/HUNT_PARTICIPATION.md
+- /docs/HUNT_STOPS_AND_CLUES.md
+- /docs/HUNT_PROOF_SYSTEM.md
+- /docs/HUNT_POINT_AWARDS.md
+- /docs/HUNT_SECURITY.md
+- replit.md
+- the approved UI/UX addendum
+- the approved authentication and navigation clarification
+The application is named:
+Worlds
+Prompt 11 implemented the Hunt domain, privacy model, availability and eligibility evaluation, occurrences, invitations, capacity enforcement, joining, Ready state, start models, stops, clues, proof integration, secure completion, points, cancellation, withdrawal, participant removal, and React Query contracts.
+This prompt must implement the polished user-facing Hunt entry experience:
+- Hunt Map
+- Hunt discovery
+- Hunt marker previews
+- Hunt Detail
+- Public Hunt joining
+- Invite-only access
+- Invitation viewing
+- Invitation acceptance and decline
+- Ready-state presentation
+- Initial My Hunts organization
+- Safe transition into the later Active Hunt flow
+Do not recreate or bypass Prompt 11 business logic.
+Do not build the complete Active Hunt gameplay experience during this prompt. That belongs in Prompt 13.
+Do not build the complete Hunt Progress and leaderboard experience during this prompt. That belongs in Prompt 14.
+Do not build the complete user-facing Create Hunt flow during this prompt. That belongs in a later creator prompt.
+Do not duplicate the shared Mapbox, geospatial validation, profile, settings, media, proof, notification, points, or authentication systems.
+Do not redesign the approved navigation.
+---
+# Primary Objective
+Implement the Hunt user journey:
+```text
+Hunt Map
+    ↓
+Discover or select Hunt
+    ↓
+Hunt Preview
+    ↓
+Hunt Detail
+    ↓
+Join Hunt or respond to invitation
+    ↓
+Ready
+    ↓
+Start Hunt when permitted
+    ↓
+Route into the Prompt 13 Active Hunt experience
+
+The Hunt experience should feel:
+
+* Map-first
+* Exploratory
+* Clear
+* Immersive
+* Modern
+* Minimal
+* Safe
+* Social-ready without requiring a social feed
+* Game-inspired without appearing childish
+
+The Hunt Map must remain the primary Hunt landing screen.
+
+⸻
+
+1. Preserve Approved Hunt Navigation
+
+Hunt bottom navigation remains exactly:
+
+1. Map
+2. My Hunts
+3. Progress
+4. Profile
+
+Do not add:
+
+* Home
+* Discover
+* Search
+* Invitations
+* Create
+* Active
+* Chat
+* Teams
+* Notifications
+* Settings
+
+as bottom tabs.
+
+The existing Quest/Hunt selector in the top header must remain intact.
+
+The shared Profile tab must continue using Prompt 5.
+
+The Progress tab may remain a controlled Hunt placeholder until Prompt 14.
+
+My Hunts must be implemented sufficiently for:
+
+* Active
+* Ready
+* Completed
+* Invitations
+* Create Hunt
+
+However:
+
+* Active Hunt gameplay is completed in Prompt 13.
+* Completed Hunt history is completed in Prompt 14.
+* Create Hunt remains a controlled placeholder until its later prompt.
+
+Do not rebuild the application shell.
+
+⸻
+
+2. Hunt Feature Screens
+
+Implement or complete:
+
+* Hunt Map
+* Hunt map-search interface
+* Hunt marker preview
+* Nearby Hunts bottom sheet
+* Hunt Detail
+* Join confirmation
+* Join result
+* Invitation Detail
+* Invitation acceptance confirmation
+* Invitation decline confirmation
+* Ready Hunt Detail
+* Initial My Hunts screen
+* Safe Active Hunt placeholder or route contract
+* Safe Hunt Progress placeholder
+* Safe Create Hunt placeholder
+
+Use Prompt 11 services and action resolver.
+
+Do not place raw Supabase, PostGIS, or Mapbox calls inside screens.
+
+⸻
+
+3. Hunt Map as Default Hunt Screen
+
+When the user changes the top selector from Quest to Hunt:
+
+* Open the Hunt Map.
+* Preserve the Quest navigation state separately.
+* Restore the Hunt Map’s safe recent viewport where appropriate.
+* Do not redirect to My Hunts unless a deep link or explicit action requires it.
+* Do not automatically request location permission merely because Hunt mode opened.
+* Do not expose private or invite-only Hunts on the public map.
+
+The Hunt Map should feel distinct from the Quest Map while still using the same design system and shared map architecture.
+
+⸻
+
+4. Hunt Map Layout
+
+Use a map-first layout containing:
+
+* Compact shared header
+* Quest/Hunt selector showing Hunt
+* Notification icon and unread badge
+* Full available map area
+* Search control
+* Filter control
+* User-location control
+* Recenter control
+* Search This Area control
+* Public Hunt markers
+* Marker clusters
+* Selected-Hunt preview
+* Nearby-Hunts bottom sheet
+* Safe loading, empty, permission, offline, and error states
+
+Do not add a large Hunt page title above the map.
+
+Do not permanently cover most of the map.
+
+Respect safe areas and bottom navigation.
+
+⸻
+
+5. Reuse the Shared Map Foundation
+
+Audit the implementation from Prompts 9 and 10.
+
+Reuse:
+
+* Map provider
+* Mapbox configuration
+* Map styles
+* Camera utilities
+* Foreground location
+* Permission handling
+* Search/geocoding
+* Viewport querying
+* Clustering
+* Bounding-box utilities
+* Distance formatting
+* Map bottom sheet
+* Marker accessibility
+* Offline map fallback
+* Query cancellation
+* Geo privacy boundaries
+
+Do not create:
+
+* A second Mapbox provider
+* A separate location-permission service
+* A duplicate geocoding architecture
+* A duplicate map-theme system
+* A separate distance preference
+* A parallel geospatial validation engine
+
+Create Hunt-specific wrappers only where Hunt behavior differs.
+
+⸻
+
+6. Hunt Map Query Contract
+
+Use the public-safe Hunt Map query prepared in Prompt 11.
+
+Map results may include:
+
+* Hunt ID
+* Hunt occurrence ID
+* Title
+* Short description
+* Public location name
+* Public display coordinate
+* Points reward
+* Estimated duration
+* Difficulty
+* Privacy type when publicly relevant
+* Availability state
+* Join state
+* Participant count
+* Capacity state
+* Public image
+* Public category
+* Start time
+* End time
+* Current-user participation state
+
+Do not return:
+
+* Private stop geometry
+* Locked clue content
+* Hidden future locations
+* Invitee lists
+* Participant private details
+* Proof submissions
+* Internal moderation notes
+* Private meeting instructions
+* Exact validation thresholds
+* Service secrets
+
+Public map results must include only published public Hunts.
+
+⸻
+
+7. Map Visibility by Hunt Privacy
+
+Apply Prompt 11 privacy rules.
+
+Public
+
+May appear on the Hunt Map when published and available.
+
+Unlisted
+
+Must not appear through ordinary public discovery.
+
+May open through:
+
+* Valid link
+* Valid deep link
+* Authorized My Hunts record
+* Accepted participation
+
+Invite-only
+
+Must not appear publicly unless the product explicitly supports a generalized hidden marker without revealing content. For Build 1, do not show it publicly.
+
+Invitees may access it through:
+
+* Invitations
+* Notification
+* Valid invitation deep link
+* My Hunts after acceptance
+
+Private
+
+Must not appear publicly.
+
+Visible only to:
+
+* Owner
+* Authorized participants
+* Authorized staff
+
+Do not rely on UI filtering alone. Enforce this in the backend query.
+
+⸻
+
+8. Hunt Map Markers
+
+Create a reusable Hunt marker using the shared map system.
+
+Support restrained states for:
+
+* Available
+* Joined
+* Ready
+* Active
+* Full
+* Upcoming
+* Completed
+* Selected
+
+Do not create a different marker color for every backend status.
+
+Use:
+
+* Icon or shape
+* Accessible label
+* Selected state
+* Restrained status treatment
+
+Do not communicate state through color alone.
+
+Active or joined Hunts should be recognizable without overpowering all available discovery markers.
+
+Completed Hunts may be hidden by default unless the user enables a relevant filter.
+
+⸻
+
+9. Marker Clustering
+
+Use the shared clustering architecture.
+
+Requirements:
+
+* Cluster overlapping public Hunt markers.
+* Show a count.
+* Tapping a cluster zooms or expands appropriately.
+* Selected marker remains stable during refresh where possible.
+* Avoid marker rerenders during every camera frame.
+* Keep accessible cluster labels.
+* Do not place private or invite-only Hunts into public clusters.
+
+Do not implement a separate clustering algorithm if one already exists.
+
+⸻
+
+10. Marker Selection
+
+When a marker is selected:
+
+* Open a compact Hunt preview.
+* Keep the marker visible above the bottom sheet.
+* Avoid dramatic unexpected zoom.
+* Do not automatically join.
+* Do not reveal clue or stop content.
+* Do not expose private validation data.
+* Preserve selection during compatible data refresh.
+
+Tapping a different marker updates the preview.
+
+Tapping the map may clear the selection when appropriate.
+
+⸻
+
+11. Hunt Preview Card
+
+The selected Hunt preview should display:
+
+* Hunt title
+* Short description
+* Public location label
+* Approximate distance when available
+* Points reward
+* Estimated duration
+* Difficulty
+* Participant count or capacity status
+* Start time or availability
+* Hunt privacy label where relevant
+* Public image
+* Current-user state
+* One primary action
+
+Possible primary actions:
+
+* View Hunt
+* Join Hunt
+* View Invitation
+* Ready
+* Continue Hunt
+* View Completion
+* Full
+* Upcoming
+* Unavailable
+
+Use Prompt 11’s action resolver.
+
+Prefer View Hunt before joining when:
+
+* Safety information matters
+* The Hunt has multiple stops
+* The Hunt has proof requirements
+* Location is required
+* Group rules apply
+* Start time matters
+* Participant capacity matters
+
+Do not overload the preview with every detail.
+
+⸻
+
+12. Nearby Hunts Bottom Sheet
+
+Use collapsed, medium, and expanded states.
+
+Collapsed
+
+Show:
+
+* Selected Hunt title
+* Or count of Hunts in the visible area
+* Drag handle
+
+Medium
+
+Show:
+
+* Selected Hunt preview
+* A few nearby Hunt rows
+
+Expanded
+
+Show:
+
+* Scrollable Hunt results
+* Current map area
+* Active filters
+* Sorting controls
+* Capacity indicators
+* Empty state
+
+Do not create a second complete marketplace-style Hunt list inside the map.
+
+The bottom sheet should support map exploration rather than replace it.
+
+⸻
+
+13. Nearby Hunt Sorting
+
+Support:
+
+* Nearest
+* Starting Soon
+* Featured
+* Highest Points
+* Shortest
+* Easiest
+
+Default:
+
+* Nearest when user location is available
+* Featured or map relevance otherwise
+
+Requirements:
+
+* Distance is approximate.
+* Do not imply driving or walking time.
+* Starting Soon must use authoritative occurrence scheduling.
+* Full Hunts should not rank above joinable Hunts unless explicitly selected.
+* Joined or Active Hunts may be prioritized in a separate personal section.
+
+Do not calculate rankings only from stale client state.
+
+⸻
+
+14. Hunt Filters
+
+Create a compact Hunt filter bottom sheet.
+
+Support useful Build 1 filters:
+
+* Available Now
+* Starting Soon
+* Public
+* Solo
+* Group
+* Solo or Group
+* Has Space
+* Difficulty
+* Duration
+* Indoor
+* Outdoor
+* Accessibility
+* Interest or category
+* Not Joined
+* In My Hunts
+
+Do not expose:
+
+* Private geometry
+* Hidden stop count
+* Validation radius
+* Moderation state
+* Internal capacity fields
+* Creator role IDs
+
+Include:
+
+* Apply
+* Clear All
+* Active-filter count
+
+Preserve filters while the user remains in Hunt mode.
+
+⸻
+
+15. Hunt Place Search
+
+Reuse the shared place-search service.
+
+Support:
+
+* City
+* County
+* ZIP code
+* Landmark
+* Public address where appropriate
+
+On selecting a result:
+
+1. Move the map camera.
+2. Query public Hunts in the selected region.
+3. Preserve current filters.
+4. Update the nearby sheet.
+5. Avoid saving permanent search history unless approved.
+
+Respect the current US-only rollout unless project documentation changes it.
+
+Do not imply Hunt availability outside supported regions.
+
+⸻
+
+16. User Location
+
+The Hunt Map must remain usable without location permission.
+
+When permission is granted:
+
+* Show the user-location indicator.
+* Allow recentering.
+* Sort by approximate distance.
+* Support nearby discovery.
+
+When permission is denied:
+
+* Allow manual map browsing.
+* Allow place search.
+* Show a restrained Enable Location option.
+* Do not repeatedly prompt.
+
+Do not upload ordinary browsing-location data.
+
+Do not request background location.
+
+Do not store continuous movement history.
+
+⸻
+
+17. Hunt Detail Screen
+
+Implement a polished Hunt Detail screen.
+
+Display:
+
+* Public Hunt image
+* Hunt title
+* Short description
+* Full description
+* Privacy type when useful
+* Hunt owner or creator public identity where permitted
+* Points reward
+* Difficulty
+* Estimated duration
+* Number of stops
+* Ordered or unordered structure
+* Solo or group participation mode
+* Participant count
+* Capacity
+* Start date and time
+* Join deadline
+* Completion deadline
+* Public start or meeting area
+* Accessibility information
+* Safety information
+* Required proof summary
+* Current availability
+* Current participation or invitation state
+* One dominant primary action
+
+Do not display:
+
+* Locked clues
+* Secret stop locations
+* Private validation geometry
+* Private invitee information
+* Internal moderation notes
+* Other users’ proof
+* Internal creator contact details
+
+⸻
+
+18. Hunt Detail for Public Hunts
+
+For an eligible public Hunt, display:
+
+Primary action:
+
+Join Hunt
+
+Use consistent wording.
+
+Do not use vague labels such as:
+
+* Join Game
+* Enter
+* Participate
+* Accept Hunt
+
+Before joining, ensure the user can see:
+
+* Duration
+* Start timing
+* Participation mode
+* Capacity
+* Stop count
+* Proof requirements
+* Location requirements
+* Safety notes
+* Points reward
+
+Do not allow a one-tap join from an incomplete card when important participation terms have not been shown.
+
+⸻
+
+19. Hunt Detail for Invite-Only Hunts
+
+For a valid invited user:
+
+Display:
+
+* Invitation status
+* Inviter’s safe public identity
+* Optional invitation message
+* Hunt details
+* Invitation expiration
+* Capacity status
+* Participation mode
+* Accept Invitation
+* Decline
+
+Do not expose other invitees.
+
+Do not expose the inviter’s private profile fields.
+
+If the invitation has expired:
+
+* Disable acceptance.
+* Explain the state.
+* Provide Return to Invitations.
+
+If capacity became full before acceptance:
+
+* Show the server-confirmed state.
+* Do not imply that a pending invitation guaranteed a space unless reserved capacity was configured.
+
+⸻
+
+20. Hunt Detail for Unlisted Hunts
+
+A valid unlisted deep link may open Hunt Detail.
+
+Requirements:
+
+* Verify access server-side.
+* Do not add the Hunt to public map discovery.
+* Do not show private or locked content.
+* Use the normal eligibility evaluator.
+* Permit joining only if the unlisted Hunt’s configuration allows it.
+* Handle invalid or revoked links safely.
+
+Do not treat knowledge of the Hunt ID as authorization.
+
+⸻
+
+21. Hunt Detail for Private Hunts
+
+Private Hunt Detail may be visible only to:
+
+* Owner
+* Authorized participant
+* Authorized staff
+
+If unauthorized:
+
+* Do not reveal the title or existence unnecessarily.
+* Show a generic unavailable state.
+* Do not indicate whether the Hunt is private, deleted, or nonexistent where that distinction would leak information.
+
+Do not expose private Hunt information through guessed URLs.
+
+⸻
+
+22. Hunt Detail Primary Action Resolver
+
+Use Prompt 11’s centralized action resolver.
+
+Possible states:
+
+Public and eligible
+
+* Join Hunt
+
+Invited
+
+* View Invitation
+* Or Accept Invitation when invitation context is already open
+
+Joined and waiting
+
+* View Ready Hunt
+
+Ready and start permitted
+
+* Start Hunt
+
+Ready and scheduled
+
+* Ready
+
+Active
+
+* Continue Hunt
+
+Awaiting proof
+
+* Submit Proof
+
+Needs resubmission
+
+* Resubmit Proof
+
+Under review
+
+* View Submission
+
+Completed
+
+* View Completion
+
+Full
+
+* Disabled Full status
+
+Upcoming
+
+* Disabled with start date
+
+Paused
+
+* Unavailable
+
+Cancelled
+
+* Cancelled
+
+Expired
+
+* Expired
+
+Do not duplicate condition logic inside individual screens.
+
+⸻
+
+23. Join Hunt Confirmation
+
+Before joining, show a concise confirmation when appropriate.
+
+Include:
+
+* Hunt title
+* Participation mode
+* Start time
+* Completion deadline
+* Number of stops
+* Estimated duration
+* Location requirement
+* Proof requirement
+* Points reward
+* Safety acknowledgment where meaningful
+
+Buttons:
+
+* Not Now
+* Join Hunt
+
+Avoid unnecessary confirmation for a very simple, immediately startable solo Hunt only when all details were already clearly displayed.
+
+Do not make the user agree to hidden terms.
+
+⸻
+
+24. Join Hunt Mutation
+
+When Join Hunt is tapped:
+
+1. Disable repeat taps.
+2. Show a focused loading state.
+3. Call Prompt 11’s trusted joinHunt.
+4. Reevaluate capacity and eligibility server-side.
+5. Handle existing participation idempotently.
+6. Store no client-controlled reward or role.
+7. Invalidate relevant Hunt queries.
+8. Route according to the returned state:
+    * Ready Hunt
+    * Start-ready Hunt
+    * Active Hunt where immediate start is explicitly configured
+9. Show safe errors.
+10. Do not award points.
+
+Do not optimistically claim a place before server confirmation.
+
+⸻
+
+25. Join Failure States
+
+Handle:
+
+* Hunt became full
+* Hunt paused
+* Hunt cancelled
+* Hunt expired
+* Join window closed
+* Invitation required
+* Existing participation
+* Account restricted
+* Block relationship
+* Prerequisite missing
+* Region unavailable
+* Network failure
+* Unknown safe error
+
+Provide clear next actions where legitimate.
+
+Examples:
+
+Hunt full
+
+This Hunt has reached its participant limit.
+
+Invitation required
+
+This Hunt is available by invitation only.
+
+Existing participation
+
+Route to:
+
+* Ready Hunt
+* Active Hunt
+* Completion
+
+Do not expose internal SQL, RLS, or role details.
+
+⸻
+
+26. Join Success
+
+After successful joining:
+
+Display a concise confirmation.
+
+Examples:
+
+Ready state
+
+You joined the Hunt.
+
+Then show:
+
+* Start time
+* Readiness status
+* View My Hunts
+* View Hunt
+
+Immediately startable
+
+You joined the Hunt. Start when you’re ready.
+
+Primary action:
+
+Start Hunt
+
+Do not show points as earned.
+
+Do not show locked clues.
+
+⸻
+
+27. Invitation List in My Hunts
+
+Implement the Invitations section inside My Hunts.
+
+Display pending invitations first.
+
+Each invitation row should show:
+
+* Hunt title
+* Inviter’s safe public identity
+* Public image
+* Start date
+* Expiration date
+* Participation mode
+* Capacity status
+* Invitation status
+* Primary action:
+    * View Invitation
+
+Optional compact actions:
+
+* Accept
+* Decline
+
+Only include direct row-level actions if accidental taps are safely handled and the user has enough context.
+
+Prefer opening Invitation Detail before accepting when the Hunt is complex.
+
+⸻
+
+28. Invitation Detail
+
+Implement Invitation Detail.
+
+Display:
+
+* Hunt title
+* Hunt image
+* Inviter
+* Invitation message
+* Sent date
+* Expiration
+* Hunt timing
+* Duration
+* Stops
+* Participation mode
+* Capacity
+* Points
+* Proof requirements
+* Safety
+* Accessibility
+* Accept Invitation
+* Decline
+
+Use Prompt 11’s invitation state.
+
+Do not expose:
+
+* Other invitees
+* Private inviter details
+* Locked clues
+* Secret locations
+* Internal moderation information
+
+⸻
+
+29. Accept Invitation Flow
+
+When accepting:
+
+1. Show confirmation if necessary.
+2. Disable repeated taps.
+3. Call Prompt 11’s trusted invitation-acceptance operation.
+4. Atomically create or reuse participation.
+5. Reevaluate capacity.
+6. Update invitation status.
+7. Invalidate Invitations, Ready, Hunt Detail, and relevant Map queries.
+8. Route to Ready Hunt or start-ready state.
+9. Show safe result.
+10. Do not award points.
+
+Repeated taps must return the existing valid participation.
+
+Do not optimistically remove the invitation before server confirmation.
+
+⸻
+
+30. Decline Invitation Flow
+
+When declining:
+
+* Show a restrained confirmation.
+* Explain that declining does not block the inviter.
+* Call Prompt 11’s decline operation.
+* Preserve the invitation record.
+* Update the Invitations list.
+* Route back to My Hunts or the next invitation.
+
+Buttons:
+
+* Keep Invitation
+* Decline
+
+Do not use destructive language such as Delete Hunt.
+
+Do not notify the inviter unless the approved domain-event behavior specifies it.
+
+⸻
+
+31. Expired, Revoked, and Declined Invitations
+
+Keep historical invitation states available in a secondary filter or history view.
+
+Statuses:
+
+* Expired
+* Revoked
+* Declined
+* Accepted
+
+Do not mix them with current pending invitations by default.
+
+Each historical row may show:
+
+* Hunt title
+* Final invitation status
+* Date
+* View Hunt where access remains valid
+* View participation where accepted
+
+Do not allow expired or revoked invitations to be accepted.
+
+⸻
+
+32. Initial My Hunts Structure
+
+Implement My Hunts with these internal sections:
+
+* Active
+* Ready
+* Completed
+* Invitations
+* Create Hunt
+
+Use a compact segmented control, tabs, or another mobile-appropriate internal navigation.
+
+These are not bottom tabs.
+
+Do not add extra top-level sections without approval.
+
+Recommended default:
+
+1. Active when user has active Hunt activity
+2. Ready when a Hunt is awaiting start
+3. Invitations when a pending invitation needs attention
+4. Last selected section
+5. Active as general default
+
+Do not unpredictably switch sections during background refresh.
+
+⸻
+
+33. Active Section During Prompt 12
+
+The Active section should list active Hunt participations.
+
+Each item may include:
+
+* Hunt title
+* Current authorized stop
+* Stop progress
+* Deadline
+* Proof state
+* Points reward snapshot
+* Primary action:
+    * Continue Hunt
+
+Prompt 13 will implement the complete Active Hunt experience.
+
+During this prompt:
+
+* Route Continue Hunt to the prepared Active Hunt route.
+* Use a polished controlled placeholder only if Prompt 13 has not yet been implemented.
+* Do not fake clues or progress.
+* Do not expose locked content.
+
+⸻
+
+34. Ready Section
+
+Implement a complete Ready list.
+
+Include Hunts that are:
+
+* Joined
+* Invitation accepted
+* Waiting for start window
+* Waiting for host
+* Waiting for minimum participants
+* Individually startable
+
+Each item should show:
+
+* Hunt title
+* Occurrence date
+* Readiness reason
+* Participant count where relevant
+* Start window
+* Capacity
+* Primary action:
+    * Start Hunt
+    * View Hunt
+    * Waiting for Host
+    * Starts Soon
+
+Do not label a Hunt Active before the trusted start operation succeeds.
+
+⸻
+
+35. Ready Hunt Detail
+
+Implement a Ready Hunt screen or state of Hunt Detail.
+
+Display:
+
+* Hunt title
+* Ready status
+* Start time
+* Join status
+* Participation mode
+* Participant count
+* Minimum participants
+* Start model
+* Public meeting or start area
+* Safety
+* What happens next
+* Points reward snapshot
+* One primary action
+
+Possible primary actions:
+
+Individually startable
+
+Start Hunt
+
+Scheduled automatic start
+
+Ready
+
+with explanatory text.
+
+Host-controlled
+
+Waiting for Host
+
+with explanatory text.
+
+Do not expose clues early.
+
+⸻
+
+36. Start Hunt from Ready
+
+For individually startable Hunts:
+
+1. Confirm start eligibility.
+2. Show a concise pre-start confirmation.
+3. Request foreground location only if start validation requires it.
+4. Call Prompt 11’s trusted startHunt.
+5. Handle idempotency.
+6. Invalidate Active, Ready, Detail, and Map state.
+7. Route to the Active Hunt experience.
+8. Do not award points.
+9. Do not reveal future clues beyond the authorized starting clue.
+
+Do not implement host-start controls for ordinary participants.
+
+⸻
+
+37. Start Confirmation
+
+Show only when useful.
+
+Include:
+
+* Estimated duration
+* Completion deadline
+* Number of required stops
+* Ordered or unordered structure
+* Location requirement
+* Proof requirement
+* Safety reminder
+* Acknowledgment that interaction should not occur while driving
+
+Buttons:
+
+* Not Yet
+* Start Hunt
+
+Do not make this a lengthy terms screen.
+
+⸻
+
+38. Host-Controlled Ready State
+
+For host-controlled Hunts:
+
+Display:
+
+* Waiting for Host
+* Start window
+* Minimum participant status
+* Current participant count
+* Whether the user is ready
+* Safe public participant summary where authorized
+* Notification expectation
+
+Do not show a Start Hunt button to ordinary participants.
+
+Do not expose private participant information.
+
+Do not implement host participant-management controls in this prompt.
+
+⸻
+
+39. Minimum-Participant State
+
+If minimum participants have not joined:
+
+Display:
+
+* Current count
+* Required count
+* Start status
+* Whether the occurrence can still proceed
+* Join deadline
+
+Example:
+
+3 of 5 participants are ready.
+
+Do not imply that pending invitations count unless Prompt 11’s capacity rule says they do.
+
+Do not invent an estimated time to fill.
+
+⸻
+
+40. Full Hunts
+
+When a public Hunt is full:
+
+* Keep it visible if appropriate.
+* Show Full clearly.
+* Disable Join Hunt.
+* Allow viewing details.
+* Do not create a fake waitlist.
+* Do not accept invitations unless reserved capacity rules allow it.
+* Refresh capacity before showing a final join error.
+
+Do not add Notify Me or Join Waitlist unless those features are approved and implemented.
+
+⸻
+
+41. Upcoming Hunts
+
+For future scheduled Hunts:
+
+* Show start date and join window.
+* Allow joining only when Prompt 11 allows early joining.
+* Show Upcoming when joining is not yet allowed.
+* Do not reveal locked clues.
+* Use local display time backed by server scheduling.
+* Do not rely on drifting client countdowns.
+
+A concise countdown may be used only when accurate and useful.
+
+⸻
+
+42. Cancelled Hunts
+
+Display:
+
+* Cancelled status
+* Safe cancellation reason where allowed
+* Date
+* Participant impact
+* Route to My Hunts history if joined
+* No Start or Continue action
+
+Do not delete the Hunt from joined-user history.
+
+Do not show points as earned.
+
+Do not expose private moderation reasons.
+
+⸻
+
+43. Expired Hunts
+
+Display:
+
+* Expired status
+* Relevant date
+* Whether a joined participant may still finish under the configured grace rule
+* No invalid Join action
+* Route to archived activity where applicable
+
+Do not mark expired Hunts as completed.
+
+Do not assume expiration rules from the device clock.
+
+⸻
+
+44. Hunt Creator Identity
+
+Where creators are displayed:
+
+Show only approved public identity fields:
+
+* Display name
+* Username where permitted
+* Avatar where permitted
+* Creator or platform label
+
+Do not display:
+
+* Email
+* Private account information
+* Exact location
+* Account-status details
+* Internal user ID
+
+If the creator’s profile is private:
+
+* Use a safe generic label
+* Or omit identity according to product rules
+
+Do not imply that user-created Hunts are platform-endorsed.
+
+⸻
+
+45. Participant Count and Privacy
+
+Public Hunt Detail may show:
+
+* Number joined
+* Capacity
+* Number of spots remaining
+
+Do not show participant identity publicly by default.
+
+For authorized group Hunts, a limited participant list may later be shown in Prompt 13 or creator-management prompts.
+
+Do not expose:
+
+* Emails
+* Exact locations
+* Invitation status of others
+* Block relationships
+* Proof state of others
+* Account restrictions
+
+⸻
+
+46. Hunt Safety Presentation
+
+Display Hunt-specific safety notes prominently where relevant.
+
+Examples:
+
+* Stay in public, permitted areas.
+* Do not trespass.
+* Do not use the app while driving.
+* Follow posted rules and operating hours.
+* Remain aware of surroundings.
+* Respect privacy and consent.
+* Leave the area if conditions feel unsafe.
+* Do not continue in hazardous weather or darkness where inappropriate.
+
+Do not repeat a large warning on every harmless screen.
+
+Use stronger warnings before:
+
+* Joining location-sensitive Hunts
+* Starting a Hunt
+* Location validation
+* Outdoor nighttime activity
+
+⸻
+
+47. Accessibility Information
+
+Display known Hunt accessibility details:
+
+* Wheelchair accessibility
+* Walking distance
+* Terrain
+* Stairs
+* Outdoor exposure
+* Seating
+* Visual or hearing considerations
+* Alternative completion method where configured
+
+Do not infer missing accessibility information.
+
+Allow accessibility filters only when backed by actual data.
+
+⸻
+
+48. Proof Requirement Summary
+
+Hunt Detail must summarize proof without exposing clue solutions.
+
+Examples:
+
+* Location verification required
+* One image required at a stop
+* Text response required
+* Manual review required
+* Some stops require proof
+
+Do not reveal which hidden future stop requires which proof when the Hunt intends sequential discovery.
+
+Use a generalized pre-join summary.
+
+Detailed stop-level requirements should be revealed only when authorized during active play.
+
+⸻
+
+49. Deep Links
+
+Support safe deep links to:
+
+* Public Hunt Detail
+* Unlisted Hunt Detail
+* Invitation Detail
+* Ready Hunt
+* Active Hunt route
+* Completed Hunt route
+* My Hunts internal section
+
+Requirements:
+
+* Validate IDs.
+* Verify access.
+* Reevaluate privacy and invitation status.
+* Handle archived or cancelled Hunts.
+* Handle malformed notification payloads.
+* Do not expose private Hunt existence.
+* Do not expose locked clue content in route parameters.
+* Do not pass private geometry.
+
+⸻
+
+50. Notification Integration
+
+Connect Prompt 11 domain events to the existing notification center.
+
+Examples:
+
+Hunt invitation
+
+Open Invitation Detail.
+
+Invitation accepted
+
+Open Ready Hunt for the invitee.
+
+Hunt starts soon
+
+Open Ready Hunt.
+
+Hunt started
+
+Open Active Hunt.
+
+Participant removed
+
+Open My Hunts archived or status detail.
+
+Hunt cancelled
+
+Open cancelled Hunt status.
+
+Hunt full or availability changed
+
+Open Hunt Detail.
+
+Do not build push delivery yet.
+
+Do not create a second notification system.
+
+⸻
+
+51. Shared Hunt Action Components
+
+Create or finalize reusable components such as:
+
+* HuntMarker
+* HuntCluster
+* HuntPreviewCard
+* NearbyHuntRow
+* HuntTypeBadge
+* HuntPrivacyBadge
+* ParticipationModeBadge
+* CapacityIndicator
+* HuntTimingSummary
+* HuntDetailHeader
+* HuntPrimaryAction
+* InvitationCard
+* InvitationStatusBadge
+* ReadyHuntCard
+* ReadyStateSummary
+* ParticipantCountSummary
+* HuntSafetyNotice
+* HuntAccessibilityNotice
+* HuntMapSkeleton
+* HuntEmptyState
+* HuntJoinConfirmation
+* InvitationResponseConfirmation
+
+Reuse existing shared:
+
+* Button
+* Card
+* Bottom sheet
+* Avatar
+* Points badge
+* Duration
+* Difficulty
+* Media
+* Loading
+* Empty-state
+* Error-state components
+
+Do not create duplicate design-system primitives.
+
+⸻
+
+52. Hunt Map and List Coordination
+
+Coordinate the map and nearby list.
+
+Requirements:
+
+* Selecting a map marker highlights the matching list item.
+* Selecting a list item highlights the marker.
+* Expanding a cluster updates visible results appropriately.
+* Moving the map does not erase an active selection immediately.
+* Search This Area updates both map and list.
+* Filters apply consistently to both.
+* A Hunt must not appear in the list if backend privacy rules exclude it from the map result.
+* Avoid infinite camera/list feedback loops.
+
+Document state ownership.
+
+⸻
+
+53. State Ownership
+
+Use clear ownership.
+
+Local UI state
+
+* Selected marker
+* Bottom-sheet position
+* Search text
+* Temporary filter changes
+* Join-confirmation visibility
+* Invitation-confirmation visibility
+
+React Query
+
+* Public Hunt viewport results
+* Hunt Detail
+* Hunt availability
+* Invitation records
+* My Hunts lists
+* Participation state
+* Capacity
+
+Shared settings
+
+* Distance unit
+* Map appearance
+* Safe recent map viewport
+* Last selected My Hunts section where practical
+
+Domain services
+
+* Eligibility
+* Joining
+* Invitation response
+* Start
+* Capacity
+* Lifecycle transitions
+
+Do not put all map and participation state in Zustand.
+
+Do not make local UI state authoritative.
+
+⸻
+
+54. React Query Hooks
+
+Use Prompt 11 hooks and create only missing UI-focused hooks.
+
+Possible hooks:
+
+* useHuntMapViewport
+* useNearbyHunts
+* useHuntMapFilters
+* useHuntDetail
+* useHuntAvailability
+* useJoinHunt
+* useHuntInvitations
+* useHuntInvitationDetail
+* useAcceptHuntInvitation
+* useDeclineHuntInvitation
+* useMyActiveHunts
+* useMyReadyHunts
+* useMyCompletedHunts
+* useStartHunt
+
+Requirements:
+
+* Stable keys
+* User-scoped private data
+* Targeted invalidation
+* Stale request cancellation
+* Conservative mutation retry
+* No optimistic capacity claims
+* No optimistic invitation acceptance
+* No optimistic Hunt start
+* No precise protected location in persistent cache
+
+⸻
+
+55. Query Invalidation
+
+After joining:
+
+Invalidate:
+
+* Hunt Detail
+* Hunt availability
+* Public map result for the area
+* My Hunts Ready
+* My Hunts Active where immediate start is possible
+* Invitations where relevant
+* Capacity summaries
+
+After invitation acceptance:
+
+Invalidate:
+
+* Invitations
+* Hunt Detail
+* Hunt availability
+* My Hunts Ready
+* Map result if the Hunt is public
+
+After invitation decline:
+
+Invalidate:
+
+* Invitations
+* Invitation Detail
+* Hunt availability where relevant
+
+After Hunt start:
+
+Invalidate:
+
+* Ready
+* Active
+* Hunt Detail
+* Hunt availability
+* Map result
+* Active Hunt query
+
+Do not invalidate all Quest and Profile data after every Hunt action.
+
+⸻
+
+56. Loading States
+
+Create layout-specific loading states for:
+
+* Hunt Map
+* Markers
+* Nearby sheet
+* Hunt preview
+* Hunt Detail
+* Join mutation
+* Invitation list
+* Invitation Detail
+* Invitation response
+* My Hunts
+* Ready Hunt
+* Hunt start
+
+Avoid one generic full-screen spinner.
+
+Preserve loaded map content during nonblocking refreshes.
+
+Use blocking states only for protected mutations.
+
+⸻
+
+57. Empty States
+
+Implement deliberate empty states.
+
+No Hunts in map area
+
+No public Hunts are available in this area.
+
+Actions:
+
+* Search another area
+* Clear filters
+
+No location permission
+
+Browse the map or enable location to find Hunts nearby.
+
+No Active Hunts
+
+You don’t have an active Hunt.
+
+Action:
+
+Explore Hunts
+
+No Ready Hunts
+
+Joined Hunts that are waiting to begin will appear here.
+
+No Completed Hunts
+
+Completed Hunts will appear here.
+
+No Invitations
+
+You don’t have any pending Hunt invitations.
+
+Create Hunt placeholder
+
+Hunt creation will be available after the creator system is completed.
+
+Do not display fake production Hunts.
+
+⸻
+
+58. Error States
+
+Handle independently:
+
+* Mapbox unavailable
+* Public Hunt query failure
+* Hunt Detail unavailable
+* Hunt became private
+* Hunt became full
+* Hunt cancelled
+* Invitation expired
+* Invitation revoked
+* Capacity conflict
+* Join failure
+* Invitation response failure
+* Start failure
+* Location permission failure
+* Offline state
+* Invalid deep link
+* Unknown safe error
+
+Provide:
+
+* Retry
+* Return to Map
+* Return to My Hunts
+* Open Settings
+* Refresh status
+
+A map-rendering failure must not prevent My Hunts from working.
+
+An invitation-query failure must not prevent public Hunt discovery.
+
+Do not expose raw backend errors.
+
+⸻
+
+59. Offline Behavior
+
+Allow cached read-only access to:
+
+* Previously loaded public Hunt summaries
+* Previously loaded Hunt Detail
+* Invitations previously loaded
+* Ready Hunt information
+* Active Hunt route information
+
+Do not allow offline actions to appear confirmed for:
+
+* Join Hunt
+* Accept invitation
+* Decline invitation
+* Start Hunt
+* Capacity reservation
+* Protected location validation
+
+Show connectivity-required messaging.
+
+Do not calculate capacity locally.
+
+Full offline synchronization remains Prompt 22.
+
+⸻
+
+60. Accessibility
+
+Ensure:
+
+* Map controls have labels.
+* Markers announce Hunt title, status, and points.
+* Clusters announce Hunt count.
+* Bottom sheet works with screen readers.
+* Preview cards are navigable.
+* Capacity is announced textually.
+* Full state is not communicated only by color.
+* Invitation actions are clearly labeled.
+* My Hunts internal controls announce selected state.
+* Ready state is explained.
+* Disabled actions explain why.
+* Dynamic text scaling does not break layouts.
+* Touch targets are appropriately sized.
+* Reduced motion is respected.
+* Current selection is not indicated only by color.
+
+Test with screen readers and increased text size.
+
+⸻
+
+61. Privacy Verification
+
+Verify:
+
+* Public Map shows only published public Hunts.
+* Unlisted Hunts are not discoverable publicly.
+* Invite-only Hunts are not discoverable publicly.
+* Private Hunts are not discoverable publicly.
+* Unauthorized users cannot open private Hunt Detail.
+* Other invitees are not exposed.
+* Other participants’ proof is not exposed.
+* Locked clues are not returned.
+* Hidden stop locations are not returned.
+* Private validation geometry is not returned.
+* Creator private details are not shown.
+* Invitation messages are visible only to authorized users.
+* Participant identity is not publicly exposed by default.
+* User browsing location is not stored continuously.
+
+Do not weaken server privacy policies for UI convenience.
+
+⸻
+
+62. Security Verification
+
+Verify:
+
+* Join Hunt calls the trusted Prompt 11 operation.
+* Capacity is checked transactionally.
+* Duplicate join requests do not duplicate participation.
+* Invite-only Hunts cannot be joined without invitation.
+* Invitation acceptance is atomic with participation creation.
+* Expired or revoked invitations cannot be accepted.
+* Decline preserves invitation history.
+* Ordinary participants cannot trigger host-controlled start.
+* Hunt start is server-authoritative.
+* Locked clues remain protected.
+* Points are not awarded during join or start.
+* Client cannot select reward or participant role.
+* Suspended or restricted accounts are handled.
+* Deep links do not bypass privacy.
+* Service-role credentials are absent from the mobile client.
+
+⸻
+
+63. Database or RPC Adjustments
+
+Add only focused migrations or functions where the UI requires missing safe query support.
+
+Potential additions:
+
+* Public Hunt viewport RPC
+* Public Hunt Map view
+* Authorized Hunt Detail RPC
+* Invitation Detail RPC
+* My Hunts summary view
+* Ready Hunts query
+* Safe capacity summary
+* Creator public identity view
+* Stable map pagination
+* Safe unlisted access-token validation
+* Invitation history query
+
+Requirements:
+
+* Do not expose private Hunt data.
+* Validate authentication for private queries.
+* Restrict privileged execution.
+* Use explicit safe search paths.
+* Limit viewport result size.
+* Apply publication, schedule, privacy, and capacity rules.
+* Do not replace Prompt 11 domain operations.
+
+Document every migration.
+
+⸻
+
+64. Development Fixtures
+
+Use Prompt 11 fixtures to render:
+
+* Public available Hunt
+* Public full Hunt
+* Upcoming Hunt
+* Joined Hunt
+* Ready Hunt
+* Active Hunt
+* Completed Hunt
+* Invite-only Hunt with valid invitation
+* Expired invitation
+* Revoked invitation
+* Unlisted Hunt accessed by valid link
+* Private Hunt denied
+* Host-controlled Ready state
+* Minimum-participant waiting state
+* Map cluster
+* Empty map area
+* Location denied
+* Offline state
+* Mapbox disconnected state
+
+Fixtures must remain development-only.
+
+Do not let fixture joining or starting award production points.
+
+⸻
+
+65. Automated Tests
+
+Add tests covering:
+
+Hunt Map
+
+* Opens as Hunt mode default
+* Shows public Hunts
+* Excludes unlisted discovery
+* Excludes invite-only discovery
+* Excludes private Hunts
+* Clusters markers
+* Selects marker
+* Opens preview
+* Coordinates map and list
+* Applies filters
+* Handles empty area
+* Works without location permission
+
+Hunt Preview
+
+* Shows safe summary
+* Uses action resolver
+* Does not reveal clue content
+* Does not expose private geometry
+* Routes to Hunt Detail
+
+Hunt Detail
+
+* Shows required public information
+* Shows Join Hunt when eligible
+* Shows Full when capacity reached
+* Shows Upcoming appropriately
+* Shows Ready for joined user
+* Shows Continue for active user
+* Protects private content
+* Handles unlisted access safely
+
+Joining
+
+* Requires confirmation where appropriate
+* Prevents repeated taps
+* Calls trusted operation
+* Handles capacity change
+* Reuses existing participation
+* Routes to Ready state
+* Does not award points
+
+Invitations
+
+* Shows pending invitations
+* Opens Invitation Detail
+* Accepts atomically
+* Declines safely
+* Prevents expired acceptance
+* Prevents revoked acceptance
+* Handles capacity conflict
+* Does not expose other invitees
+
+My Hunts
+
+* Contains Active, Ready, Completed, Invitations, and Create Hunt
+* Does not add bottom tabs
+* Defaults appropriately
+* Shows Ready reasons
+* Routes Active items safely
+* Uses controlled placeholders for later features
+
+Starting
+
+* Shows Start Hunt only when allowed
+* Prevents ordinary host-controlled start
+* Uses trusted start operation
+* Does not reveal future clues
+* Routes to Active Hunt
+* Does not award points
+
+Privacy and security
+
+* Public query excludes private Hunts
+* Unauthorized private deep link reveals no details
+* Invite-only join cannot be bypassed
+* Locked clues remain absent
+* Private validation geometry remains absent
+* Client cannot assign participant role
+* Client cannot alter capacity or reward
+
+Use local Supabase integration tests where available.
+
+⸻
+
+66. Documentation
+
+Create or update:
+
+/docs/HUNT_MAP.md
+/docs/HUNT_DISCOVERY.md
+/docs/HUNT_DETAIL_UI.md
+/docs/HUNT_JOIN_FLOW.md
+/docs/HUNT_INVITATION_UI.md
+/docs/MY_HUNTS.md
+/docs/HUNT_READY_STATE.md
+/docs/HUNT_MAP_PRIVACY.md
+/docs/HUNT_UI_SECURITY.md
+/docs/HUNT_UI_TESTING.md
+
+Document:
+
+* Hunt Map structure
+* Public discovery rules
+* Privacy behavior
+* Marker and clustering behavior
+* Map/list coordination
+* Hunt filters
+* Hunt preview
+* Hunt Detail
+* Primary action resolver
+* Joining
+* Capacity conflicts
+* Invitation viewing
+* Accept and decline
+* My Hunts structure
+* Active placeholder behavior
+* Ready state
+* Start Hunt transition
+* Deep links
+* Notification routing
+* Offline behavior
+* Accessibility
+* Privacy and security
+* Development fixtures
+* Remaining work for Prompt 13
+
+Update:
+
+* /docs/PROJECT_CONSTITUTION.md
+* replit.md
+
+only where necessary.
+
+Do not alter approved navigation or visual direction.
+
+⸻
+
+67. Out of Scope
+
+Do not implement:
+
+* Complete Active Hunt gameplay
+* Full clue interaction
+* Complete stop-by-stop map experience
+* Hunt proof-submission UI
+* Complete Hunt completion UI
+* Hunt Progress
+* Hunt leaderboard
+* Completed Hunt history
+* Full participant-management UI
+* Host control panel
+* User-facing Hunt creation
+* Hunt editor
+* Admin Hunt moderation
+* Admin proof review
+* AI Hunt generation
+* Live participant locations
+* Hunt chat
+* Friends
+* Teams or guilds
+* Background location
+* Turn-by-turn navigation
+* Push-notification delivery
+* Automated media-moderation provider
+* Stripe
+* Memberships
+* Paid Hunt tickets
+* Paid hints
+* Creator payouts
+
+Prompt 13 will implement Active Hunt gameplay, authorized clue release, stops, proof, validation, and Hunt completion.
+
+Prompt 14 will implement Hunt Progress, completion history, proof status, and Hunt leaderboards.
+
+⸻
+
+68. Final Verification
+
+Before finishing:
+
+* Confirm Hunt mode opens on the existing Map tab.
+* Confirm Hunt bottom navigation remains Map, My Hunts, Progress, and Profile.
+* Confirm no duplicate map or location architecture was created.
+* Confirm the public Hunt Map shows only published public Hunts.
+* Confirm unlisted, invite-only, and private Hunts are not publicly discoverable.
+* Confirm markers cluster.
+* Confirm marker selection opens a safe preview.
+* Confirm Hunt Detail does not expose clues or private geometry.
+* Confirm Join Hunt uses Prompt 11’s trusted operation.
+* Confirm joining is idempotent.
+* Confirm capacity is checked server-side.
+* Confirm invite-only joining cannot be bypassed.
+* Confirm invitation acceptance and participation creation are atomic.
+* Confirm invitation decline preserves history.
+* Confirm Ready state accurately represents the start model.
+* Confirm ordinary users cannot start host-controlled Hunts.
+* Confirm starting a Hunt does not award points.
+* Confirm future clues remain protected.
+* Confirm My Hunts contains Active, Ready, Completed, Invitations, and Create Hunt.
+* Confirm later features use controlled placeholders rather than fake functionality.
+* Confirm another user’s invitations and private participation remain inaccessible.
+* Confirm no new bottom tabs were added.
+* Confirm the Quest/Hunt selector remains intact.
+* Confirm Profile remains shared.
+* Confirm the app compiles.
+* Confirm tests pass or clearly document blocked integration tests.
+* Confirm no approved UI or navigation was redesigned.
+
+Resolve known in-scope errors before stopping.
+
+⸻
+
+Deliverables
+
+When complete, provide:
+
+1. Hunt Map files created or updated
+2. Public Hunt Map query implementation
+3. Privacy-aware discovery behavior
+4. Hunt markers and clustering
+5. Map/list coordination
+6. Hunt filters and search
+7. Hunt preview card
+8. Hunt Detail screen
+9. State-based Hunt actions
+10. Join confirmation
+11. Join Hunt flow
+12. Join failure and success handling
+13. Invitation list
+14. Invitation Detail
+15. Accept invitation flow
+16. Decline invitation flow
+17. Historical invitation states
+18. Initial My Hunts screen
+19. Active section treatment
+20. Ready section
+21. Ready Hunt Detail
+22. Start Hunt transition
+23. Host-controlled waiting state
+24. Capacity and minimum-participant presentation
+25. Cancelled, expired, full, and upcoming states
+26. Deep-link routes
+27. Notification routing
+28. React Query integration and invalidation
+29. Offline and error behavior
+30. Database migrations, views, RPCs, indexes, or RLS adjustments
+31. Tests added and results
+32. Documentation created or updated
+33. Assumptions made
+34. Known limitations
+35. Exact remaining work for Prompt 13
+
+Do not begin Prompt 13.
+
+Do not redesign the application.
+
+Create a checkpoint named:
+
+Build 1 — Prompt 12 — Hunt Map, Joining, and Invitations

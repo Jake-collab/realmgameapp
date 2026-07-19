@@ -6,3 +6,4 @@
 - [Quest Progress Architecture](quest-progress-architecture.md) — Prompt 8: migration 019 RPCs, segmented control screen, deep screens, has_image derived from submission_type, safe review note rule.
 - [Geo Quest Map Architecture](geo-quest-map-architecture.md) — Prompt 10: Mapbox lazy-load, no raw GPS in cache keys, server-only validation, approximate display coords, known TS gotchas.
 - [Hunt Domain Architecture](hunt-domain-architecture.md) — Prompt 11: full Hunt feature, reward snapshot, idempotency, trusted-only transitions, security invariants, 507 tests passing.
+- [Hunt Map UI Architecture](hunt-map-ui-architecture.md) — Prompt 12: MyHuntsSummaryEntry vs HuntSummary, requireSupabase pattern, Button props, privacy layers, 607 tests passing.
