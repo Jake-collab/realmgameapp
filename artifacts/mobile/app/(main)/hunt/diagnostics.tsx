@@ -11,7 +11,8 @@
 
 import React, { useState } from 'react';
 import { ScrollView, View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { fontFamily, spacing, colors, borderRadius } from '@/lib/theme';
+import { fontFamily } from '@/constants/typography';
+import { spacing, radius } from '@/constants/spacing';
 import {
   DEV_HUNT_FIXTURES,
   DEV_ACTIVE_HUNT,
@@ -263,10 +264,10 @@ export default function HuntDiagnosticsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background ?? '#0d0d14',
+    backgroundColor: '#0d0d14',
   },
   content: {
-    padding: spacing.md,
+    padding: spacing[4],
     paddingBottom: 60,
   },
   header: {
@@ -279,18 +280,18 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: 12,
     color: '#888',
-    marginBottom: spacing.lg,
+    marginBottom: spacing[6],
   },
   section: {
-    marginBottom: spacing.md,
+    marginBottom: spacing[4],
     borderWidth: 1,
     borderColor: '#2a2a3a',
-    borderRadius: borderRadius.md,
+    borderRadius: radius.md,
     overflow: 'hidden',
   },
   sectionHeader: {
     backgroundColor: '#1a1a2a',
-    padding: spacing.sm,
+    padding: spacing[3],
   },
   sectionTitle: {
     fontFamily: fontFamily.semiBold,
@@ -298,13 +299,13 @@ const styles = StyleSheet.create({
     color: '#c0c0d0',
   },
   sectionBody: {
-    padding: spacing.sm,
+    padding: spacing[3],
   },
   card: {
     backgroundColor: '#111120',
-    borderRadius: borderRadius.sm,
-    padding: spacing.sm,
-    marginBottom: spacing.xs,
+    borderRadius: radius.sm,
+    padding: spacing[3],
+    marginBottom: spacing[2],
     borderLeftWidth: 2,
     borderLeftColor: '#444466',
   },
