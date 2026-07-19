@@ -1,0 +1,2412 @@
+Prompt 11 — Hunt Domain Logic, Lifecycle, Invitations, Stops, Clues, and Completion
+
+Copy this into Replit AI:
+
+# Worlds — Build 1, Prompt 11
+# Hunt Domain Logic, Lifecycle, Invitations, Stops, Clues, and Completion
+Continue from the current Worlds project and follow these documents as authoritative:
+- /docs/PROJECT_CONSTITUTION.md
+- /docs/DATABASE_ARCHITECTURE.md
+- /docs/ROW_LEVEL_SECURITY.md
+- /docs/POINTS_SYSTEM.md
+- /docs/GEO_DATA_SECURITY.md
+- /docs/AUTHENTICATION.md
+- /docs/PROFILE_AND_SETTINGS.md
+- /docs/NOTIFICATIONS.md
+- all Quest domain and UI documents
+- all shared map and geospatial documents created by Prompt 9
+- /docs/QUEST_MAP.md
+- /docs/GEO_QUEST_VALIDATION.md
+- /docs/GEO_VALIDATION_PRIVACY.md
+- /docs/GEO_VALIDATION_SECURITY.md
+- replit.md
+- the approved UI/UX addendum
+- the approved authentication and navigation clarification
+The application is named:
+Worlds
+Prompt 3 established the Hunt tables, participation records, invitation records, proof infrastructure, media architecture, points ledger, moderation foundation, and RLS baseline.
+Prompt 5 implemented shared Profile, settings, privacy, blocked users, and notifications.
+Prompts 6–10 completed the Quest domain, Quest UI, Quest Progress, shared mapping foundation, Quest Geo Map, and secure location validation.
+This prompt must implement the Hunt domain and business logic that the later Hunt UI, Hunt Map, My Hunts, invitations, and creator tools will call.
+Do not build the finished Hunt UI during this prompt.
+Do not build the finished Hunt Map during this prompt.
+Do not build user-facing Hunt creation during this prompt.
+Do not duplicate the shared Mapbox, location, media, notification, profile, points, or proof architectures.
+Do not redesign the approved navigation.
+---
+# Primary Objective
+Implement a secure and reusable Hunt domain supporting:
+- Public Hunts
+- Unlisted Hunts
+- Invite-only Hunts
+- Private Hunts
+- Solo participation
+- Group participation readiness
+- Hunt invitations
+- Hunt joining
+- Hunt start conditions
+- Ordered and unordered stops
+- Sequential clue release
+- Stop validation
+- Location validation
+- Image, text, and mixed proof
+- Hunt progress
+- Hunt completion
+- Point awarding
+- Hunt cancellation
+- Hunt expiration
+- Participant removal
+- Invitation expiration
+- Capacity limits
+- Hunt occurrences
+- Hunt ownership
+- Creator and admin moderation states
+- Safe development fixtures
+- Notification-domain events
+The Hunt domain must be reusable from:
+- Hunt Map
+- My Hunts
+- Hunt Detail
+- Active Hunt
+- Hunt invitations
+- Hunt participant management
+- Future Hunt creator tools
+- Future admin moderation
+- Future AI-assisted Hunt drafting
+- Shared Progress and leaderboard systems
+Do not place Hunt business rules directly inside screens.
+---
+# 1. Preserve the Approved Hunt Navigation
+Hunt bottom navigation remains exactly:
+1. Map
+2. My Hunts
+3. Progress
+4. Profile
+Do not add:
+- Home
+- Discover
+- Create
+- Invitations
+- Search
+- Chat
+- Teams
+- Notifications
+- Settings
+as bottom tabs.
+The existing Quest/Hunt selector in the top header must remain intact.
+The shared Profile must remain shared between Quest and Hunt.
+The Hunt Map will be the map-first Hunt entry point.
+My Hunts will later contain:
+- Active
+- Ready
+- Completed
+- Invitations
+- Create Hunt
+Do not implement those finished screens in this prompt.
+---
+# 2. Hunt Feature Module
+Create or finalize a modular Hunt feature structure similar to:
+```text
+/features/hunts/
+  components/
+  hooks/
+  screens/
+  services/
+  repositories/
+  schemas/
+  types/
+  constants/
+  queries/
+  mutations/
+  state-machines/
+  tests/
+
+Adapt this to the existing architecture.
+
+Responsibilities:
+
+Repositories
+
+Typed persistence and safe database access.
+
+Services
+
+Business rules, eligibility, lifecycle, invitations, participation, stops, clues, validation, completion, and cancellation.
+
+Queries and hooks
+
+React Query integration.
+
+Schemas
+
+Input, payload, invitation, validation, and service response validation.
+
+State machines
+
+Centralized Hunt, participation, invitation, stop, and proof transitions.
+
+Do not duplicate shared services already implemented for:
+
+* Authentication
+* Profiles
+* User settings
+* Media
+* Proof submissions
+* Notifications
+* Points
+* Mapbox
+* Foreground location
+* Geospatial validation
+
+Extend them where Hunt-specific behavior is required.
+
+⸻
+
+3. Hunt Domain Types
+
+Create clear domain types for:
+
+* Hunt
+* Hunt summary
+* Hunt detail
+* Hunt status
+* Hunt privacy
+* Hunt participation mode
+* Hunt occurrence
+* Hunt creator
+* Hunt owner
+* Hunt participant
+* Hunt participant role
+* Hunt participation status
+* Hunt invitation
+* Hunt invitation status
+* Hunt stop
+* Hunt stop status
+* Hunt clue
+* Hunt clue visibility state
+* Hunt proof requirement
+* Hunt validation requirement
+* Hunt availability
+* Hunt eligibility
+* Hunt join result
+* Hunt start result
+* Hunt completion result
+* Hunt cancellation result
+* Hunt points reward
+* Hunt capacity state
+* Hunt moderation state
+
+Use generated database types as the persistence foundation.
+
+Avoid creating incompatible duplicate Hunt types across Map, My Hunts, and creator tools.
+
+⸻
+
+4. Initial Hunt Privacy Types
+
+Support exactly:
+
+* public
+* unlisted
+* invite_only
+* private
+
+Public
+
+Discoverable by eligible users through the Hunt Map and future public listings.
+
+Unlisted
+
+Not broadly discoverable, but accessible through a valid link or identifier.
+
+Invite-only
+
+Accessible only to invited eligible users.
+
+Private
+
+Visible only to its owner, authorized participants, and authorized staff.
+
+Do not treat unlisted as private.
+
+Do not expose invite-only or private Hunt details through public map queries.
+
+Do not expose participant lists publicly unless explicitly permitted.
+
+⸻
+
+5. Hunt Content Status
+
+Use a controlled Hunt content lifecycle.
+
+Support statuses such as:
+
+* draft
+* pending_review
+* approved
+* scheduled
+* published
+* paused
+* cancelled
+* expired
+* archived
+* rejected
+
+Define exact behavior.
+
+Draft
+
+Visible only to the creator and authorized staff.
+
+Pending Review
+
+Submitted for moderation and unavailable to ordinary participants.
+
+Approved
+
+Approved but not necessarily scheduled or published.
+
+Scheduled
+
+Approved and awaiting availability.
+
+Published
+
+Available according to privacy, schedule, capacity, and eligibility.
+
+Paused
+
+Temporarily unavailable to new participants.
+
+Cancelled
+
+Ended by owner or staff under defined rules.
+
+Expired
+
+Availability ended.
+
+Archived
+
+Historical record retained.
+
+Rejected
+
+Not approved.
+
+Public and participant queries must never expose internal moderation details.
+
+⸻
+
+6. Hunt Ownership
+
+Each Hunt must have one authoritative owner.
+
+Initial owner types may include:
+
+* Platform
+* Administrator
+* User creator
+
+Requirements:
+
+* Ownership cannot be changed casually by the mobile client.
+* Hunt creators cannot grant themselves staff permissions.
+* Ownership transfer must be a future trusted operation.
+* The owner is not automatically a participant unless explicitly added.
+* A user-created Hunt remains subject to moderation before publication.
+* The owner cannot bypass proof, safety, or points rules.
+
+Do not implement creator ownership transfer during this prompt.
+
+⸻
+
+7. Participation Modes
+
+Prepare support for:
+
+* Solo Hunt
+* Group Hunt
+* Either solo or group
+
+For Build 1:
+
+* Solo participation must be fully supported in the domain.
+* Group participation architecture must be correct and usable by later prompts.
+* Do not overbuild live team coordination or chat.
+
+Define configuration such as:
+
+* solo
+* group
+* solo_or_group
+
+For group Hunts, prepare:
+
+* Group creator or captain
+* Participant membership
+* Participant readiness
+* Shared or individual progress mode
+* Capacity
+* Start conditions
+* Completion rules
+
+Choose explicit fields rather than hidden assumptions.
+
+⸻
+
+8. Participant Roles
+
+Support roles such as:
+
+* owner
+* host
+* captain
+* participant
+
+Only use roles required by the current schema.
+
+Suggested behavior:
+
+Owner
+
+Owns the Hunt definition.
+
+Host
+
+Authorized to manage a scheduled Hunt occurrence or participant group.
+
+Captain
+
+Leads one participant group where group play is supported.
+
+Participant
+
+Takes part in the Hunt.
+
+Do not confuse Hunt ownership with administrative platform roles.
+
+Do not allow ordinary users to assign themselves elevated Hunt roles.
+
+⸻
+
+9. Hunt Occurrences
+
+Separate reusable Hunt definitions from scheduled Hunt occurrences where appropriate.
+
+An occurrence should support:
+
+* Hunt definition ID
+* Occurrence ID
+* Availability start
+* Availability end
+* Start window
+* Completion deadline
+* Capacity
+* Participant count
+* Status
+* Reward snapshot or override where explicitly supported
+* Public meeting information where safe
+* Cancellation state
+* Owner or host
+
+Examples:
+
+hunt:{hunt_id}:2026-08-01T14:00Z
+hunt:{hunt_id}:open-2026-08
+
+Do not use client-generated occurrence keys as the final authority.
+
+If the current schema lacks a practical Hunt occurrence model, add a focused migration.
+
+Avoid duplicating all Hunt content for every occurrence.
+
+⸻
+
+10. Hunt Availability Evaluator
+
+Create one authoritative Hunt availability evaluator.
+
+It should determine whether the Hunt is:
+
+* Upcoming
+* Available to view
+* Available to join
+* Invitation required
+* Invited
+* Ready to start
+* Active
+* Full
+* Already joined
+* Completed
+* Paused
+* Cancelled
+* Expired
+* Ineligible
+* Private
+* Unavailable because of account status
+* Unavailable because of location or region
+* Unavailable because of prerequisites
+
+Return structured output.
+
+Example:
+
+type HuntAvailabilityResult = {
+  state:
+    | "upcoming"
+    | "available"
+    | "invitation_required"
+    | "invited"
+    | "ready"
+    | "active"
+    | "full"
+    | "joined"
+    | "completed"
+    | "paused"
+    | "cancelled"
+    | "expired"
+    | "private"
+    | "ineligible";
+  canView: boolean;
+  canJoin: boolean;
+  canStart: boolean;
+  reasonCode?: string;
+  userMessage?: string;
+  occurrenceId?: string;
+  participationId?: string;
+  availableFrom?: string;
+  availableUntil?: string;
+};
+
+Do not duplicate Hunt availability logic across Map, Detail, Invitations, and My Hunts.
+
+⸻
+
+11. Hunt Eligibility
+
+Create a centralized Hunt eligibility service.
+
+Evaluate:
+
+* Authentication
+* Account status
+* Onboarding completion
+* Hunt content status
+* Occurrence status
+* Privacy setting
+* Invitation status
+* Existing participation
+* Capacity
+* Start and completion windows
+* Region availability
+* Prerequisites
+* Participation mode
+* Owner restrictions
+* Block relationships where relevant
+* Creator or participant restrictions
+* Minimum participant count
+* Maximum participant count
+* Administrative restriction
+* Future age restrictions readiness
+
+Return structured reason codes.
+
+Examples:
+
+* NOT_AUTHENTICATED
+* ACCOUNT_RESTRICTED
+* HUNT_NOT_PUBLISHED
+* HUNT_UPCOMING
+* HUNT_EXPIRED
+* HUNT_PAUSED
+* HUNT_CANCELLED
+* HUNT_FULL
+* INVITATION_REQUIRED
+* INVITATION_EXPIRED
+* ALREADY_JOINED
+* ALREADY_COMPLETED
+* BLOCK_RELATIONSHIP
+* PREREQUISITE_NOT_MET
+* REGION_UNAVAILABLE
+* MINIMUM_PARTICIPANTS_NOT_MET
+* INVALID_PARTICIPATION_MODE
+
+Use user-safe messages at the UI layer.
+
+⸻
+
+12. Hunt Prerequisites
+
+Prepare simple Hunt prerequisite support.
+
+A Hunt may require:
+
+* Completion of a Quest
+* Completion of another Hunt
+* Minimum point total
+* Specific achievement
+* Invitation
+* Administrative or creator access
+* Future membership tier
+
+Use a typed, nonexecutable prerequisite model.
+
+Do not store arbitrary code or expressions in the database.
+
+Support all-required behavior initially.
+
+Do not activate membership-gated Hunts before membership infrastructure exists.
+
+⸻
+
+13. Hunt Stops
+
+A Hunt consists of one or more stops.
+
+Each stop may include:
+
+* Title
+* Public instruction
+* Private validation configuration
+* Sort order
+* Required or optional status
+* Clue
+* Public display location
+* Private validation geometry
+* Proof requirement
+* Validation requirement
+* Estimated duration
+* Safety note
+* Accessibility note
+* Unlock condition
+* Time window
+* Completion state
+
+Do not treat clues and stops as the same database entity unless the existing schema intentionally combines them.
+
+Each stop should have an authoritative stable ID.
+
+⸻
+
+14. Ordered and Unordered Hunts
+
+Support:
+
+Ordered Hunts
+
+Stops must be completed in sequence.
+
+Unordered Hunts
+
+Stops may be completed in any permitted order.
+
+Partially ordered readiness
+
+Prepare future grouping or dependency behavior only if the schema already supports it cleanly.
+
+For Build 1:
+
+* Ordered and unordered are sufficient.
+* Do not implement a general graph execution engine.
+* Locked stops must not become accessible through deep links.
+* Stop availability must be evaluated server-side where sensitive.
+
+⸻
+
+15. Stop Statuses
+
+Support stop-progress statuses such as:
+
+* locked
+* available
+* in_progress
+* awaiting_proof
+* under_review
+* needs_resubmission
+* completed
+* rejected
+* skipped
+* expired
+
+Use only states that fit the current schema.
+
+Define allowed transitions.
+
+Example:
+
+locked
+  → available
+available
+  → in_progress
+  → awaiting_proof
+  → completed
+awaiting_proof
+  → under_review
+under_review
+  → completed
+  → needs_resubmission
+  → rejected
+needs_resubmission
+  → under_review
+
+Do not allow the client to set protected completion states directly.
+
+⸻
+
+16. Clue Model
+
+A clue may contain:
+
+* Text
+* Image
+* Riddle
+* Public hint
+* Location-area hint
+* Instruction
+* Future audio readiness
+
+For Build 1, support:
+
+* Text clues
+* Image clues
+* Combined text and image clues
+
+Do not implement arbitrary HTML.
+
+Do not implement audio unless the existing media system already supports it safely and it is required.
+
+Clues must use moderation-aware media records.
+
+Do not expose unpublished or future locked clues.
+
+⸻
+
+17. Clue Visibility
+
+Support clue states such as:
+
+* Hidden
+* Available
+* Revealed
+* Completed
+* Expired
+
+A clue may be revealed:
+
+* At Hunt start
+* After previous stop completion
+* At a scheduled time
+* After a valid location check
+* Through an optional hint action later
+
+Do not rely only on local client state to hide sensitive future clues.
+
+The server response must exclude unauthorized clue content.
+
+Deep links must not reveal locked clues.
+
+⸻
+
+18. Sequential Clue Release
+
+Implement an authoritative clue-release service.
+
+For ordered Hunts:
+
+1. The first authorized clue becomes available at start.
+2. Completing the current stop unlocks the next stop and clue.
+3. Future locked clue content remains unavailable.
+4. The active Hunt query returns only authorized content.
+5. Reopening the app restores the correct current clue.
+6. Completion of the final required stop prepares Hunt completion.
+
+Do not send all clue content to the client and merely hide it visually.
+
+Do not include locked clue text in analytics or logs.
+
+⸻
+
+19. Optional Hints Preparation
+
+Prepare future support for optional hints.
+
+A hint may:
+
+* Reveal extra text
+* Show a broader location region
+* Reduce points in a future scoring model
+* Become available after time passes
+
+For this prompt:
+
+* Define a safe contract only if useful.
+* Do not activate point penalties.
+* Do not build in-app purchases.
+* Do not implement paid hints.
+* Do not expose hidden validation geometry.
+
+Do not complicate Build 1 with a large hint economy.
+
+⸻
+
+20. Hunt Invitations
+
+Implement a secure invitation domain.
+
+Support:
+
+* Invite creation by an authorized owner, host, or future creator
+* Invitation retrieval
+* Accept
+* Decline
+* Expire
+* Revoke
+* Capacity enforcement
+* Duplicate prevention
+* Notification-event preparation
+* Block relationship enforcement
+
+Invitation statuses:
+
+* pending
+* accepted
+* declined
+* revoked
+* expired
+
+Use exact existing statuses where possible.
+
+Do not allow ordinary participants to invite others unless the Hunt configuration permits it.
+
+⸻
+
+21. Invitation Data
+
+An invitation should include:
+
+* Invitation ID
+* Hunt ID
+* Occurrence ID
+* Inviter ID
+* Invitee ID
+* Status
+* Created timestamp
+* Expiration timestamp
+* Responded timestamp
+* Optional safe invitation message
+* Role offered where permitted
+
+Do not include:
+
+* Invitee email in public Hunt data
+* Private location history
+* Internal moderation data
+* Hidden clue content
+* Service-role metadata
+
+Do not expose invitations to users other than the inviter, invitee, and authorized staff.
+
+⸻
+
+22. Invitation Creation
+
+Implement a trusted inviteToHunt operation.
+
+It must:
+
+1. Authenticate the inviter.
+2. Verify inviter authority.
+3. Verify Hunt and occurrence.
+4. Verify Hunt privacy and invitation configuration.
+5. Verify invitee exists and is eligible.
+6. Check block relationships in both directions.
+7. Prevent self-invitation.
+8. Prevent duplicate pending or accepted invitations.
+9. Check capacity.
+10. Create the invitation.
+11. Emit a notification-ready domain event.
+12. Return a safe invitation result.
+
+Do not let the inviter bypass account, capacity, privacy, or blocking rules.
+
+Do not send email or push notifications yet.
+
+⸻
+
+23. Invitation Acceptance
+
+Implement a secure acceptHuntInvitation operation.
+
+It must:
+
+1. Authenticate the invitee.
+2. Verify invitation ownership.
+3. Verify pending status.
+4. Verify invitation has not expired or been revoked.
+5. Reevaluate Hunt eligibility.
+6. Reevaluate occurrence capacity.
+7. Create or reuse participation idempotently.
+8. Mark invitation accepted.
+9. Record response timestamp.
+10. Emit a notification-ready event.
+11. Return the participation.
+
+Invitation acceptance and participation creation must be atomic.
+
+Do not create duplicate participation records from repeated taps.
+
+⸻
+
+24. Invitation Decline
+
+Implement declineHuntInvitation.
+
+Requirements:
+
+* Only the invitee may decline.
+* Decline must be idempotent.
+* Accepted invitations cannot be silently changed to declined after participation begins.
+* Decline preserves the record.
+* Decline does not block the inviter.
+* Decline does not affect unrelated Hunts.
+* Emit a notification-ready event only if the product intends to notify the inviter.
+
+Do not delete the invitation.
+
+⸻
+
+25. Invitation Revocation and Expiration
+
+Authorized inviters may revoke pending invitations.
+
+Requirements:
+
+* Accepted invitations cannot be revoked as though they were never accepted.
+* Participant removal is a separate operation.
+* Expiration must be evaluated using server time.
+* Expired invitations cannot be accepted.
+* Scheduled cleanup may mark invitations expired.
+* Query-time expiration checks must still protect stale records.
+
+Do not rely on the client to expire invitations.
+
+⸻
+
+26. Joining Public Hunts
+
+Implement joinHunt.
+
+Expected behavior:
+
+1. Authenticate user.
+2. Verify active account.
+3. Load Hunt and occurrence.
+4. Evaluate privacy.
+5. Evaluate availability and eligibility.
+6. Check capacity.
+7. Check existing participation.
+8. Create participation.
+9. Assign appropriate role.
+10. Initialize stop progress.
+11. Store reward and rules snapshot.
+12. Return Ready or Active state depending on start rules.
+
+Requirements:
+
+* Idempotent
+* Transactional
+* No point award
+* No draft or private Hunt joining
+* No capacity overrun
+* No client-controlled participant role
+* No bypass of invitation requirement
+
+⸻
+
+27. Ready State
+
+A joined Hunt may enter a ready state before it becomes active.
+
+Use Ready when:
+
+* The occurrence has not reached its start window
+* Minimum participants have not joined
+* The host has not started a host-controlled group Hunt
+* The user accepted an invitation before the Hunt begins
+
+Ready users should have access only to authorized pre-start information.
+
+Do not reveal locked clues early.
+
+Do not mark Ready as Active.
+
+⸻
+
+28. Hunt Start Models
+
+Support:
+
+Individual start
+
+Each eligible participant starts independently.
+
+Scheduled automatic start
+
+The Hunt becomes active at the occurrence start time.
+
+Host-controlled start
+
+An authorized host starts the group Hunt after requirements are met.
+
+Use explicit configuration.
+
+Do not infer start behavior from privacy type.
+
+Do not let ordinary participants trigger a host-controlled start.
+
+⸻
+
+29. Starting an Individual Hunt
+
+Implement startHunt.
+
+Expected behavior:
+
+1. Authenticate user.
+2. Verify participation ownership.
+3. Verify Ready or joined state.
+4. Reevaluate Hunt and occurrence availability.
+5. Check start window.
+6. Check minimum and maximum participant rules.
+7. Validate start location if configured.
+8. Set started timestamp.
+9. Initialize or activate the first permitted stops.
+10. Reveal authorized clue content.
+11. Return active Hunt state.
+
+Do not reveal all clues.
+
+Do not award points.
+
+The operation must be idempotent.
+
+⸻
+
+30. Host-Controlled Start
+
+Prepare startHuntOccurrence or equivalent for authorized hosts.
+
+Requirements:
+
+* Verify host authority.
+* Verify occurrence state.
+* Verify minimum participant count.
+* Verify scheduled window.
+* Activate accepted and ready participants according to rules.
+* Reveal authorized starting clues.
+* Emit domain events.
+* Preserve transactional consistency.
+
+Do not expose this operation to ordinary participants.
+
+Do not build the host UI yet.
+
+⸻
+
+31. Participation Statuses
+
+Support statuses such as:
+
+* invited
+* joined
+* ready
+* active
+* awaiting_proof
+* under_review
+* needs_resubmission
+* completed
+* removed
+* withdrawn
+* expired
+* cancelled
+
+Adapt to the existing schema.
+
+Define valid transitions centrally.
+
+Example:
+
+invited
+  → joined
+  → ready
+  → active
+  → completed
+active
+  → awaiting_proof
+  → under_review
+  → completed
+under_review
+  → needs_resubmission
+  → under_review
+joined or ready or active
+  → withdrawn
+joined or ready or active
+  → removed
+ready or active
+  → expired
+any nonfinal state
+  → cancelled
+
+Do not allow arbitrary transitions.
+
+⸻
+
+32. Participation Withdrawal
+
+Implement withdrawFromHunt.
+
+Rules:
+
+* Only the participant may withdraw themselves.
+* Completed participation cannot be withdrawn.
+* Under-review final proof requires an explicit rule.
+* Group impacts must be evaluated.
+* Withdrawal preserves history.
+* No points are awarded.
+* Capacity may reopen.
+* Invitation status should not be rewritten improperly.
+* The user may or may not rejoin depending on Hunt configuration.
+
+Do not delete participation.
+
+⸻
+
+33. Participant Removal
+
+Implement trusted participant removal.
+
+Authorized roles may remove a participant only under defined rules.
+
+Requirements:
+
+* Verify authority.
+* Prevent unauthorized removal.
+* Prevent removing the Hunt owner through an ordinary operation.
+* Preserve participation history.
+* Store safe removal reason.
+* Emit notification-ready event.
+* Recalculate group readiness or minimum participant state.
+* Reopen capacity where appropriate.
+* Audit the action.
+
+Do not expose confidential moderation notes to the removed participant.
+
+Do not let ordinary users remove arbitrary participants.
+
+⸻
+
+34. Capacity Enforcement
+
+Support:
+
+* Maximum participants
+* Minimum participants
+* Current accepted or joined count
+* Reserved invitation capacity readiness
+* Waitlist readiness, but not active implementation
+
+Requirements:
+
+* Capacity must be enforced transactionally.
+* Simultaneous joins cannot exceed capacity.
+* Declined, revoked, expired, withdrawn, and removed states must be handled consistently.
+* Define whether pending invitations reserve capacity.
+* Document the chosen rule.
+
+Recommended Build 1 rule:
+
+* Accepted or joined participation counts toward capacity.
+* Pending invitations do not guarantee capacity unless the Hunt explicitly reserves invited slots.
+
+Do not implement a waitlist unless required by current product documents.
+
+⸻
+
+35. Group Progress Models
+
+Prepare explicit support for:
+
+Shared progress
+
+One group completion state applies to all active group members.
+
+Individual progress
+
+Each participant completes stops independently.
+
+For Build 1:
+
+* Individual progress must work fully.
+* Shared progress may be implemented if the schema already supports it safely.
+* Do not fake shared progress through client synchronization.
+
+If shared progress is enabled:
+
+* Authorized completion of a shared stop updates the group state.
+* Participant contribution records may be retained.
+* Completion rules must define who receives points.
+* Removed or late participants must not receive rewards automatically without eligibility.
+
+Document the chosen Build 1 support level.
+
+⸻
+
+36. Stop Progress Initialization
+
+When participation starts:
+
+* Create required progress records or derive them safely.
+* Ordered Hunts should make only the first permitted stop available.
+* Unordered Hunts may make all permitted required stops available.
+* Optional stops should be identified clearly.
+* Locked clue content must remain server-protected.
+* Initialization must be idempotent.
+
+Do not initialize duplicate stop-progress rows.
+
+⸻
+
+37. Stop Validation Types
+
+Support stop validation such as:
+
+* none
+* manual_confirmation
+* text
+* image
+* location
+* image_and_location
+* text_and_image
+* trusted_code
+* Future automated validation
+
+Use only schema-supported types.
+
+For trusted_code, prepare secure one-time code validation only if the current roadmap requires it.
+
+Do not store easily guessable completion codes in public client data.
+
+⸻
+
+38. Location Validation Reuse
+
+Reuse the trusted geospatial architecture from Prompts 9 and 10.
+
+Hunt stop location validation must support:
+
+* Private validation geometry
+* Public display geometry
+* Current location capture
+* Accuracy checks
+* Freshness checks
+* Authenticated request
+* Ownership or participation check
+* Stop-state check
+* Rate limiting
+* Validation-attempt recording
+* Idempotency
+* Safe response
+
+Do not create a second location-validation endpoint unless Hunt-specific behavior requires a thin wrapper.
+
+Prefer a shared validation engine with typed subject:
+
+* Quest participation
+* Hunt participation
+* Hunt stop
+
+Do not expose private Hunt stop geometry.
+
+⸻
+
+39. Hunt Proof Submission
+
+Reuse the shared proof-submission infrastructure.
+
+A Hunt proof submission must be associated with:
+
+* Hunt participation
+* Hunt stop
+* Participant
+* Submission sequence
+* Proof requirement version
+* Occurrence
+* Group context where applicable
+
+Support:
+
+* Draft
+* Uploading
+* Submitted
+* Under review
+* Approved
+* Rejected
+* Needs resubmission
+
+Requirements:
+
+* Proof remains private.
+* Submitted proof is immutable.
+* Resubmissions link to prior submissions.
+* Users cannot approve their own proof.
+* Users cannot change reviewer data.
+* Media uses protected storage.
+* Multiple simultaneous active submissions are prevented.
+
+Do not build the proof UI yet.
+
+⸻
+
+40. Stop Completion
+
+Implement one authoritative completeHuntStop operation.
+
+It must:
+
+1. Authenticate the user.
+2. Verify participation ownership or authorized group action.
+3. Verify active Hunt state.
+4. Verify stop availability.
+5. Verify ordering rules.
+6. Verify required proof or trusted validation.
+7. Verify the stop is not already completed.
+8. Set completion state and timestamp.
+9. Unlock the next permitted stop or clue.
+10. Update Hunt progress.
+11. Emit domain events.
+12. Return the newly authorized active state.
+
+Do not award the full Hunt reward at ordinary stop completion unless the reward model explicitly includes per-stop rewards.
+
+Do not let the client directly unlock future clues.
+
+⸻
+
+41. Per-Stop Points Preparation
+
+Prepare optional per-stop reward support.
+
+For Build 1:
+
+* Default to awarding points at full Hunt completion.
+* Per-stop rewards should remain disabled unless explicitly configured.
+* Do not allow the client to calculate or choose stop rewards.
+* If implemented, use the append-only ledger and unique idempotency keys.
+* Reversals must remain append-only.
+
+Avoid making Hunt point logic overly complicated before creator and admin controls exist.
+
+⸻
+
+42. Hunt Completion Readiness
+
+Create a centralized completion-readiness evaluator.
+
+It should verify:
+
+* Participation active
+* All required stops completed
+* Required proof approved
+* Required location validation successful
+* Required shared progress complete where applicable
+* Hunt occurrence valid
+* Completion deadline not violated
+* Participant still eligible
+* Reward not already issued
+
+Return:
+
+* Ready
+* Missing required stop
+* Proof pending
+* Proof rejected
+* Location validation required
+* Expired
+* Removed
+* Already completed
+* Invalid state
+
+Do not duplicate readiness logic across future UI screens.
+
+⸻
+
+43. Hunt Completion Transaction
+
+Implement one authoritative completeHunt operation.
+
+It must:
+
+1. Authenticate user.
+2. Verify participation ownership or valid group allocation.
+3. Verify completion readiness.
+4. Verify all required stops.
+5. Verify proof and validation.
+6. Verify Hunt not already completed.
+7. Verify reward not already issued.
+8. Set participation completed.
+9. Set completion timestamp.
+10. Record the authoritative reward.
+11. Insert a Hunt points-ledger transaction.
+12. Use a unique idempotency key.
+13. Update occurrence or group completion state where necessary.
+14. Emit notification-ready events.
+15. Return the completion result.
+
+Completion and point insertion must be atomic.
+
+Do not trust reward values sent by the client.
+
+Do not duplicate the Quest completion code if a safe generic completion engine can be extended.
+
+⸻
+
+44. Reward Snapshot
+
+At join or start, store an authoritative Hunt reward and rules snapshot.
+
+Potential fields:
+
+* Hunt version
+* Occurrence ID
+* Points reward
+* Required stops
+* Proof configuration version
+* Completion deadline
+* Participation mode
+* Group reward allocation rule
+
+Requirements:
+
+* Later edits to the Hunt must not silently change active participant rewards.
+* Completed records must remain auditable.
+* Do not snapshot unnecessary private data.
+* Geometry version references must be retained where needed for validation disputes.
+
+Document the selected strategy.
+
+⸻
+
+45. Duplicate Reward Prevention
+
+Use a unique idempotency key such as:
+
+hunt_completion:{participation_id}
+
+For group rewards, use a deterministic key appropriate to the reward-recipient relationship.
+
+Requirements:
+
+* Repeated completion calls return the original valid result.
+* Simultaneous requests award once.
+* Ordinary users cannot insert ledger transactions.
+* Ordinary users cannot edit awarded points.
+* Reversal support remains append-only.
+
+Test concurrency.
+
+⸻
+
+46. Group Reward Allocation
+
+Prepare explicit group reward rules.
+
+Possible future models:
+
+* Full reward to every eligible participant
+* Shared pool divided among eligible participants
+* Contribution-based reward
+* Host-defined fixed rewards
+
+For Build 1:
+
+Use the simplest approved model.
+
+Recommended default:
+
+* Every eligible participant who satisfies participation and completion rules receives the configured individual reward.
+
+Requirements:
+
+* Removed or withdrawn participants do not automatically receive rewards.
+* Late joins must follow configured eligibility.
+* The client does not calculate group reward allocation.
+* Reward rules are snapshotted.
+* Group completion cannot create duplicate participant rewards.
+
+Do not implement contribution-based rewards without a clear product requirement.
+
+⸻
+
+47. Hunt Cancellation
+
+Implement Hunt and occurrence cancellation rules.
+
+Cancellation may be performed by:
+
+* Authorized owner
+* Authorized host
+* Administrator
+* Moderation system through trusted action
+
+Requirements:
+
+* Verify authority.
+* Record reason.
+* Preserve history.
+* Notify affected participants through domain events.
+* Prevent new joining.
+* Define active participant outcome.
+* Define proof and progress retention.
+* Define whether any compensation is possible later.
+* Do not award completion points.
+* Audit the cancellation.
+
+Do not allow creators to erase all records.
+
+⸻
+
+48. Hunt Expiration
+
+Support:
+
+* Join window ended
+* Start window ended
+* Occurrence ended
+* Participation deadline ended
+* Stop-specific time window ended
+* Hard expiration
+* Started-user grace period
+
+Use server time.
+
+Define behavior explicitly.
+
+Recommended configuration:
+
+* join_until
+* start_until
+* complete_until
+* started_users_may_finish
+* hard_expiration
+
+Do not rely on the app remaining open.
+
+Do not mark a Hunt completed because it expired.
+
+⸻
+
+49. Hunt Restart and Replay
+
+Support configuration for:
+
+* One-time Hunt
+* Repeatable Hunt
+* Repeat cooldown
+* Repeat by occurrence
+* Owner-only test replay in development
+
+Default:
+
+* Public scheduled Hunt: one completion per occurrence
+* Private reusable Hunt: configurable
+* Invite-only occurrence: one participation per occurrence
+
+Do not allow repeated point farming through replay unless explicitly configured.
+
+Use occurrence-aware uniqueness.
+
+⸻
+
+50. Hunt Detail Query
+
+Create one safe Hunt-detail query returning:
+
+* Public or authorized Hunt content
+* Privacy state
+* Availability
+* Eligibility
+* Owner or creator public identity where allowed
+* Occurrence
+* Participant count
+* Capacity
+* Estimated duration
+* Difficulty
+* Public meeting or start information
+* Public map geometry
+* Safety notes
+* Accessibility notes
+* Reward
+* Stop count
+* Clue preview only when authorized
+* Current participation
+* Current invitation
+* Appropriate primary action state
+
+Do not return:
+
+* Private validation geometry
+* Locked clue content
+* Other participants’ private proof
+* Internal moderation notes
+* Private creator information
+* Service secrets
+
+⸻
+
+51. Active Hunt Query
+
+Create an authorized active-Hunt query returning:
+
+* Hunt title
+* Occurrence
+* Participation status
+* Started timestamp
+* Completion deadline
+* Current authorized stop or stops
+* Current authorized clue content
+* Completed stop count
+* Required stop count
+* Proof state
+* Safe public map locations
+* Current actions
+* Participant role
+* Group summary where authorized
+* Reward snapshot
+
+Do not return locked future clues.
+
+Do not return private validation geometry.
+
+Do not reveal participants hidden by privacy or group rules.
+
+⸻
+
+52. My Hunts Query Contracts
+
+Prepare queries for the later My Hunts UI:
+
+* Active
+* Ready
+* Completed
+* Invitations
+* Created Hunts
+* Drafts
+* Pending Review
+* Archived Activity
+
+Do not implement the finished screen yet.
+
+Support pagination and stable sorting.
+
+Suggested priorities:
+
+Active
+
+Hunts requiring current action.
+
+Ready
+
+Joined or accepted Hunts awaiting start.
+
+Completed
+
+Successfully completed Hunts.
+
+Invitations
+
+Pending invitations.
+
+Created Hunts
+
+Owned Hunts and moderation status.
+
+Do not expose staff-only moderation fields.
+
+⸻
+
+53. Hunt Map Query Contract
+
+Prepare a public-safe Hunt map result.
+
+It may include:
+
+* Hunt ID
+* Occurrence ID
+* Title
+* Short description
+* Public map coordinate
+* Public location label
+* Availability
+* Privacy state if publicly relevant
+* Points
+* Estimated duration
+* Difficulty
+* Participant count
+* Capacity state
+* Public image
+* Join state
+* Current participation state
+
+It must not include:
+
+* Private stop geometry
+* Future clue locations
+* Invitee lists
+* Participant private data
+* Proof
+* Hidden meeting details
+* Moderation notes
+
+Do not implement the finished Hunt Map UI yet.
+
+⸻
+
+54. Action Resolver
+
+Create one Hunt action resolver.
+
+Possible actions:
+
+* View Hunt
+* Join Hunt
+* Invitation Required
+* Accept Invitation
+* Decline Invitation
+* Ready
+* Start Hunt
+* Continue Hunt
+* Submit Proof
+* Resubmit Proof
+* View Submission
+* View Completion
+* Full
+* Upcoming
+* Cancelled
+* Expired
+* Unavailable
+
+Return:
+
+* Label
+* Enabled state
+* Action type
+* Destination or mutation
+* Reason
+* Loading behavior
+* Confirmation requirement
+
+Do not scatter action labels and logic across future screens.
+
+⸻
+
+55. Domain Events
+
+Prepare trusted domain events such as:
+
+* Hunt published
+* Hunt invitation created
+* Invitation accepted
+* Invitation declined
+* Invitation revoked
+* Hunt joined
+* Hunt ready
+* Hunt started
+* Participant removed
+* Participant withdrew
+* Stop unlocked
+* Stop completed
+* Proof submitted
+* Proof approved
+* Proof rejected
+* Resubmission requested
+* Hunt completed
+* Hunt cancelled
+* Hunt expired
+
+Do not send push notifications yet.
+
+Use a typed event payload.
+
+Do not include:
+
+* Private clue content
+* Exact validation geometry
+* Proof contents
+* Sensitive moderation details
+* Access tokens
+
+Document expected notification destinations for later prompts.
+
+⸻
+
+56. Analytics Event Preparation
+
+Prepare internal analytics hooks for:
+
+* Hunt Map viewed
+* Hunt Detail viewed
+* Join attempted
+* Hunt joined
+* Invitation viewed
+* Invitation accepted
+* Invitation declined
+* Hunt started
+* Clue viewed
+* Stop started
+* Stop completed
+* Proof started
+* Proof submitted
+* Hunt completed
+* Hunt withdrawn
+* Hunt cancelled
+
+Do not connect a third-party provider.
+
+Do not log exact private locations, clue solutions, proof contents, or hidden stop data.
+
+⸻
+
+57. Server Trust Boundaries
+
+Document and enforce:
+
+Client may request
+
+* View public or authorized Hunt
+* Join public Hunt
+* Accept invitation
+* Decline invitation
+* Withdraw from Hunt
+* Start eligible individual Hunt
+* View authorized clue
+* Submit stop proof
+* Request location validation
+* Request stop completion
+* Request Hunt completion
+
+Trusted backend or authorized roles must perform
+
+* Publish Hunt
+* Approve Hunt
+* Reject Hunt
+* Create protected invitation where authority is required
+* Start host-controlled occurrence
+* Remove participant
+* Approve proof
+* Reject proof
+* Reveal protected clue
+* Validate protected location
+* Complete protected stop
+* Award points
+* Reverse points
+* Cancel occurrence
+* Override capacity
+* Change reward
+* Change ownership
+
+Ownership alone does not justify client-writable reward-sensitive operations.
+
+⸻
+
+58. Secure RPCs or Server Functions
+
+Create secure operations where needed.
+
+Potential functions:
+
+* get_hunt_availability
+* join_hunt
+* start_hunt
+* invite_to_hunt
+* accept_hunt_invitation
+* decline_hunt_invitation
+* withdraw_from_hunt
+* remove_hunt_participant
+* complete_hunt_stop
+* complete_hunt
+* cancel_hunt_occurrence
+* get_active_hunt
+* get_my_hunts_summary
+
+Use exact names consistent with the project.
+
+Requirements for privileged functions:
+
+* Explicit safe search path
+* auth.uid() validation
+* Account-status validation
+* Ownership or role validation
+* Transactional capacity enforcement
+* Idempotency
+* Restricted execution grants
+* No dynamic SQL
+* No client-controlled authoritative reward
+* Documented behavior
+
+Do not use the Supabase service-role key in the mobile client.
+
+⸻
+
+59. React Query Hooks
+
+Create or finalize hooks such as:
+
+* useHuntAvailability
+* useHuntDetail
+* usePublicHunts
+* useNearbyHunts
+* useMyActiveHunts
+* useMyReadyHunts
+* useMyCompletedHunts
+* useHuntInvitations
+* useHuntParticipation
+* useActiveHunt
+* useJoinHunt
+* useStartHunt
+* useAcceptHuntInvitation
+* useDeclineHuntInvitation
+* useWithdrawFromHunt
+* useCompleteHuntStop
+* useSubmitHuntProof
+* useCompleteHunt
+
+Adapt names to conventions.
+
+Requirements:
+
+* Stable query keys
+* User-scoped private queries
+* Targeted invalidation
+* Conservative protected mutation retries
+* No optimistic reward or completion
+* No precise protected coordinates in cache
+* No duplicate Quest and Hunt key namespaces
+
+⸻
+
+60. Query Keys
+
+Create centralized Hunt keys.
+
+Example:
+
+huntKeys.all
+huntKeys.publicLists(filters)
+huntKeys.map(boundsKey, filters)
+huntKeys.detail(huntId, occurrenceId, userId)
+huntKeys.availability(huntId, occurrenceId, userId)
+huntKeys.active(userId)
+huntKeys.ready(userId)
+huntKeys.completed(userId, filters)
+huntKeys.invitations(userId, status)
+huntKeys.participation(participationId, userId)
+huntKeys.stop(participationId, stopId)
+huntKeys.submissions(participationId, stopId)
+
+Do not place private clue content, exact coordinates, or secret validation data in query keys.
+
+⸻
+
+61. Error Handling
+
+Create Hunt-specific safe errors:
+
+* Hunt not found
+* Hunt unavailable
+* Hunt private
+* Invitation required
+* Invitation expired
+* Hunt full
+* Hunt paused
+* Hunt cancelled
+* Hunt expired
+* Already joined
+* Already completed
+* Invalid participation mode
+* Minimum participants not met
+* Not authorized to invite
+* Not authorized to start
+* Stop locked
+* Proof required
+* Proof under review
+* Invalid state transition
+* Location validation required
+* Location validation failed
+* Reward already issued
+* Account restricted
+* Network unavailable
+* Unknown safe error
+
+Do not expose SQL, RLS policy names, private geometry, internal role IDs, or other users’ IDs.
+
+⸻
+
+62. RLS Verification
+
+Verify Hunt-related RLS.
+
+At minimum:
+
+* Public users see only published public-safe Hunts.
+* Unlisted Hunts require valid access.
+* Invite-only Hunts require valid invitation or participation.
+* Private Hunts remain private.
+* Users see only their own invitations except authorized inviters.
+* Users see only authorized participant lists.
+* Users see their own participation and proof.
+* Users cannot approve proof.
+* Users cannot reveal locked clues.
+* Users cannot alter rewards.
+* Users cannot change ownership.
+* Users cannot increase capacity.
+* Users cannot directly set completion.
+* Users cannot insert points.
+* Private stop geometry remains inaccessible.
+* Draft and rejected Hunts remain protected.
+* Participant removal requires authority.
+* Invitation creation requires authority.
+
+Do not weaken RLS for fixtures.
+
+⸻
+
+63. Migration Adjustments
+
+Add focused migrations if necessary.
+
+Potential additions:
+
+* Hunt occurrences
+* Hunt reward snapshot
+* Hunt version reference
+* Participation-mode configuration
+* Stop-ordering mode
+* Stop-progress uniqueness
+* Invitation idempotency constraints
+* Invitation expiration
+* Capacity transaction support
+* Group or captain relation
+* Clue visibility fields
+* Protected clue content separation
+* Private stop-validation geometry relation
+* Completion idempotency constraint
+* Cancellation fields
+* Participant removal fields
+* Domain-event outbox readiness
+
+Do not replace the full schema.
+
+Use additive ordered migrations.
+
+Document all changes.
+
+⸻
+
+64. Development Seed Data
+
+Create safe Hunt fixtures.
+
+Include:
+
+Public Hunts
+
+* Public solo Hunt
+* Public group-ready Hunt
+* Scheduled upcoming Hunt
+* Full Hunt
+* Expired Hunt
+
+Privacy
+
+* Unlisted Hunt
+* Invite-only Hunt
+* Private Hunt
+
+Invitations
+
+* Pending invitation
+* Accepted invitation
+* Declined invitation
+* Revoked invitation
+* Expired invitation
+
+Participation
+
+* Joined
+* Ready
+* Active
+* Awaiting proof
+* Under review
+* Needs resubmission
+* Completed
+* Withdrawn
+* Removed
+* Expired
+
+Stops
+
+* Ordered three-stop Hunt
+* Unordered Hunt
+* Text clue
+* Image clue
+* Location validation stop
+* Image-proof stop
+* Mixed-proof stop
+* Locked future clue
+* Optional stop
+
+Use safe fictional or public-area scenarios.
+
+Do not create objectives involving:
+
+* Trespassing
+* Unsafe driving
+* Restricted property
+* Dangerous heights
+* Abandoned buildings
+* Unknown substances
+* Harassment
+* Surveillance
+* Photography of private individuals without consent
+* Illegal activity
+* Extreme physical exertion
+
+⸻
+
+65. Minimal Development Diagnostics
+
+Create a development-only Hunt domain diagnostics area where useful.
+
+It may display:
+
+* Hunt availability
+* Invitation state
+* Participation state
+* Current authorized stop
+* Locked and unlocked clue count
+* Capacity
+* Join result
+* Start result
+* Stop-completion result
+* Hunt-completion result
+
+Trusted simulation controls may cover:
+
+* Accept invitation
+* Start Hunt
+* Complete stop
+* Approve proof through local trusted test utility
+* Advance occurrence time in fixtures
+
+Requirements:
+
+* Development-only
+* Not in production navigation
+* No service-role secret in client
+* Cannot award production points using fixtures
+* Cannot bypass production RLS
+
+Do not build a second Hunt UI.
+
+⸻
+
+66. Automated Tests
+
+Add tests covering:
+
+Availability and privacy
+
+* Public Hunt visible
+* Draft hidden
+* Unlisted access rules
+* Invite-only access rules
+* Private Hunt hidden
+* Paused unavailable
+* Cancelled unavailable
+* Expired unavailable
+* Full Hunt unavailable to join
+
+Invitations
+
+* Authorized invitation creation
+* Unauthorized inviter rejected
+* Self-invitation rejected
+* Blocked relationship rejected
+* Duplicate invitation prevented
+* Invitation accepted atomically
+* Invitation declined
+* Invitation revoked
+* Expired invitation cannot be accepted
+* Capacity rechecked on acceptance
+
+Joining
+
+* Joins public Hunt
+* Prevents duplicate joining
+* Prevents capacity overflow
+* Prevents invite-only bypass
+* Stores reward snapshot
+* Initializes stop progress
+
+Starting
+
+* Individual Hunt starts
+* Host-controlled Hunt rejects ordinary participant
+* Minimum participant requirement enforced
+* Start window enforced
+* First clue revealed
+* Future clues remain hidden
+* Duplicate start idempotent
+
+Stops and clues
+
+* Ordered stop enforcement
+* Unordered stop behavior
+* Locked clue inaccessible
+* Current clue accessible
+* Stop completion unlocks next clue
+* Optional stop handled correctly
+* Client cannot mark protected stop complete
+
+Proof and location
+
+* Creates Hunt proof draft
+* Submits once
+* Prevents edits after submission
+* Allows valid resubmission
+* Reuses trusted location validation
+* Private geometry remains hidden
+* Another participant cannot access proof
+
+Completion
+
+* Rejects incomplete Hunt
+* Rejects pending proof
+* Completes valid Hunt
+* Awards correct reward
+* Awards once
+* Handles simultaneous requests
+* Uses reward snapshot
+* Inserts ledger transaction atomically
+
+Capacity and group readiness
+
+* Simultaneous joins do not exceed capacity
+* Withdrawal reopens capacity
+* Removal updates readiness
+* Minimum participant rule works
+* Removed participant receives no completion reward
+
+Cancellation and expiration
+
+* Authorized cancellation works
+* Unauthorized cancellation rejected
+* Cancellation preserves history
+* Expiration preserves history
+* No points awarded on cancellation or expiration
+
+Security
+
+* User cannot alter reward
+* User cannot change owner
+* User cannot reveal locked clues
+* User cannot approve proof
+* User cannot directly complete participation
+* User cannot insert points
+* User cannot view private Hunt
+* User cannot read another user’s private invitation
+
+Use local Supabase integration testing where available.
+
+⸻
+
+67. Documentation
+
+Create or update:
+
+/docs/HUNT_DOMAIN.md
+/docs/HUNT_STATE_MACHINE.md
+/docs/HUNT_PRIVACY.md
+/docs/HUNT_INVITATIONS.md
+/docs/HUNT_PARTICIPATION.md
+/docs/HUNT_STOPS_AND_CLUES.md
+/docs/HUNT_PROOF_SYSTEM.md
+/docs/HUNT_POINT_AWARDS.md
+/docs/HUNT_SECURITY.md
+/docs/HUNT_TESTING.md
+
+Document:
+
+* Hunt privacy types
+* Hunt content lifecycle
+* Ownership
+* Participation modes
+* Participant roles
+* Occurrences
+* Availability
+* Eligibility
+* Invitations
+* Capacity
+* Joining
+* Ready state
+* Starting
+* Stops
+* Clues
+* Sequential release
+* Proof
+* Location validation reuse
+* Stop completion
+* Hunt completion
+* Reward snapshot
+* Duplicate reward prevention
+* Group reward rules
+* Withdrawal
+* Removal
+* Cancellation
+* Expiration
+* Server trust boundaries
+* RLS
+* Fixtures
+* Tests
+* Remaining work for Prompt 12
+
+Update:
+
+* /docs/PROJECT_CONSTITUTION.md
+* replit.md
+
+only where necessary.
+
+Do not change approved navigation or visual direction.
+
+⸻
+
+68. Out of Scope
+
+Do not implement:
+
+* Finished Hunt Map UI
+* Finished My Hunts UI
+* Hunt Detail UI
+* Active Hunt UI
+* Invitation UI
+* Participant-management UI
+* Finished Hunt Progress UI
+* User-facing Create Hunt flow
+* Admin Hunt editor
+* Admin Hunt moderation
+* Admin proof review
+* AI Hunt generation
+* Hunt chat
+* Live participant locations
+* Friends
+* Teams or guilds
+* Turn-by-turn navigation
+* Background location
+* Push-notification delivery
+* Automated image moderation provider
+* Stripe
+* Memberships
+* Creator payouts
+* Paid Hunt tickets
+* Paid hints
+
+Prompt 12 should implement the Hunt Map, Hunt discovery, Hunt Detail, joining, and invitation-facing entry flow.
+
+⸻
+
+69. Final Verification
+
+Before finishing:
+
+* Confirm the approved Hunt navigation remains unchanged.
+* Confirm no duplicate Mapbox, location, proof, points, profile, or notification system was created.
+* Confirm Hunt domain types are centralized.
+* Confirm privacy rules are enforced.
+* Confirm availability and eligibility are centralized.
+* Confirm joining is idempotent.
+* Confirm invitation acceptance and participation creation are atomic.
+* Confirm simultaneous joins cannot exceed capacity.
+* Confirm start models are explicit.
+* Confirm locked clues are server-protected.
+* Confirm ordered stops cannot be bypassed.
+* Confirm Hunt location validation reuses the trusted geo architecture.
+* Confirm users cannot approve their own proof.
+* Confirm users cannot complete protected stops directly.
+* Confirm Hunt completion and reward insertion are atomic.
+* Confirm points are awarded once.
+* Confirm cancellation, withdrawal, removal, and expiration preserve history.
+* Confirm private Hunts, invitations, proof, and geometry remain protected.
+* Confirm development fixtures do not appear in production.
+* Confirm no new bottom tabs were added.
+* Confirm the top Quest/Hunt selector remains intact.
+* Confirm Profile remains shared.
+* Confirm the app compiles.
+* Confirm tests pass or clearly document blocked integration tests.
+* Confirm no approved UI or navigation was redesigned.
+
+Resolve known in-scope errors before stopping.
+
+⸻
+
+Deliverables
+
+When complete, provide:
+
+1. Hunt module files created or updated
+2. Hunt domain types
+3. Hunt privacy behavior
+4. Hunt content lifecycle
+5. Hunt occurrence model
+6. Hunt availability evaluator
+7. Hunt eligibility service
+8. Participation-mode architecture
+9. Participant-role rules
+10. Invitation domain and operations
+11. Joining transaction
+12. Capacity enforcement
+13. Ready and start behavior
+14. Participation state machine
+15. Stop model
+16. Clue model and visibility
+17. Sequential clue-release logic
+18. Stop-progress initialization
+19. Hunt proof integration
+20. Hunt location-validation integration
+21. Stop-completion transaction
+22. Hunt-completion transaction
+23. Reward snapshot strategy
+24. Duplicate reward prevention
+25. Group reward rule
+26. Withdrawal and participant removal
+27. Cancellation and expiration
+28. Hunt Map and My Hunts query contracts
+29. Action resolver
+30. Domain-event contracts
+31. React Query hooks and query keys
+32. Database migrations, RPCs, Edge Functions, indexes, or RLS changes
+33. Seed data
+34. Tests added and results
+35. Documentation created or updated
+36. Assumptions made
+37. Known limitations
+38. Exact remaining work for Prompt 12
+
+Do not begin Prompt 12.
+
+Do not redesign the application.
+
+Create a checkpoint named:
+
+Build 1 — Prompt 11 — Hunt Domain Logic
