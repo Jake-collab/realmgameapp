@@ -1,10 +1,8 @@
 /**
- * Hunt Profile Tab — Worlds
+ * Hunt — Profile tab
  *
- * Shared profile screen — delegates to the Quest profile implementation.
- * Profile data is shared between Quest and Hunt modes.
- *
- * No separate Hunt-specific profile in Build 1.
+ * Shared player profile (same content as Quest profile, same context).
+ * Re-exports the Quest profile implementation for consistency.
  */
 
 export { default } from '../quest/profile';

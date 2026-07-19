@@ -125,13 +125,12 @@ Dark theme default. No magic numbers. No emoji icons. No copy-pasted markup.
 
 ## Implementation Order
 
-See `artifacts/mobile/docs/PROJECT_CONSTITUTION.md` Section 15 for the full 15-build roadmap. Next steps:
+See `artifacts/mobile/docs/PROJECT_CONSTITUTION.md` Section 15 for the full 15-build roadmap.
 
-1. **Build 2** — Connect Supabase credentials + run migrations
-2. **Build 3** — Authentication UI (sign in, sign up, session guards)
-3. **Build 4** — Quest core gameplay
-4. **Build 5** — Mapbox integration
-5. **Build 6** — Hunt core gameplay
+**Completed through Prompt 15 (Shared Worlds Progression):**
+- Builds 1–15 complete: Auth, Quest, Hunt, Geo-Quest, Hunt Map, Active Hunt Gameplay, Hunt Progress/Leaderboards, and Shared Progression (Achievements, Milestones, Titles, Badges, Statistics).
+
+**Next:** Prompt 16 (if assigned).
 
 ---
 

@@ -1,0 +1,539 @@
+Prompt 15 — Shared Worlds Progression, Achievements, Milestones, Titles, Badges, and Cross-Mode Progress
+
+Copy this into Replit AI:
+
+# Worlds — Build 1, Prompt 15
+# Shared Worlds Progression, Achievements, Milestones, Titles, Badges, and Cross-Mode Progress
+Continue from the current Worlds project and follow these documents as authoritative:
+- /docs/PROJECT_CONSTITUTION.md
+- /docs/DATABASE_ARCHITECTURE.md
+- /docs/ROW_LEVEL_SECURITY.md
+- /docs/POINTS_SYSTEM.md
+- /docs/PROFILE_AND_SETTINGS.md
+- /docs/NOTIFICATIONS.md
+- /docs/QUEST_PROGRESS.md
+- /docs/HUNT_PROGRESS.md
+- /docs/HUNT_LEADERBOARDS.md
+- /docs/HUNT_POINT_HISTORY.md
+- /docs/HUNT_COMPLETION_HISTORY.md
+- /docs/HUNT_COMPLETION_DETAIL.md
+- all documentation created in Prompts 1–14
+- replit.md
+The application is named:
+Worlds
+Quest gameplay is complete.
+Hunt gameplay is complete.
+Quest Progress is complete.
+Hunt Progress is complete.
+This prompt creates the first shared progression layer across the application.
+This is NOT a leveling system.
+This is NOT a virtual currency.
+This is NOT a collectible inventory system.
+This is a permanent recognition system rewarding meaningful participation while preserving the integrity of Quest and Hunt progression.
+Do not redesign any approved navigation.
+Do not change the approved UI style.
+Do not modify Quest or Hunt gameplay logic.
+Do not rebuild existing point systems.
+---
+# Primary Objective
+Implement:
+• Shared achievements
+• Achievement engine
+• Milestones
+• Titles
+• Profile badges
+• Public recognition
+• Shared profile statistics
+• Combined Worlds progress
+• Cross-mode accomplishments
+• Notification support
+• Secure achievement awarding
+• Achievement history
+• Future extensibility
+The system should feel:
+Modern
+Minimal
+Meaningful
+Permanent
+Prestigious
+Non-pay-to-win
+Not overwhelming
+Achievements should celebrate meaningful accomplishments—not spam users with constant unlocks.
+---
+# 1. Shared Progress Architecture
+Create a shared feature:
+/features/progression/
+Suggested structure:
+components/
+screens/
+hooks/
+services/
+repositories/
+queries/
+mutations/
+schemas/
+types/
+tests/
+This module owns:
+Achievements
+Milestones
+Titles
+Badges
+Recognition
+Shared statistics
+Cross-mode progression
+Future prestige systems
+Do not move Quest-specific logic here.
+Do not move Hunt-specific logic here.
+---
+# 2. Navigation
+Do NOT add another bottom tab.
+Instead:
+Profile
+↓
+Achievements
+Achievements becomes a Profile subsection.
+Profile remains the owner of:
+Statistics
+Achievements
+Titles
+Badges
+Future reputation
+Future collections
+Future creator stats
+---
+# 3. Achievement Categories
+Support categories:
+Quest
+Hunt
+Worlds
+Community
+Exploration
+Consistency
+Special
+Examples:
+Quest
+• First Quest
+• 25 Quests
+• 100 Quests
+Hunt
+• First Hunt
+• 25 Hunts
+• Perfect Hunt
+Worlds
+• First Activity
+• 1,000 Total Points
+• Both Quest and Hunt Completed
+Community
+Future
+Exploration
+Future
+Special
+Manual/Admin only
+Categories must remain extensible.
+---
+# 4. Achievement Types
+Support:
+Automatic
+Manual
+Hidden
+Secret
+Limited-time
+Permanent
+Retired
+Future seasonal
+Do not expose unsupported types in UI.
+---
+# 5. Achievement Definition
+Each achievement should contain:
+ID
+Name
+Subtitle
+Description
+Category
+Icon
+Artwork
+Hidden flag
+Secret flag
+Manual flag
+Visibility
+Requirement type
+Requirement version
+Award timestamp
+Display priority
+Future retirement flag
+Localization readiness
+---
+# 6. Achievement Engine
+Implement centralized evaluation.
+Never award achievements inside UI.
+Evaluation occurs only through trusted server operations.
+Possible triggers:
+Quest completed
+Hunt completed
+Point transaction inserted
+Profile updated
+Account age milestone
+Admin action
+Future community participation
+---
+# 7. Achievement Trigger Events
+Prepare event handlers for:
+Quest completion
+Hunt completion
+Achievement manually awarded
+Point milestone reached
+Combined milestone reached
+Future creator milestone
+Future moderation milestone
+Do not duplicate evaluations.
+---
+# 8. Achievement Rules
+Support rules such as:
+Completed X Hunts
+Completed X Quests
+Completed X Total Activities
+Earned X Hunt Points
+Earned X Quest Points
+Earned X Combined Points
+Completed both Quest and Hunt
+Completed first ordered Hunt
+Completed first geo Quest
+Future rules should plug in without redesign.
+---
+# 9. Atomic Awarding
+Awarding must occur atomically.
+Requirements:
+Prevent duplicates
+Use transactions
+Be idempotent
+Store audit trail
+Trigger notification
+Return authoritative state
+Never award from client logic.
+---
+# 10. Achievement History
+Create history screen.
+Each row:
+Achievement icon
+Name
+Description
+Award date
+Category
+Hidden status
+Primary action:
+View Details
+Newest first.
+---
+# 11. Achievement Detail
+Display:
+Artwork
+Name
+Description
+Category
+Award date
+Requirement summary
+Progress snapshot
+Related Quest or Hunt where applicable
+Future rarity
+Future sharing
+Do not expose internal rule expressions.
+---
+# 12. Hidden Achievements
+Hidden achievements appear as:
+???
+Hidden Achievement
+Unlock to reveal
+Do not reveal requirements.
+Upon unlocking:
+Reveal normally.
+---
+# 13. Titles
+Support one active title.
+Examples:
+Explorer
+Trailblazer
+Adventurer
+Pathfinder
+Pioneer
+Master Hunter
+Quest Champion
+World Traveler
+Requirements:
+User selects one unlocked title.
+Displayed on profile.
+Displayed beside username where appropriate.
+Do not allow paid titles.
+---
+# 14. Profile Badges
+Support cosmetic badges.
+Badge examples:
+First Hunt
+100 Quests
+Community Founder
+Beta Tester
+Support:
+Pinned badge
+Multiple unlocked
+Profile selection
+Future animated badges
+No gameplay effect.
+---
+# 15. Milestones
+Implement milestone engine.
+Examples:
+1 Hunt
+10 Hunts
+50 Hunts
+100 Hunts
+250 Hunts
+1 Quest
+100 Quests
+1000 Combined Points
+Do not spam notifications.
+---
+# 16. Combined Statistics
+Create shared statistics.
+Examples:
+Total Quests
+Total Hunts
+Total Activities
+Quest Points
+Hunt Points
+Combined Points
+Achievements
+Titles Unlocked
+Badges
+Account Age
+Display inside Profile.
+---
+# 17. Combined Progress Screen
+Inside Achievements:
+Overview
+↓
+Categories
+↓
+History
+↓
+Titles
+↓
+Badges
+↓
+Statistics
+Simple navigation.
+---
+# 18. Achievement Notifications
+Reuse notification system.
+Example:
+Achievement Unlocked
+↓
+Opens Achievement Detail
+No push implementation yet.
+---
+# 19. Deep Links
+Support:
+Achievement
+Title
+Badge
+History
+Statistics
+Validate ownership.
+---
+# 20. Privacy
+Respect profile privacy.
+Users may hide:
+Achievement list
+Titles
+Badges
+Statistics
+Hidden achievements remain private.
+---
+# 21. Leaderboard Preparation
+Prepare future combined leaderboard.
+Do NOT implement.
+Only document interfaces.
+---
+# 22. Database
+Add tables if necessary:
+achievements
+achievement_definitions
+user_achievements
+titles
+user_titles
+badges
+user_badges
+milestones
+achievement_events
+Use RLS.
+---
+# 23. Queries
+Create hooks:
+useAchievements
+useAchievement
+useAchievementHistory
+useTitles
+useActiveTitle
+useBadges
+useStatistics
+useCombinedProgress
+---
+# 24. Query Invalidation
+Achievement awarded:
+Invalidate:
+Achievements
+Profile
+Statistics
+Titles
+Badges
+Notifications
+Do not invalidate Quest/Hunt gameplay.
+---
+# 25. Empty States
+Examples:
+No achievements yet
+Complete your first Quest or Hunt.
+No titles unlocked.
+Titles unlock through achievements.
+No badges unlocked.
+Badges are earned through participation.
+---
+# 26. Loading States
+Create dedicated skeletons.
+Do not reuse leaderboard loaders.
+---
+# 27. Error States
+Handle:
+Achievement unavailable
+History unavailable
+Statistics unavailable
+Title unavailable
+Badge unavailable
+Retry safely.
+---
+# 28. Shared Components
+Examples:
+AchievementCard
+AchievementGrid
+AchievementRow
+AchievementIcon
+AchievementCategory
+AchievementHistoryRow
+TitleCard
+TitleSelector
+BadgeGrid
+BadgeCard
+StatisticsCard
+ProgressOverview
+---
+# 29. Accessibility
+Screen-reader support
+Reduced motion
+Dynamic type
+Readable icons
+Color-independent status
+---
+# 30. Security
+Verify:
+Achievements awarded server-side
+No duplicate awards
+Titles require unlock
+Badges require unlock
+Statistics cannot be edited
+Client cannot forge achievements
+RLS enforced
+Audit preserved
+---
+# 31. Tests
+Add tests covering:
+Achievement award
+Duplicate prevention
+History
+Titles
+Badges
+Milestones
+Combined statistics
+Privacy
+Deep links
+Notifications
+Server validation
+---
+# 32. Documentation
+Create:
+/docs/ACHIEVEMENTS.md
+/docs/TITLES.md
+/docs/BADGES.md
+/docs/PROGRESSION.md
+/docs/MILESTONES.md
+/docs/PROFILE_STATISTICS.md
+/docs/ACHIEVEMENT_SECURITY.md
+/docs/ACHIEVEMENT_TESTING.md
+Update:
+PROJECT_CONSTITUTION.md
+replit.md
+---
+# 33. Out of Scope
+Do NOT implement:
+Friends
+Guilds
+Trading
+Inventory
+Loot
+NFTs
+Creator rewards
+Marketplace
+Combined leaderboard
+Season passes
+Battle pass
+Prestige reset
+Avatar customization
+Social sharing
+Push notifications
+Economy changes
+Quest/Hunt gameplay changes
+---
+# 34. Final Verification
+Confirm:
+Achievements award only once
+Titles require unlock
+Badges require unlock
+Combined statistics are accurate
+Quest/Hunt logic unchanged
+Profile navigation preserved
+Privacy respected
+App compiles
+Tests pass
+No gameplay regression
+---
+# Deliverables
+When complete provide:
+1. Progression module
+2. Achievement engine
+3. Achievement history
+4. Achievement detail
+5. Hidden achievements
+6. Milestone engine
+7. Title system
+8. Badge system
+9. Combined profile statistics
+10. Progress overview
+11. Notification integration
+12. Query hooks
+13. Database changes
+14. Security verification
+15. Tests
+16. Documentation
+17. Remaining work for Prompt 16
+Do not begin Prompt 16.
+Create checkpoint:
+Build 1 — Prompt 15 — Shared Progression, Achievements, Titles, and Badges
+
+Why Prompt 15 comes next
+
+At this point, Build 1 has finished the two core gameplay loops:
+
+* ✅ Quest system
+* ✅ Hunt system
+* ✅ Quest Progress
+* ✅ Hunt Progress
+
+The next logical layer is shared progression, which ties both experiences together without changing their individual mechanics. After this, Prompt 16 can naturally move into social features (friends, profiles, activity feed, or whichever direction you want to take next) because users will already have achievements, titles, and profile progression to display.

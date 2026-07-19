@@ -84,6 +84,16 @@ export default function MainLayout() {
         options={{ animation: 'fade' }}
       />
 
+      {/* Shared Progression deep screens — appear over the tab UI (no tab bar) */}
+      <Stack.Screen
+        name="profile-achievements"
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="achievement-detail/[achievementId]"
+        options={{ animation: 'slide_from_right' }}
+      />
+
       {/* Hunt Progress deep screens — appear over the tab UI (no tab bar) */}
       <Stack.Screen
         name="hunt-completion-detail/[participationId]"
