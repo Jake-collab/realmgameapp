@@ -79,6 +79,10 @@ export default function MainLayout() {
         name="hunt-active/[participationId]"
         options={{ animation: 'slide_from_right' }}
       />
+      <Stack.Screen
+        name="hunt-completion/[participationId]"
+        options={{ animation: 'fade' }}
+      />
     </Stack>
   );
 }

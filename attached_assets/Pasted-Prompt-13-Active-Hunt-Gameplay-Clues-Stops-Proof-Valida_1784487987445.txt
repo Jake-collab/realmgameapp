@@ -1,0 +1,2257 @@
+Prompt 13 — Active Hunt Gameplay, Clues, Stops, Proof, Validation, and Completion
+
+Copy this into Replit AI:
+
+# Worlds — Build 1, Prompt 13
+# Active Hunt Gameplay, Clues, Stops, Proof, Validation, and Completion
+Continue from the current Worlds project and follow these documents as authoritative:
+- /docs/PROJECT_CONSTITUTION.md
+- /docs/DATABASE_ARCHITECTURE.md
+- /docs/ROW_LEVEL_SECURITY.md
+- /docs/POINTS_SYSTEM.md
+- /docs/GEO_DATA_SECURITY.md
+- /docs/PROFILE_AND_SETTINGS.md
+- /docs/NOTIFICATIONS.md
+- all shared map and geospatial documents created by Prompt 9
+- /docs/GEO_QUEST_VALIDATION.md
+- /docs/GEO_VALIDATION_PRIVACY.md
+- /docs/GEO_VALIDATION_SECURITY.md
+- /docs/HUNT_DOMAIN.md
+- /docs/HUNT_STATE_MACHINE.md
+- /docs/HUNT_PRIVACY.md
+- /docs/HUNT_INVITATIONS.md
+- /docs/HUNT_PARTICIPATION.md
+- /docs/HUNT_STOPS_AND_CLUES.md
+- /docs/HUNT_PROOF_SYSTEM.md
+- /docs/HUNT_POINT_AWARDS.md
+- /docs/HUNT_SECURITY.md
+- /docs/HUNT_MAP.md
+- /docs/HUNT_DISCOVERY.md
+- /docs/HUNT_DETAIL_UI.md
+- /docs/HUNT_JOIN_FLOW.md
+- /docs/HUNT_INVITATION_UI.md
+- /docs/MY_HUNTS.md
+- /docs/HUNT_READY_STATE.md
+- /docs/HUNT_MAP_PRIVACY.md
+- /docs/HUNT_UI_SECURITY.md
+- replit.md
+- the approved UI/UX addendum
+- the approved authentication and navigation clarification
+The application is named:
+Worlds
+Prompt 11 implemented the Hunt domain, privacy model, participation lifecycle, stops, clues, proof infrastructure, geospatial validation reuse, completion transaction, points, invitations, capacity, cancellation, and state machines.
+Prompt 12 implemented the Hunt Map, public discovery, Hunt Detail, joining, invitations, Ready state, My Hunts organization, and the transition into Active Hunt.
+This prompt must implement the complete user-facing Active Hunt experience:
+- Active Hunt overview
+- Current clue
+- Stop progression
+- Ordered and unordered stop behavior
+- Stop-specific maps
+- Location validation
+- Image proof
+- Text proof
+- Mixed proof
+- Proof review states
+- Resubmission
+- Authorized clue release
+- Group-readiness presentation where supported
+- Hunt completion
+- Completion confirmation
+- Withdrawal
+- Removal and cancellation states
+- Active Hunt restoration after app restart
+Do not recreate or bypass Prompt 11 domain logic.
+Do not expose locked clues or private validation geometry.
+Do not build the complete Hunt Progress, completed history, proof-history organization, or Hunt leaderboard experience. Those belong in Prompt 14.
+Do not build user-facing Hunt creation or editing.
+Do not duplicate the shared map, location, media, proof, notification, points, profile, settings, or authentication systems.
+Do not redesign the approved navigation.
+---
+# Primary Objective
+Implement the Active Hunt journey:
+```text
+Ready Hunt
+    ↓
+Start Hunt
+    ↓
+Active Hunt Overview
+    ↓
+Current Authorized Clue
+    ↓
+Travel or perform activity
+    ↓
+Validate Stop Requirement
+    ↓
+Submit Required Proof
+    ↓
+Complete Stop
+    ↓
+Unlock Next Authorized Clue
+    ↓
+Complete All Required Stops
+    ↓
+Trusted Hunt Completion
+    ↓
+Completion Confirmation
+
+The experience should feel:
+
+* Immersive
+* Focused
+* Exploratory
+* Clear
+* Safe
+* Modern
+* Minimal
+* Progress-oriented
+* Game-like without appearing childish
+* Suitable for solo and future group play
+
+The current authorized clue or objective must remain the most visually important content.
+
+⸻
+
+1. Preserve Approved Hunt Navigation
+
+Hunt bottom navigation remains exactly:
+
+1. Map
+2. My Hunts
+3. Progress
+4. Profile
+
+Do not add:
+
+* Active Hunt
+* Clues
+* Stops
+* Proof
+* Teams
+* Chat
+* Directions
+* Notifications
+* Settings
+
+as bottom tabs.
+
+The top Quest/Hunt selector must remain intact where appropriate.
+
+While inside Active Hunt:
+
+* Use a focused nested route.
+* Keep access to safe back navigation.
+* Do not show unrelated discovery content.
+* Do not accidentally route users into Quest mode.
+* Do not rebuild the main navigation shell.
+
+Prompt 14 will replace the current Hunt Progress placeholder.
+
+⸻
+
+2. Active Hunt Feature Module
+
+Create or finalize a module similar to:
+
+/features/hunts/active/
+  components/
+  hooks/
+  screens/
+  services/
+  schemas/
+  types/
+  utils/
+  queries/
+  mutations/
+  tests/
+
+This may remain inside the broader Hunt feature directory if that better fits the project.
+
+Responsibilities:
+
+Screens
+
+Render the Active Hunt, stop, clue, proof, validation, and completion experiences.
+
+Domain hooks
+
+Call Prompt 11 services and trusted operations.
+
+UI services
+
+Resolve current authorized objective, action, map state, and proof presentation.
+
+Shared infrastructure
+
+Reuse:
+
+* Prompt 11 Hunt state machine
+* Prompt 11 action resolver
+* Prompt 7 proof UI primitives where reusable
+* Shared media upload
+* Shared foreground location
+* Shared trusted geospatial validation
+* Shared points presentation
+* Shared notification routing
+* Shared error normalization
+
+Do not place raw Supabase or privileged database calls inside screens.
+
+⸻
+
+3. Active Hunt Route
+
+Create a protected route such as:
+
+/hunt/active/[participationId]
+
+Adapt to the existing Expo Router structure.
+
+Requirements:
+
+* Authenticate the user.
+* Validate the participation ID.
+* Verify participation ownership or authorized group access.
+* Confirm the Hunt is active or in a valid related state.
+* Redirect Ready participation to Ready Hunt.
+* Redirect Completed participation to completion or Progress.
+* Redirect Removed, Withdrawn, Cancelled, or Expired participation to a safe status view.
+* Handle archived Hunt definitions.
+* Do not expose another user’s active Hunt through a guessed ID.
+* Do not trust route parameters as proof of state.
+
+Retrieve authoritative Active Hunt data from the backend.
+
+⸻
+
+4. Active Hunt Query Contract
+
+Use the Prompt 11 authorized Active Hunt query.
+
+It should provide only currently authorized information:
+
+* Hunt ID
+* Hunt occurrence ID
+* Participation ID
+* Hunt title
+* Public Hunt image
+* Participation status
+* Participant role
+* Started timestamp
+* Completion deadline
+* Reward snapshot
+* Stop-ordering mode
+* Required stop count
+* Completed required stop count
+* Current authorized stop
+* Other currently available stops for unordered Hunts
+* Completed stops
+* Authorized clue content
+* Public display geometry
+* Proof requirements
+* Location-validation requirements
+* Safety information
+* Accessibility information
+* Current proof or review state
+* Group summary where authorized
+* Completion-readiness state
+* Current primary action
+
+It must not include:
+
+* Locked future clues
+* Private validation geometry
+* Hidden future stop locations
+* Other participants’ private proof
+* Internal review notes
+* Anti-abuse thresholds
+* Service secrets
+* Unnecessary exact coordinates
+* Unauthorized participant identities
+
+⸻
+
+5. Active Hunt Screen Hierarchy
+
+The Active Hunt screen should generally contain:
+
+1. Compact focused header
+2. Hunt status and deadline
+3. Dominant current clue or objective
+4. Current stop location or activity information
+5. Primary action
+6. Required proof summary
+7. Meaningful Hunt progress
+8. Completed-stop summary
+9. Other available stops for unordered Hunts
+10. Safety and accessibility information
+11. Restrained secondary actions
+
+Do not turn Active Hunt into a dashboard of equally weighted cards.
+
+Do not show the public Hunt Map feed.
+
+Do not display unrelated Hunts.
+
+Do not reveal future ordered stops.
+
+⸻
+
+6. Active Hunt Header
+
+Use a compact header with:
+
+* Back navigation to My Hunts or Ready Hunt where appropriate
+* Hunt title or concise “Active Hunt” label
+* Safe status indicator
+* Optional more menu
+
+The more menu may contain:
+
+* View Hunt Details
+* Safety Information
+* Accessibility Information
+* Withdraw from Hunt
+* Report a Problem
+
+Do not place withdrawal as a prominent primary button.
+
+Do not place private debugging actions in production.
+
+Do not clutter the header with points, avatars, and multiple icons.
+
+⸻
+
+7. Dominant Current Clue
+
+The current authorized clue must be visually dominant.
+
+Support:
+
+* Text clue
+* Image clue
+* Combined text and image clue
+* Public area hint
+* Activity instruction
+* Riddle-style clue
+* Manual objective
+
+Display:
+
+* Clue or objective label
+* Clue text
+* Authorized clue image
+* Current stop title when authorized
+* Stop number only when ordered
+* Safety note where relevant
+* One clear next action
+
+Do not show locked clue titles or snippets.
+
+Do not preload future clue media.
+
+Do not place the answer, validation coordinate, or internal solution in the client.
+
+⸻
+
+8. Clue Rendering
+
+Create reusable components such as:
+
+* HuntClueCard
+* HuntClueText
+* HuntClueImage
+* HuntRiddleBlock
+* HuntAreaHint
+* ClueStatusBadge
+* ClueRevealTransition
+
+Requirements:
+
+* Plain text only unless the schema explicitly supports safe rich text.
+* No arbitrary HTML.
+* Images use moderated media relations.
+* Private clue images use authorized signed URLs where appropriate.
+* Image loading failures have safe fallback.
+* Alt text must be present.
+* Dynamic text must not break layouts.
+* Do not log clue contents in analytics.
+
+Avoid heavy decorative effects that reduce readability.
+
+⸻
+
+9. Clue Reveal
+
+When a stop completion unlocks a new clue:
+
+* Retrieve the newly authorized state from the server.
+* Show a subtle reveal transition.
+* Respect reduced-motion preferences.
+* Do not reveal the next clue before trusted completion succeeds.
+* Do not use only local state to unlock content.
+* Do not replay the reveal every time the user revisits the screen.
+* Preserve the revealed state across devices.
+
+Suggested transition:
+
+Stop complete
+    ↓
+Next clue unlocked
+
+Use concise motion rather than elaborate animations.
+
+⸻
+
+10. Ordered Hunts
+
+For ordered Hunts:
+
+* Show only the current authorized stop as active.
+* Show completed previous stops.
+* Show the total number of required stops.
+* Future stops may be represented only as generic locked placeholders if approved.
+* Do not display future stop names, clues, images, or locations.
+* Deep links must not open locked stops.
+* Completing the current stop must call the trusted operation before the next clue appears.
+
+Example progress:
+
+Stop 2 of 5
+
+Do not allow users to select future stops.
+
+⸻
+
+11. Unordered Hunts
+
+For unordered Hunts:
+
+* Show all currently authorized available stops.
+* Allow the user to choose a stop.
+* Clearly distinguish:
+    * Available
+    * In progress
+    * Awaiting proof
+    * Under review
+    * Completed
+* Optional stops must be labeled.
+* Required progress must exclude optional stops.
+* Locked or conditionally unavailable stops must remain protected.
+
+Use a focused stop selector or list.
+
+Do not display all stop details simultaneously when that creates clutter.
+
+⸻
+
+12. Stop Selector
+
+Create a reusable stop selector for unordered Hunts.
+
+Each row may show:
+
+* Stop title
+* Public location label
+* Approximate distance
+* Required or optional
+* Status
+* Proof requirement indicator
+* Primary action:
+    * View Stop
+    * Continue
+    * Submit Proof
+    * View Submission
+    * Completed
+
+Do not show exact protected coordinates.
+
+Do not show hidden clues for stops that are not currently authorized.
+
+Do not show a meaningless completion percentage for one-step Hunts.
+
+⸻
+
+13. Stop Detail Screen
+
+Implement a focused stop-detail screen or expandable state.
+
+Display:
+
+* Stop title
+* Authorized clue
+* Public location or activity area
+* Public display map when relevant
+* Estimated effort
+* Safety note
+* Accessibility information
+* Proof requirement
+* Validation requirement
+* Current stop state
+* Primary action
+
+Possible actions:
+
+* Check Location
+* Mark Activity Complete
+* Add Text Proof
+* Add Image Proof
+* Submit Proof
+* Continue
+* View Submission
+* Resubmit Proof
+* Complete Stop
+
+Use Prompt 11’s stop state machine and action resolution.
+
+Do not duplicate stop completion rules in the screen.
+
+⸻
+
+14. Active Hunt Map
+
+Implement a focused stop-level map using the shared map system.
+
+The Active Hunt map may show:
+
+* User location when permission is granted
+* Current public stop destination
+* Authorized available stops for unordered Hunts
+* Completed public stop locations where useful
+* Broad area hint
+* External Directions action
+
+It must not show:
+
+* Locked future stop locations
+* Private validation geometry
+* Secret checkpoint centers
+* Hidden clue locations
+* Other participants’ live locations
+* Routes traveled by the user
+
+Do not recreate the public Hunt Map discovery experience inside Active Hunt.
+
+⸻
+
+15. Public Stop Location
+
+Use public display geometry.
+
+The map may display:
+
+* Landmark
+* Park area
+* Venue entrance
+* General neighborhood
+* Public meeting point
+* Broad search area
+
+Requirements:
+
+* The displayed point must be safe for navigation.
+* It must not expose protected validation geometry unnecessarily.
+* It must not imply permission to access private property.
+* It must not reveal sensitive infrastructure.
+* It must not expose a future clue accidentally.
+
+Do not pass private validation coordinates to external map applications.
+
+⸻
+
+16. External Directions
+
+Support a restrained Directions action when a safe public destination exists.
+
+Requirements:
+
+* Open an installed external map application.
+* Use the public display location.
+* Warn users not to interact while driving where appropriate.
+* Do not build turn-by-turn navigation.
+* Do not track the route.
+* Do not send private validation geometry externally.
+* Hide the action if no safe public destination exists.
+
+Directions and completion validation are separate.
+
+Arriving through directions must not automatically validate a stop.
+
+⸻
+
+17. Foreground Location Use
+
+Request foreground location only when the user chooses an action requiring it, such as:
+
+* Recenter map
+* Sort by distance
+* Check Location
+* Validate current stop
+
+Do not request:
+
+* Background location
+* Always-on location
+* Continuous movement tracking
+* Location merely to read a text clue
+
+Ordinary Active Hunt viewing should remain possible without location unless the current stop explicitly requires validation.
+
+Do not store ordinary map-browsing location.
+
+⸻
+
+18. Check Location Flow
+
+For a stop requiring trusted location validation:
+
+1. Explain why location is required.
+2. Request foreground permission after user action.
+3. Acquire a fresh current reading.
+4. Show acquisition status.
+5. Show a general accuracy state.
+6. Submit to the trusted shared geospatial endpoint.
+7. Receive a safe result.
+8. Associate the result with the participation and stop.
+9. Advance only if the domain rules permit.
+10. Preserve any other proof draft.
+
+Do not calculate authoritative completion solely on the client.
+
+Do not expose the protected target radius or polygon.
+
+⸻
+
+19. Location Validation States
+
+Handle:
+
+* Not started
+* Acquiring location
+* Permission denied
+* Location services disabled
+* Accuracy insufficient
+* Location stale
+* Outside required area
+* Validated
+* Rate limited
+* Server unavailable
+* Stop no longer valid
+* Hunt expired
+* Participation invalid
+
+Use safe messages.
+
+Examples:
+
+Poor accuracy
+
+Your location signal is not accurate enough yet. Move to an open area and try again.
+
+Outside required area
+
+You are not in the required area yet.
+
+Do not show distance to the secret boundary when that could expose the hidden validation geometry.
+
+⸻
+
+20. Location Validation Success
+
+When location validation succeeds:
+
+* Confirm the location requirement was verified.
+* Update the stop state.
+* Continue to additional proof if required.
+* Complete the stop only when all requirements are satisfied.
+* Invalidate the Active Hunt and stop queries.
+* Do not award Hunt points.
+* Do not reveal more than the newly authorized clue.
+
+Suggested message:
+
+Location verified.
+
+If image or text proof is still required, route directly into the next requirement.
+
+⸻
+
+21. Manual Confirmation Stops
+
+For a stop configured for safe user confirmation:
+
+* Show a clear objective.
+* Show Mark Activity Complete or equivalent.
+* Require confirmation only when accidental completion would be difficult to reverse.
+* Call the trusted stop operation.
+* Do not allow manual confirmation when proof or protected validation is required.
+* Do not award full Hunt points at ordinary stop completion.
+
+Do not use vague labels such as Done when the consequence is unclear.
+
+⸻
+
+22. Hunt Proof Interface
+
+Reuse and extend the shared Quest proof UI where appropriate.
+
+Support Hunt stop proof types:
+
+* Text
+* Image
+* Location
+* Text and image
+* Image and location
+* Manual confirmation
+* Other schema-approved mixed combinations
+
+The proof interface must adapt to the current stop configuration.
+
+Do not show irrelevant fields.
+
+Do not reveal future stop requirements.
+
+Do not create a second upload architecture.
+
+⸻
+
+23. Proof Draft State
+
+Create a secure temporary proof draft for the current stop.
+
+It may contain:
+
+* Text response
+* Selected local images
+* Validated location-attempt reference
+* Current upload state
+* Submission readiness
+* Last local update time
+
+Requirements:
+
+* Preserve recoverable draft state during current use.
+* Do not expose draft content to other users.
+* Do not permanently retain local sensitive media unnecessarily.
+* Clear the draft after confirmed submission.
+* Preserve it after recoverable upload or network failure.
+* Do not treat the draft as submitted.
+
+Full offline synchronization remains Prompt 22.
+
+⸻
+
+24. Text Proof
+
+Implement:
+
+* Clear prompt
+* Minimum and maximum character validation
+* Character count
+* Multiline plain-text input
+* Draft preservation
+* Accessible errors
+* Review preview before submission
+
+Do not allow arbitrary HTML.
+
+Do not expose internal validation expressions.
+
+Do not automatically submit when the user reaches the minimum length.
+
+⸻
+
+25. Image Proof
+
+Support:
+
+* Device-library selection
+* Camera option only when already supported and chosen explicitly
+* Image preview
+* Remove or replace before submission
+* Multiple images only when configured
+* File validation
+* Compression
+* Upload progress
+* Retry
+* Cancellation
+* Protected storage
+
+Requirements:
+
+* Request camera permission only after camera action.
+* Do not make proof images public.
+* Do not claim automated moderation occurred.
+* Use moderation-ready states.
+* Do not upload future clue screenshots or irrelevant internal content automatically.
+
+Allow the user to review selected evidence before final submission.
+
+⸻
+
+26. Mixed Proof
+
+For stops requiring multiple evidence types:
+
+* Show each required component clearly.
+* Track readiness independently.
+* Do not submit until all required components are valid.
+* Preserve completed components if another component fails.
+* Show one final proof review.
+* Submit one authoritative linked proof package or clearly associated submissions according to the existing schema.
+
+Examples:
+
+* Text and image
+* Image and location
+* Text, image, and location where supported
+
+Do not let one successful evidence type bypass the others.
+
+⸻
+
+27. Proof Review Screen
+
+Before final submission, show:
+
+* Hunt title
+* Stop title
+* Text proof
+* Image previews
+* Location verified status
+* Submission warning
+* Submit Proof button
+
+Suggested warning:
+
+After submission, your proof may require review before this stop is completed.
+
+Do not imply that manual review is guaranteed to be immediate.
+
+Do not show hidden geometry or raw location coordinates.
+
+Do not allow the user to edit evidence after submission except through an authorized resubmission flow.
+
+⸻
+
+28. Proof Submission
+
+When the user submits proof:
+
+1. Disable repeated taps.
+2. Complete pending protected uploads.
+3. Validate required fields.
+4. Call the trusted Hunt proof-submission operation.
+5. Associate the proof with:
+    * Participation
+    * Stop
+    * Occurrence
+    * Participant
+    * Requirement version
+6. Prevent duplicate active submissions.
+7. Invalidate relevant Active Hunt and proof queries.
+8. Show the authoritative resulting state.
+9. Do not award points.
+10. Do not directly mark protected completion in the client.
+
+No optimistic proof approval.
+
+⸻
+
+29. Proof Submission Result
+
+Possible results:
+
+Automatically validated and stop completed
+
+Stop complete.
+
+Submitted for review
+
+Your proof was submitted for review.
+
+Validation pending
+
+Your submission is being validated.
+
+Additional requirement missing
+
+Explain what remains.
+
+Do not show points as awarded unless the full Hunt completion transaction has succeeded.
+
+Route back to the Active Hunt overview or the current stop state.
+
+⸻
+
+30. Under Review State
+
+When a stop proof is under review:
+
+Display:
+
+* Stop title
+* Submitted timestamp
+* Evidence summary
+* Under Review status
+* Points pending only at Hunt level where appropriate
+* View Submission action
+* Continue another stop only when Hunt ordering and rules permit it
+
+Do not:
+
+* Allow duplicate submission
+* Promise a review time
+* Reveal reviewer identity
+* Reveal internal moderation notes
+* Treat the stop as completed unless the trusted domain state says so
+
+For ordered Hunts, explain that progress may pause until approval.
+
+⸻
+
+31. Needs Resubmission
+
+When resubmission is allowed:
+
+Display:
+
+* Needs Resubmission status
+* User-safe reviewer explanation
+* What must be corrected
+* Previous submission summary
+* Resubmission deadline where applicable
+* Resubmit Proof action
+
+Requirements:
+
+* Link the new submission to the previous one.
+* Keep previous submitted evidence immutable.
+* Do not expose internal reviewer comments.
+* Do not expose automated risk scores.
+* Do not reuse rejected proof as though it were approved.
+* Do not award points.
+
+Needs Resubmission should take priority on the Active Hunt overview.
+
+⸻
+
+32. Final Rejection
+
+When a stop proof is finally rejected and resubmission is unavailable:
+
+* Show Final Rejection status.
+* Show a safe explanation.
+* Explain whether the Hunt can continue.
+* Explain whether the participation becomes failed, blocked, or incomplete.
+* Provide support or report-a-problem route where approved.
+* Preserve history.
+* Do not mark the Hunt completed.
+* Do not award points.
+
+Do not expose confidential moderation or anti-abuse details.
+
+⸻
+
+33. Submission Detail
+
+Implement a private Hunt stop submission-detail screen.
+
+Display:
+
+* Hunt title
+* Stop title
+* Submission number
+* Submitted date
+* Status
+* Text evidence
+* Image evidence
+* Location verified status
+* User-visible review explanation
+* Resubmission action where allowed
+
+Do not display:
+
+* Exact coordinates unless strictly approved
+* Private validation geometry
+* Reviewer email
+* Moderator-only notes
+* Raw moderation-provider output
+* Internal storage paths
+* Database IDs
+
+Use signed private media URLs.
+
+Prompt 14 will organize full submission history.
+
+⸻
+
+34. Stop Completion Operation
+
+Use Prompt 11’s authoritative completeHuntStop operation.
+
+The UI must never directly set the stop to completed.
+
+The trusted operation must verify:
+
+* Authentication
+* Participation ownership or authorized group action
+* Hunt state
+* Stop state
+* Ordering
+* Required proof
+* Required location validation
+* Review result
+* Idempotency
+
+On success:
+
+* Update the current stop.
+* Unlock the next authorized clue or stop.
+* Update progress.
+* Emit the expected domain event.
+* Return authoritative newly available content.
+
+Do not award the full Hunt reward here unless the configured model explicitly supports trusted per-stop rewards.
+
+⸻
+
+35. Stop Completion Confirmation
+
+After successful stop completion:
+
+Display a concise confirmation:
+
+Stop complete.
+
+May include:
+
+* Completed stop title
+* Updated required-stop count
+* Next clue unlocked
+* Return to Hunt
+
+Avoid full-screen celebration after every ordinary stop.
+
+Use subtle motion respecting reduced-motion preferences.
+
+Do not display unconfirmed points.
+
+⸻
+
+36. Progress Presentation
+
+Display meaningful progress.
+
+For ordered Hunts:
+
+2 of 5 required stops completed
+
+For unordered Hunts:
+
+* Completed required count
+* Remaining required count
+* Optional completed count separately if useful
+
+Requirements:
+
+* Do not count optional stops as required.
+* Do not display misleading percentages.
+* Do not calculate progress solely from client assumptions.
+* Use the authoritative Active Hunt query.
+* Use accessible textual progress.
+
+A progress bar may be used only when the denominator is meaningful.
+
+⸻
+
+37. Completed Stops
+
+Show a compact completed-stop history inside Active Hunt.
+
+Each item may include:
+
+* Stop title
+* Completion date
+* Proof-approved indicator where relevant
+* Optional contribution label for group play
+
+Do not show full proof content in the overview.
+
+Do not show internal review data.
+
+Do not allow completed stops to be reopened unless domain rules explicitly support it.
+
+⸻
+
+38. Optional Stops
+
+Optional stops must be clearly labeled.
+
+Rules:
+
+* Optional stops do not block Hunt completion unless configuration says otherwise.
+* Optional stops do not inflate required progress.
+* Optional rewards remain disabled unless explicitly trusted and configured.
+* The user may choose them when currently authorized.
+* Completing them must still use trusted validation and proof rules.
+
+Do not imply an optional stop is required through visual placement.
+
+⸻
+
+39. Time-Limited Stops
+
+Support stop-specific time windows.
+
+Display:
+
+* Available from
+* Available until
+* Upcoming
+* Expired
+* Remaining useful deadline information
+
+Requirements:
+
+* Use server-authoritative timing.
+* Refresh on foreground.
+* Do not rely solely on the device clock.
+* Do not show locked content before the time window.
+* Define whether an expired optional stop can be skipped.
+* Define what happens when a required stop expires.
+
+Do not mark an expired stop completed.
+
+⸻
+
+40. Hunt Deadline
+
+Display the Hunt completion deadline where it affects the participant.
+
+Use:
+
+* Localized date and time
+* Concise deadline warning
+* Server state on mutation
+* No drifting countdown unless necessary
+
+Warnings may include:
+
+* Ends today
+* Complete before 8:00 PM
+* One required stop remains
+
+Do not alarm users when a started-user grace period makes the deadline nonbinding.
+
+Do not use the device clock as the sole authority.
+
+⸻
+
+41. Expired During Active Play
+
+If the Hunt expires while active:
+
+* Refresh authoritative state.
+* Stop protected completion attempts.
+* Preserve completed-stop history.
+* Preserve proof history.
+* Explain whether a grace period applies.
+* Route to a safe expired-participation status when necessary.
+* Do not mark the Hunt completed.
+* Do not award points.
+
+Do not erase local proof evidence before determining whether it can still be submitted.
+
+⸻
+
+42. Hunt Completion Readiness
+
+Use Prompt 11’s centralized completion-readiness evaluator.
+
+The UI may display:
+
+* Ready to Complete
+* Required Stop Remaining
+* Proof Under Review
+* Resubmission Required
+* Location Validation Required
+* Expired
+* Removed
+* Already Completed
+
+Do not duplicate readiness rules.
+
+Do not show Complete Hunt before the server reports readiness or the completion request can verify it atomically.
+
+⸻
+
+43. Complete Hunt Action
+
+When all required conditions appear satisfied:
+
+Display:
+
+Complete Hunt
+
+On tap:
+
+1. Disable repeated taps.
+2. Show a focused loading state.
+3. Call Prompt 11’s trusted completeHunt.
+4. Reverify all requirements server-side.
+5. Handle repeated or concurrent calls idempotently.
+6. Insert the points transaction atomically.
+7. Retrieve the confirmed reward.
+8. Invalidate Active, My Hunts, point summary, and Progress-ready queries.
+9. Route to completion confirmation.
+10. Do not calculate points locally.
+
+Do not optimistically show completion.
+
+⸻
+
+44. Automatic Hunt Completion
+
+If the Hunt is configured to complete automatically after the final trusted stop:
+
+* Call the trusted Hunt completion operation from the trusted flow.
+* Show pending completion while the transaction resolves.
+* Do not award points from UI logic.
+* Handle the case where completion already succeeded.
+* Route to the same completion confirmation.
+
+Do not silently complete before all proof and review requirements are resolved.
+
+⸻
+
+45. Completion Race and Retry Handling
+
+Handle:
+
+* User taps Complete Hunt twice
+* Network response is delayed
+* Completion succeeded but response was lost
+* Another device completed the Hunt
+* Reward already exists
+* Completion occurred automatically after final stop
+
+Use the idempotency key from Prompt 11.
+
+On retry:
+
+* Retrieve the existing authoritative completion.
+* Show the original reward.
+* Do not display a duplicate error.
+* Do not insert another ledger transaction.
+
+Test concurrent requests.
+
+⸻
+
+46. Hunt Completion Screen
+
+Implement a polished Hunt completion confirmation.
+
+Display:
+
+* Hunt completed acknowledgment
+* Hunt title
+* Points awarded
+* Completion date
+* Required stops completed
+* Optional stops completed where useful
+* Real achievement awarded, only if one exists
+* View Hunt Progress
+* Return to Hunt Map
+* View Completion Details, routed for Prompt 14 readiness
+
+Keep it concise.
+
+Use restrained motion.
+
+Do not require social sharing.
+
+Do not create a fake public share card.
+
+Do not show an unconfirmed reward.
+
+⸻
+
+47. Group Participation Presentation
+
+Where group architecture is supported, display only authorized information.
+
+May include:
+
+* Group name
+* Participant count
+* Captain or host public identity
+* Group readiness
+* Shared or individual progress label
+* Current shared objective
+* Current-user contribution
+
+Do not display:
+
+* Emails
+* Live locations
+* Other participants’ private proof
+* Account statuses
+* Block relationships
+* Internal removal reasons
+
+Do not build Hunt chat or live location sharing.
+
+⸻
+
+48. Shared Group Progress
+
+If Prompt 11 implemented shared progress:
+
+* Show the authoritative group stop state.
+* Explain that completing a shared stop updates the group.
+* Preserve current-user contribution where tracked.
+* Refresh after another participant completes a stop.
+* Prevent duplicate shared completion.
+* Apply reward eligibility rules server-side.
+
+Do not simulate shared progress through local polling alone.
+
+Do not award points to removed, withdrawn, or ineligible participants.
+
+⸻
+
+49. Individual Group Progress
+
+If the Hunt uses individual progress:
+
+* Show the current user’s stop progress.
+* Do not imply that another participant’s completion completed this user’s requirements.
+* Group summary may show general progress only when permitted.
+* Reward remains dependent on the current user’s trusted completion state.
+
+Do not expose another user’s private progression details.
+
+⸻
+
+50. Participant Removal State
+
+If the current user is removed while Active Hunt is open:
+
+* Refresh participation state.
+* Disable further protected actions.
+* Preserve completed progress history.
+* Show a safe removal message.
+* Show user-safe reason where permitted.
+* Provide Return to My Hunts.
+* Provide support route where appropriate.
+* Do not expose internal host or moderator notes.
+* Do not award points.
+
+Do not continue displaying active clues after removal if access should end.
+
+⸻
+
+51. Withdrawal
+
+Implement a safe withdrawal flow.
+
+Place it in a restrained secondary action.
+
+Before withdrawal, explain:
+
+* Hunt progress will remain in history.
+* Completion points will not be awarded.
+* Rejoining depends on Hunt rules.
+* Submitted proof may remain in review.
+* Group participation may be affected where applicable.
+
+Buttons:
+
+* Keep Playing
+* Withdraw from Hunt
+
+Call Prompt 11’s trusted operation.
+
+Do not delete participation.
+
+After success:
+
+* Invalidate Active and My Hunts.
+* Route to a safe withdrawal confirmation.
+* Do not award points.
+
+⸻
+
+52. Cancellation State
+
+If the Hunt or occurrence is cancelled:
+
+Display:
+
+* Cancelled status
+* Safe reason where allowed
+* Date
+* Progress preserved
+* Proof-status impact
+* Return to My Hunts
+* Support route where relevant
+
+Do not allow:
+
+* Further stop completion
+* New proof submission unless specifically allowed for dispute handling
+* Hunt completion
+* Point award
+
+Do not erase the Hunt from history.
+
+⸻
+
+53. Paused Hunt
+
+If the Hunt becomes paused during active participation:
+
+Use the configured behavior.
+
+Possible rules:
+
+* New starts paused, active participants continue
+* All activity temporarily paused
+* Validation temporarily unavailable
+
+Display the actual server-defined effect.
+
+Do not assume pause means cancellation.
+
+Do not expose internal moderation reasons.
+
+⸻
+
+54. App Restart and Restoration
+
+When the app restarts:
+
+1. Restore authentication.
+2. Retrieve active Hunt participations.
+3. Restore the correct current authorized clue.
+4. Restore completed-stop progress.
+5. Restore under-review or resubmission state.
+6. Restore safe proof draft only where locally preserved.
+7. Reevaluate expiration and cancellation.
+8. Do not reveal clues from stale local cache that are no longer authorized.
+9. Do not require the user to restart the Hunt.
+
+The server remains authoritative.
+
+Do not use local state alone to determine the current stop.
+
+⸻
+
+55. Multi-Device Behavior
+
+Support safe multi-device use.
+
+Examples:
+
+* Stop completed on another device
+* Proof submitted elsewhere
+* Hunt completed elsewhere
+* User removed elsewhere
+* Hunt cancelled while open
+* Next clue unlocked elsewhere
+
+Requirements:
+
+* Refresh on app foreground.
+* Refresh after mutation conflict.
+* Prefer server state.
+* Avoid duplicate reward.
+* Avoid stale clue presentation.
+* Explain state changes clearly.
+
+Do not overwrite newer server state with stale local drafts.
+
+⸻
+
+56. Active Hunt Notifications
+
+Connect existing notification types to Active Hunt routes.
+
+Examples:
+
+Next clue unlocked
+
+Open current Active Hunt objective.
+
+Proof approved
+
+Open the newly unlocked stop or completion state.
+
+Proof needs resubmission
+
+Open the relevant stop and resubmission flow.
+
+Hunt starts
+
+Open Active Hunt.
+
+Hunt ending soon
+
+Open Active Hunt overview.
+
+Hunt cancelled
+
+Open cancellation status.
+
+Participant removed
+
+Open removal status.
+
+Do not build push delivery yet.
+
+Do not include clue text or private locations in notification previews unless explicitly safe.
+
+⸻
+
+57. Analytics Events
+
+Use prepared event hooks for:
+
+* Active Hunt viewed
+* Clue viewed
+* Stop selected
+* Directions opened
+* Location check started
+* Location validated
+* Location validation failed
+* Proof draft started
+* Image added
+* Proof submitted
+* Stop completed
+* Next clue unlocked
+* Complete Hunt tapped
+* Hunt completed
+* Hunt withdrawn
+
+Do not log:
+
+* Exact location
+* Private geometry
+* Clue solution
+* Proof text
+* Proof images
+* Internal review reasons
+* Other participant identities
+
+Do not connect a third-party provider.
+
+⸻
+
+58. Offline Behavior
+
+Allow cached read-only access to:
+
+* Hunt title
+* Previously authorized clue
+* Previously loaded stop instructions
+* Completed-stop summary
+* Public location label
+* Safety information
+
+Do not allow offline actions to appear confirmed for:
+
+* Location validation
+* Proof submission
+* Protected stop completion
+* Hunt completion
+* Withdrawal
+* Group-state changes
+
+If a proof draft is safely preserved offline:
+
+* Clearly show it as a draft.
+* Require server connection to submit.
+* Do not mark it under review.
+* Do not award points.
+
+Full offline synchronization remains Prompt 22.
+
+⸻
+
+59. Loading States
+
+Create layout-specific loading states for:
+
+* Active Hunt overview
+* Current clue
+* Stop selector
+* Stop Detail
+* Stop map
+* Location acquisition
+* Validation
+* Proof draft
+* Proof upload
+* Submission
+* Under-review status
+* Stop completion
+* Next clue reveal
+* Hunt completion
+* Withdrawal
+
+Avoid one generic full-screen spinner.
+
+Preserve already loaded authorized clue content during safe nonblocking refreshes.
+
+Use blocking loaders only for protected mutations.
+
+⸻
+
+60. Error States
+
+Handle independently:
+
+* Active Hunt unavailable
+* Participation unauthorized
+* Stop locked
+* Clue unavailable
+* Hunt expired
+* Hunt cancelled
+* User removed
+* Location permission denied
+* Location services disabled
+* Poor accuracy
+* Outside region
+* Validation rate limited
+* Proof upload failed
+* Proof submission failed
+* Completion state uncertain
+* Network offline
+* Signed media expired
+* Unknown safe error
+
+Provide:
+
+* Retry
+* Refresh
+* Open Settings
+* Return to Active Hunt
+* Return to My Hunts
+* Contact Support where appropriate
+
+Do not expose raw Supabase, PostGIS, storage, or SQL errors.
+
+⸻
+
+61. Shared Components
+
+Create or finalize reusable components such as:
+
+* ActiveHuntHeader
+* ActiveHuntStatus
+* CurrentCluePanel
+* HuntClueCard
+* HuntProgressSummary
+* OrderedStopProgress
+* UnorderedStopSelector
+* HuntStopRow
+* HuntStopDetail
+* HuntStopMap
+* StopPrimaryAction
+* LocationValidationPanel
+* LocationAccuracyStatus
+* HuntProofRequirementSummary
+* HuntProofDraft
+* HuntProofReview
+* HuntSubmissionStatus
+* HuntReviewTimeline
+* StopCompletionConfirmation
+* NextClueReveal
+* HuntCompletionSummary
+* GroupProgressSummary
+* HuntDeadlineNotice
+* WithdrawalConfirmation
+* HuntStatusState
+* ActiveHuntSkeleton
+* ActiveHuntEmptyState
+
+Extend existing Quest proof and status components where behavior is genuinely shared.
+
+Do not force Quest and Hunt into one generic component when their semantics differ.
+
+Do not duplicate design-system primitives.
+
+⸻
+
+62. Action Resolver Integration
+
+Use Prompt 11’s Hunt action resolver and add a stop-level resolver where needed.
+
+The stop action resolver should determine:
+
+* Label
+* Enabled state
+* Action type
+* Destination or mutation
+* Disabled reason
+* Loading behavior
+* Confirmation requirement
+
+Possible stop actions:
+
+* View Stop
+* Check Location
+* Mark Activity Complete
+* Add Proof
+* Submit Proof
+* View Submission
+* Resubmit Proof
+* Complete Stop
+* Waiting for Review
+* Completed
+* Locked
+* Expired
+
+Do not scatter action-label logic across screens.
+
+⸻
+
+63. React Query Hooks
+
+Use or create hooks such as:
+
+* useActiveHunt
+* useActiveHuntStop
+* useAuthorizedHuntClue
+* useHuntStopProgress
+* useSelectHuntStop
+* useValidateHuntStopLocation
+* useCreateHuntProofDraft
+* useUploadHuntProofMedia
+* useSubmitHuntProof
+* useCompleteHuntStop
+* useHuntCompletionReadiness
+* useCompleteHunt
+* useWithdrawFromHunt
+* useHuntSubmissionDetail
+
+Adapt names to existing conventions.
+
+Requirements:
+
+* Stable user-scoped keys
+* Targeted invalidation
+* Conservative mutation retries
+* No optimistic proof approval
+* No optimistic stop completion
+* No optimistic Hunt completion
+* No optimistic point award
+* No private geometry in cache
+* No exact location retained unnecessarily
+* Stale request cancellation
+
+⸻
+
+64. Query Invalidation
+
+After location validation:
+
+Invalidate:
+
+* Current stop
+* Active Hunt
+* Validation state
+* Completion readiness
+
+After proof submission:
+
+Invalidate:
+
+* Current stop
+* Active Hunt
+* Submission Detail
+* Completion readiness
+* My Hunts Active
+
+After stop completion:
+
+Invalidate:
+
+* Active Hunt
+* Current clue
+* Stop progress
+* My Hunts Active
+* Hunt Detail
+* Completion readiness
+* Map state where current participation marker changes
+
+After Hunt completion:
+
+Invalidate:
+
+* Active Hunt
+* My Hunts Active
+* My Hunts Completed
+* Hunt Progress-ready queries
+* Point summary
+* Point history
+* Hunt leaderboard-ready queries
+* Hunt Detail
+* Public Hunt Map state where relevant
+
+After withdrawal:
+
+Invalidate:
+
+* Active Hunt
+* My Hunts Active
+* My Hunts archived activity
+* Hunt Detail
+* Capacity
+
+Do not invalidate all Quest data.
+
+⸻
+
+65. Security Verification
+
+Verify:
+
+* Active Hunt route requires authorized participation.
+* Locked clues never reach unauthorized clients.
+* Future stop locations remain hidden.
+* Private validation geometry never reaches the client.
+* Users cannot access another participant’s proof.
+* Users cannot approve proof.
+* Users cannot set stop completion directly.
+* Users cannot unlock clues directly.
+* Users cannot set Hunt completion directly.
+* Users cannot insert points.
+* Users cannot choose reward values.
+* Location validation is authenticated and server-side.
+* Stop completion verifies proof and ordering server-side.
+* Hunt completion verifies all requirements server-side.
+* Duplicate completion awards once.
+* Removed or withdrawn users cannot continue protected actions.
+* Cancelled Hunts cannot complete.
+* Signed proof media remains private.
+* Service-role credentials are absent from the app.
+
+Do not weaken RLS for development testing.
+
+⸻
+
+66. Privacy Verification
+
+Verify:
+
+* Ordinary browsing location is not stored continuously.
+* Validation coordinates are retained only according to documented policy.
+* Exact coordinates are not displayed unnecessarily.
+* Other participants’ live locations are never shown.
+* Other participants’ proof remains private.
+* Group summaries expose only authorized public identity.
+* Clue contents are not logged.
+* Proof contents are not included in notifications.
+* Private media uses signed URLs.
+* Removed users lose access to protected current clue content where required.
+* Archived proof remains owner-private.
+
+⸻
+
+67. Database or Server Adjustments
+
+Add only focused migrations or functions where the UI exposes a missing safe operation.
+
+Potential additions:
+
+* Authorized Active Hunt RPC
+* Authorized current-clue RPC
+* Safe stop-detail RPC
+* Stop-level action resolver data
+* Proof-draft association fields
+* Submission idempotency constraints
+* Stop-completion RPC adjustments
+* Completion-readiness RPC
+* Active Hunt restoration query
+* Safe group-progress summary
+* User-safe review explanation field
+* Current authorized content view
+* Domain-event outbox records
+
+Requirements:
+
+* Preserve Prompt 11 architecture.
+* Restrict private clue access.
+* Restrict private stop geometry.
+* Validate auth.uid().
+* Use explicit safe search paths.
+* Restrict execution.
+* Do not use dynamic SQL.
+* Do not expose service-role functions to ordinary users.
+* Document every migration.
+
+⸻
+
+68. Development Fixtures
+
+Use Prompt 11 fixtures to render:
+
+Ordered Hunt
+
+* First clue
+* Middle stop
+* Final stop
+* Locked future clue
+* Completed prior stops
+
+Unordered Hunt
+
+* Multiple available stops
+* Required stop
+* Optional stop
+* Completed stop
+* Under-review stop
+
+Proof
+
+* Text proof
+* Image proof
+* Image and location
+* Under review
+* Needs resubmission
+* Final rejection
+* Approved proof
+
+Location
+
+* Permission denied
+* Poor accuracy
+* Outside region
+* Validated
+* Rate limited
+* Server unavailable
+
+Lifecycle
+
+* Active
+* Expiring soon
+* Grace period
+* Cancelled
+* Paused
+* Removed
+* Withdrawn
+* Completed
+
+Group readiness
+
+* Shared-progress fixture where supported
+* Individual-progress fixture
+* Removed participant excluded from reward
+
+Fixtures must remain development-only.
+
+Fake validation must not award production points.
+
+⸻
+
+69. Automated Tests
+
+Add tests covering:
+
+Active Hunt route
+
+* Authorized participant can open
+* Unauthorized user is rejected
+* Ready participation redirects correctly
+* Completed participation redirects correctly
+* Removed participation loses protected access
+* Invalid route is handled safely
+
+Clues
+
+* Current clue renders
+* Locked clue remains unavailable
+* Future clue content is absent from response
+* Stop completion unlocks only the next authorized clue
+* App restart restores correct clue
+* Multi-device refresh uses server state
+
+Ordered stops
+
+* Future stops cannot be selected
+* Current stop can be completed
+* Required order is enforced
+* Optional behavior does not bypass required order
+
+Unordered stops
+
+* Available stops render
+* User can choose authorized stop
+* Optional stops are labeled
+* Required progress excludes optional stops
+
+Location
+
+* Permission request occurs after user action
+* Valid location succeeds
+* Outside region fails safely
+* Poor accuracy permits retry
+* Stale location is rejected
+* Rate limiting works
+* Client does not receive private geometry
+* Browsing location is not stored
+
+Proof
+
+* Shows only required evidence inputs
+* Preserves recoverable draft
+* Validates text
+* Validates image count
+* Handles upload failure
+* Prevents duplicate submission
+* Under Review disables resubmission
+* Needs Resubmission allows linked new submission
+* Historical submitted proof remains immutable
+
+Stop completion
+
+* Protected stop cannot complete without proof
+* Protected stop cannot complete without validation
+* Completion is idempotent
+* Unlocks the next clue
+* Does not award full Hunt reward
+* Client cannot set completion directly
+
+Hunt completion
+
+* Incomplete Hunt is rejected
+* Pending proof blocks completion
+* Final required stop enables readiness
+* Valid Hunt completes
+* Points are awarded once
+* Reward snapshot is used
+* Concurrent completion awards once
+* Lost response can retrieve existing completion
+
+Lifecycle
+
+* Withdrawal preserves history
+* Removed participant cannot continue
+* Cancelled Hunt cannot complete
+* Expired Hunt cannot improperly complete
+* Grace-period behavior follows server configuration
+* Paused behavior follows configuration
+
+Privacy and security
+
+* Another user cannot open proof
+* Another user cannot open participation
+* Locked clues are not in query payload
+* Private geometry is inaccessible
+* Client cannot alter reward
+* Client cannot reveal clues
+* Service-role credentials are not bundled
+
+Use local Supabase and Edge Function integration tests where available.
+
+⸻
+
+70. Documentation
+
+Create or update:
+
+/docs/ACTIVE_HUNT_UI.md
+/docs/HUNT_CLUE_UI.md
+/docs/HUNT_STOP_FLOW.md
+/docs/HUNT_STOP_MAP.md
+/docs/HUNT_LOCATION_VALIDATION_UI.md
+/docs/HUNT_PROOF_UI.md
+/docs/HUNT_STOP_COMPLETION.md
+/docs/HUNT_COMPLETION_UI.md
+/docs/HUNT_ACTIVE_SECURITY.md
+/docs/HUNT_ACTIVE_PRIVACY.md
+/docs/HUNT_ACTIVE_TESTING.md
+
+Document:
+
+* Active Hunt route
+* Screen hierarchy
+* Current clue presentation
+* Ordered and unordered Hunts
+* Stop selector
+* Stop Detail
+* Stop-level map
+* Directions boundary
+* Location validation flow
+* Proof draft
+* Text and image proof
+* Mixed proof
+* Under Review
+* Resubmission
+* Final rejection
+* Stop completion
+* Clue reveal
+* Progress calculation
+* Optional stops
+* Deadline and expiration
+* Group progress
+* Completion readiness
+* Hunt completion
+* Reward confirmation
+* Withdrawal
+* Removal
+* Cancellation
+* App restoration
+* Multi-device behavior
+* Query invalidation
+* Security
+* Privacy
+* Fixtures
+* Tests
+* Remaining work for Prompt 14
+
+Update:
+
+* /docs/PROJECT_CONSTITUTION.md
+* replit.md
+
+only where necessary.
+
+Do not alter approved navigation or visual direction.
+
+⸻
+
+71. Out of Scope
+
+Do not implement:
+
+* Complete Hunt Progress UI
+* Hunt leaderboard
+* Completed Hunt history
+* Full archived Hunt activity
+* Full proof-submission history organization
+* Full Hunt point-history interface
+* Cross-game achievements
+* User-facing Hunt creation
+* Hunt editing
+* Host control panel
+* Participant-management UI
+* Admin Hunt moderation
+* Admin proof review
+* AI Hunt generation
+* Automated media-moderation provider
+* Hunt chat
+* Live participant locations
+* Friends
+* Teams or guilds
+* Background location
+* Turn-by-turn navigation
+* Full offline synchronization
+* Push-notification delivery
+* Stripe
+* Memberships
+* Paid Hunt tickets
+* Paid hints
+* Creator payouts
+
+Prompt 14 will implement Hunt Progress, In Action, Completed history, proof-status organization, point history, and Hunt leaderboards.
+
+⸻
+
+72. Final Verification
+
+Before finishing:
+
+* Confirm Active Hunt uses the protected participation route.
+* Confirm unauthorized users cannot access Active Hunt.
+* Confirm the current authorized clue is visually dominant.
+* Confirm ordered Hunts hide future clue and stop content.
+* Confirm unordered Hunts show only authorized available stops.
+* Confirm private validation geometry never reaches the client.
+* Confirm ordinary map browsing does not store location history.
+* Confirm location validation uses the trusted shared endpoint.
+* Confirm proof UI adapts to the configured requirement.
+* Confirm proof remains private.
+* Confirm submitted proof is immutable.
+* Confirm resubmission links to the prior submission.
+* Confirm under-review proof cannot be duplicated.
+* Confirm protected stop completion is server-authoritative.
+* Confirm completing a stop unlocks only authorized content.
+* Confirm optional stops do not inflate required progress.
+* Confirm Hunt completion verifies all requirements.
+* Confirm the client does not calculate or insert points.
+* Confirm duplicate Hunt completion awards once.
+* Confirm withdrawal preserves history.
+* Confirm removed users cannot continue.
+* Confirm cancelled and expired Hunts cannot improperly complete.
+* Confirm app restart restores the correct Active Hunt state.
+* Confirm multi-device state uses the server as authority.
+* Confirm no Hunt chat or live-location system was added.
+* Confirm no new bottom tabs were added.
+* Confirm the Quest/Hunt selector remains intact.
+* Confirm Profile remains shared.
+* Confirm the app compiles.
+* Confirm tests pass or clearly document blocked integration tests.
+* Confirm no approved UI or navigation was redesigned.
+
+Resolve known in-scope errors before stopping.
+
+⸻
+
+Deliverables
+
+When complete, provide:
+
+1. Active Hunt files created or updated
+2. Protected Active Hunt route
+3. Active Hunt screen hierarchy
+4. Current clue presentation
+5. Clue rendering components
+6. Ordered Hunt behavior
+7. Unordered Hunt behavior
+8. Stop selector
+9. Stop Detail
+10. Active Hunt stop-level map
+11. Directions behavior
+12. Location-validation flow
+13. Location failure and retry states
+14. Proof-draft behavior
+15. Text-proof UI
+16. Image-proof UI
+17. Mixed-proof UI
+18. Proof review and submission
+19. Under-review state
+20. Resubmission state
+21. Final rejection state
+22. Submission Detail
+23. Trusted stop-completion integration
+24. Next-clue reveal
+25. Hunt progress presentation
+26. Optional-stop behavior
+27. Deadline and expiration handling
+28. Group-progress presentation
+29. Completion-readiness integration
+30. Trusted Hunt-completion flow
+31. Completion confirmation
+32. Completion race and retry handling
+33. Withdrawal flow
+34. Removal, cancellation, and pause states
+35. App restoration and multi-device handling
+36. Notification and deep-link routing
+37. React Query hooks and invalidation
+38. Offline and error behavior
+39. Database migrations, views, RPCs, Edge Functions, indexes, or RLS adjustments
+40. Tests added and results
+41. Documentation created or updated
+42. Assumptions made
+43. Known limitations
+44. Exact remaining work for Prompt 14
+
+Do not begin Prompt 14.
+
+Do not redesign the application.
+
+Create a checkpoint named:
+
+Build 1 — Prompt 13 — Active Hunt Gameplay and Completion

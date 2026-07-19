@@ -341,10 +341,10 @@ export async function fetchActiveHunt(participationId: string): Promise<ActiveHu
 
   const completedCount = authorizedProgress.filter((s: any) => s.progressStatus === 'completed').length;
 
-  // Load hunt for total stop count
+  // Load hunt for total stop count + ordering
   const { data: hunt } = await supabase
     .from('hunts')
-    .select('title, points_reward')
+    .select('title, points_reward, stop_ordering')
     .eq('id', p.hunt_id)
     .single();
 
@@ -363,6 +363,7 @@ export async function fetchActiveHunt(participationId: string): Promise<ActiveHu
     participantRole: p.role,
     startedAt: p.started_at ?? null,
     completionDeadline: (p.reward_snapshot as any)?.completionDeadline ?? null,
+    isOrdered: (hunt as any)?.stop_ordering === 'ordered',
     currentStops: authorizedProgress,
     completedStopCount: completedCount,
     requiredStopCount: totalRequired.count ?? 0,
@@ -600,6 +601,102 @@ export async function rpcCompleteHunt(participationId: string): Promise<HuntComp
     reasonCode: r.reasonCode ?? null,
     userMessage: r.userMessage ?? '',
   };
+}
+
+// ─── Proof submission (Prompt 13) ─────────────────────────────────────────────
+
+export async function rpcSubmitHuntProof(
+  participationId: string,
+  stopId: string,
+  submissionType: string,
+  textResponse?: string | null,
+  mediaIds?: string[] | null,
+  locationLat?: number | null,
+  locationLng?: number | null,
+  locationAccuracy?: number | null,
+  previousSubmissionId?: string | null,
+): Promise<{
+  success: boolean;
+  submissionId: string | null;
+  stopStatus: string | null;
+  reasonCode: string | null;
+  userMessage: string;
+}> {
+  const supabase = db();
+  const { data, error } = await supabase.rpc('submit_hunt_stop_proof', {
+    p_participation_id:       participationId,
+    p_stop_id:                stopId,
+    p_submission_type:        submissionType,
+    p_text_response:          textResponse ?? null,
+    p_media_ids:              mediaIds ?? null,
+    p_location_lat:           locationLat ?? null,
+    p_location_lng:           locationLng ?? null,
+    p_location_accuracy:      locationAccuracy ?? null,
+    p_previous_submission_id: previousSubmissionId ?? null,
+  });
+  if (error) throw normalizeError(error);
+  const r = data as any;
+  return {
+    success:        r.success ?? false,
+    submissionId:   r.submissionId ?? null,
+    stopStatus:     r.stopStatus ?? null,
+    reasonCode:     r.reasonCode ?? null,
+    userMessage:    r.userMessage ?? '',
+  };
+}
+
+export async function rpcValidateHuntStopLocation(
+  participationId: string,
+  stopId: string,
+  latitude: number,
+  longitude: number,
+  accuracyMeters: number,
+): Promise<{
+  success: boolean;
+  validated: boolean;
+  reasonCode: string | null;
+  userMessage: string;
+}> {
+  const supabase = db();
+  const { data, error } = await supabase.rpc('validate_hunt_stop_location', {
+    p_participation_id: participationId,
+    p_stop_id:          stopId,
+    p_latitude:         latitude,
+    p_longitude:        longitude,
+    p_accuracy_meters:  accuracyMeters,
+  });
+  if (error) throw normalizeError(error);
+  const r = data as any;
+  return {
+    success:    r.success ?? false,
+    validated:  r.validated ?? false,
+    reasonCode: r.reasonCode ?? null,
+    userMessage: r.userMessage ?? '',
+  };
+}
+
+export async function fetchHuntStopSubmission(
+  participationId: string,
+  stopId: string,
+): Promise<any | null> {
+  const supabase = db();
+  const { data, error } = await supabase.rpc('get_hunt_stop_submission', {
+    p_participation_id: participationId,
+    p_stop_id:          stopId,
+  });
+  if (error) throw normalizeError(error);
+  return data ?? null;
+}
+
+export async function fetchHuntCompletionReadiness(
+  participationId: string,
+): Promise<any | null> {
+  const supabase = db();
+  const { data, error } = await supabase.rpc('get_hunt_completion_readiness', {
+    p_participation_id: participationId,
+  });
+  if (error) throw normalizeError(error);
+  return data ?? null;
 }
 
 export async function rpcCancelHuntOccurrence(

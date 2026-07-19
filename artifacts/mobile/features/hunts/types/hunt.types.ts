@@ -446,6 +446,8 @@ export interface ActiveHunt {
   participantRole: ParticipantRole;
   startedAt: string | null;
   completionDeadline: string | null;
+  /** Whether stops must be completed in order */
+  isOrdered: boolean;
   /** Authorized current stops — NOT all stops, NOT locked stops */
   currentStops: ActiveHuntStop[];
   completedStopCount: number;
