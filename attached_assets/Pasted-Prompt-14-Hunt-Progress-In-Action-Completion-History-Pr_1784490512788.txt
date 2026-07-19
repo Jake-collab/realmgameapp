@@ -1,0 +1,2257 @@
+Prompt 14 — Hunt Progress, In Action, Completion History, Proof Status, Points, and Leaderboards
+
+Copy this into Replit AI:
+
+# Worlds — Build 1, Prompt 14
+# Hunt Progress, In Action, Completion History, Proof Status, Points, and Leaderboards
+Continue from the current Worlds project and follow these documents as authoritative:
+- /docs/PROJECT_CONSTITUTION.md
+- /docs/DATABASE_ARCHITECTURE.md
+- /docs/ROW_LEVEL_SECURITY.md
+- /docs/POINTS_SYSTEM.md
+- /docs/GEO_DATA_SECURITY.md
+- /docs/PROFILE_AND_SETTINGS.md
+- /docs/NOTIFICATIONS.md
+- all shared map and geospatial documents created by Prompt 9
+- /docs/HUNT_DOMAIN.md
+- /docs/HUNT_STATE_MACHINE.md
+- /docs/HUNT_PRIVACY.md
+- /docs/HUNT_INVITATIONS.md
+- /docs/HUNT_PARTICIPATION.md
+- /docs/HUNT_STOPS_AND_CLUES.md
+- /docs/HUNT_PROOF_SYSTEM.md
+- /docs/HUNT_POINT_AWARDS.md
+- /docs/HUNT_SECURITY.md
+- /docs/HUNT_MAP.md
+- /docs/HUNT_DISCOVERY.md
+- /docs/HUNT_DETAIL_UI.md
+- /docs/HUNT_JOIN_FLOW.md
+- /docs/HUNT_INVITATION_UI.md
+- /docs/MY_HUNTS.md
+- /docs/HUNT_READY_STATE.md
+- /docs/HUNT_MAP_PRIVACY.md
+- /docs/HUNT_UI_SECURITY.md
+- /docs/ACTIVE_HUNT_UI.md
+- /docs/HUNT_CLUE_UI.md
+- /docs/HUNT_STOP_FLOW.md
+- /docs/HUNT_STOP_MAP.md
+- /docs/HUNT_LOCATION_VALIDATION_UI.md
+- /docs/HUNT_PROOF_UI.md
+- /docs/HUNT_STOP_COMPLETION.md
+- /docs/HUNT_COMPLETION_UI.md
+- /docs/HUNT_ACTIVE_SECURITY.md
+- /docs/HUNT_ACTIVE_PRIVACY.md
+- replit.md
+- the approved UI/UX addendum
+- the approved authentication and navigation clarification
+The application is named:
+Worlds
+Prompt 11 implemented the Hunt domain, lifecycle, privacy, invitations, participation, stops, clues, proof infrastructure, trusted completion, points, cancellation, expiration, and security boundaries.
+Prompt 12 implemented the Hunt Map, discovery, Hunt Detail, joining, invitations, Ready state, My Hunts organization, and starting transitions.
+Prompt 13 implemented the complete Active Hunt experience, stop progression, authorized clue release, location validation, proof submission, resubmission, stop completion, Hunt completion, withdrawal, cancellation states, and restoration.
+This prompt must replace the current Hunt Progress placeholder and finish the user-facing Hunt record and ranking experience.
+Do not recreate or bypass Prompt 11–13 business logic.
+Do not rebuild the Active Hunt gameplay flow.
+Do not duplicate the Quest Progress implementation blindly. Reuse shared infrastructure where behavior is genuinely identical, while preserving Hunt-specific concepts such as:
+- Stops
+- Invitations
+- Ready state
+- Group participation
+- Shared or individual progress
+- Hunt occurrences
+- Clue progression
+- Participant removal
+- Host cancellation
+Do not build user-facing Hunt creation.
+Do not build the complete cross-game achievement system. That belongs in Prompt 15.
+Do not redesign the approved navigation.
+---
+# Primary Objective
+Implement a complete Hunt Progress experience supporting:
+- Hunt leaderboards
+- In Action
+- Completed
+- Active Hunt progress summaries
+- Ready Hunts requiring attention
+- Proof awaiting submission
+- Proof under review
+- Proof needing resubmission
+- Rejected proof
+- Completion history
+- Stop-completion history
+- Submission history
+- Hunt point history
+- Point reversals
+- Withdrawn activity
+- Removed activity
+- Expired activity
+- Cancelled activity
+- Group-result summaries
+- Privacy-aware ranking
+- Pagination
+- Filtering
+- Deep links
+- Notification destinations
+The approved top-level Hunt Progress organization is:
+1. Leaderboards
+2. In Action
+3. Completed
+Do not add separate top-level Progress sections for:
+- Proof
+- Points
+- Invitations
+- Ready
+- History
+- Achievements
+- Group activity
+These must be organized within the approved experience or opened as secondary screens.
+---
+# 1. Preserve Approved Hunt Navigation
+Hunt bottom navigation remains exactly:
+1. Map
+2. My Hunts
+3. Progress
+4. Profile
+The Progress tab must now open the completed Hunt Progress experience.
+Do not add:
+- Leaderboards as a bottom tab
+- Proof as a bottom tab
+- History as a bottom tab
+- Points as a bottom tab
+- Achievements as a bottom tab
+- Invitations as a bottom tab
+- Teams as a bottom tab
+The Quest/Hunt selector must remain intact.
+Quest Progress and Hunt Progress must preserve separate internal navigation state.
+The shared Profile implementation must remain intact.
+Do not rebuild the application shell.
+---
+# 2. Hunt Progress Screen Structure
+Implement three primary internal sections:
+- Leaderboards
+- In Action
+- Completed
+Use a compact segmented control or mobile-appropriate internal tab control.
+These are not bottom-navigation tabs.
+Recommended default-selection priority:
+1. In Action when proof needs resubmission
+2. In Action when proof is ready to submit
+3. In Action when the user has an Active Hunt
+4. In Action when proof is under review
+5. In Action when a Ready Hunt is approaching its start time
+6. Completed when arriving from a newly completed Hunt
+7. Last selected Hunt Progress section
+8. Leaderboards as the ordinary default
+Deep links may override the default.
+Do not automatically switch sections during an ordinary background refresh.
+---
+# 3. Hunt Progress Module
+Create or finalize a focused module such as:
+```text
+/features/hunt-progress/
+  components/
+  hooks/
+  screens/
+  services/
+  repositories/
+  schemas/
+  types/
+  queries/
+  utils/
+  tests/
+
+It may remain inside /features/hunts/progress/ if that fits the existing architecture.
+
+Requirements:
+
+* Reuse Prompt 11 Hunt repositories and services.
+* Reuse Prompt 13 Active Hunt state and proof queries.
+* Reuse the append-only points ledger.
+* Reuse shared leaderboard infrastructure where appropriate.
+* Reuse privacy settings.
+* Reuse shared media and signed-URL handling.
+* Reuse notification and deep-link systems.
+* Keep Quest and Hunt leaderboard point sources distinct.
+* Do not place raw Supabase queries in screens.
+
+Do not force every Quest and Hunt component into one generic abstraction when the semantics differ.
+
+⸻
+
+4. Hunt Progress Domain Types
+
+Create or finalize types for:
+
+* Hunt progress summary
+* Hunt In Action item
+* Ready Hunt summary
+* Active Hunt summary
+* Hunt proof-status summary
+* Completed Hunt summary
+* Hunt completion detail
+* Hunt stop-history entry
+* Hunt submission-history entry
+* Hunt point transaction
+* Hunt leaderboard entry
+* Hunt leaderboard scope
+* Hunt leaderboard period
+* Current-user Hunt rank
+* Group-result summary
+* Archived Hunt activity
+* Hunt Progress filters
+* Paginated Hunt Progress result
+
+Use generated database types as the persistence foundation.
+
+Avoid incompatible duplicate types across My Hunts, Active Hunt, and Progress.
+
+⸻
+
+5. In Action Organization
+
+The In Action section must organize unresolved and ongoing Hunt activity in this priority:
+
+1. Needs Resubmission
+2. Ready to Submit Proof
+3. Active Hunts
+4. Under Review
+5. Ready Hunts Starting Soon
+6. Waiting for Host or Minimum Participants
+7. Final Rejection Requiring Acknowledgment
+8. Recently Cancelled, Removed, or Expired statuses requiring attention
+
+Do not display empty group headers.
+
+Do not present every group as equally urgent.
+
+Do not move ordinary completed Hunts into In Action.
+
+⸻
+
+6. In Action Summary
+
+At the top of In Action, show a concise summary when useful:
+
+* Active Hunts
+* Stops awaiting proof
+* Proof under review
+* Stops needing resubmission
+* Ready Hunts
+* Upcoming Hunt deadline
+
+Keep this visually secondary to urgent actions.
+
+Do not create an oversized analytics dashboard.
+
+When no current Hunt activity exists, show:
+
+You don’t have a Hunt in action.
+
+Primary action:
+
+Explore Hunts
+
+Route to the Hunt Map.
+
+⸻
+
+7. Needs Resubmission
+
+Place resubmission items first.
+
+Each item should show:
+
+* Hunt title
+* Stop title
+* Hunt image or controlled placeholder
+* Needs Resubmission status
+* User-safe explanation
+* Previous submission date
+* Resubmission deadline where applicable
+* Hunt completion deadline
+* Reward pending at Hunt level
+* Primary action:
+    * Resubmit Proof
+
+Secondary actions may include:
+
+* View Previous Submission
+* View Active Hunt
+
+Do not expose:
+
+* Moderator-only notes
+* Reviewer identity
+* Automated moderation output
+* Fraud scores
+* Internal reason codes
+* Hidden stop or clue information
+
+Use clear urgency without an alarming design.
+
+⸻
+
+8. Ready to Submit Proof
+
+Include active stops where:
+
+* The activity requirement is complete
+* Required proof has not been submitted
+* Submission is currently allowed
+
+Each item should show:
+
+* Hunt title
+* Stop title
+* Proof requirement summary
+* Submission deadline
+* Hunt completion deadline
+* Reward snapshot at Hunt level
+* Primary action:
+    * Submit Proof
+
+Use Prompt 13’s proof route.
+
+Do not allow duplicate active submissions.
+
+Do not mark the stop completed before trusted validation.
+
+⸻
+
+9. Active Hunts Group
+
+Display ongoing Hunt participations requiring activity.
+
+Each item may include:
+
+* Hunt title
+* Current authorized clue or objective summary
+* Current stop
+* Required-stop progress
+* Completion deadline
+* Ordered or unordered label where useful
+* Solo or group label
+* Proof state
+* Reward snapshot
+* Primary action:
+    * Continue Hunt
+
+For ordered Hunts, do not reveal future clue or stop content.
+
+For unordered Hunts, show only currently authorized available-stop counts.
+
+Use authoritative server progress.
+
+Example:
+
+3 of 6 required stops completed
+
+Do not count optional stops as required progress.
+
+⸻
+
+10. Under Review
+
+Display stop submissions currently under review.
+
+Each item should include:
+
+* Hunt title
+* Stop title
+* Submission timestamp
+* Evidence-type summary
+* Under Review status
+* Whether Hunt progression is paused
+* Hunt reward pending
+* Primary action:
+    * View Submission
+
+Use neutral wording:
+
+Your proof is under review. Hunt progress will update after a decision.
+
+When an unordered Hunt permits other stops to continue, offer:
+
+* Continue Hunt
+
+as a secondary action.
+
+Do not promise a review duration.
+
+Do not permit duplicate submission.
+
+⸻
+
+11. Ready Hunts
+
+Include Ready Hunts when they require awareness or action.
+
+Subgroups may include:
+
+* Start Available
+* Starts Soon
+* Waiting for Host
+* Waiting for Participants
+
+Each item should show:
+
+* Hunt title
+* Occurrence date
+* Start model
+* Start window
+* Participant count where relevant
+* Minimum participant requirement
+* Current-user readiness
+* Primary action:
+    * Start Hunt
+    * View Ready Hunt
+    * Waiting for Host
+    * Starts Soon
+
+Do not label Ready Hunts as Active.
+
+Do not expose locked clues.
+
+Do not duplicate the complete My Hunts Ready screen; provide concise action-focused summaries.
+
+⸻
+
+12. Rejection States
+
+Handle two proof rejection outcomes:
+
+Resubmission allowed
+
+Show under Needs Resubmission.
+
+Final rejection
+
+Show as a restrained unresolved status until acknowledged, then move it to Other Activity.
+
+Include:
+
+* Hunt title
+* Stop title
+* Final Rejection status
+* Safe explanation
+* Decision date
+* Effect on Hunt participation
+* Whether another stop or replay remains possible
+* View Details action
+
+Do not label the Hunt completed.
+
+Do not award points.
+
+Do not expose internal moderation information.
+
+⸻
+
+13. Cancellation, Removal, and Expiration Notices
+
+Recently changed participation states may appear temporarily in In Action when the user must understand what happened.
+
+Support:
+
+* Hunt cancelled
+* Participant removed
+* Hunt expired
+* Participation expired
+* Hunt paused where all activity is blocked
+
+Display:
+
+* Hunt title
+* Final or current status
+* Date
+* Safe explanation
+* Whether progress remains visible
+* Primary action:
+    * View Status
+
+After acknowledgment, organize these records in Other Activity.
+
+Do not erase history.
+
+Do not imply completion.
+
+⸻
+
+14. Hunt Progress Card
+
+Create or extend a reusable HuntProgressCard.
+
+Support variants:
+
+* Active
+* Ready
+* Awaiting proof
+* Under review
+* Needs resubmission
+* Rejected
+* Cancelled
+* Removed
+* Expired
+* Starting soon
+
+Possible content:
+
+* Hunt image
+* Hunt title
+* Current stop
+* Status
+* Required-stop progress
+* Deadline
+* Participation mode
+* Reward snapshot
+* Primary action
+* One secondary contextual action
+
+Do not place multiple equally prominent buttons on one card.
+
+Use the Hunt action resolver and stop action resolver.
+
+⸻
+
+15. Completed Section
+
+Implement a paginated Completed section containing successfully completed Hunt participations.
+
+Each item should show:
+
+* Hunt title
+* Hunt image or controlled placeholder
+* Completion date
+* Points awarded
+* Required stops completed
+* Optional stops completed where useful
+* Solo or group label
+* Occurrence label where useful
+* View Completion action
+
+Do not show:
+
+* Pending points as awarded
+* Withdrawn Hunts
+* Removed participations
+* Expired participations
+* Cancelled Hunts
+* Final rejected participations
+
+Only authoritative successful completion belongs in this list.
+
+⸻
+
+16. Completed Filters
+
+Support practical filters such as:
+
+* All
+* Solo
+* Group
+* Ordered
+* Unordered
+* Date range
+* Point range where useful
+
+Sorting may include:
+
+* Most Recent
+* Oldest
+* Highest Points
+* Most Stops
+
+Keep controls compact.
+
+Use a filter bottom sheet where appropriate.
+
+Preserve filters while the user remains in Hunt Progress.
+
+Do not create a complex analytics dashboard.
+
+⸻
+
+17. Hunt Completion Detail
+
+Implement a complete Hunt Completion Detail screen.
+
+Display:
+
+* Hunt title
+* Hunt image
+* Completion date and time
+* Occurrence
+* Points awarded
+* Reward transaction confirmation
+* Participation mode
+* Solo or group result
+* Required stops completed
+* Optional stops completed
+* Ordered or unordered structure
+* Completion duration where reliably known
+* Approved proof summary where appropriate
+* Location-verification summary
+* Achievement earned only when an actual achievement exists
+* Link to the original Hunt where still authorized
+* Link to Hunt point transaction
+* Group-result summary where authorized
+
+Do not expose:
+
+* Locked or unrevealed clue content
+* Private validation geometry
+* Raw proof-storage paths
+* Other users’ private proof
+* Internal review notes
+* Other participants’ exact progress
+* Internal moderation data
+* Raw ledger IDs
+
+⸻
+
+18. Completed Stop History
+
+Within Completion Detail, provide a stop history.
+
+Each stop entry may show:
+
+* Stop title
+* Completion order
+* Completion timestamp
+* Required or optional
+* Proof type
+* Approved status
+* Location verified
+* User contribution where group play supports it
+
+Requirements:
+
+* Use the authoritative historical snapshot.
+* Do not expose clues that the user was never authorized to receive.
+* Do not expose other participants’ private evidence.
+* Do not imply the current user completed a shared stop personally unless contribution data supports it.
+
+For ordered Hunts, preserve actual completion order.
+
+For unordered Hunts, show completion sequence where meaningful.
+
+⸻
+
+19. Proof Within Completion Detail
+
+Proof remains private by default.
+
+The current user may view their own approved proof where allowed.
+
+Support:
+
+* Text proof
+* Image proof
+* Location-verification status
+* Mixed proof
+* Manual confirmation
+* Shared group proof only where the user is authorized
+
+Requirements:
+
+* Use signed media URLs.
+* Do not make proof assets public.
+* Handle expired signed URLs.
+* Avoid persistent local caching of sensitive proof media.
+* Do not display exact coordinates unnecessarily.
+* Prefer:
+    * Location requirement verified
+
+Do not display raw private geometry.
+
+⸻
+
+20. Group Completion Summary
+
+For group Hunts, display only authorized and meaningful group information.
+
+May include:
+
+* Group name
+* Shared or individual progress model
+* Number of eligible completing participants
+* Current-user role
+* Current-user reward
+* Current-user contribution
+* Group completion date
+* Captain or host public identity where permitted
+
+Do not display:
+
+* Other users’ proof
+* Other users’ private reward adjustments
+* Account status
+* Emails
+* Live or historical exact locations
+* Internal removal reasons
+
+Do not imply every group member received points unless the reward operation confirms it.
+
+⸻
+
+21. Other Activity
+
+Provide a secondary screen or filter titled:
+
+* Other Activity
+* Archived Activity
+* Participation History
+
+It may contain:
+
+* Withdrawn
+* Removed
+* Cancelled
+* Expired
+* Final rejected
+* Failed
+* Joined but never started, where retained
+* Ready occurrence cancelled before start
+
+Do not place these records in Completed.
+
+Each item should show:
+
+* Hunt title
+* Final participation status
+* Date
+* Progress reached
+* Points awarded, usually zero
+* Replay or rejoin eligibility where applicable
+* View Details action
+
+Keep this section visually secondary to Completed.
+
+⸻
+
+22. Other Activity Detail
+
+Implement a safe historical detail screen.
+
+Display:
+
+* Hunt title
+* Participation status
+* Joined date
+* Started date where applicable
+* Final status date
+* Stops completed
+* Proof status
+* No-reward explanation
+* Replay or rejoin eligibility
+* Safe cancellation, removal, withdrawal, or expiration explanation
+* Support route where appropriate
+
+Do not:
+
+* Display positive completion celebration
+* Claim the Hunt was completed
+* Reveal internal host or moderator notes
+* Reveal locked future clues
+* Reveal other participants’ private information
+
+⸻
+
+23. Hunt Submission History
+
+Allow the user to view proof-submission history for their Hunt participation and stops.
+
+Organize by stop.
+
+Include:
+
+* Stop title
+* Submission sequence
+* Submitted timestamp
+* Evidence-type summary
+* Status
+* User-visible decision explanation
+* Resubmission relationship
+* Final approved submission
+* View Submission action
+
+Requirements:
+
+* Submitted records remain immutable.
+* The latest active submission is clear.
+* Previous submissions remain visible.
+* Private images use signed URLs.
+* New submission is allowed only when the state machine permits it.
+* Do not expose reviewer identity or internal notes.
+
+⸻
+
+24. Hunt Submission Detail
+
+Reuse or extend Prompt 13’s Submission Detail.
+
+Display:
+
+* Hunt title
+* Stop title
+* Submission number
+* Submission date
+* Status
+* Text evidence
+* Image evidence
+* Location verified
+* User-visible decision explanation
+* Resubmission action where allowed
+* Relationship to prior and later submissions
+
+Do not display:
+
+* Exact coordinates unless explicitly approved
+* Validation geometry
+* Reviewer identity
+* Moderator-only notes
+* Risk signals
+* Storage paths
+* Raw database fields
+
+⸻
+
+25. Review Status Timeline
+
+Use a compact timeline when it improves clarity.
+
+Examples:
+
+Submitted
+    ↓
+Under Review
+    ↓
+Approved
+Submitted
+    ↓
+Needs Resubmission
+    ↓
+Resubmitted
+    ↓
+Under Review
+
+Requirements:
+
+* Show only actual stored states.
+* Use text and icons, not color alone.
+* Include dates where useful.
+* Do not imply proof was viewed by a reviewer unless that state exists.
+* Do not mark future states complete.
+
+Avoid an overly elaborate tracking interface.
+
+⸻
+
+26. Hunt Point History
+
+Create a Hunt-specific point-history screen accessible from Progress.
+
+The append-only points ledger is the source of truth.
+
+Display transactions such as:
+
+* Hunt completion reward
+* Trusted optional-stop reward if such a reward actually exists
+* Hunt reward reversal
+* Administrative correction that is user-visible
+* Group reward allocation entry
+* Compensation entry only if supported later
+
+Each row should show:
+
+* Amount
+* Hunt title or safe source label
+* Transaction type
+* Date
+* Valid or reversed state
+* Associated completion
+* Adjustment relationship where applicable
+
+Do not display raw ledger IDs.
+
+Do not calculate point history only from completed participation records.
+
+⸻
+
+27. Point Reversals
+
+When a Hunt reward is reversed:
+
+* Preserve the original positive ledger entry.
+* Show a separate offsetting transaction.
+* Mark the completion record with an adjustment notice.
+* Recalculate leaderboard totals using reversal-aware aggregation.
+* Explain that the point balance was adjusted.
+* Provide a support route where appropriate.
+
+Use neutral wording such as:
+
+Hunt reward adjustment
+
+Do not silently edit or delete the original reward.
+
+Do not expose confidential fraud or moderation details.
+
+⸻
+
+28. Personal Hunt Summary
+
+Provide a concise personal summary.
+
+Possible values:
+
+* Total Hunt points
+* Hunts completed
+* Active Hunts
+* Ready Hunts
+* Required stops completed
+* Proof under review
+* Stops needing resubmission
+* Solo Hunts completed
+* Group Hunts completed
+* Current Hunt leaderboard rank where visible
+* Actual Hunt achievements earned
+
+Keep this visually compact.
+
+Do not invent values.
+
+Do not use development fixtures in production mode.
+
+⸻
+
+29. Hunt Statistics Boundaries
+
+Do not display statistics that are unreliable or encourage unsafe behavior.
+
+Do not show by default:
+
+* Fastest completion
+* Average speed
+* Distance traveled
+* Nighttime completion count
+* Consecutive hours played
+* Location heat map
+* Competitive travel speed
+
+A Hunt may involve movement, but the product must not encourage rushing, unsafe driving, or trespassing.
+
+Completion duration may appear only as a historical fact where meaningful and safe, not as a speed competition.
+
+⸻
+
+30. Hunt Leaderboard Scope
+
+Implement a Hunt-specific leaderboard.
+
+Active Build 1 scope:
+
+* Global Hunt leaderboard
+* Time-period Hunt leaderboard
+* Current-user Hunt rank
+* Privacy-aware identity
+
+Prepare architecture for future:
+
+* Local leaderboard
+* Friends leaderboard
+* Group leaderboard
+* Individual Hunt leaderboard
+* Combined Worlds leaderboard
+
+Do not expose unsupported scopes as functional controls.
+
+Do not build friends, guilds, or social following.
+
+⸻
+
+31. Hunt-Only Ranking
+
+The Hunt Progress leaderboard must use qualifying Hunt point transactions only.
+
+Do not combine:
+
+* Quest points
+* Hunt points
+* Administrative test points
+* Pending rewards
+* Rejected proof
+* Reversed value
+
+Use a typed source:
+
+* Quest
+* Hunt
+* Combined Worlds, future
+
+The active leaderboard must be clearly labeled:
+
+Hunt Leaderboard
+
+⸻
+
+32. Leaderboard Periods
+
+Support:
+
+* This Week
+* This Month
+* All Time
+
+Optionally support Today only if the existing shared system already does so correctly and it provides clear value.
+
+Requirements:
+
+* Use server-defined boundaries.
+* Document the week-start convention.
+* Store timestamps in UTC.
+* Apply one consistent period calculation.
+* Do not aggregate the full ledger on the client.
+* Avoid rankings changing because of inconsistent client time zones.
+
+⸻
+
+33. Leaderboard Entry
+
+Each leaderboard row may show:
+
+* Rank
+* Avatar where permitted
+* Display name
+* Username where permitted
+* Hunt points for selected period
+* Hunts completed as secondary information
+* Current-user indicator
+* Anonymous state
+* Group-related summary only when the leaderboard is explicitly group-based in the future
+
+Do not display:
+
+* Email
+* Exact location
+* Private profile data
+* Proof
+* Invitation state
+* Account status
+* Internal user ID
+* Private group membership
+
+Use stable pagination.
+
+⸻
+
+34. Current-User Rank
+
+Display the current user’s status even when outside the first leaderboard page.
+
+Use:
+
+* Pinned current-user row
+* Or separate Current Rank summary
+
+Include:
+
+* Rank where applicable
+* Hunt points for selected period
+* Number of visible ranked users
+* Privacy mode
+* Distance to next rank only when accurately and safely calculated
+
+When no qualifying points exist:
+
+Complete a Hunt to enter this leaderboard.
+
+Do not assign a fake last-place rank.
+
+Do not claim the user is unranked merely because the first page did not contain them.
+
+⸻
+
+35. Leaderboard Privacy
+
+Respect the shared leaderboard visibility setting.
+
+Support:
+
+Visible
+
+Show approved public identity fields.
+
+Anonymous
+
+Show a nonidentifying label while preserving rank and points.
+
+Example:
+
+Anonymous Explorer
+
+Hidden
+
+Exclude the user from public leaderboard output.
+
+The hidden user may still see:
+
+* Their Hunt points
+* Their completion summary
+* A private progress summary
+
+Do not show a misleading public rank when the user is excluded from public ranking.
+
+Enforce privacy server-side, not only in UI.
+
+Document how hidden users affect rank numbering.
+
+Recommended:
+
+* Public rank numbers are calculated among visible and anonymous entries only.
+* Hidden users receive no public rank.
+* Anonymous users remain ranked but return no identifying fields.
+
+⸻
+
+36. Suspended, Restricted, and Deactivated Accounts
+
+Apply account-status rules.
+
+Recommended behavior:
+
+* Suspended accounts are excluded from public leaderboards.
+* Deactivated accounts are excluded or anonymized according to retention policy.
+* Integrity-restricted accounts may be excluded from new rankings.
+* Historical ledger records remain auditable.
+* Administrative exclusion is logged.
+
+Do not expose another user’s account status.
+
+Do not label entries Suspended or Restricted publicly.
+
+⸻
+
+37. Ties
+
+Use one consistent ranking method.
+
+Recommended options:
+
+* Competition rank: 1, 2, 2, 4
+* Dense rank: 1, 2, 2, 3
+
+Use the same method as Quest Leaderboards unless there is a documented reason not to.
+
+Use a deterministic internal secondary order for stable pagination.
+
+Possible private secondary criteria:
+
+* Earlier qualifying reward timestamp
+* Stable internal identifier
+
+Do not visually imply one equal-score user outperformed another unless the ranking rule clearly says so.
+
+Document the SQL window function used.
+
+⸻
+
+38. Leaderboard Query Architecture
+
+Use secure server-side aggregation.
+
+Support:
+
+* Hunt-only qualifying transactions
+* Period selection
+* Pagination
+* Current-user rank
+* Privacy enforcement
+* Account-status enforcement
+* Reversal handling
+* Tie calculation
+* Safe public profile fields
+* Stable ordering
+
+Prefer:
+
+* Secure RPC
+* Secure view
+* Materialized or summary table only when needed for scale
+
+Do not:
+
+* Download the full points ledger
+* Rank users locally
+* Expose private ledger entries
+* Return hidden-user identities
+* Expose internal tie-breaking fields
+
+⸻
+
+39. Leaderboard Performance
+
+Choose the simplest correct Build 1 architecture.
+
+Possible approach:
+
+* Server-side RPC using grouped ledger entries and a ranking window function
+
+Add indexes for:
+
+* Point source
+* Transaction status
+* Created timestamp
+* User ID
+* Reversal relation
+* Hunt completion source
+
+Document the scale at which precomputed leaderboard summaries may become necessary.
+
+Do not prematurely build a distributed ranking system.
+
+Do not recompute an unlimited all-time ledger on every small refresh if an efficient summary strategy is available.
+
+⸻
+
+40. Individual Hunt Leaderboards
+
+Prepare a future-safe contract, but do not activate individual Hunt leaderboards by default.
+
+Potential valid future metrics:
+
+* Trusted score generated by Hunt rules
+* Optional-stop score
+* Correct-answer count
+* Approved creator-defined score
+
+Do not rank ordinary Hunts by:
+
+* Fastest physical travel
+* Fastest location arrival
+* Highest movement speed
+* Shortest route
+
+Speed-based ranking may encourage unsafe behavior.
+
+Only expose an individual Hunt leaderboard later when the Hunt has an approved fair scoring model.
+
+⸻
+
+41. Group Leaderboard Preparation
+
+Prepare a future contract for group leaderboards.
+
+Potential metrics:
+
+* Group Hunt points
+* Group completions
+* Approved scored Hunt results
+
+Do not activate it until:
+
+* Group identity is formalized
+* Membership privacy is defined
+* Reward allocation is stable
+* Anti-abuse rules are implemented
+* Group creation and management exist
+
+Do not infer teams from temporary Hunt participant groups.
+
+⸻
+
+42. Anti-Cheat and Integrity
+
+Hunt leaderboards must use trusted point transactions only.
+
+Exclude:
+
+* Client-created rewards
+* Pending proof
+* Rejected proof
+* Invalidated location checks
+* Reversed reward value
+* Development fixtures in production
+* Administrative test transactions
+* Removed-user rewards that were never legitimately earned
+* Duplicate completion transactions
+
+Document future integrity measures such as:
+
+* Proof review
+* Location-validation review
+* Duplicate-participation detection
+* Unusual completion-pattern review
+* Repeated failed validation analysis
+* Group reward integrity review
+
+Do not implement invasive fingerprinting.
+
+Do not expose detection thresholds.
+
+⸻
+
+43. Leaderboard Refresh
+
+Support:
+
+* Pull to refresh
+* Background refresh when returning to Progress
+* Reasonable cache duration
+* Nonblocking loading
+* Cached offline presentation
+
+Do not:
+
+* Refresh continuously
+* Claim real-time updates unless the backend is real-time
+* Animate rank movement without reliable prior-snapshot data
+* Optimistically change rank after completion
+
+Use wording such as:
+
+Rankings update periodically.
+
+only if actual aggregation is delayed.
+
+⸻
+
+44. Completion Transition
+
+After Prompt 13 completes a Hunt and routes to Progress:
+
+* Open Completed.
+* Highlight the newly completed Hunt briefly.
+* Retrieve authoritative completion data.
+* Do not rely on the route parameter as proof of completion.
+* Do not permanently pin the record.
+* Do not replay celebration on every visit.
+* Respect reduced-motion preferences.
+
+Do not create duplicate completion entries.
+
+⸻
+
+45. Deep Links
+
+Support safe deep links to:
+
+* Hunt Progress → Leaderboards
+* Hunt Progress → In Action
+* Hunt Progress → Completed
+* Active Hunt summary
+* Ready Hunt summary
+* Needs Resubmission
+* Under Review submission
+* Completion Detail
+* Other Activity Detail
+* Hunt point history
+* Hunt submission history
+
+Requirements:
+
+* Validate route parameters.
+* Confirm ownership for private records.
+* Confirm current access.
+* Handle cancelled or archived Hunts.
+* Handle malformed notification payloads.
+* Do not expose another user’s participation or proof.
+* Do not expose private clues or geometry.
+
+⸻
+
+46. Notification Integration
+
+Connect existing Hunt domain events to Progress.
+
+Examples:
+
+Proof approved
+
+Open:
+
+* Newly unlocked Active Hunt stop
+* Or Completion Detail if the Hunt completed
+
+Proof needs resubmission
+
+Open In Action at the relevant stop.
+
+Proof rejected
+
+Open submission status or Other Activity as appropriate.
+
+Hunt completed
+
+Open Completion Detail.
+
+Reward adjusted
+
+Open Hunt point history.
+
+Hunt cancelled
+
+Open Other Activity Detail.
+
+Participant removed
+
+Open removal status detail.
+
+Ready Hunt starts soon
+
+Open In Action or Ready Hunt.
+
+Do not build push delivery.
+
+Do not create a duplicate notification center.
+
+⸻
+
+47. Empty States
+
+Implement deliberate empty states.
+
+Leaderboard has no entries
+
+No Hunt rankings are available for this period yet.
+
+Current user has no qualifying points
+
+Complete a Hunt to enter this leaderboard.
+
+In Action empty
+
+You don’t have a Hunt in action.
+
+Primary action:
+
+Explore Hunts
+
+Completed empty
+
+Completed Hunts will appear here.
+
+Primary action:
+
+Find a Hunt
+
+Other Activity empty
+
+You don’t have any archived Hunt activity.
+
+Point history empty
+
+Hunt point transactions will appear here.
+
+Do not show fake rankings or history in production.
+
+⸻
+
+48. Loading States
+
+Create layout-specific loading states for:
+
+* Hunt Progress summary
+* Internal section navigation
+* In Action groups
+* Leaderboard
+* Current-user rank
+* Completed list
+* Completion Detail
+* Stop history
+* Submission history
+* Submission Detail
+* Point history
+* Other Activity
+
+Use skeletons that resemble the final layout.
+
+Avoid one indefinite full-screen spinner.
+
+Preserve loaded content during nonblocking refreshes.
+
+⸻
+
+49. Error States
+
+Handle independently:
+
+* Leaderboard unavailable
+* In Action unavailable
+* Completed history unavailable
+* Completion Detail missing
+* Proof history unavailable
+* Signed media URL expired
+* Point history unavailable
+* Other Activity unavailable
+* Authorization failure
+* Network offline
+* Hunt archived
+* Invalid deep link
+* Partial-data failure
+
+Provide:
+
+* Retry
+* Refresh
+* Return to Progress
+* Return to My Hunts
+* Explore Hunts where appropriate
+
+A leaderboard failure must not block In Action or Completed.
+
+Do not expose raw SQL, RLS, storage, or Supabase errors.
+
+⸻
+
+50. Pagination
+
+Implement pagination or infinite scrolling for:
+
+* Hunt leaderboard
+* Completed Hunts
+* Other Activity
+* Point history
+* Submission history
+* Completed stop history when unusually large
+
+Requirements:
+
+* Stable ordering
+* No duplicate entries
+* Loading-more indicator
+* End-of-list state
+* Refresh resets safely
+* Filter-aware query keys
+* Reasonable page sizes
+* Cursor-based pagination where practical
+
+Do not load an entire lifetime history at once.
+
+⸻
+
+51. React Query Keys
+
+Create centralized Hunt Progress keys.
+
+Example:
+
+huntProgressKeys.all
+huntProgressKeys.summary(userId)
+huntProgressKeys.inAction(userId)
+huntProgressKeys.completed(userId, filters)
+huntProgressKeys.completion(completionId, userId)
+huntProgressKeys.stopHistory(participationId, userId)
+huntProgressKeys.submissionHistory(participationId, userId)
+huntProgressKeys.submission(submissionId, userId)
+huntProgressKeys.otherActivity(userId, filters)
+huntProgressKeys.pointHistory(userId, filters)
+huntProgressKeys.leaderboard(period, page)
+huntProgressKeys.currentRank(userId, period)
+
+Adapt to current conventions.
+
+Do not mix Quest Progress and Hunt Progress key namespaces.
+
+⸻
+
+52. Query Invalidation
+
+After proof submission:
+
+Invalidate:
+
+* In Action
+* Active Hunt
+* Stop status
+* Submission history
+* Completion readiness
+
+After proof decision:
+
+Invalidate:
+
+* In Action
+* Active Hunt
+* Completed
+* Submission history
+* Point history
+* Personal summary
+* Leaderboard
+* Notifications where relevant
+
+After stop completion:
+
+Invalidate:
+
+* In Action
+* Active Hunt
+* Stop history
+* Completion readiness
+* My Hunts Active
+
+After Hunt completion:
+
+Invalidate:
+
+* In Action
+* Completed
+* Completion Detail
+* Point history
+* Personal summary
+* Hunt leaderboard
+* My Hunts Active
+* My Hunts Completed
+* Hunt Detail
+* Profile point summary
+
+After reward reversal:
+
+Invalidate:
+
+* Point history
+* Completion Detail
+* Personal summary
+* Hunt leaderboard
+* Combined summary readiness for Prompt 15
+
+Do not invalidate all Quest data unless a genuinely shared total must update.
+
+⸻
+
+53. Offline Behavior
+
+Allow cached read-only access to:
+
+* Previously loaded In Action state
+* Completed history
+* Completion Detail
+* Stop history
+* Submission history
+* Point history
+* Cached leaderboard
+
+Requirements:
+
+* Clearly indicate stale data when refresh fails.
+* Do not claim a pending review state is current when offline without qualification.
+* Do not perform protected mutations from Progress as though confirmed.
+* Do not calculate rankings locally.
+* Do not award points offline.
+* Do not expose expired signed proof media from insecure local persistence.
+
+Full offline synchronization belongs in Prompt 22.
+
+⸻
+
+54. Shared Components
+
+Create or finalize components such as:
+
+* HuntProgressSegmentedControl
+* HuntProgressSummary
+* HuntProgressCard
+* HuntProgressStatusBadge
+* HuntReadySummaryCard
+* HuntProofStatusCard
+* HuntReviewTimeline
+* HuntCompletionHistoryRow
+* HuntCompletionDetailSummary
+* HuntStopHistory
+* HuntStopHistoryRow
+* HuntSubmissionHistory
+* HuntPointTransactionRow
+* HuntLeaderboardList
+* HuntLeaderboardRow
+* HuntCurrentRankCard
+* HuntLeaderboardPeriodSelector
+* HuntLeaderboardPrivacyNotice
+* HuntArchivedActivityRow
+* HuntProgressEmptyState
+* HuntProgressSkeleton
+* HuntProgressFilterSheet
+* HuntPaginationFooter
+
+Reuse shared:
+
+* Avatar
+* Points badge
+* Button
+* Modal
+* Empty state
+* Media viewer
+* Status primitives
+* Leaderboard primitives where correct
+
+Do not duplicate the design system.
+
+⸻
+
+55. Visual Hierarchy
+
+Use the Worlds visual direction:
+
+* Modern
+* Immersive
+* Minimal
+* Deep blue
+* Green
+* White
+* Charcoal
+* Restrained semantic status colors
+
+Within In Action:
+
+* Needs Resubmission is most urgent.
+* Ready to Submit Proof is prominent.
+* Active Hunts are easy to continue.
+* Under Review is informational.
+* Ready Hunts are secondary unless starting soon.
+
+Within Completed:
+
+* Hunt title, date, stops, and points should scan quickly.
+* Avoid oversized celebration visuals.
+
+Within Leaderboards:
+
+* Rank, identity, and Hunt points should scan clearly.
+* Current user should be visible but not overpowering.
+
+Avoid excessive gradients, shadows, nested cards, glows, or arcade-like decoration.
+
+⸻
+
+56. Status System
+
+Use one consistent Hunt status vocabulary.
+
+Possible visible labels:
+
+* Active
+* Ready
+* Awaiting Proof
+* Under Review
+* Needs Resubmission
+* Completed
+* Rejected
+* Withdrawn
+* Removed
+* Cancelled
+* Expired
+* Paused
+
+Requirements:
+
+* Use the same labels across My Hunts, Active Hunt, and Progress.
+* Pair color with icon and text.
+* Avoid using red for ordinary informational states.
+* Do not show raw backend status names.
+* Do not call Ready Active.
+* Do not call Expired Completed.
+
+Centralize presentation mapping.
+
+⸻
+
+57. Accessibility
+
+Ensure:
+
+* Internal sections announce selection.
+* Leaderboard rows announce rank, identity, and points.
+* Anonymous entries are described properly.
+* Current-user rank is clearly identified.
+* Hunt progress is expressed textually.
+* Required and optional stops are distinguished.
+* Status badges have readable labels.
+* Review timelines announce actual sequence.
+* Filters announce active state.
+* Pagination updates are announced.
+* Dynamic text scaling works.
+* Touch targets are appropriately sized.
+* Reduced motion is respected.
+* Current-user and urgency states are not color-only.
+
+Test with screen readers and increased text size.
+
+⸻
+
+58. Privacy Verification
+
+Verify:
+
+* Hidden users do not appear publicly.
+* Anonymous users do not expose username or avatar when prohibited.
+* Emails never appear.
+* Proof remains owner-private.
+* Exact validation coordinates are not displayed unnecessarily.
+* Another user cannot access completion details.
+* Another user cannot access submission history.
+* Another user cannot access point history.
+* Other participants’ proof remains private.
+* Group summaries expose only authorized information.
+* Locked clues remain inaccessible.
+* Current-rank behavior respects visibility settings.
+* Account-status enforcement is server-side.
+* Archived activity remains private.
+
+Do not weaken privacy to simplify leaderboard aggregation.
+
+⸻
+
+59. Leaderboard Security Verification
+
+Verify:
+
+* Only qualifying Hunt point transactions count.
+* Quest points do not count.
+* Pending proof contributes zero points.
+* Rejected proof contributes zero points.
+* Reversed reward value is removed through the append-only reversal.
+* Duplicate reward transactions do not double-count.
+* Development transactions are excluded in production.
+* Ordinary users cannot insert totals.
+* Ordinary users cannot change rank.
+* Hidden users remain hidden.
+* Anonymous users remain nonidentifying.
+* Suspended users do not appear publicly.
+* Period boundaries are consistent.
+* Tie behavior is deterministic.
+* Pagination does not leak hidden entries.
+
+⸻
+
+60. Database Functions and Migrations
+
+Add focused migrations only when necessary.
+
+Potential additions:
+
+* Secure Hunt leaderboard RPC
+* Current-user Hunt rank function
+* Hunt Progress summary view
+* Hunt In Action summary RPC
+* Hunt completion-history view
+* Hunt completion-detail RPC
+* Hunt stop-history RPC
+* Hunt submission-history RPC
+* Hunt point-history RPC
+* Hunt Other Activity view
+* Privacy-aware public profile projection
+* Reversal-aware Hunt aggregation
+* Stable leaderboard pagination
+* Safe user-visible decision explanation field
+* Completion snapshot fields where missing
+
+Requirements:
+
+* Do not expose private ledger data.
+* Do not expose hidden profiles.
+* Validate auth.uid() for private data.
+* Use explicit safe search paths.
+* Restrict execution grants.
+* Avoid dynamic SQL.
+* Add appropriate indexes.
+* Preserve Prompt 11’s points and completion architecture.
+* Document scale limitations.
+
+⸻
+
+61. Suggested Hunt Leaderboard Contract
+
+Implement a typed contract similar to:
+
+type HuntLeaderboardRequest = {
+  period: "week" | "month" | "all_time";
+  limit: number;
+  cursor?: string;
+};
+type HuntLeaderboardEntry = {
+  rank: number;
+  publicUserId?: string;
+  displayName: string;
+  username?: string;
+  avatarPath?: string;
+  huntPoints: number;
+  huntsCompleted?: number;
+  isCurrentUser: boolean;
+  isAnonymous: boolean;
+};
+
+Adapt to the existing schema.
+
+Requirements:
+
+* Do not return a stable public identifier for anonymous users if it would permit profiling.
+* Do not return hidden users.
+* Validate page size.
+* Use deterministic pagination.
+* Keep tie-breaking data private.
+* Return safe display-ready identity fields only.
+
+⸻
+
+62. Current Rank Contract
+
+Implement a secure current-user rank query.
+
+Return:
+
+* Qualifying status
+* Visibility mode
+* Public rank where applicable
+* Hunt points
+* Selected period
+* Number of visible ranked users
+* Optional valid percentile
+* No-rank reason where applicable
+
+For Hidden users:
+
+* Return private Hunt totals.
+* Do not return a misleading public rank.
+* Explain that leaderboard visibility is disabled.
+
+Do not expose neighboring hidden users.
+
+⸻
+
+63. Development Fixtures
+
+Use or extend safe development fixtures.
+
+In Action
+
+* Active ordered Hunt
+* Active unordered Hunt
+* Ready Hunt starting soon
+* Waiting for host
+* Waiting for minimum participants
+* Awaiting image proof
+* Under review
+* Needs resubmission
+* Final rejection
+* Cancelled
+* Removed
+* Expiring soon
+
+Completed
+
+* Solo Hunt completion
+* Group Hunt completion
+* Ordered Hunt completion
+* Unordered Hunt completion
+* Optional-stop completion
+* Image-proof completion
+* Location-proof completion
+* Reward reversal example
+
+Leaderboards
+
+* Visible user
+* Anonymous user
+* Hidden user excluded
+* Suspended user excluded
+* Tied scores
+* Current user outside the first page
+* User with no qualifying Hunt points
+* Reversal-adjusted score
+* Quest points excluded
+
+History
+
+* Withdrawn
+* Removed
+* Cancelled
+* Expired
+* Final rejected
+
+Fixtures must remain development-only.
+
+Do not display fake rankings in production.
+
+⸻
+
+64. Automated Tests
+
+Add tests covering:
+
+Progress navigation
+
+* Shows exactly Leaderboards, In Action, and Completed
+* Preserves selected internal section
+* Prioritizes In Action for resubmission
+* Opens Completed after authoritative completion
+* Does not add bottom tabs
+* Keeps Quest and Hunt section state separate
+
+In Action
+
+* Needs Resubmission appears first
+* Awaiting proof routes correctly
+* Active Hunt routes to Prompt 13
+* Under Review prevents duplicate submission
+* Ready Hunt shows correct start model
+* Waiting for Host has no participant Start action
+* Empty state routes to Hunt Map
+* Cancelled and removed states are presented safely
+
+Completed
+
+* Displays only successful completions
+* Uses confirmed points
+* Shows required and optional stop counts correctly
+* Supports filters
+* Paginates without duplicates
+* Opens Completion Detail
+* Excludes withdrawn, removed, expired, cancelled, and rejected activity
+
+Completion Detail
+
+* Displays authoritative reward
+* Displays stop history
+* Protects private proof
+* Does not expose private geometry
+* Handles group completion safely
+* Shows reward adjustment when reversed
+
+Other Activity
+
+* Shows withdrawn, removed, cancelled, expired, and rejected records
+* Does not label them completed
+* Preserves progress history
+* Shows replay eligibility correctly
+* Protects internal reasons
+
+Submission history
+
+* Groups submissions by stop
+* Shows immutable prior submissions
+* Shows latest active submission
+* Uses signed media
+* Protects reviewer-only information
+* Allows resubmission only when permitted
+
+Point history
+
+* Uses ledger transactions
+* Shows reversals separately
+* Preserves original reward
+* Excludes another user’s transactions
+* Distinguishes Hunt from Quest transactions
+
+Leaderboards
+
+* Uses Hunt points only
+* Excludes Quest points
+* Excludes pending and rejected proof
+* Applies reversals
+* Handles ties consistently
+* Uses correct period boundaries
+* Supports pagination
+* Shows current user outside first page
+* Shows no fake rank for zero points
+* Excludes hidden users
+* Anonymizes anonymous users
+* Excludes suspended users
+* Does not leak hidden entries through pagination
+
+Security
+
+* Cannot access another user’s completion
+* Cannot access another user’s proof history
+* Cannot access another user’s point history
+* Cannot infer anonymous identity
+* Cannot alter points or rank from client
+* Cannot access locked clues through historical routes
+
+Use local Supabase integration tests where available.
+
+⸻
+
+65. Documentation
+
+Create or update:
+
+/docs/HUNT_PROGRESS.md
+/docs/HUNT_IN_ACTION.md
+/docs/HUNT_COMPLETION_HISTORY.md
+/docs/HUNT_COMPLETION_DETAIL.md
+/docs/HUNT_STOP_HISTORY.md
+/docs/HUNT_SUBMISSION_HISTORY.md
+/docs/HUNT_POINT_HISTORY.md
+/docs/HUNT_LEADERBOARDS.md
+/docs/HUNT_LEADERBOARD_PRIVACY.md
+/docs/HUNT_ARCHIVED_ACTIVITY.md
+/docs/HUNT_PROGRESS_SECURITY.md
+/docs/HUNT_PROGRESS_TESTING.md
+
+Document:
+
+* Hunt Progress hierarchy
+* Default-section selection
+* In Action grouping and priority
+* Ready Hunt presentation
+* Active Hunt integration
+* Proof-state organization
+* Completed history
+* Stop history
+* Group completion presentation
+* Other Activity
+* Submission history
+* Point history
+* Reward reversals
+* Leaderboard periods
+* Hunt-only point aggregation
+* Privacy modes
+* Account-status exclusions
+* Tie behavior
+* Current-user rank
+* Pagination
+* Query caching
+* Deep links
+* Notification routing
+* Offline behavior
+* Privacy and security boundaries
+* Development fixtures
+* Tests
+* Remaining work for Prompt 15
+
+Update:
+
+* /docs/PROJECT_CONSTITUTION.md
+* replit.md
+
+only where necessary.
+
+Do not change approved navigation or visual direction.
+
+⸻
+
+66. Out of Scope
+
+Do not implement:
+
+* Full cross-game Progress dashboard
+* Combined Quest and Hunt leaderboard
+* Full achievement engine
+* Achievement creation rules
+* Friends leaderboard
+* Local leaderboard
+* Group leaderboard
+* Individual speed-based Hunt leaderboard
+* User-facing Hunt creation
+* Hunt editing
+* Host control panel
+* Participant-management UI
+* Admin Hunt moderation
+* Admin proof review
+* AI Hunt generation
+* Automated media-moderation provider
+* Hunt chat
+* Live participant locations
+* Teams or guilds
+* Background location
+* Push-notification delivery
+* Full offline synchronization
+* Stripe
+* Memberships
+* Paid Hunt tickets
+* Paid hints
+* Creator payouts
+
+Prompt 15 will implement the shared Worlds points presentation, achievements, achievement-award engine, and carefully scoped cross-game progression.
+
+⸻
+
+67. Final Verification
+
+Before finishing:
+
+* Confirm Hunt Progress opens from the existing Hunt Progress bottom tab.
+* Confirm the primary sections are exactly Leaderboards, In Action, and Completed.
+* Confirm proof states are organized within In Action.
+* Confirm Needs Resubmission is prioritized.
+* Confirm Active Hunt items route to Prompt 13.
+* Confirm Ready Hunts show the correct start model.
+* Confirm ordinary participants cannot start host-controlled Hunts.
+* Confirm Completed contains only authoritative Hunt completions.
+* Confirm withdrawn, removed, cancelled, expired, and rejected activity remains separate.
+* Confirm Completion Detail uses confirmed rewards.
+* Confirm stop history excludes locked or unauthorized content.
+* Confirm proof remains private.
+* Confirm point history comes from the append-only ledger.
+* Confirm reward reversals remain separate transactions.
+* Confirm Hunt leaderboards use Hunt points only.
+* Confirm Quest points are excluded.
+* Confirm hidden users are excluded.
+* Confirm anonymous users remain nonidentifying.
+* Confirm suspended accounts are excluded publicly.
+* Confirm ties are deterministic.
+* Confirm current-user rank works outside the first page.
+* Confirm another user’s completion, proof, and point data are inaccessible.
+* Confirm no fake leaderboard data appears in production.
+* Confirm no speed-based ranking was introduced.
+* Confirm no new bottom tabs were added.
+* Confirm the Quest/Hunt selector remains intact.
+* Confirm Profile remains shared.
+* Confirm the app compiles.
+* Confirm tests pass or clearly document blocked integration tests.
+* Confirm no approved UI or navigation was redesigned.
+
+Resolve known in-scope errors before stopping.
+
+⸻
+
+Deliverables
+
+When complete, provide:
+
+1. Hunt Progress files created or updated
+2. Leaderboards, In Action, and Completed sections
+3. Default-section selection logic
+4. In Action grouping and priority
+5. Needs Resubmission presentation
+6. Ready to Submit Proof presentation
+7. Active Hunt summaries
+8. Under Review presentation
+9. Ready Hunt presentation
+10. Cancellation, removal, rejection, and expiration notices
+11. Completed Hunt list
+12. Completed filters and pagination
+13. Hunt Completion Detail
+14. Completed stop history
+15. Group completion summary
+16. Other Activity history
+17. Other Activity Detail
+18. Submission history
+19. Submission Detail
+20. Review-status timeline
+21. Hunt point-history screen
+22. Reward-reversal presentation
+23. Personal Hunt summary
+24. Hunt leaderboard UI
+25. Hunt-only leaderboard aggregation
+26. Current-user rank behavior
+27. Privacy and anonymity enforcement
+28. Tie-handling behavior
+29. Account-status exclusion behavior
+30. Deep-link integration
+31. Notification routing
+32. React Query hooks, keys, and invalidation
+33. Offline and error behavior
+34. Database migrations, views, RPCs, indexes, or RLS changes
+35. Tests added and results
+36. Documentation created or updated
+37. Assumptions made
+38. Known limitations
+39. Exact remaining work for Prompt 15
+
+Do not begin Prompt 15.
+
+Do not redesign the application.
+
+Create a checkpoint named:
+
+Build 1 — Prompt 14 — Hunt Progress and Leaderboards

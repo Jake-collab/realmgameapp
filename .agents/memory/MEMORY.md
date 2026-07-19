@@ -8,3 +8,4 @@
 - [Hunt Domain Architecture](hunt-domain-architecture.md) — Prompt 11: full Hunt feature, reward snapshot, idempotency, trusted-only transitions, security invariants, 507 tests passing.
 - [Hunt Map UI Architecture](hunt-map-ui-architecture.md) — Prompt 12: MyHuntsSummaryEntry vs HuntSummary, requireSupabase pattern, Button props, privacy layers, 607 tests passing.
 - [Active Hunt Gameplay Architecture](active-hunt-gameplay-architecture.md) — Prompt 13: stopActionResolver, proof draft, location validation, 4 new RPCs, isOrdered added to ActiveHunt, 677 tests (644 passing).
+- [Hunt Progress Architecture](hunt-progress-architecture.md) — Prompt 14: leaderboards, In Action, Completed, 4 deep screens, 13 components, 10 hooks, migration 024, 727 tests (694 passing).

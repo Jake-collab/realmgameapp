@@ -83,6 +83,24 @@ export default function MainLayout() {
         name="hunt-completion/[participationId]"
         options={{ animation: 'fade' }}
       />
+
+      {/* Hunt Progress deep screens — appear over the tab UI (no tab bar) */}
+      <Stack.Screen
+        name="hunt-completion-detail/[participationId]"
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="hunt-other-activity/[participationId]"
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="hunt-submission-history/[participationId]"
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="hunt-point-history"
+        options={{ animation: 'slide_from_right' }}
+      />
     </Stack>
   );
 }
