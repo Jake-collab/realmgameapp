@@ -64,6 +64,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
+    "@rnmapbox/maps": "^10.3.2",
     "@supabase/supabase-js": "^2.110.7",
     "nativewind": "^4.2.6",
     "react-hook-form": "^7.81.0",

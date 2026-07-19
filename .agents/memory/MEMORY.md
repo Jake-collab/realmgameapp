@@ -4,3 +4,4 @@
 - [Jest expo version pinning](jest-expo-pinning.md) — jest-expo@~54.0.17 and jest@~29.7.0 must match expo@54; use testEnvironment:node to avoid react-native import errors.
 - [Quest domain architecture](quest-domain-architecture.md) — occurrence keys, snapshot rewards, RPC-only point awards, Supabase untyped client cast pattern, __DEV__ in tests.
 - [Quest Progress Architecture](quest-progress-architecture.md) — Prompt 8: migration 019 RPCs, segmented control screen, deep screens, has_image derived from submission_type, safe review note rule.
+- [Geo Quest Map Architecture](geo-quest-map-architecture.md) — Prompt 10: Mapbox lazy-load, no raw GPS in cache keys, server-only validation, approximate display coords, known TS gotchas.

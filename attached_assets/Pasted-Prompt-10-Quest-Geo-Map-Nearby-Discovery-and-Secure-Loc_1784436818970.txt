@@ -1,0 +1,1970 @@
+Prompt 10 — Quest Geo Map, Nearby Discovery, and Secure Location Validation
+
+This prompt assumes Prompt 9’s shared Mapbox and geospatial architecture has already been completed in Replit, even though it was not included in this chat sequence. The prompt begins with a prerequisite audit so Replit does not create a conflicting second map system.
+
+Copy this into Replit AI:
+
+# Worlds — Build 1, Prompt 10
+# Quest Geo Map, Nearby Discovery, and Secure Location Validation
+Continue from the current Worlds project and follow these documents as authoritative:
+- /docs/PROJECT_CONSTITUTION.md
+- /docs/DATABASE_ARCHITECTURE.md
+- /docs/ROW_LEVEL_SECURITY.md
+- /docs/GEO_DATA_SECURITY.md
+- /docs/QUEST_DOMAIN.md
+- /docs/QUEST_STATE_MACHINE.md
+- /docs/QUEST_SCHEDULING.md
+- /docs/QUEST_SECURITY.md
+- /docs/QUEST_UI.md
+- /docs/QUEST_USER_FLOW.md
+- /docs/QUEST_PROGRESS.md
+- /docs/PROFILE_AND_SETTINGS.md
+- /docs/NOTIFICATIONS.md
+- all mapping and geospatial documents created by Prompt 9
+- replit.md
+- the approved UI/UX addendum
+- the approved authentication and navigation clarification
+The application is named:
+Worlds
+Prompt 6 implemented the Quest domain, Geo-Quest rules, eligibility evaluation, Quest participation, proof rules, and secure completion boundaries.
+Prompt 7 implemented the Quest user interface and preliminary location-proof interface.
+Prompt 8 implemented Quest Progress, completion history, proof status, and Quest leaderboards.
+Prompt 9 should have implemented the shared Mapbox and geospatial foundation, including:
+- Shared map provider
+- Mapbox configuration
+- Map theme handling
+- Marker and clustering architecture
+- Foreground-location services
+- Permission-state handling
+- Geographic query utilities
+- Coordinate privacy boundaries
+- Map camera utilities
+- Geospatial database support
+- Shared map components
+- Development fallback behavior
+This prompt must implement the finished Quest Geo Map and trusted Geo-Quest validation flow using that shared foundation.
+Do not build a second map architecture.
+Do not place Mapbox logic directly throughout screen components.
+Do not redesign the approved navigation.
+Do not implement the Hunt map or Hunt gameplay during this prompt.
+---
+# Primary Objective
+Implement the complete Quest Map experience supporting:
+- Geo-Quest discovery
+- Nearby Quest loading
+- Map markers
+- Marker clustering
+- Map-region querying
+- Quest preview cards
+- Map and list coordination
+- User-location controls
+- Location-permission states
+- Location search
+- Distance display
+- Public approximate Quest locations
+- Private validation geometry
+- Secure start-location validation
+- Secure objective-location validation
+- Secure completion-location validation
+- Accuracy checks
+- Anti-spoofing preparation
+- Location-proof submission
+- Geospatial safety and privacy
+- Offline-safe map behavior
+- Mapbox disconnected-development behavior
+The user-facing map must help users discover Geo-Quests without exposing protected validation coordinates or collecting continuous location history.
+---
+# 1. Prompt 9 Prerequisite Audit
+Before changing code, inspect the current project for the Prompt 9 mapping foundation.
+Verify whether the project already contains equivalents of:
+- Shared Mapbox provider
+- Map configuration service
+- Map style or theme service
+- Foreground location service
+- Permission-state hook
+- Map viewport state
+- Map camera helpers
+- Coordinate and bounding-box utilities
+- Marker clustering
+- Shared map marker components
+- Shared map bottom sheet
+- Safe development fallback
+- Mapbox environment-variable documentation
+- Geospatial data-security documentation
+- PostGIS-ready database functions or query contracts
+Also inspect for mapping documentation such as:
+```text
+/docs/MAP_ARCHITECTURE.md
+/docs/MAPBOX_SETUP.md
+/docs/GEO_QUERY_ARCHITECTURE.md
+/docs/LOCATION_PERMISSIONS.md
+/docs/GEO_PRIVACY.md
+
+Use the actual existing names if they differ.
+
+If the shared Prompt 9 foundation is present:
+
+* Reuse it.
+* Extend it only where necessary.
+* Do not duplicate providers, services, hooks, or coordinate models.
+
+If Prompt 9 is incomplete:
+
+* Implement only narrowly required missing shared pieces when doing so is safe.
+* Document every missing prerequisite.
+* Do not create an unrelated parallel map system.
+* Stop and report a blocking prerequisite if secure implementation would otherwise be impossible.
+
+Do not silently pretend that Mapbox or server-side validation exists.
+
+⸻
+
+2. Preserve Approved Quest Navigation
+
+Quest bottom navigation remains exactly:
+
+1. Home
+2. Quests
+3. Map
+4. Progress
+5. Profile
+
+The Quest Map tab must now open the completed Geo-Quest Map.
+
+Do not add:
+
+* Nearby as a bottom tab
+* Search as a bottom tab
+* Geo as another bottom tab
+* Directions as a bottom tab
+* Hunt as a bottom tab
+* Create as a bottom tab
+* Notifications as a bottom tab
+
+The top Quest/Hunt selector must remain intact.
+
+The shared Profile implementation must remain intact.
+
+Do not rebuild the main application shell.
+
+⸻
+
+3. Quest Map Feature Structure
+
+Create or finalize a focused module similar to:
+
+/features/quest-map/
+  components/
+  hooks/
+  screens/
+  services/
+  repositories/
+  schemas/
+  types/
+  utils/
+  queries/
+  mutations/
+  tests/
+
+This may remain inside /features/quests/geo/ if that fits the current project.
+
+Responsibilities:
+
+Map components
+
+Render the map, markers, clusters, overlays, controls, and bottom sheets.
+
+Geo repositories
+
+Call safe database functions and retrieve public-safe Geo-Quest data.
+
+Geo services
+
+Handle viewport querying, coordinate abstraction, distance display, and trusted validation requests.
+
+Location services
+
+Use the shared Prompt 9 permission and foreground-location architecture.
+
+Domain services
+
+Continue using Prompt 6 for Quest availability, eligibility, participation, proof, and completion.
+
+Screens must not make raw Supabase, PostGIS, or Mapbox calls directly.
+
+⸻
+
+4. Environment Configuration
+
+Use environment variables such as:
+
+EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN=
+
+Use the exact variable name established by Prompt 9.
+
+Requirements:
+
+* Do not hardcode the Mapbox token.
+* Do not place Supabase service-role credentials in the app.
+* Do not place server validation secrets in the app.
+* Validate configuration at startup.
+* Keep the app from crashing when Mapbox is unavailable.
+* Provide a neutral development-only map state when credentials are absent.
+* Never pretend the map is interactive when it is disconnected.
+
+Suggested development message:
+
+Map setup is pending. Geo-Quest mapping will be enabled after Mapbox is connected.
+
+Production builds must not expose developer configuration instructions.
+
+⸻
+
+5. Quest Map Screen Layout
+
+Implement the Quest Map screen as a map-first experience.
+
+The screen should contain:
+
+* Existing compact app header
+* Quest/Hunt selector
+* Notification icon and unread badge
+* Full available map area
+* User-location control
+* Search or area-search control
+* Filter control
+* Recenter control
+* Geo-Quest markers and clusters
+* Bottom sheet for selected Quest or nearby results
+* Safe loading, empty, permission, offline, and error states
+
+Do not place a large static page title above the map.
+
+Do not permanently cover a large portion of the map with cards.
+
+The bottom sheet may use collapsed, medium, and expanded states.
+
+Respect device safe areas.
+
+⸻
+
+6. Map Camera Behavior
+
+Implement predictable camera behavior.
+
+On first map load:
+
+Location granted
+
+* Center on the user’s current general area.
+* Use a practical discovery zoom.
+* Do not zoom to an exact building-level location automatically unless necessary.
+
+Location unavailable or denied
+
+* Use a safe configured default region.
+* Prefer a broad launch region appropriate to the current product rollout.
+* Allow search and manual map movement.
+
+Returning user
+
+* Restore a safe recent map viewport where appropriate.
+* Do not store precise user-location history.
+* Prefer storing map camera state rather than a history of actual GPS readings.
+
+Requirements:
+
+* Avoid constant camera recentering.
+* Do not move the map every time a location update arrives.
+* Recenter only on user action or clearly defined first-load behavior.
+* Preserve the user’s manually selected area while browsing.
+
+⸻
+
+7. Foreground Location Only
+
+Use foreground location permission.
+
+Do not request:
+
+* Background location
+* Always-on tracking
+* Continuous route history
+* Unnecessary precise location access at launch
+
+Location should be requested only after:
+
+* The onboarding location explanation from Prompt 4
+* Or an explicit map action requiring location
+* Or an explicit Geo-Quest validation action
+
+The map should remain useful without location permission through:
+
+* Manual browsing
+* Search
+* Area-based Quest loading
+* Public location labels
+
+Do not make location permission mandatory for opening the Map tab.
+
+⸻
+
+8. Permission States
+
+Handle:
+
+* Not determined
+* Granted
+* Denied
+* Blocked
+* Restricted
+* Unavailable
+* Reduced accuracy where the operating system exposes it
+
+Not determined
+
+Show an explanation before requesting permission.
+
+Granted
+
+Enable nearby discovery and user-location controls.
+
+Denied
+
+Allow manual map browsing and provide a restrained Enable Location action.
+
+Blocked
+
+Provide Open Settings.
+
+Restricted or unavailable
+
+Explain that nearby and validation features may be unavailable.
+
+Do not repeatedly display permission prompts.
+
+Do not show alarming error states for a normal denial.
+
+⸻
+
+9. User Location Display
+
+When permission is granted:
+
+* Show a standard user-location indicator.
+* Use the shared Mapbox location component where safe.
+* Display accuracy only when useful during validation.
+* Do not expose coordinates in ordinary UI.
+* Do not continuously upload location to Supabase.
+* Do not store ordinary browsing-location history.
+
+Location readings used only to center the map should remain client-side unless a trusted validation request is initiated.
+
+⸻
+
+10. Public Geo-Quest Data Contract
+
+Create a public-safe map result type.
+
+It may include:
+
+* Quest ID
+* Quest occurrence ID where applicable
+* Title
+* Short objective
+* Quest type
+* Public location name
+* Approximate display coordinate
+* Approximate distance
+* Points reward
+* Difficulty
+* Estimated duration
+* Availability state
+* Participation state
+* Public image
+* Category
+* Accessibility summary
+* Cluster grouping data
+
+It must not include:
+
+* Exact hidden validation coordinate
+* Private polygon
+* Private radius
+* Review configuration
+* Anti-spoofing thresholds
+* Hidden trigger point
+* Proof-validation secret
+* Other users’ locations
+* Internal moderation fields
+
+Use separate public display geometry and private validation geometry.
+
+⸻
+
+11. Public Display Coordinates
+
+Support an approximate public map coordinate for Geo-Quest discovery.
+
+The display coordinate may represent:
+
+* A public landmark
+* A park centroid
+* A neighborhood centroid
+* A venue entrance
+* A deliberately offset safe coordinate
+* A generalized area
+
+Requirements:
+
+* It should be sufficiently accurate for discovery.
+* It must not reveal a protected exact validation point unnecessarily.
+* It must not direct users through private property.
+* It must not imply permission to access restricted land.
+* It must not reveal sensitive infrastructure.
+* It must not expose a private residence unless explicitly appropriate and authorized.
+
+Document how display geometry differs from validation geometry.
+
+⸻
+
+12. Private Validation Geometry
+
+Private validation geometry may support:
+
+* Point and radius
+* Polygon
+* Multipolygon-ready future support
+* Route or corridor-ready future support
+* Start region
+* Step region
+* Completion region
+
+Requirements:
+
+* Ordinary clients must not receive raw private validation geometry.
+* Validation must occur in a trusted backend function or Edge Function.
+* RLS must prevent public reading.
+* Service-role credentials must not be present in the client.
+* Logs must avoid printing exact private geometry.
+* Admin access must be audited.
+* Geometry changes must be versioned or snapshotted for active participation.
+
+Do not perform final protected validation solely on the device.
+
+⸻
+
+13. Map Viewport Queries
+
+Implement server-backed viewport querying.
+
+The client should send a safe map region representation such as:
+
+* Bounding box
+* Zoom level or result-density hint
+* Filters
+* Maximum result count
+* Optional generalized user region
+
+The backend should return public-safe Geo-Quest summaries.
+
+Requirements:
+
+* Validate bounding-box ranges.
+* Limit maximum result size.
+* Prevent global scraping through unrestricted giant queries.
+* Use stable pagination or region-result limits.
+* Use PostGIS intersection or distance functions where available.
+* Exclude unpublished and unauthorized Quests.
+* Apply current schedule and availability rules.
+* Avoid returning the full database on every map movement.
+
+Do not query on every animation frame.
+
+⸻
+
+14. Debounced Region Search
+
+When the user moves the map:
+
+* Wait until movement ends.
+* Debounce the area query.
+* Do not fire requests continuously during gestures.
+* Avoid duplicate requests for nearly identical bounds.
+* Use a Search This Area action when appropriate.
+* Preserve existing markers while a nonblocking refresh occurs.
+* Cancel stale requests.
+* Use a query key based on generalized or rounded bounds.
+
+Do not place precise live user coordinates in logs or query keys.
+
+⸻
+
+15. Search This Area
+
+Provide a compact Search This Area control when:
+
+* The user moves meaningfully away from the currently loaded area
+* The current map results no longer correspond to the viewport
+
+On tap:
+
+* Query the visible region
+* Update markers
+* Update the nearby-results bottom sheet
+* Preserve selected filters
+* Show a nonblocking loading state
+
+Hide or disable the control when:
+
+* The current viewport is already loaded
+* Map configuration is unavailable
+* The user is offline and no suitable cache exists
+
+⸻
+
+16. Marker Clustering
+
+Use the Prompt 9 clustering system.
+
+Requirements:
+
+* Cluster markers at broader zoom levels.
+* Show a count.
+* Tapping a cluster should zoom or expand appropriately.
+* Do not show dozens of overlapping markers.
+* Avoid excessive marker rerenders.
+* Keep cluster behavior stable during nonblocking refresh.
+* Ensure markers remain accessible.
+
+Do not implement clustering with an inefficient client loop when Mapbox or the shared architecture already supports it.
+
+⸻
+
+17. Geo-Quest Markers
+
+Create consistent Geo-Quest markers.
+
+Markers may reflect:
+
+* Available
+* Active
+* Completed
+* Upcoming
+* Unavailable
+* Featured monthly Geo-Quest where applicable
+
+Do not create too many visually distinct marker styles.
+
+Use:
+
+* Shape or icon
+* Restrained status treatment
+* Selected state
+* Accessible label
+
+Do not communicate state through color alone.
+
+Completed markers should not visually compete with currently available content.
+
+⸻
+
+18. Marker Selection
+
+When the user taps a marker:
+
+* Select the corresponding Quest.
+* Open the compact Quest preview in the bottom sheet.
+* Move the camera only enough to keep the marker and preview visible.
+* Do not unexpectedly zoom far in.
+* Do not immediately start the Quest.
+* Do not expose validation geometry.
+
+Tapping elsewhere may clear the selection when appropriate.
+
+Preserve selection if refreshed data still contains the same Quest occurrence.
+
+⸻
+
+19. Geo-Quest Preview Card
+
+The selected marker preview should display:
+
+* Quest title
+* Short objective
+* Public location name
+* Approximate distance where available
+* Points
+* Estimated duration
+* Difficulty
+* Availability or participation state
+* Public image
+* One primary action
+
+Primary actions may include:
+
+* View Quest
+* Continue Quest
+* Submit Proof
+* View Submission
+* View Completion
+* Unavailable
+
+Use the Prompt 7 action resolver.
+
+Do not add Start Quest directly from a minimal preview when the user has not yet reviewed necessary safety, proof, or accessibility details.
+
+Prefer View Quest unless the preview contains all required information and the product has approved direct start.
+
+⸻
+
+20. Nearby Results Bottom Sheet
+
+The bottom sheet should support:
+
+Collapsed
+
+* Selected Quest summary or nearby count
+* Drag handle
+
+Medium
+
+* Selected Quest preview
+* Small nearby list
+
+Expanded
+
+* Scrollable nearby Geo-Quest results
+* Current filters
+* Sort options
+* Empty state
+
+Do not make the sheet permanently occupy most of the screen.
+
+Do not create a second full Quests screen inside the map.
+
+Nearby results should complement geographic browsing.
+
+⸻
+
+21. Nearby Sorting
+
+Support useful sorting such as:
+
+* Nearest
+* Featured
+* Ending soon
+* Highest points
+* Easiest
+* Shortest duration
+
+Default:
+
+* Nearest when user location is available
+* Featured or map relevance when it is not
+
+Do not claim exact distance when only an approximate area is known.
+
+Do not sort by straight-line distance as though it represents travel time.
+
+Label distances as approximate where appropriate.
+
+⸻
+
+22. Map Filters
+
+Use a compact filter bottom sheet.
+
+Support practical filters:
+
+* Available now
+* Daily
+* Monthly
+* Geo category where applicable
+* Difficulty
+* Duration
+* Indoor/outdoor
+* Accessibility
+* Interest category
+* Not completed
+* In Action
+
+Do not expose internal geospatial fields.
+
+Do not expose private validation radius.
+
+Show the number of active filters.
+
+Allow:
+
+* Apply
+* Clear all
+
+Preserve filters while the user remains in the Quest map experience.
+
+⸻
+
+23. Location Search
+
+Implement search for places or areas using the shared Prompt 9 geocoding architecture.
+
+Support:
+
+* City
+* County
+* ZIP code
+* Landmark
+* Public address where appropriate
+
+Requirements:
+
+* Debounce text search.
+* Show suggestions.
+* Allow selection.
+* Move the camera to the selected area.
+* Query Geo-Quests for that region.
+* Avoid storing permanent search history unless approved.
+* Do not expose API keys beyond normal supported client configuration.
+* Apply configured geographic rollout boundaries where required.
+
+The application is currently intended for the United States unless project documentation states otherwise.
+
+Do not imply global Quest availability if the backend is US-only.
+
+⸻
+
+24. County Awareness
+
+Where useful, support county identification for a selected map area.
+
+Use county context only for:
+
+* Regional discovery
+* Future community organization
+* Administrative content grouping
+* Availability labels
+
+Do not make county boundaries visually dominant unless needed.
+
+Do not infer the user’s residence from one location reading.
+
+Do not permanently save a home county without explicit user action.
+
+⸻
+
+25. Directions Boundary
+
+The map may provide a future-ready Directions action.
+
+For Build 1:
+
+* Prefer opening an installed external maps application.
+* Use the public display destination.
+* Clearly separate directions from Quest validation.
+* Do not build turn-by-turn navigation.
+* Do not track the user’s route.
+* Do not pass private validation coordinates to an external map provider.
+
+If no safe public destination exists, do not expose Directions.
+
+⸻
+
+26. Geo-Quest Detail Integration
+
+Tapping View Quest must open the existing Prompt 7 Quest Detail screen.
+
+Quest Detail should receive:
+
+* Quest ID
+* Occurrence ID where needed
+* Safe source context indicating Map
+* Current public availability
+
+Quest Detail must independently retrieve authoritative data.
+
+Do not trust the preview payload as the complete Quest record.
+
+Do not pass protected geometry through navigation parameters.
+
+⸻
+
+27. Geo-Quest Start Requirements
+
+Before starting a Geo-Quest, use Prompt 6 eligibility evaluation.
+
+A Geo-Quest may require:
+
+* Being within a defined starting region
+* Foreground location permission
+* Minimum acceptable accuracy
+* Current published occurrence
+* No conflicting active participation
+* Required prerequisite completion
+* Account in good standing
+
+Do not assume that all Geo-Quests require the user to be physically present before starting.
+
+Support configuration such as:
+
+* Start anywhere
+* Start within region
+* Complete within region
+* Validate one or more steps within regions
+
+⸻
+
+28. Trusted Location Validation Endpoint
+
+Implement a secure server-side validation operation.
+
+Potential forms:
+
+* Supabase Edge Function
+* Secure Postgres RPC where appropriate
+* Server route using protected credentials
+
+Use the project’s existing backend approach.
+
+The client may submit:
+
+* Participation ID
+* Quest step ID where applicable
+* Current latitude
+* Current longitude
+* Reported horizontal accuracy
+* Captured timestamp
+* Device platform
+* App-generated request ID
+* Optional nonsecret integrity metadata
+
+The trusted backend must:
+
+1. Authenticate the user.
+2. Verify active account status.
+3. Verify participation ownership.
+4. Load the private versioned validation geometry.
+5. Verify the Quest and step state.
+6. Verify the validation type.
+7. Verify the captured time is recent enough.
+8. Verify accuracy meets the configured requirement.
+9. Perform the geospatial containment or distance check.
+10. Record the validation attempt.
+11. Return a safe result.
+12. Never return private geometry.
+13. Avoid awarding points directly unless it is part of a trusted completion transaction.
+14. Remain idempotent where appropriate.
+
+Do not accept an authoritative success boolean from the client.
+
+⸻
+
+29. Validation Request Contract
+
+Create a typed request and response.
+
+Example:
+
+type GeoValidationRequest = {
+  participationId: string;
+  questStepId?: string;
+  latitude: number;
+  longitude: number;
+  horizontalAccuracyMeters: number;
+  capturedAt: string;
+  requestId: string;
+};
+type GeoValidationResponse = {
+  result:
+    | "validated"
+    | "outside_region"
+    | "accuracy_insufficient"
+    | "location_stale"
+    | "not_required"
+    | "invalid_state"
+    | "unavailable";
+  validationAttemptId?: string;
+  canRetry: boolean;
+  userMessage?: string;
+};
+
+Adapt names to the project.
+
+Requirements:
+
+* Validate numeric ranges.
+* Validate timestamp format.
+* Reject stale readings.
+* Limit request frequency.
+* Do not include distance-to-secret-boundary details when that would expose hidden geometry.
+* Do not include exact hidden center or radius.
+* Do not expose raw PostGIS errors.
+
+⸻
+
+30. Location Freshness
+
+Use a current foreground reading for protected validation.
+
+Define a reasonable maximum reading age.
+
+Requirements:
+
+* Do not validate using an old cached location without checking age.
+* Show when a new reading is being acquired.
+* Allow retry if accuracy is poor.
+* Do not keep the user trapped indefinitely waiting for perfect accuracy.
+* Provide a safe failure state when the device cannot obtain an acceptable reading.
+
+The exact threshold must be configurable based on Quest requirements.
+
+Do not use one unrealistically strict threshold for every Quest.
+
+⸻
+
+31. Accuracy Requirements
+
+Support Quest-specific acceptable accuracy.
+
+Examples may include:
+
+* Broad outdoor area
+* Park
+* Venue
+* Specific public checkpoint
+
+Requirements:
+
+* Store the accuracy threshold privately where appropriate.
+* Do not expose hidden anti-abuse thresholds unnecessarily.
+* Reject invalid or missing accuracy data.
+* Allow a more accurate retry.
+* Explain poor accuracy in user-friendly language.
+
+Suggested message:
+
+Your location signal is not accurate enough yet. Move to an open area and try again.
+
+Do not tell the user the precise hidden radius if doing so undermines validation.
+
+⸻
+
+32. Validation Attempts
+
+Create or finalize a private validation-attempt record.
+
+Potential fields:
+
+* ID
+* User ID
+* Participation ID
+* Quest step ID
+* Validation type
+* Result
+* General accuracy category
+* Captured timestamp
+* Received timestamp
+* Request ID
+* App version
+* Reviewed status where applicable
+* Created timestamp
+
+Privacy requirements:
+
+* Store only what is necessary.
+* Define retention.
+* Do not create a continuous location timeline.
+* Keep records private.
+* Do not expose attempts to other users.
+* Limit staff access.
+* Audit sensitive access where practical.
+
+Do not store location readings from ordinary map browsing.
+
+⸻
+
+33. Coordinate Retention
+
+Define and document retention for submitted validation coordinates.
+
+Use data minimization.
+
+A practical approach may be:
+
+* Store exact submitted validation coordinates temporarily for fraud review and dispute resolution.
+* Derive and retain the validation result.
+* Reduce precision or delete exact coordinates after the configured retention period.
+* Retain timestamps and audit outcome as necessary.
+
+Do not implement indefinite exact-location retention by default.
+
+If automated deletion is not implemented yet:
+
+* Add a scheduled-cleanup-ready field.
+* Document the required operational task.
+* Do not falsely claim exact coordinates are already automatically deleted.
+
+⸻
+
+34. Location Proof Integration
+
+Connect the Prompt 7 location-proof UI to the trusted validation endpoint.
+
+Flow:
+
+1. Explain the location requirement.
+2. Confirm foreground permission.
+3. Acquire a fresh location.
+4. Show acquisition and accuracy state.
+5. Submit to the trusted backend.
+6. Receive safe validation result.
+7. Associate the attempt with the proof draft or Quest step.
+8. Advance only when domain rules permit.
+9. Do not expose the secret region.
+10. Do not award points from client logic.
+
+If validation succeeds:
+
+* Mark the protected step validated through trusted logic.
+* Continue to remaining proof requirements.
+* Complete automatically only if all requirements are satisfied and the trusted completion operation succeeds.
+
+⸻
+
+35. Start-Location Validation
+
+For Quests configured to require presence before start:
+
+* Show the requirement clearly on Quest Detail.
+* Provide Check Location.
+* Acquire a fresh location.
+* Call trusted validation.
+* Start the Quest only after successful validation.
+* Preserve idempotency.
+* Handle the Quest becoming unavailable between validation and start.
+
+Prefer a single trusted combined operation where practical:
+
+validate location
++ start Quest
+
+within a secure transaction or short-lived validation token model.
+
+Do not let a user validate once and reuse that result indefinitely.
+
+⸻
+
+36. Completion-Location Validation
+
+For Quests requiring location at completion:
+
+* Validate after required activities are complete.
+* Use a fresh location.
+* Associate validation with the active participation and occurrence.
+* Do not reuse an unrelated earlier reading.
+* Require additional image or text proof where configured.
+* Do not complete the Quest until all proof and validation requirements succeed.
+
+Use Prompt 6’s trusted completion transaction.
+
+Do not award points based only on a client distance calculation.
+
+⸻
+
+37. Step-Specific Regions
+
+Support multi-step Geo-Quests where different steps require different locations.
+
+Each protected step may reference:
+
+* Private validation geometry
+* Validation type
+* Required accuracy
+* Time window
+* Sequence requirement
+* Repeat policy
+
+The client receives only a safe public instruction and display location.
+
+The server loads the authoritative step geometry.
+
+Do not return all future hidden step locations when the Quest design intends sequential discovery.
+
+⸻
+
+38. Sequential Location Revelation
+
+Prepare support for Quests where later locations should be revealed only after earlier steps are completed.
+
+Requirements:
+
+* Public detail may show a general region.
+* Active Quest returns only currently authorized location instructions.
+* Completing one step unlocks the next.
+* Hidden future validation geometry remains server-only.
+* The map should not display locked secret checkpoints.
+* Deep links must not bypass sequence rules.
+
+Do not overbuild a treasure-hunt system in Quest mode.
+
+Use this only where Quest configuration requires it.
+
+Hunt will implement richer sequential clue behavior later.
+
+⸻
+
+39. Anti-Spoofing Preparation
+
+Implement proportionate anti-spoofing preparation without invasive surveillance.
+
+Possible signals:
+
+* Impossible timestamp
+* Invalid coordinates
+* Missing or implausible accuracy
+* Excessive repeated validation attempts
+* Large impossible jumps between protected validations
+* Validation from an unsupported app version
+* Location-reading age
+* Duplicate request IDs
+* Server-received timing
+* Future device-integrity provider readiness
+
+Requirements:
+
+* Do not automatically accuse the user.
+* Mark suspicious attempts for review where appropriate.
+* Do not expose detection thresholds.
+* Do not use invasive device fingerprinting.
+* Do not block legitimate users solely due to one noisy GPS reading.
+* Audit administrative overrides.
+
+Do not claim spoofing can be completely prevented.
+
+⸻
+
+40. Rate Limiting
+
+Rate-limit protected validation attempts.
+
+Support:
+
+* Short retry delay after poor accuracy
+* Stronger limits after repeated failures
+* Safe cooldown messaging
+* Server-side enforcement
+* Per-user and per-participation limits
+* Idempotent duplicate request handling
+
+Do not rely only on disabling the client button.
+
+Do not reveal exact anti-abuse thresholds unnecessarily.
+
+⸻
+
+41. Map Safety
+
+Geo-Quest discovery and validation must reinforce safety.
+
+Display context-sensitive guidance such as:
+
+* Do not use the app while driving.
+* Stop in a safe place before interacting.
+* Remain in public, permitted areas.
+* Do not trespass.
+* Follow posted rules and operating hours.
+* Stay aware of surroundings.
+* Do not enter unsafe conditions.
+* Respect privacy.
+* Leave an area if conditions feel unsafe.
+
+Do not display a blocking warning on every harmless map interaction.
+
+Show stronger notices:
+
+* Before starting location-sensitive activity
+* Before validation
+* For nighttime or terrain-sensitive content where configured
+
+⸻
+
+42. Driving Safety
+
+Implement a clear safety boundary.
+
+Do not build active driving detection in this prompt unless already safely supported.
+
+Requirements:
+
+* Do not encourage map interaction while driving.
+* Directions should open externally.
+* Location-validation buttons should require deliberate user action.
+* Do not continuously update objectives in a way that encourages screen interaction while moving.
+* Include “Do not use while driving” in relevant safety documentation and screens.
+
+Do not use speed-based completion mechanics.
+
+⸻
+
+43. Hours and Temporary Availability
+
+Support optional Geo-Quest venue hours or temporal access notes.
+
+Display:
+
+* Public opening hours where provided
+* Temporary closure
+* Event schedule
+* Seasonal limitation
+* Daylight-only recommendation
+* Administrative pause
+
+The authoritative Quest availability evaluator remains responsible for whether the Quest can start.
+
+Do not infer business hours from unverified third-party data.
+
+Do not allow a map marker to appear available when the Quest is server-paused.
+
+⸻
+
+44. Accessibility and Terrain
+
+Map previews and Quest Detail should support:
+
+* Wheelchair-accessible indication
+* Surface or terrain notes
+* Estimated walking distance
+* Stairs
+* Outdoor exposure
+* Seating availability where known
+* Alternative completion path where configured
+
+Do not infer accessibility.
+
+Allow filtering by accessibility attributes only when data exists.
+
+Do not hide a Quest merely because accessibility data is absent unless the user explicitly filters for verified accessibility.
+
+⸻
+
+45. Map Theme
+
+Use the shared Prompt 9 theme system.
+
+Support the approved app appearance:
+
+* System
+* Light
+* Dark only if complete
+
+Do not create paid map skins or cosmetic map themes in this prompt.
+
+Do not create a new Mapbox Studio dependency unless the shared architecture requires it.
+
+Use Mapbox styles through configured style identifiers.
+
+Do not hardcode style URLs throughout components.
+
+⸻
+
+46. Mapbox Attribution
+
+Preserve required Mapbox attribution and legal requirements.
+
+Do not hide or obscure attribution.
+
+Ensure any geocoding or search attribution requirements are met.
+
+Document:
+
+* Token setup
+* Style configuration
+* Attribution handling
+* Offline limitations
+* Production billing considerations
+
+Do not claim Mapbox usage is unlimited or free.
+
+⸻
+
+47. Offline and Weak Connectivity
+
+Provide safe behavior.
+
+Allow:
+
+* Previously loaded map area to remain visible where Mapbox caching permits
+* Cached Geo-Quest summaries
+* Cached active Quest instructions
+* Cached public location labels
+
+Do not allow:
+
+* Protected location validation to appear successful offline
+* Quest completion to appear confirmed offline
+* New authoritative Geo-Quest availability decisions based only on stale cache
+* Offline point awards
+
+When offline:
+
+* Show cached content clearly.
+* Disable validation with an explanation.
+* Preserve a captured proof draft only if it can be stored securely.
+* Require server confirmation later.
+
+Full offline synchronization belongs in Prompt 22.
+
+⸻
+
+48. Location Capture Failure
+
+Handle:
+
+* Timeout
+* Permission denied
+* GPS unavailable
+* Low accuracy
+* Location services disabled
+* Temporary operating-system error
+* Server validation unavailable
+* Rate limit
+* Quest expired during capture
+* Participation invalidated
+
+Provide appropriate actions:
+
+* Retry
+* Open Settings
+* Move to an open area
+* Return to Quest
+* Refresh availability
+
+Do not erase other proof evidence because location acquisition failed.
+
+Do not expose raw provider errors.
+
+⸻
+
+49. Map Error Boundaries
+
+Separate failures.
+
+A failure in:
+
+* Mapbox rendering
+* Geo-Quest query
+* Location permission
+* Geocoding
+* Validation endpoint
+* Selected Quest detail
+
+must not unnecessarily crash the entire Quest application.
+
+Examples:
+
+* If Mapbox is unavailable, show a nearby list or controlled map-unavailable state.
+* If place search fails, manual browsing should remain functional.
+* If selected Quest detail fails, clear the selection and offer retry.
+* If validation fails, preserve the active Quest state.
+
+Do not use one global error that removes all map functionality.
+
+⸻
+
+50. Development Fixtures
+
+Use safe development Geo-Quest fixtures.
+
+Include:
+
+* Available Quest in a broad public park area
+* Upcoming Geo-Quest
+* Completed Geo-Quest
+* Active Geo-Quest
+* Start-location-required Quest
+* Completion-location-required Quest
+* Multi-step location Quest
+* Poor-accuracy validation result
+* Outside-region result
+* Successful validation result
+* Mapbox disconnected state
+* Location denied state
+* Empty region
+* Clustered region
+
+Use fictional or clearly development-safe locations.
+
+Do not place hidden coordinates at private residences, secure facilities, schools during operating hours, or sensitive infrastructure.
+
+Development-only validation stubs must never award production points.
+
+⸻
+
+51. Secure Validation Testing Utilities
+
+Create trusted local-development testing utilities.
+
+They may allow authorized developers to simulate:
+
+* Valid location
+* Outside region
+* Poor accuracy
+* Stale reading
+* Rate limit
+* Validation server unavailable
+
+Requirements:
+
+* Development-only
+* Clearly labeled
+* Not accessible through production navigation
+* Cannot call production completion with fake success
+* Cannot insert production point rewards
+* Cannot bypass RLS
+* Documented for testing
+
+Do not add a hidden production debug menu.
+
+⸻
+
+52. React Query Integration
+
+Create or reuse hooks such as:
+
+* useGeoQuestViewport
+* useNearbyGeoQuests
+* useGeoQuestDetail
+* useGeoQuestFilters
+* useGeoValidation
+* useStartGeoQuest
+* useCompleteGeoStep
+* usePlaceSearch
+* useUserLocationPermission
+* useCurrentForegroundLocation
+
+Adapt names to project conventions.
+
+Requirements:
+
+* Stable query keys
+* Rounded or generalized viewport inputs
+* Stale request cancellation
+* Targeted invalidation
+* Conservative retries
+* No automatic repeated validation mutation retries
+* No precise coordinates in persistent cache where unnecessary
+* Private validation results scoped to the authenticated user
+
+⸻
+
+53. Geo Query Keys
+
+Create centralized keys.
+
+Example:
+
+questMapKeys.all
+questMapKeys.viewport(boundsKey, filters)
+questMapKeys.nearby(regionKey, filters)
+questMapKeys.detail(questId, occurrenceId, userId)
+questMapKeys.search(searchText)
+questMapKeys.validation(participationId, stepId)
+
+Do not place raw exact GPS coordinates in debug-readable keys if a rounded region identifier is sufficient.
+
+Protected validation mutations should not be cached like ordinary public queries.
+
+⸻
+
+54. Map State Ownership
+
+Clearly define map state ownership.
+
+Possible responsibilities:
+
+Local map UI state
+
+* Current camera
+* Selected marker
+* Bottom-sheet position
+* Search text
+* Temporary filter panel state
+
+React Query server state
+
+* Viewport Quest results
+* Quest summaries
+* Selected Quest detail
+* Availability
+* Participation state
+
+Shared settings
+
+* Preferred map appearance
+* Distance units
+* Last safe viewport where approved
+* Location preference
+
+Operating system
+
+* Permission status
+* Current foreground reading
+
+Do not place every map value into Zustand.
+
+Do not duplicate camera state across multiple stores.
+
+Document ownership.
+
+⸻
+
+55. Distance Units
+
+Use the user’s configured distance units where available.
+
+Support:
+
+* Miles
+* Kilometers
+
+Default based on locale or current US product setting.
+
+Requirements:
+
+* Clearly label approximate distances.
+* Do not show excessive precision.
+* Use sensible formatting:
+    * 0.3 mi
+    * 2.1 mi
+    * 750 ft where appropriate
+* Do not imply route distance.
+* Use straight-line distance only when labeled or understood as approximate.
+
+Do not store separate duplicate distance preferences in Quest and Hunt.
+
+⸻
+
+56. Performance
+
+Optimize for mobile map performance.
+
+Requirements:
+
+* Avoid rerendering every marker on camera movement.
+* Use clustering.
+* Memoize marker presentation where appropriate.
+* Limit viewport result count.
+* Use thumbnail-sized map preview images.
+* Cancel stale queries.
+* Avoid loading full Quest Detail for every marker.
+* Avoid storing giant GeoJSON payloads in component state.
+* Use server-side geospatial filtering.
+* Test dense marker areas.
+
+Do not sacrifice correctness or privacy for performance.
+
+⸻
+
+57. Security Verification
+
+Verify:
+
+* Public map queries return published-safe fields only.
+* Draft and rejected Quests do not appear.
+* Private validation geometry is never returned to ordinary clients.
+* Users cannot read another user’s validation attempts.
+* Users cannot submit validation for another user’s participation.
+* Users cannot validate an inactive or completed participation improperly.
+* Users cannot mark protected steps successful directly.
+* Users cannot award points.
+* Users cannot alter authoritative validation thresholds.
+* Service-role credentials are absent from the client.
+* Exact ordinary browsing location is not stored.
+* Validation requests are authenticated and rate-limited.
+* Validation and completion are idempotent.
+* Suspended accounts cannot validate or complete Quests.
+* Map deep links do not expose protected data.
+
+Do not weaken RLS to make testing easier.
+
+⸻
+
+58. Database Functions and Migrations
+
+Add focused migrations where required.
+
+Potential additions:
+
+* Public Geo-Quest viewport RPC
+* Nearby Geo-Quest RPC
+* Public-safe Geo-Quest map view
+* Private validation geometry table
+* Quest step validation-region relation
+* Validation-attempt table
+* Validation request idempotency constraint
+* Geo-validation RPC or Edge Function support
+* Geometry-version snapshot for active participation
+* Coordinate-retention fields
+* Validation rate-limit support
+* Appropriate PostGIS indexes
+
+Requirements:
+
+* Use PostGIS types where available.
+* Use geography for meter-based distance where appropriate.
+* Restrict access to private geometry.
+* Validate auth.uid().
+* Use safe search paths for privileged functions.
+* Restrict execution grants.
+* Avoid dynamic SQL.
+* Document every privileged operation.
+* Do not replace the whole Prompt 3 schema.
+
+⸻
+
+59. Suggested Public Viewport RPC
+
+Create a typed secure contract similar to:
+
+type GeoQuestViewportRequest = {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+  zoom?: number;
+  filters?: {
+    availableNow?: boolean;
+    difficulties?: string[];
+    maxDurationMinutes?: number;
+    accessibleOnly?: boolean;
+    notCompleted?: boolean;
+  };
+  limit: number;
+};
+type PublicGeoQuestMapItem = {
+  questId: string;
+  occurrenceId?: string;
+  title: string;
+  shortObjective: string;
+  displayLatitude: number;
+  displayLongitude: number;
+  publicLocationName?: string;
+  pointsReward: number;
+  estimatedDurationMinutes?: number;
+  difficulty?: string;
+  availabilityState: string;
+  participationState?: string;
+  thumbnailUrl?: string;
+};
+
+Adapt this to the schema.
+
+Requirements:
+
+* Validate coordinate bounds.
+* Handle map bounds crossing the antimeridian if the product later expands.
+* Cap result size.
+* Return public display coordinates only.
+* Apply publication and schedule rules.
+* Apply account-aware participation state safely.
+* Do not expose another user’s information.
+* Do not return secret geometry.
+
+⸻
+
+60. Suggested Validation Function
+
+Implement a trusted operation with behavior similar to:
+
+validate_geo_quest_location(
+  participation_id,
+  quest_step_id,
+  latitude,
+  longitude,
+  horizontal_accuracy_meters,
+  captured_at,
+  request_id
+)
+
+Requirements:
+
+* Authenticated invocation
+* Account-status check
+* Ownership check
+* Participation-state check
+* Quest-occurrence check
+* Versioned validation geometry
+* Timestamp freshness check
+* Accuracy check
+* Rate limit
+* Idempotency
+* PostGIS validation
+* Private attempt record
+* Safe response
+* No geometry return
+* No direct client-controlled point value
+* No direct client completion override
+
+Where completion is appropriate, call the existing trusted completion function rather than duplicating points logic.
+
+⸻
+
+61. Tests
+
+Add tests covering:
+
+Map configuration
+
+* Mapbox configured
+* Mapbox missing
+* Safe development fallback
+* Production configuration failure handled correctly
+
+Permissions
+
+* Not determined
+* Granted
+* Denied
+* Blocked
+* Restricted
+* Open Settings behavior
+* Map remains browsable without location
+
+Viewport queries
+
+* Returns published Geo-Quests
+* Excludes drafts
+* Excludes private geometry
+* Applies bounds
+* Applies filters
+* Caps result size
+* Debounces map movement
+* Cancels stale requests
+
+Markers and clusters
+
+* Renders marker
+* Selects marker
+* Opens preview
+* Clusters dense markers
+* Expands cluster
+* Preserves selected marker after refresh
+
+Nearby discovery
+
+* Sorts by approximate distance
+* Handles missing permission
+* Handles empty area
+* Does not claim exact route distance
+
+Place search
+
+* Debounces
+* Selects result
+* Moves camera
+* Queries new area
+* Handles search failure
+
+Validation
+
+* Valid location succeeds
+* Outside region fails safely
+* Poor accuracy allows retry
+* Stale reading fails
+* Invalid coordinates fail
+* Duplicate request is idempotent
+* Wrong user is rejected
+* Wrong participation state is rejected
+* Suspended account is rejected
+* Private geometry is not returned
+* Rate limit is enforced
+
+Quest integration
+
+* Start-location requirement prevents premature start
+* Validated start uses trusted flow
+* Step-specific validation works
+* Completion validation does not award points locally
+* Trusted completion awards points once
+* Location plus image proof requires both
+* Deep link does not bypass sequence
+
+Privacy
+
+* Browsing location is not inserted into history
+* Validation attempts are owner-private
+* Exact validation geometry is inaccessible
+* Another user cannot retrieve attempt data
+* Signed proof access remains private
+
+Use local Supabase and Edge Function integration testing where available.
+
+⸻
+
+62. Documentation
+
+Create or update:
+
+/docs/QUEST_MAP.md
+/docs/GEO_QUEST_DISCOVERY.md
+/docs/GEO_QUEST_VALIDATION.md
+/docs/GEO_VALIDATION_PRIVACY.md
+/docs/GEO_VALIDATION_SECURITY.md
+/docs/GEO_VALIDATION_TESTING.md
+/docs/MAPBOX_PRODUCTION_SETUP.md
+
+Document:
+
+* Prompt 9 prerequisite audit
+* Quest Map layout
+* Camera behavior
+* Permission behavior
+* Viewport queries
+* Marker clustering
+* Public display geometry
+* Private validation geometry
+* Nearby discovery
+* Search
+* Distance handling
+* Quest Detail integration
+* Start-location validation
+* Step validation
+* Completion validation
+* Accuracy and freshness
+* Validation-attempt retention
+* Anti-spoofing preparation
+* Rate limiting
+* Safety
+* Offline limitations
+* Mapbox configuration
+* Query caching
+* Server trust boundaries
+* Tests
+* Remaining work for Prompt 11
+
+Update:
+
+* /docs/PROJECT_CONSTITUTION.md
+* replit.md
+
+only where necessary.
+
+Do not change the approved navigation or visual direction.
+
+⸻
+
+63. Out of Scope
+
+Do not implement:
+
+* Hunt domain logic
+* Hunt map
+* Hunt discovery
+* Hunt gameplay
+* Hunt clues
+* Hunt invitations
+* My Hunts
+* Custom Game creation
+* User-created Geo-Quests
+* Public social location sharing
+* Live friend locations
+* Route tracking
+* Turn-by-turn navigation
+* Background location
+* Full offline map downloads
+* Admin map editor
+* Admin private-geometry editor
+* AI Quest generation
+* Automated image moderation
+* Push-notification delivery
+* Friends
+* Teams
+* Chat
+* Stripe
+* Memberships
+* Creator payouts
+
+Prompt 11 should begin the Hunt domain and lifecycle architecture unless the approved roadmap documents specify a different next stage.
+
+⸻
+
+64. Final Verification
+
+Before finishing:
+
+* Confirm Prompt 9 shared architecture was audited.
+* Confirm no duplicate Mapbox provider or location system was created.
+* Confirm the Quest Map opens from the existing Map bottom tab.
+* Confirm the top Quest/Hunt selector remains intact.
+* Confirm the map remains usable without location permission.
+* Confirm map movement uses debounced viewport queries.
+* Confirm markers cluster.
+* Confirm marker selection opens a safe preview.
+* Confirm View Quest opens the existing Quest Detail screen.
+* Confirm public display coordinates are separated from private validation geometry.
+* Confirm private validation geometry never reaches the ordinary client.
+* Confirm nearby results do not expose protected coordinates.
+* Confirm location validation is server-side.
+* Confirm validation checks authentication, ownership, state, freshness, and accuracy.
+* Confirm validation attempts are rate-limited and private.
+* Confirm browsing location is not stored as continuous history.
+* Confirm start-location validation cannot be bypassed.
+* Confirm completion-location validation cannot award points from the client.
+* Confirm trusted Quest completion awards points once.
+* Confirm location plus media proof requires all configured evidence.
+* Confirm offline validation does not appear successful.
+* Confirm Mapbox missing credentials do not crash development.
+* Confirm required attribution remains visible.
+* Confirm another user cannot access validation attempts or proof.
+* Confirm no new bottom tabs were added.
+* Confirm Profile remains shared.
+* Confirm the app compiles.
+* Confirm tests pass or clearly document blocked integration tests.
+* Confirm no approved UI or navigation was redesigned.
+
+Resolve known in-scope errors before stopping.
+
+⸻
+
+Deliverables
+
+When complete, provide:
+
+1. Prompt 9 prerequisite audit result
+2. Quest Map files created or updated
+3. Mapbox configuration used
+4. Quest Map layout
+5. Camera and recenter behavior
+6. Permission-state behavior
+7. Viewport-query implementation
+8. Marker and clustering implementation
+9. Selected-Quest preview
+10. Nearby-results bottom sheet
+11. Geo-Quest search and filtering
+12. Public display-geometry strategy
+13. Private validation-geometry strategy
+14. Trusted validation endpoint
+15. Validation request and response contract
+16. Start-location validation
+17. Step-location validation
+18. Completion-location validation
+19. Location-proof integration
+20. Accuracy and freshness rules
+21. Validation-attempt recording and retention
+22. Rate limiting
+23. Anti-spoofing preparation
+24. Offline and error behavior
+25. Database migrations, RPCs, Edge Functions, indexes, or RLS changes
+26. React Query hooks and query keys
+27. Tests added and results
+28. Documentation created or updated
+29. Assumptions made
+30. Known limitations
+31. Exact remaining work for Prompt 11
+
+Do not begin Prompt 11.
+
+Do not redesign the application.
+
+Create a checkpoint named:
+
+Build 1 — Prompt 10 — Quest Geo Map and Secure Validation
