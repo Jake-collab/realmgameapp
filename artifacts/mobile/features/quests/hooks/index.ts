@@ -19,3 +19,13 @@ export { useAbandonQuest } from './useAbandonQuest';
 export { useSubmitQuestProof } from './useSubmitQuestProof';
 export { useQuestPointGuideline } from './useQuestPointGuideline';
 export { useHomeQuestSummary } from './useHomeQuestSummary';
+
+// Quest Progress — Prompt 8
+export { useProgressInAction } from './useProgressInAction';
+export { useProgressCompleted } from './useProgressCompleted';
+export { useProgressOtherActivity } from './useProgressOtherActivity';
+export { useQuestLeaderboard } from './useQuestLeaderboard';
+export { useMyQuestRank } from './useMyQuestRank';
+export { useSubmissionHistory } from './useSubmissionHistory';
+export { useQuestPointHistory } from './useQuestPointHistory';
+export { useCompletionDetail } from './useCompletionDetail';

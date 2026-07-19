@@ -43,6 +43,24 @@ export default function MainLayout() {
         name="quest-completion/[participationId]"
         options={{ animation: 'fade' }}
       />
+
+      {/* Quest Progress deep screens — appear over the tab UI (no tab bar) */}
+      <Stack.Screen
+        name="quest-completion-detail/[participationId]"
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="quest-other-activity/[participationId]"
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="quest-submission/[participationId]"
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="quest-point-history"
+        options={{ animation: 'slide_from_right' }}
+      />
     </Stack>
   );
 }

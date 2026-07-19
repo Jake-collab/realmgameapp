@@ -1,0 +1,1899 @@
+Prompt 8 — Quest Progress, In Action, Completed History, Proof Status, and Leaderboards
+
+Copy this into Replit AI:
+
+# Worlds — Build 1, Prompt 8
+# Quest Progress, In Action, Completed History, Proof Status, and Leaderboards
+Continue from the current Worlds project and follow these documents as authoritative:
+- /docs/PROJECT_CONSTITUTION.md
+- /docs/DATABASE_ARCHITECTURE.md
+- /docs/ROW_LEVEL_SECURITY.md
+- /docs/POINTS_SYSTEM.md
+- /docs/QUEST_DOMAIN.md
+- /docs/QUEST_STATE_MACHINE.md
+- /docs/QUEST_SCHEDULING.md
+- /docs/QUEST_PROOF_SYSTEM.md
+- /docs/QUEST_POINT_AWARDS.md
+- /docs/QUEST_SECURITY.md
+- /docs/QUEST_UI.md
+- /docs/QUEST_USER_FLOW.md
+- /docs/QUEST_PROOF_UI.md
+- /docs/QUEST_ACTION_RESOLVER.md
+- /docs/PROFILE_AND_SETTINGS.md
+- /docs/NOTIFICATIONS.md
+- replit.md
+- the approved UI/UX addendum
+- the approved authentication and navigation clarification
+The application is named:
+Worlds
+Prompt 6 implemented the Quest domain logic, Quest participation lifecycle, proof states, completion transaction, points ledger, and reward integrity.
+Prompt 7 implemented Quest Home, the Quests screen, Quest Detail, Active Quest, proof submission, and completion confirmation.
+This prompt must complete the Quest Progress experience.
+Do not recreate or bypass the business logic from Prompts 6 and 7.
+Do not redesign the approved navigation.
+Do not implement Mapbox or the finished Geo-Quest map. Those belong in Prompts 9 and 10.
+Do not implement Hunt progression in this prompt. Hunt progression will use shared components later but must remain distinct from Quest progress where the data and experience differ.
+---
+# Primary Objective
+Implement a complete Quest Progress area supporting:
+- Leaderboards
+- In Action
+- Completed
+- Awaiting Proof
+- Under Review
+- Needs Resubmission
+- Rejected submissions
+- Expired and abandoned history
+- Quest completion details
+- Point history related to Quests
+- Personal performance summaries
+- Privacy-aware rankings
+- Pagination and historical filtering
+The approved top-level organization for Quest Progress is:
+1. Leaderboards
+2. In Action
+3. Completed
+Proof-related states must be sensibly incorporated into **In Action** rather than creating excessive top-level navigation.
+Do not add a separate Proof bottom tab.
+---
+# 1. Preserve Approved Navigation
+Quest bottom navigation remains exactly:
+1. Home
+2. Quests
+3. Map
+4. Progress
+5. Profile
+The Progress bottom tab must now open the completed Quest Progress experience.
+Do not add:
+- Proof as a bottom tab
+- Leaderboards as a bottom tab
+- History as a bottom tab
+- Achievements as a bottom tab
+- Hunt as a bottom tab
+- Notifications as a bottom tab
+- Settings as a bottom tab
+The top Quest/Hunt selector must remain intact.
+The shared Profile implementation must remain intact.
+Do not rebuild the main application shell.
+---
+# 2. Quest Progress Screen Structure
+Implement the Progress screen with three primary internal sections:
+- Leaderboards
+- In Action
+- Completed
+Use a compact segmented control or clearly styled internal tabs.
+These are screen-level sections, not bottom-navigation tabs.
+Recommended default behavior:
+- Open In Action when the user has active or review-related Quest activity requiring attention.
+- Otherwise open Leaderboards or the user’s most recently selected Progress section.
+- Preserve the last selected Progress section in user settings where practical.
+Do not create a fourth top-level section solely for proof submissions.
+---
+# 3. Internal Section Priority
+When opening Progress, determine the best default section.
+Recommended priority:
+1. In Action when a submission needs resubmission
+2. In Action when a Quest requires proof
+3. In Action when the user has an active Quest
+4. In Action when proof is under review
+5. Completed when the user has just completed a Quest and arrived through a completion link
+6. Last selected section
+7. Leaderboards as the general default
+Deep links may override the default section safely.
+Do not unpredictably switch sections during ordinary background refreshes.
+---
+# 4. Shared Progress Architecture
+Create or finalize a Quest progress module similar to:
+```text
+/features/quest-progress/
+  components/
+  hooks/
+  screens/
+  services/
+  repositories/
+  schemas/
+  types/
+  utils/
+  queries/
+  tests/
+
+This may remain within /features/quests/ if the existing architecture favors that organization.
+
+Requirements:
+
+* Do not duplicate Quest repositories from Prompt 6.
+* Do not duplicate Quest participation hooks unnecessarily.
+* Do not place raw Supabase queries in screens.
+* Reuse generated database types.
+* Reuse the Quest state machine.
+* Reuse the Prompt 7 action resolver.
+* Reuse the shared points and privacy services.
+* Prepare components for later Hunt use only where the behavior is genuinely shared.
+
+Do not force Quest and Hunt into one overly generic progress model.
+
+⸻
+
+5. Progress Domain Types
+
+Create clear types for:
+
+* Quest progress summary
+* Quest activity summary
+* Active participation summary
+* Review-state summary
+* Completed Quest summary
+* Completion detail
+* Quest point transaction
+* Leaderboard entry
+* Leaderboard period
+* Leaderboard scope
+* Current-user rank
+* Rank movement readiness
+* Privacy-aware leaderboard identity
+* Progress filter
+* Progress pagination result
+
+Avoid incompatible duplicate leaderboard and point types.
+
+Use app-level domain types only where they improve safety or presentation.
+
+⸻
+
+6. In Action Overview
+
+The In Action section must contain all ongoing Quest participation and unresolved proof states.
+
+Organize it in this priority:
+
+1. Needs Resubmission
+2. Ready to Submit Proof
+3. Active Quests
+4. Under Review
+5. Recently Rejected where resubmission is unavailable
+6. Upcoming participation deadlines where relevant
+
+Do not present these as equally urgent.
+
+Use clear headings or grouped sections only when there is content in that group.
+
+Do not display empty category headers.
+
+⸻
+
+7. In Action Summary Header
+
+At the top of In Action, display a concise summary when useful:
+
+* Number of active Quests
+* Number awaiting proof
+* Number under review
+* Number needing resubmission
+* Upcoming deadline warning
+
+Avoid an oversized statistics dashboard.
+
+The summary must remain secondary to urgent Quest actions.
+
+When the user has no active Quest activity, show a polished empty state with a route to the Quests screen.
+
+Example:
+
+You don’t have a Quest in action. Choose one when you’re ready for your next activity.
+
+Primary action:
+
+Browse Quests
+
+⸻
+
+8. Needs Resubmission Group
+
+Proof requiring resubmission must appear first.
+
+Each item should show:
+
+* Quest title
+* Quest image or controlled placeholder
+* Submission status
+* Safe reviewer explanation
+* Resubmission deadline where applicable
+* Original submission date
+* Points awaiting approval
+* Primary action:
+    * Resubmit Proof
+
+Secondary action may include:
+
+* View Previous Submission
+* View Quest
+
+Do not expose:
+
+* Internal moderator notes
+* Reviewer identity unless explicitly intended
+* Automated moderation provider payloads
+* Risk scores
+* Database status codes
+
+Use visually clear urgency without making the screen alarming.
+
+⸻
+
+9. Ready to Submit Proof Group
+
+Include participations where:
+
+* Required objectives are complete
+* Proof has not yet been submitted
+* The user is allowed to submit
+
+Each item should show:
+
+* Quest title
+* Proof requirement summary
+* Completion deadline
+* Points reward snapshot
+* Primary action:
+    * Submit Proof
+
+Do not show Start Quest.
+
+Do not allow duplicate active proof submissions.
+
+Use the Prompt 7 proof-submission route.
+
+⸻
+
+10. Active Quests Group
+
+Display ongoing Quests that still require activity.
+
+Each item may include:
+
+* Quest title
+* Quest type
+* Current objective
+* Required-step progress
+* Deadline
+* Points reward snapshot
+* Location requirement where relevant
+* Primary action:
+    * Continue Quest
+
+For single-step Quests, do not show meaningless percentages.
+
+For multi-step Quests, use meaningful progress such as:
+
+2 of 4 required steps completed
+
+Do not count optional steps as required progress.
+
+⸻
+
+11. Under Review Group
+
+Display submissions awaiting review or trusted validation.
+
+Each item should include:
+
+* Quest title
+* Submission timestamp
+* Proof type summary
+* Current status
+* Points pending
+* Primary action:
+    * View Submission
+
+Use neutral wording:
+
+Your proof is under review. Points will be awarded after approval.
+
+Do not promise a specific review duration unless such an operational policy exists.
+
+Do not allow duplicate proof submission while the current submission remains under review.
+
+⸻
+
+12. Rejected Proof States
+
+Handle two distinct rejection outcomes:
+
+Resubmission allowed
+
+Show the item under Needs Resubmission.
+
+Final rejection or resubmission unavailable
+
+Show a restrained historical item under In Action until acknowledged, then move it into an appropriate history view.
+
+Display:
+
+* Quest title
+* Rejected status
+* Safe explanation
+* Date
+* Whether the Quest can be restarted
+* View Details action
+
+Do not show the Quest as completed.
+
+Do not award points.
+
+Do not erase the participation.
+
+⸻
+
+13. Expiration Warnings
+
+Surface meaningful deadline warnings.
+
+Examples:
+
+* Quest expires today
+* Proof due within 24 hours
+* Monthly Quest ends soon
+* Participation deadline approaching
+
+Requirements:
+
+* Use authoritative server scheduling.
+* Convert times for local display.
+* Avoid countdown timers when they are not needed.
+* Refresh state when returning to the foreground.
+* Do not alarm users about deadlines that do not affect an already-started participation.
+* Respect the configured expiration behavior from Prompt 6.
+
+Do not use the device clock as the sole authority.
+
+⸻
+
+14. In Action Card
+
+Create a reusable QuestProgressCard or equivalent.
+
+Support variants:
+
+* Active
+* Awaiting proof
+* Under review
+* Needs resubmission
+* Rejected
+* Expiring
+
+Possible content:
+
+* Image
+* Quest title
+* Quest type
+* Status
+* Current objective
+* Step progress
+* Deadline
+* Points
+* Primary action
+* Secondary contextual action
+
+Do not place multiple equally prominent buttons on a card.
+
+Use the action resolver.
+
+Do not duplicate QuestCard logic where the existing Prompt 7 component can be extended cleanly.
+
+⸻
+
+15. Completed Section
+
+Implement a paginated Completed section containing successfully completed Quests.
+
+Each item should show:
+
+* Quest title
+* Quest type
+* Completion date
+* Points awarded
+* Image or controlled placeholder
+* Occurrence label where useful
+* View Completion action
+
+Optional useful metadata:
+
+* Difficulty
+* Duration
+* Achievement earned, only when one was actually awarded
+
+Do not show unconfirmed or pending points as earned.
+
+Do not mix rejected, abandoned, or expired activity into the main Completed list.
+
+⸻
+
+16. Completed Filters
+
+Support practical filters such as:
+
+* All
+* Daily
+* Monthly
+* Geo
+* Date range
+* Point range where useful
+
+Optional sorting:
+
+* Most recent
+* Oldest
+* Highest points
+
+Keep controls compact.
+
+Do not create a complex analytics dashboard.
+
+Use a filter bottom sheet where necessary.
+
+Preserve filters while the user remains in the Progress experience.
+
+⸻
+
+17. Completion Detail Screen
+
+Implement a Quest Completion Detail screen.
+
+Display:
+
+* Quest title
+* Quest image
+* Quest type
+* Completion date and time
+* Points awarded
+* Reward transaction confirmation
+* Completed objective summary
+* Completed required steps
+* Public-safe proof summary where appropriate
+* Occurrence information
+* Achievement earned where applicable
+* Quest safety or location summary only if useful historically
+* Link to view the original Quest when still available
+
+Do not expose:
+
+* Internal review notes
+* Reviewer identity
+* Protected geofence geometry
+* Raw proof storage paths
+* Other users’ activity
+* Internal AI-generation metadata
+
+⸻
+
+18. Proof Display Within Completion Detail
+
+Proof is private by default.
+
+The user may view their own approved proof summary where allowed.
+
+Support:
+
+* Text proof
+* Image proof
+* Location verification status
+* Mixed proof
+* Manual confirmation
+
+Requirements:
+
+* Use signed media URLs.
+* Do not convert proof media to public assets.
+* Clearly distinguish approved proof from public Quest media.
+* Handle expired signed URLs.
+* Avoid permanently caching sensitive proof media.
+* Do not display exact location coordinates unless the product explicitly requires it and the data policy permits it.
+* Prefer a general validation statement such as:
+    * Location requirement verified
+
+Do not show a map of the user’s proof location during this prompt.
+
+⸻
+
+19. Abandoned and Expired History
+
+Do not place abandoned or expired participation in Completed.
+
+Provide a secondary history filter or an unobtrusive link such as:
+
+* Other Activity
+* Archived Activity
+* Participation History
+
+This history may include:
+
+* Abandoned
+* Expired
+* Rejected
+* Cancelled-ready future state
+
+Each item should show:
+
+* Quest title
+* Final status
+* Date
+* Whether restart is available
+* View Details action where useful
+
+Do not make this secondary history more prominent than Completed.
+
+Do not hide the records entirely because history and auditability matter.
+
+⸻
+
+20. Other Activity Detail
+
+For abandoned, expired, or rejected participation, show a safe detail view.
+
+Include:
+
+* Quest title
+* Participation status
+* Started date
+* Final status date
+* Completed steps
+* No-points explanation
+* Restart availability
+* Relevant safe explanation
+
+Do not imply that the Quest was completed.
+
+Do not show a positive completion animation.
+
+Do not reveal internal moderation records.
+
+⸻
+
+21. Quest Point History
+
+Add a Quest-specific point-history view accessible from Progress.
+
+This may be:
+
+* A secondary screen
+* A link from the point summary
+* A section within Leaderboards or Completed
+
+Display Quest-related ledger transactions:
+
+* Quest rewards
+* Quest reward reversals
+* Administrative corrections clearly labeled if visible to the user
+
+Each row should include:
+
+* Amount
+* Quest title or safe source label
+* Transaction type
+* Date
+* Current validity
+* Reversal reference where appropriate
+
+Do not display raw ledger IDs.
+
+Do not calculate history only from completed participation records.
+
+The append-only points ledger is the source of truth.
+
+⸻
+
+22. Point Reversal Presentation
+
+When a Quest reward has been reversed:
+
+* Keep the original transaction visible.
+* Show the reversal as a separate offsetting entry.
+* Mark the associated completion detail appropriately.
+* Explain that the point balance was adjusted.
+* Provide a support path where appropriate.
+
+Do not silently change or delete the original reward row.
+
+Do not expose confidential fraud or moderation information.
+
+Use a neutral label such as:
+
+Quest reward adjustment
+
+unless a more specific user-safe explanation exists.
+
+⸻
+
+23. Personal Quest Summary
+
+Provide a concise personal summary within Progress.
+
+Possible values:
+
+* Total Quest points
+* Quests completed
+* Daily Quests completed
+* Monthly Quests completed
+* Geo-Quests completed
+* Active Quests
+* Proof under review
+* Achievements earned from Quest
+* Current Quest leaderboard rank where visible
+
+Keep this concise and visually subordinate to the selected Progress section.
+
+Do not invent statistics.
+
+Do not calculate values from development fixtures in production mode.
+
+⸻
+
+24. Streak Preparation
+
+The original product direction may later support streaks.
+
+For this prompt:
+
+* Prepare the summary contract for a Quest completion streak.
+* Do not display a streak unless the backend has an authoritative definition and valid data.
+* Do not implement punitive streak loss mechanics.
+* Do not encourage unsafe or compulsive behavior.
+* Do not fabricate a streak from incomplete seed data.
+
+If implemented, clearly define whether a streak relates to:
+
+* Daily Quest occurrences
+* Any Quest completion
+* Consecutive calendar days
+
+Document the selected rule.
+
+A streak may remain hidden until the rule is approved.
+
+⸻
+
+25. Leaderboards Overview
+
+Implement a Quest leaderboard experience using the points-ledger-backed architecture from Prompt 3.
+
+Initial leaderboard scope should support:
+
+* Global Quest leaderboard
+* Time-period Quest leaderboard
+* Current-user rank
+* Privacy-aware display
+
+Prepare architecture for future:
+
+* Local leaderboard
+* Friends leaderboard
+* Category leaderboard
+* Individual Quest leaderboard
+
+Do not expose future scopes as active controls until their supporting systems exist.
+
+Do not create a social following system.
+
+⸻
+
+26. Leaderboard Time Periods
+
+Support useful periods such as:
+
+* This Week
+* This Month
+* All Time
+
+Optionally:
+
+* Today
+
+only if the query and product value justify it.
+
+Use server-defined date boundaries.
+
+Document whether week boundaries begin on Sunday or Monday.
+
+Use UTC storage with clear boundary calculation.
+
+Do not rely solely on device-local aggregation.
+
+Avoid inconsistent rankings across clients.
+
+⸻
+
+27. Quest-Only Ranking
+
+The Quest leaderboard must use Quest-related qualifying point transactions only.
+
+Do not accidentally combine Hunt points unless the selected leaderboard is explicitly a future combined Worlds leaderboard.
+
+Support a typed leaderboard source such as:
+
+* Quest points
+* Hunt points
+* Combined Worlds points, future
+
+For this prompt, the active Progress leaderboard is:
+
+Quest leaderboard
+
+Label it clearly.
+
+⸻
+
+28. Leaderboard Entry
+
+Each leaderboard row may display:
+
+* Rank
+* Avatar
+* Display name
+* Username where privacy permits
+* Quest points for the selected period
+* Current-user indicator
+* Privacy-aware identity
+* Optional completion count as supporting data
+
+Do not display:
+
+* Email
+* Exact location
+* Private profile details
+* Proof
+* Account status
+* Internal user IDs
+
+Use consistent rank numbering.
+
+Support pagination beyond the initial entries.
+
+⸻
+
+29. Current User Rank
+
+Display the current user’s rank even when they are outside the initially loaded top entries.
+
+Use a pinned current-user row or separate summary.
+
+Include:
+
+* Rank
+* Quest points for period
+* Distance to next rank only if accurately calculated
+* Privacy mode applied
+
+Do not imply that a user is unranked merely because they are not in the first page.
+
+If no qualifying points exist, show:
+
+Complete a Quest to enter this leaderboard.
+
+Do not assign a fake last-place rank.
+
+⸻
+
+30. Leaderboard Privacy Modes
+
+Respect the Prompt 5 leaderboard visibility setting.
+
+Support:
+
+Visible
+
+Show approved public identity fields.
+
+Anonymous
+
+Show an anonymous label while preserving rank and points.
+
+Example:
+
+Anonymous Explorer
+
+Use a stable nonidentifying display within the current leaderboard period if practical.
+
+Hidden
+
+Do not include the user in public leaderboard output.
+
+The user may still be shown their private personal Quest summary outside the public ranking.
+
+Document how hidden users affect rank numbering.
+
+Recommended behavior:
+
+* Public ranks are calculated only among leaderboard-visible entries.
+* A hidden user may receive a private percentile or personal-points summary, but not a misleading public rank.
+
+Choose one consistent rule and enforce it server-side.
+
+Do not make privacy settings cosmetic.
+
+⸻
+
+31. Restricted and Suspended Accounts in Leaderboards
+
+Define leaderboard behavior for account status.
+
+Recommended rules:
+
+* Suspended accounts are excluded from public leaderboards.
+* Deactivated accounts are excluded or anonymized according to retention policy.
+* Restricted accounts may be excluded from new rankings when the restriction relates to integrity.
+* Prior historical point transactions remain auditable.
+* Administrative exclusion must be logged.
+
+Do not reveal that another user is suspended.
+
+Do not show account-status labels publicly.
+
+⸻
+
+32. Ties
+
+Define consistent tie behavior.
+
+Possible approaches:
+
+* Competition ranking: 1, 2, 2, 4
+* Dense ranking: 1, 2, 2, 3
+* Deterministic unique ordering after equal points
+
+Recommended:
+
+Use competition ranking or dense ranking based on a documented SQL window function.
+
+For deterministic ordering within a tie, use a safe secondary criterion such as:
+
+* Earlier qualifying completion timestamp
+* Stable nonpublic identifier used only internally
+
+Do not imply meaningful separation between users with equal points unless the tie-breaking rule is clear.
+
+⸻
+
+33. Leaderboard Query Architecture
+
+Prefer secure views, RPCs, or materialized summaries.
+
+Support:
+
+* Selected period
+* Pagination
+* Current user rank
+* Visibility enforcement
+* Account-status enforcement
+* Quest-only point filtering
+* Rank calculation
+* Safe public profile fields
+* Efficient point aggregation
+
+Do not fetch the full points ledger to the client and rank users locally.
+
+Do not expose private ledger entries of other users.
+
+Do not expose hidden users.
+
+⸻
+
+34. Leaderboard Performance
+
+Create appropriate query and index support.
+
+Potential strategies:
+
+* Secure SQL view for low-scale development
+* RPC with window functions
+* Periodic aggregate table or materialized view for larger scale
+* Cached leaderboard snapshots later
+
+For Build 1:
+
+* Choose the simplest correct approach.
+* Document the scale at which a materialized or precomputed system becomes necessary.
+* Keep result pagination stable.
+* Avoid recalculating the full all-time ledger on every mobile refresh when unnecessary.
+
+Do not prematurely create a complex distributed ranking service.
+
+⸻
+
+35. Leaderboard Refresh Behavior
+
+Support:
+
+* Pull to refresh
+* Background refresh when returning to Progress
+* Reasonable cache duration
+* Clear “updated” behavior where useful
+
+Do not refresh continuously.
+
+Do not animate rank changes unless reliable historical comparison data exists.
+
+Do not claim live real-time rankings unless the backend actually provides them.
+
+Use wording such as:
+
+Rankings update periodically.
+
+only if aggregation is delayed.
+
+⸻
+
+36. Individual Quest Leaderboard Preparation
+
+Prepare a disabled or internal contract for a future leaderboard tied to one Quest or occurrence.
+
+Potential metrics:
+
+* Earliest valid completion
+* Highest score where scoring exists
+* Completion count
+* Points earned
+
+Do not expose an individual Quest leaderboard unless the Quest configuration supports fair comparison.
+
+Most ordinary completion Quests should not rank users by fastest completion because that could encourage unsafe behavior.
+
+Do not add speed-based rankings by default.
+
+⸻
+
+37. Anti-Cheat and Integrity Boundaries
+
+Leaderboards must depend only on trusted qualifying points.
+
+Exclude:
+
+* Client-inserted points
+* Pending proof
+* Rejected proof
+* Reversed rewards
+* Untrusted local completion
+* Development fixtures in production
+* Administrative test transactions
+
+Handle reversals in ranking aggregation.
+
+Document future anti-abuse measures such as:
+
+* Proof review
+* Location validation
+* Duplicate detection
+* Unusual activity review
+* Device and account risk signals
+
+Do not implement invasive device fingerprinting in this prompt.
+
+⸻
+
+38. Achievement Preview Within Progress
+
+Prompt 15 will implement the complete shared points, achievements, and broader leaderboard system.
+
+In this prompt:
+
+* Display only real Quest achievements already awarded through the existing schema.
+* Show a compact preview where useful.
+* Allow a route to a controlled “Achievements coming in Prompt 15” placeholder if the full system is not ready.
+* Do not fabricate locked achievement grids.
+* Do not award achievements from UI logic.
+* Do not duplicate the future full achievement engine.
+
+This Progress prompt may show:
+
+* Recently earned Quest achievement
+* Quest achievement count
+* Small achievement preview
+
+Keep the implementation clearly limited.
+
+⸻
+
+39. Progress Deep Links
+
+Support safe deep links to:
+
+* Progress → Leaderboards
+* Progress → In Action
+* Progress → Completed
+* Specific active participation
+* Proof submission status
+* Needs resubmission
+* Completion detail
+* Other activity detail
+* Quest point history
+
+Requirements:
+
+* Validate route parameters.
+* Confirm ownership for private participation and proof routes.
+* Confirm completion access.
+* Handle archived Quest content.
+* Handle malformed notification payloads.
+* Use safe fallbacks.
+* Do not expose another user’s participation through guessed IDs.
+
+⸻
+
+40. Notification Integration
+
+Connect existing notification types from Prompt 5 to Progress destinations.
+
+Examples:
+
+Proof approved
+
+Open Completion Detail or Completed section.
+
+Proof rejected with resubmission
+
+Open In Action with the relevant Needs Resubmission item.
+
+Proof under review
+
+Open the submission-status view.
+
+Quest completed
+
+Open Completion Detail.
+
+Quest expired
+
+Open Other Activity detail or relevant In Action status.
+
+Do not create duplicate notification-center architecture.
+
+Do not send push notifications yet.
+
+⸻
+
+41. Proof Submission History
+
+Allow the user to view their submission history for a participation.
+
+Include:
+
+* Submission number
+* Submission timestamp
+* Status
+* Evidence summary
+* User-visible review response
+* Relationship to resubmission
+* Final approved submission
+
+Requirements:
+
+* The latest active submission must be clear.
+* Previous submissions must remain immutable.
+* Private media must use signed URLs.
+* Do not expose hidden reviewer metadata.
+* Do not let the user edit a submitted historical record.
+* Do not allow a new submission unless domain rules permit it.
+
+⸻
+
+42. Submission Detail Screen
+
+Implement a private submission-detail screen.
+
+Display:
+
+* Quest and step
+* Submission date
+* Submission status
+* Text proof
+* Image proof
+* General location-verification status
+* User-visible decision explanation
+* Resubmission action when allowed
+
+Do not show:
+
+* Exact private geofence
+* Raw device coordinates unless strictly necessary
+* Moderator-only notes
+* Automated risk output
+* Reviewer email
+* Internal storage path
+* Raw database fields
+
+⸻
+
+43. Review Status Timeline
+
+A compact status timeline may be used for proof lifecycle.
+
+Example:
+
+Submitted
+    ↓
+Under Review
+    ↓
+Approved
+
+Or:
+
+Submitted
+    ↓
+Needs Resubmission
+    ↓
+Resubmitted
+    ↓
+Under Review
+
+Requirements:
+
+* Show only actual states.
+* Do not show future steps as completed.
+* Use text and icons, not color alone.
+* Avoid an overly complex logistics-style tracking interface.
+* Keep dates where useful.
+
+Do not imply a reviewer has opened proof unless that state is actually stored.
+
+⸻
+
+44. Recent Completion Transition
+
+After Prompt 7 completes a Quest and routes to Progress:
+
+* Open the Completed section.
+* Highlight the newly completed item briefly.
+* Do not permanently pin it.
+* Preserve reduced-motion preferences.
+* Avoid replaying the completion animation on every visit.
+* Do not create duplicate completion cards.
+
+Use a safe navigation parameter or one-time local UI state.
+
+Do not use the URL parameter as proof of completion.
+
+Retrieve authoritative completion data.
+
+⸻
+
+45. Progress Empty States
+
+Implement deliberate empty states.
+
+Leaderboards with no qualifying users
+
+No Quest rankings are available for this period yet.
+
+Current user has no qualifying points
+
+Complete a Quest to enter this leaderboard.
+
+In Action empty
+
+You don’t have a Quest in action.
+
+Primary action:
+
+Browse Quests
+
+Completed empty
+
+Completed Quests will appear here.
+
+Primary action:
+
+Find a Quest
+
+Other Activity empty
+
+You don’t have any archived Quest activity.
+
+Do not display fake sample ranking rows in production.
+
+⸻
+
+46. Loading States
+
+Create layout-specific loading states for:
+
+* Progress summary
+* Internal segmented navigation
+* Leaderboard
+* Current-user rank
+* In Action groups
+* Completed list
+* Completion detail
+* Submission history
+* Point history
+
+Use skeletons matching the final layout.
+
+Avoid a single indefinite full-screen spinner.
+
+Preserve already loaded content during nonblocking refreshes.
+
+⸻
+
+47. Error States
+
+Handle:
+
+* Leaderboard unavailable
+* Participation history unavailable
+* Completion detail missing
+* Proof media access expired
+* Network offline
+* Authorization failure
+* Archived Quest unavailable
+* Invalid deep link
+* Point-history query failure
+* Partial data availability
+
+Provide:
+
+* Retry
+* Return to Progress
+* Refresh
+* Browse Quests where appropriate
+
+Do not expose raw SQL, RLS, storage, or Supabase errors.
+
+A failure in Leaderboards should not prevent In Action and Completed from functioning.
+
+Separate query boundaries.
+
+⸻
+
+48. Pagination
+
+Implement pagination or infinite scrolling for:
+
+* Leaderboards
+* Completed Quests
+* Other Activity
+* Point history
+* Submission history where needed
+
+Requirements:
+
+* Stable ordering
+* No duplicate entries
+* Loading-more state
+* End-of-list state
+* Safe refresh reset
+* Query-key awareness of filters
+* Reasonable page size
+
+Do not load a user’s entire lifetime history at once.
+
+⸻
+
+49. Caching and Query Invalidation
+
+Use stable React Query keys.
+
+Possible structure:
+
+questProgressKeys.all
+questProgressKeys.summary(userId)
+questProgressKeys.inAction(userId)
+questProgressKeys.completed(userId, filters)
+questProgressKeys.otherActivity(userId, filters)
+questProgressKeys.completion(completionId, userId)
+questProgressKeys.submissions(participationId, userId)
+questProgressKeys.pointHistory(userId, filters)
+questProgressKeys.leaderboard(scope, period, page)
+questProgressKeys.currentRank(userId, scope, period)
+
+After relevant mutations:
+
+Proof submitted
+
+Invalidate:
+
+* In Action
+* Participation
+* Active Quest
+* Submission history
+
+Proof decision received
+
+Invalidate:
+
+* In Action
+* Completed
+* Point history
+* Profile points
+* Leaderboard
+* Notification unread state where relevant
+
+Quest completed
+
+Invalidate:
+
+* In Action
+* Completed
+* Point history
+* Profile summary
+* Leaderboard
+* Quest Home
+* Quest lists
+
+Do not invalidate every application query.
+
+Do not optimistically insert leaderboard rank.
+
+⸻
+
+50. Offline Behavior
+
+Allow cached read-only access to:
+
+* Previously loaded In Action content
+* Previously loaded Completed history
+* Previously loaded completion detail
+* Previously loaded personal point history
+
+Leaderboards may display cached results with a clear stale or offline state.
+
+Do not:
+
+* Show outdated review status as definitely current without indicating refresh failure
+* Perform protected proof mutations offline as though confirmed
+* Calculate a new leaderboard locally
+* Award points offline
+
+Full offline synchronization belongs in Prompt 22.
+
+⸻
+
+51. Shared Components
+
+Create or finalize reusable components such as:
+
+* ProgressSegmentedControl
+* QuestProgressSummary
+* QuestProgressCard
+* ProgressStatusBadge
+* SubmissionStatusCard
+* ReviewStatusTimeline
+* CompletionHistoryRow
+* CompletionDetailSummary
+* PointTransactionRow
+* LeaderboardList
+* LeaderboardRow
+* CurrentUserRankCard
+* LeaderboardPeriodSelector
+* LeaderboardPrivacyNotice
+* ArchivedActivityRow
+* ProgressEmptyState
+* ProgressSkeleton
+* FilterBottomSheet
+* PaginationFooter
+
+Use the existing design system.
+
+Avoid creating duplicate versions of:
+
+* QuestCard
+* PointsBadge
+* Avatar
+* Button
+* Modal
+* EmptyState
+* Media viewer
+
+Extend existing components when reasonable.
+
+⸻
+
+52. Visual Hierarchy
+
+Use the Worlds design direction:
+
+* Modern
+* Immersive
+* Minimal
+* Blue-and-green accents
+* White or approved background
+* Charcoal text
+* Restrained status colors
+* Clear typography
+
+Within In Action:
+
+* Needs Resubmission must be most urgent.
+* Ready to Submit Proof must be prominent.
+* Active Quests must be easy to continue.
+* Under Review must feel informational rather than actionable.
+
+Within Completed:
+
+* Completion date and points should be clear.
+* Avoid oversized celebration visuals on every historical item.
+
+Within Leaderboards:
+
+* Rank, identity, and points should scan quickly.
+* Highlight the current user without overpowering the list.
+
+Do not use excessive gradients, shadows, nested cards, or glowing effects.
+
+⸻
+
+53. Status Styling
+
+Create one consistent status system.
+
+Statuses may include:
+
+* Active
+* Awaiting Proof
+* Under Review
+* Needs Resubmission
+* Completed
+* Rejected
+* Expired
+* Abandoned
+
+Requirements:
+
+* Each status has a consistent label.
+* Do not communicate status only through color.
+* Use icon, label, and restrained visual treatment.
+* Avoid using red for routine nonerror states.
+* Rejected and destructive states should be clear but not visually overwhelming.
+
+Do not create different labels for the same underlying state across screens.
+
+⸻
+
+54. Accessibility
+
+Ensure:
+
+* Segmented controls announce selected state.
+* Internal Progress sections are keyboard and screen-reader accessible.
+* Leaderboard rows announce rank, name, and points.
+* Anonymous and hidden states are explained.
+* Current-user rank is clearly identified.
+* Status badges include readable text.
+* Proof timelines announce actual state order.
+* Completion history is navigable.
+* Filter controls announce active filters.
+* Pagination loading is announced.
+* Dynamic text does not break layouts.
+* Touch targets are appropriately sized.
+* Reduced motion is respected.
+* Current-user highlighting is not color-only.
+
+Test with increased text size and screen readers.
+
+⸻
+
+55. Privacy Verification
+
+Verify:
+
+* Hidden leaderboard users do not appear publicly.
+* Anonymous users do not expose username or avatar where prohibited.
+* User email never appears.
+* Proof remains owner-only.
+* Exact proof location is not displayed unnecessarily.
+* Another user cannot access a completion detail.
+* Another user cannot access submission history.
+* Other users’ private ledger entries are not exposed.
+* Current-user rank behavior respects privacy configuration.
+* Account-status enforcement is server-side.
+* Archived activity remains private to the owner.
+* Signed proof URLs expire appropriately.
+
+Do not weaken privacy policies to simplify leaderboard queries.
+
+⸻
+
+56. Leaderboard Security Verification
+
+Verify:
+
+* Leaderboards use only trusted points.
+* Pending proof contributes zero points.
+* Rejected proof contributes zero points.
+* Reversed transactions reduce qualifying totals.
+* Duplicate rewards do not double-count.
+* Development seed transactions are excluded from production.
+* Ordinary users cannot insert leaderboard totals.
+* Ordinary users cannot change rank.
+* Hidden users remain hidden.
+* Suspended accounts do not appear publicly.
+* Period boundaries are calculated consistently.
+* Quest and Hunt points are not accidentally mixed.
+
+⸻
+
+57. Database Views, Functions, and Migrations
+
+Add focused migrations where necessary.
+
+Potential additions:
+
+* Secure Quest leaderboard RPC
+* Quest leaderboard summary view
+* Current-user rank function
+* User Quest progress summary view
+* Quest point-history function
+* Completion-history view
+* Safe submission-history view
+* Leaderboard visibility enforcement
+* Period-boundary helper
+* Reversal-aware aggregation
+* Completion-detail snapshot fields where needed
+
+Requirements:
+
+* Do not expose private ledger data.
+* Do not expose hidden profiles.
+* Use safe search paths for privileged functions.
+* Restrict execution permissions.
+* Validate auth.uid() for private queries.
+* Add indexes for period and user aggregation.
+* Document scale limitations.
+
+Do not replace the Prompt 3 points architecture.
+
+⸻
+
+58. Suggested Leaderboard RPC Contract
+
+Create an RPC or equivalent typed contract similar to:
+
+type QuestLeaderboardRequest = {
+  period: "week" | "month" | "all_time";
+  limit: number;
+  cursor?: string;
+};
+type QuestLeaderboardEntry = {
+  rank: number;
+  publicUserId?: string;
+  displayName: string;
+  username?: string;
+  avatarPath?: string;
+  points: number;
+  isCurrentUser: boolean;
+  isAnonymous: boolean;
+};
+
+Adapt to the actual schema.
+
+Requirements:
+
+* Do not return a stable public user ID for anonymous entries if it would enable profiling.
+* Do not expose hidden users.
+* Validate page size.
+* Use deterministic pagination.
+* Return safe display-ready identity fields.
+* Keep internal tie-breaking data private.
+
+⸻
+
+59. Current Rank Function
+
+Implement a secure current-user rank query.
+
+It should return:
+
+* Whether the user qualifies
+* Whether public visibility is enabled
+* Rank where applicable
+* Qualifying Quest points
+* Selected period
+* Number of visible ranked users
+* Optional percentile when valid
+
+Do not expose neighboring hidden-user identities.
+
+Do not return a misleading public rank when the user’s setting is Hidden.
+
+For hidden users, return a private personal summary rather than public placement unless the documented ranking model safely supports private placement.
+
+⸻
+
+60. Development Seed Data
+
+Use or extend development fixtures for:
+
+In Action
+
+* Active single-step Quest
+* Active multi-step Quest
+* Awaiting proof
+* Under review
+* Needs resubmission
+* Rejected
+* Expiring soon
+
+Completed
+
+* Daily Quest completion
+* Monthly Quest completion
+* Geo-Quest completion
+* Approved image-proof completion
+* No-proof completion
+* Reward reversal example
+
+Leaderboards
+
+* Visible user
+* Anonymous user
+* Hidden user excluded
+* Tied scores
+* Current user outside first page
+* User with no qualifying points
+* Suspended development user excluded
+
+Development data must be clearly isolated.
+
+Do not show sample rankings in production.
+
+⸻
+
+61. Automated Tests
+
+Add tests for:
+
+Progress navigation
+
+* Shows exactly Leaderboards, In Action, and Completed
+* Preserves the selected internal section
+* Defaults to In Action when resubmission is needed
+* Handles completion deep links
+* Does not add new bottom tabs
+
+In Action
+
+* Needs Resubmission appears first
+* Ready to Submit Proof is actionable
+* Active Quest routes correctly
+* Under Review disables duplicate submission
+* Expiration warning uses authoritative state
+* Empty state routes to Quests
+
+Completed
+
+* Displays only successful completions
+* Uses confirmed awarded points
+* Supports filters
+* Paginates without duplicates
+* Opens Completion Detail
+* Excludes rejected and abandoned activity
+
+Other Activity
+
+* Shows abandoned, expired, and final rejected records
+* Does not label them completed
+* Shows restart eligibility correctly
+* Preserves history
+
+Proof history
+
+* Shows immutable prior submissions
+* Shows latest active submission
+* Uses signed private media
+* Does not expose moderator-only notes
+* Allows resubmission only when permitted
+
+Point history
+
+* Uses ledger transactions
+* Shows reversals separately
+* Does not delete the original reward
+* Excludes another user’s transactions
+
+Leaderboards
+
+* Aggregates Quest points only
+* Excludes pending and rejected proof
+* Applies reversals
+* Handles ties consistently
+* Respects selected period
+* Respects pagination
+* Shows current user outside first page
+* Shows no fake rank for zero points
+* Excludes hidden users
+* Anonymizes anonymous users
+* Excludes suspended users
+
+Security
+
+* Cannot access another user’s completion
+* Cannot access another user’s proof history
+* Cannot access another user’s private ledger
+* Cannot infer hidden identities from leaderboard output
+* Cannot alter points or rank from the client
+
+Use local Supabase integration tests where available.
+
+⸻
+
+62. Documentation
+
+Create or update:
+
+/docs/QUEST_PROGRESS.md
+/docs/QUEST_COMPLETION_HISTORY.md
+/docs/QUEST_PROOF_HISTORY.md
+/docs/QUEST_LEADERBOARDS.md
+/docs/QUEST_LEADERBOARD_PRIVACY.md
+/docs/QUEST_POINT_HISTORY.md
+/docs/QUEST_PROGRESS_TESTING.md
+
+Document:
+
+* Progress screen hierarchy
+* Internal navigation
+* Default-section selection
+* In Action grouping
+* Proof-status organization
+* Completed history
+* Other Activity
+* Completion Detail
+* Proof history
+* Point history
+* Leaderboard periods
+* Quest-only aggregation
+* Tie behavior
+* Current-user rank
+* Anonymous and hidden users
+* Account-status exclusion
+* Reversal handling
+* Pagination
+* Query caching
+* Deep links
+* Security and privacy boundaries
+* Development fixtures
+* Remaining work for Prompt 9
+
+Update:
+
+* /docs/PROJECT_CONSTITUTION.md
+* replit.md
+
+only where necessary.
+
+Do not change approved navigation or visual direction.
+
+⸻
+
+63. Out of Scope
+
+Do not implement:
+
+* Mapbox
+* Shared map architecture
+* Finished Geo-Quest map
+* Final geofence validation endpoint
+* Hunt domain logic
+* Hunt map
+* Hunt gameplay
+* My Hunts
+* Custom Game creation
+* Full cross-game achievement system
+* Combined Worlds leaderboard
+* Friends leaderboard
+* Local leaderboard requiring precise location
+* Teams
+* Guilds
+* Social feed
+* Chat
+* Admin panel
+* AI generation
+* Automated media moderation provider
+* Push-notification delivery
+* Stripe
+* Memberships
+* Creator payouts
+
+Prompt 9 will implement the shared Mapbox and geospatial architecture.
+
+Prompt 10 will implement the Quest Geo Map and final location-validation flow.
+
+Prompt 15 will expand shared achievements and broader cross-game progression.
+
+⸻
+
+64. Final Verification
+
+Before finishing:
+
+* Confirm Progress opens from the existing Quest bottom tab.
+* Confirm Progress contains exactly Leaderboards, In Action, and Completed as its primary sections.
+* Confirm proof states are organized inside In Action.
+* Confirm Needs Resubmission is prioritized.
+* Confirm active Quests continue through Prompt 7 routes.
+* Confirm under-review proof cannot be resubmitted improperly.
+* Confirm Completed contains only successful completions.
+* Confirm abandoned, expired, and rejected records remain separate.
+* Confirm completion details use confirmed point awards.
+* Confirm point history comes from the ledger.
+* Confirm reversals remain append-only and visible as adjustments.
+* Confirm leaderboards use Quest points only.
+* Confirm rankings respect privacy settings.
+* Confirm hidden users are excluded.
+* Confirm anonymous users do not expose identity.
+* Confirm suspended accounts are excluded publicly.
+* Confirm ties are deterministic and documented.
+* Confirm current-user rank works outside the first page.
+* Confirm another user’s proof, completion, and ledger data remain inaccessible.
+* Confirm no fake leaderboard or ranking data appears in production.
+* Confirm no new bottom tabs were added.
+* Confirm the top Quest/Hunt selector remains intact.
+* Confirm Profile remains shared.
+* Confirm the app compiles.
+* Confirm tests pass or clearly document blocked integration tests.
+* Confirm no approved UI or navigation was redesigned.
+
+Resolve known in-scope errors before stopping.
+
+⸻
+
+Deliverables
+
+When complete, provide:
+
+1. Quest Progress files created or updated
+2. Leaderboards, In Action, and Completed sections
+3. Progress default-section logic
+4. In Action grouping and priority
+5. Needs Resubmission presentation
+6. Ready to Submit Proof presentation
+7. Active Quest progress cards
+8. Under Review presentation
+9. Completed Quest list
+10. Completion Detail screen
+11. Other Activity history
+12. Submission history and detail
+13. Review-status timeline
+14. Quest point-history view
+15. Reward-reversal presentation
+16. Personal Quest summary
+17. Quest leaderboard UI
+18. Quest leaderboard query architecture
+19. Current-user rank behavior
+20. Tie-handling behavior
+21. Leaderboard privacy enforcement
+22. Pagination and caching
+23. Deep-link integration
+24. Notification routing integration
+25. Database migrations, views, RPCs, or RLS adjustments
+26. Tests added and results
+27. Documentation created or updated
+28. Assumptions made
+29. Known limitations
+30. Exact remaining work for Prompt 9
+
+Do not begin Prompt 9.
+
+Do not redesign the application.
+
+Create a checkpoint named:
+
+Build 1 — Prompt 8 — Quest Progress and Leaderboards
