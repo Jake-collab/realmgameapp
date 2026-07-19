@@ -220,6 +220,8 @@ export interface QuestObjectiveRow {
   proof_type: ProofType;
   location_requirement_type: LocationRequirementType;
   completion_rule: string;
+  /** Added in migration 017: 'auto' | 'manual_review'. Defaults to quest.completion_mode. */
+  completion_mode: QuestCompletionMode;
   created_at: string;
   updated_at: string;
 }
@@ -260,9 +262,51 @@ export interface QuestParticipationRow {
   abandoned_at: string | null;
   expires_at: string | null;
   awarded_points: number | null;
+  /** Points captured from quest.points_reward at start time (migration 017) */
+  reward_snapshot_points: number | null;
+  /** Occurrence key for repeatable quests (migration 017). Null for non-repeatable. */
+  occurrence_key: string | null;
   completion_version: number;
   created_at: string;
   updated_at: string;
+}
+
+// ─── Migration 017: Quest occurrence and prerequisite rows ─────────────────────
+
+export type QuestCompletionMode = 'auto' | 'manual_review';
+export type QuestExpirationBehavior = 'hard' | 'started_users_may_finish';
+export type QuestPrerequisiteType = 'quest_completion' | 'minimum_points' | 'achievement';
+
+/**
+ * Scheduled occurrence of a repeatable quest.
+ * occurrence_key format: daily:{slug}:{YYYY-MM-DD} | monthly:{slug}:{YYYY-MM} | geo:{slug}
+ */
+export interface QuestOccurrenceRow {
+  id: string;
+  quest_id: string;
+  occurrence_key: string;
+  available_from: string;
+  available_until: string;
+  is_published: boolean;
+  /** Overrides quest.points_reward for this occurrence. Null = use quest default. */
+  reward_override_points: number | null;
+  admin_priority: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Prerequisite requirement for starting a quest.
+ * All prerequisites use AND logic (all must be satisfied).
+ */
+export interface QuestPrerequisiteRow {
+  id: string;
+  quest_id: string;
+  prerequisite_type: QuestPrerequisiteType;
+  required_quest_id: string | null;
+  required_achievement_id: string | null;
+  minimum_points: number | null;
+  created_at: string;
 }
 
 export interface QuestStepProgressRow {

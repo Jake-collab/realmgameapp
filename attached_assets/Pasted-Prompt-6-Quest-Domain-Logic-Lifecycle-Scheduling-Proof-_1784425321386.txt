@@ -1,0 +1,1712 @@
+Prompt 6 — Quest Domain Logic, Lifecycle, Scheduling, Proof Rules, and Point Awards
+
+Copy this into Replit AI:
+
+# Worlds — Build 1, Prompt 6
+# Quest Domain Logic, Lifecycle, Scheduling, Proof Rules, and Point Awards
+Continue from the current Worlds project and follow these documents as authoritative:
+- /docs/PROJECT_CONSTITUTION.md
+- /docs/DATABASE_ARCHITECTURE.md
+- /docs/SUPABASE_SETUP.md
+- /docs/ROW_LEVEL_SECURITY.md
+- /docs/POINTS_SYSTEM.md
+- /docs/GEO_DATA_SECURITY.md
+- /docs/AUTHENTICATION.md
+- /docs/ONBOARDING.md
+- /docs/PROFILE_AND_SETTINGS.md
+- replit.md
+- the approved UI/UX addendum
+- the approved authentication and navigation clarification
+The application is named:
+Worlds
+Prompt 3 established the Supabase schema, storage, security, points ledger, Quest tables, participation records, proof records, and backend-service foundation.
+Prompt 4 implemented authentication and onboarding.
+Prompt 5 implemented the shared Profile, settings, interests, and in-app notification center.
+This prompt must implement the reusable Quest domain and business logic that future Quest screens will call.
+Do not redesign the approved UI or navigation.
+Do not build the complete Quest Home, Quests list, Quest detail, Quest Progress, Mapbox map, Hunt system, admin panel, or AI generation interface during this prompt.
+Development-only diagnostic screens or minimal fixtures are acceptable when needed to verify the domain logic, but do not replace the approved future user interface.
+---
+# Primary Objective
+Implement a secure, testable Quest domain layer supporting:
+- Daily Quests
+- Monthly Quest Drops
+- Geo-Quests
+- Quest scheduling
+- Eligibility
+- Availability
+- Quest initiation
+- Active participation
+- Multi-step progress
+- Proof requirements
+- Proof submission preparation
+- Review states
+- Completion
+- Point awarding
+- Expiration
+- Abandonment
+- Repeatability
+- Administrative draft and approval states
+- Safe development seed data
+The Quest domain must be reusable from:
+- Quest Home
+- Quests screen
+- Quest detail
+- Active Quest
+- Quest Progress
+- Quest Map
+- Admin panel
+- AI-generated Quest drafts
+Do not place business rules directly inside screen components.
+---
+# 1. Preserve the Approved Quest Structure
+Quest bottom navigation remains exactly:
+1. Home
+2. Quests
+3. Map
+4. Progress
+5. Profile
+The Quests experience contains:
+- Daily Quest
+- Monthly Quest Drop
+- Geo-Quest
+Do not add:
+- Discover
+- Geo as a separate bottom tab
+- General social feed
+- Marketplace
+- Separate Quest account
+- Duplicate Profile
+- Duplicate points system
+This prompt establishes logic only and must not invent new product categories.
+---
+# 2. Quest Feature Module
+Create or finalize a modular Quest feature structure similar to:
+```text
+/features/quests/
+  components/
+  hooks/
+  screens/
+  services/
+  repositories/
+  schemas/
+  types/
+  utils/
+  constants/
+  queries/
+  mutations/
+  tests/
+
+Adapt this to the existing architecture.
+
+Responsibilities should be separated clearly:
+
+Repositories
+
+Responsible for typed database access.
+
+Services
+
+Responsible for business rules and orchestration.
+
+Queries and hooks
+
+Responsible for React Query integration.
+
+Schemas
+
+Responsible for input and response validation.
+
+UI components
+
+Must consume domain methods rather than raw Supabase calls.
+
+Do not duplicate services already created in Prompt 3. Extend and organize them.
+
+⸻
+
+3. Domain Types
+
+Create clear domain types for:
+
+* Quest
+* Quest summary
+* Quest detail
+* Quest type
+* Quest status
+* Quest difficulty
+* Quest availability
+* Quest objective
+* Quest step
+* Quest participation
+* Quest participation status
+* Quest proof requirement
+* Quest location requirement
+* Quest completion result
+* Quest point reward
+* Quest eligibility result
+* Quest start result
+* Quest expiration result
+* Proof review state
+
+Use generated database types as the persistence foundation.
+
+Create app-level domain types only where they provide a cleaner or safer interface than raw database rows.
+
+Avoid multiple incompatible Quest type definitions.
+
+⸻
+
+4. Quest Types
+
+Support exactly these initial Quest types:
+
+* daily
+* monthly
+* geo
+
+Daily Quest
+
+A regularly available Quest intended for frequent completion.
+
+Monthly Quest Drop
+
+A larger or featured Quest made available on a monthly schedule or designated monthly release.
+
+Geo-Quest
+
+A Quest associated with a real-world location or geographic eligibility requirement.
+
+Do not implement new Quest types without explicit approval.
+
+Prepare extension points through documented enums or configuration rather than speculative unused tables.
+
+⸻
+
+5. Quest Content Status
+
+Implement content-state rules using the statuses established in Prompt 3:
+
+* draft
+* pending_review
+* approved
+* scheduled
+* published
+* paused
+* expired
+* archived
+* rejected
+
+Define exact behavior.
+
+Draft
+
+Visible only to authorized administrators and future AI-review systems.
+
+Pending Review
+
+Awaiting review and not publicly available.
+
+Approved
+
+Content is approved but not necessarily scheduled or published.
+
+Scheduled
+
+Approved and waiting for its availability window.
+
+Published
+
+Potentially visible if its availability window and eligibility requirements are satisfied.
+
+Paused
+
+Temporarily unavailable to ordinary users.
+
+Expired
+
+Availability has ended.
+
+Archived
+
+Retained for history but not active.
+
+Rejected
+
+Not approved for publication.
+
+Public Quest queries must not expose drafts, rejected content, or staff-only metadata.
+
+⸻
+
+6. Quest Availability Evaluation
+
+Create one authoritative Quest-availability evaluator.
+
+It should determine whether a Quest is:
+
+* Upcoming
+* Available
+* Already started by the user
+* Awaiting proof
+* Under review
+* Completed
+* Expired
+* Paused
+* Ineligible
+* Unavailable because of location permission
+* Unavailable because of schedule
+* Unavailable because of repeat cooldown
+* Unavailable because of account status
+* Unavailable because prerequisites are not met
+
+Return a structured result, for example:
+
+type QuestAvailabilityResult = {
+  state:
+    | "upcoming"
+    | "available"
+    | "active"
+    | "awaiting_proof"
+    | "under_review"
+    | "completed"
+    | "expired"
+    | "paused"
+    | "ineligible";
+  canStart: boolean;
+  reasonCode?: string;
+  userMessage?: string;
+  availableFrom?: string;
+  availableUntil?: string;
+  activeParticipationId?: string;
+};
+
+Adapt the type as needed.
+
+Do not duplicate availability calculations across Home, Quests, Map, and Detail.
+
+⸻
+
+7. Scheduling Rules
+
+Implement scheduling logic using UTC.
+
+Support:
+
+* available_from
+* available_until
+* published_at
+* Optional user participation expiration
+* Daily recurring availability
+* Monthly release windows
+* Future scheduled publication
+* Manual pausing
+* Expiration
+
+The user-facing app should convert timestamps into the user’s local time.
+
+Do not store ambiguous local timestamps without timezone context.
+
+Use server time for authoritative availability decisions where practical.
+
+Do not rely solely on the mobile device clock.
+
+⸻
+
+8. Daily Quest Rules
+
+Define the Build 1 Daily Quest behavior.
+
+Support:
+
+* One or more published Daily Quests in the backend
+* A prioritized Daily Quest for the Home screen
+* Availability windows
+* Completion history
+* Nonrepeatable behavior within the configured daily window
+* Future personalization by interests
+* Fallback content if no personalized Quest exists
+
+Do not assume that exactly one Daily Quest can ever exist in the database.
+
+Create a selection method that can choose the best currently available Daily Quest for a user.
+
+Selection criteria may eventually consider:
+
+* Published status
+* Current schedule
+* User interests
+* Prior completions
+* Accessibility
+* Location availability
+* Difficulty
+* Administrative priority
+
+For Build 1, use deterministic baseline rules and document them.
+
+Avoid opaque random selection that changes every refresh.
+
+⸻
+
+9. Monthly Quest Drop Rules
+
+Define Monthly Quest Drop behavior.
+
+Support:
+
+* Featured monthly content
+* Availability start and end
+* Future scheduled publication
+* One-time completion by default
+* Larger point rewards where justified
+* Clear monthly grouping
+* Archive access for completed history
+* Fallback behavior when no current monthly Quest is available
+
+Do not hardcode calendar month logic only in the mobile client.
+
+Use backend scheduling fields and server-side evaluation.
+
+⸻
+
+10. Geo-Quest Rules
+
+Implement Geo-Quest domain rules without building the final map.
+
+Support:
+
+* Approximate public location
+* Private validation location or geometry
+* Distance-ready data
+* Start-location requirements
+* Completion-location requirements
+* Optional location permission
+* Accuracy requirements
+* Radius or polygon-ready validation
+* Availability by geographic area
+* Location-based eligibility result
+
+Security rules:
+
+* Do not include private validation geometry in ordinary public Quest summaries.
+* Do not expose exact protected coordinates when an approximate location is sufficient.
+* Do not let the client decide final location completion by itself.
+* Prepare trusted server or Edge Function validation for Prompt 10.
+* Do not store continuous user location history.
+
+Create safe public and authorized representations of Geo-Quest data.
+
+⸻
+
+11. Quest Eligibility Rules
+
+Create a centralized eligibility service.
+
+Evaluate factors such as:
+
+* Authentication
+* Account status
+* Onboarding completion
+* Quest publication status
+* Quest schedule
+* Repeatability
+* Repeat cooldown
+* Prior completion
+* Existing active participation
+* Age restriction readiness if added later
+* Interest relevance where used
+* Location permission where required
+* Geographic availability
+* Prerequisite Quest completion where configured
+* Administrative restriction
+* Capacity limits if introduced later
+
+Return structured reason codes.
+
+Example reason codes:
+
+* NOT_AUTHENTICATED
+* ACCOUNT_RESTRICTED
+* QUEST_NOT_PUBLISHED
+* QUEST_NOT_STARTED
+* QUEST_EXPIRED
+* QUEST_PAUSED
+* ALREADY_COMPLETED
+* ACTIVE_PARTICIPATION_EXISTS
+* REPEAT_COOLDOWN
+* LOCATION_PERMISSION_REQUIRED
+* OUTSIDE_AVAILABLE_REGION
+* PREREQUISITE_NOT_MET
+
+Use user-friendly messages at the UI layer.
+
+Do not expose sensitive internal security details.
+
+⸻
+
+12. Quest Prerequisites
+
+Prepare practical prerequisite support.
+
+A Quest may optionally require:
+
+* Completion of another Quest
+* Completion of a category milestone
+* A minimum point total
+* A future achievement
+* Administrative access
+
+Do not build an overly complex rule engine.
+
+Use a documented, typed prerequisite model.
+
+Support simple all-required behavior initially.
+
+Avoid arbitrary executable expressions stored in the database.
+
+⸻
+
+13. Quest Initiation
+
+Implement a secure startQuest domain operation.
+
+Expected behavior:
+
+1. Confirm authenticated user.
+2. Confirm active account.
+3. Load the Quest.
+4. Evaluate availability and eligibility.
+5. Check for an existing active participation.
+6. Check repeatability and prior completion.
+7. Create the participation record.
+8. Set started_at.
+9. Set an expiration time if applicable.
+10. Initialize required step-progress records if needed.
+11. Return the active participation and first objective.
+
+Requirements:
+
+* The operation must be idempotent.
+* Repeated taps must not create duplicate participation records.
+* A nonrepeatable Quest cannot be started after valid completion.
+* Protected fields cannot be set arbitrarily by the client.
+* Use an RPC, Edge Function-ready service, or safe transactional database function where needed.
+* Do not award points at start.
+* Do not allow a user to start a draft or expired Quest.
+
+The eventual UI button must be able to call this operation and display:
+
+Start Quest
+
+Do not build the full detail screen yet.
+
+⸻
+
+14. Participation Lifecycle
+
+Support participation statuses:
+
+* started
+* in_progress
+* awaiting_proof
+* under_review
+* needs_resubmission
+* completed
+* rejected
+* abandoned
+* expired
+
+Define allowed transitions.
+
+Example:
+
+started
+  → in_progress
+  → awaiting_proof
+  → under_review
+  → completed
+under_review
+  → needs_resubmission
+  → under_review
+under_review
+  → rejected
+started or in_progress
+  → abandoned
+started or in_progress or awaiting_proof
+  → expired
+
+Adapt transitions for automatic-completion Quests.
+
+Do not allow arbitrary backward or invalid status changes.
+
+Create a transition validator.
+
+Sensitive transitions such as completed, rejected, and point-awarded states must require trusted logic.
+
+⸻
+
+15. Single-Step and Multi-Step Quests
+
+Support:
+
+Single-step Quest
+
+One primary objective followed by completion or proof submission.
+
+Multi-step Quest
+
+Multiple ordered or unordered objectives.
+
+Each step may be:
+
+* Required
+* Optional
+* Instructional
+* Proof-requiring
+* Location-requiring
+* Automatically validated
+* Manually reviewed
+
+Support step ordering through sort_order.
+
+Do not show fake progress percentages when progress cannot be measured meaningfully.
+
+Create helpers such as:
+
+* Required steps completed
+* Total required steps
+* Current step
+* Next available step
+* Participation completion readiness
+
+⸻
+
+16. Step Progress
+
+Implement safe step-progress operations.
+
+Support:
+
+* Begin step
+* Mark simple client-allowed step in progress
+* Submit proof for a step
+* Await server validation
+* Approve step
+* Reject step
+* Request resubmission
+* Complete automatically validated step
+* Skip optional step where allowed
+
+Requirements:
+
+* Users may update only their own participation.
+* Users may not directly approve a step.
+* Users may not directly set protected location validation results.
+* Users may not mark a proof-required step completed without approved proof.
+* Step completion should be idempotent.
+* Completion timestamps should be server-generated where practical.
+
+⸻
+
+17. Proof Requirement Model
+
+Support proof types such as:
+
+* none
+* text
+* image
+* location
+* image_and_location
+* text_and_image
+* manual_confirmation
+* Future automated validation
+
+Use only the types supported by the Prompt 3 schema.
+
+Each Quest or step should specify:
+
+* Whether proof is required
+* Accepted proof types
+* Minimum and maximum image count
+* Text length requirements
+* Whether location is required
+* Whether manual review is required
+* Whether automatic approval is allowed
+* Resubmission limit where configured
+
+Do not allow arbitrary file uploads.
+
+⸻
+
+18. Proof Submission Preparation
+
+Extend the shared proof-submission service from Prompt 3.
+
+Prepare methods such as:
+
+* Create draft proof
+* Attach text
+* Attach approved media records
+* Attach location evidence
+* Validate required fields
+* Submit proof
+* Cancel draft proof
+* Retrieve current submission
+* Retrieve submission history
+* Create resubmission linked to the prior submission
+
+Do not build the final upload interface yet.
+
+Requirements:
+
+* Proof remains private.
+* Proof belongs to the authenticated participation.
+* Submitted proof becomes immutable except through a resubmission flow.
+* Users cannot change reviewer fields.
+* Users cannot approve their own proof.
+* Proof media must use the protected storage architecture.
+* Submission must be idempotent.
+* Prevent multiple simultaneous active submissions for the same requirement unless explicitly allowed.
+
+⸻
+
+19. Proof Review States
+
+Support:
+
+* draft
+* uploading
+* submitted
+* under_review
+* approved
+* rejected
+* needs_resubmission
+
+Define exact transitions.
+
+Only trusted reviewers or future validation services may set:
+
+* Approved
+* Rejected
+* Needs resubmission
+* Review notes
+* Reviewer ID
+* Reviewed timestamp
+
+The user may:
+
+* Create a draft
+* Upload required evidence
+* Submit
+* View status
+* Resubmit when allowed
+
+Do not implement the admin review interface yet.
+
+Create development fixtures or trusted test utilities for testing review transitions.
+
+⸻
+
+20. Automatic Completion Versus Manual Review
+
+Support two major completion paths.
+
+Automatic completion
+
+Suitable for Quests that require no proof or use trusted automated validation.
+
+Flow:
+
+Active
+→ Required steps satisfied
+→ Server validates
+→ Completion transaction
+→ Point award
+
+Manual review
+
+Suitable for image, text, or complex proof.
+
+Flow:
+
+Active
+→ Proof submitted
+→ Under review
+→ Approved
+→ Completion transaction
+→ Point award
+
+Do not award points merely because a user submitted proof.
+
+Do not mark a Quest completed before the required validation path succeeds.
+
+⸻
+
+21. Quest Completion Transaction
+
+Implement one authoritative completeQuest operation.
+
+It must:
+
+1. Confirm authenticated user.
+2. Confirm participation ownership.
+3. Confirm valid participation state.
+4. Confirm all required objectives are satisfied.
+5. Confirm proof approval where required.
+6. Confirm the Quest is not already completed.
+7. Confirm the reward has not already been issued.
+8. Set participation to completed.
+9. Set completed_at.
+10. Record the exact awarded point amount.
+11. Insert a points-ledger transaction.
+12. Use a unique idempotency key.
+13. Return the completion result.
+
+The completion update and points-ledger insert must occur atomically.
+
+If point insertion fails, participation must not remain completed without a recoverable award state.
+
+Prefer a secure database function or trusted server-side transaction.
+
+Do not trust a point value sent from the client.
+
+Load the reward from the authoritative Quest record or a versioned participation snapshot.
+
+⸻
+
+22. Reward Snapshotting
+
+Prevent published Quest reward changes from corrupting active participation.
+
+At Quest start, store or derive an authoritative reward snapshot for that participation, such as:
+
+* Quest version
+* Published version ID
+* Reward points at start
+* Completion requirements version
+* Participation configuration snapshot
+
+Use a practical approach consistent with the existing schema.
+
+Requirements:
+
+* Admin changes to a future Quest should not silently alter an already active user’s reward unless explicitly intended.
+* The awarded points must be auditable.
+* Do not duplicate the entire Quest unnecessarily if versioning already solves this.
+* Document the selected strategy.
+
+⸻
+
+23. Point Reward Rules
+
+Every Quest must have a positive integer points_reward.
+
+The points system should use the guideline architecture created in Prompt 3.
+
+Initial reference guidelines:
+
+* Very easy, 5–10 minutes: 25–50 points
+* Easy, 10–20 minutes: 75–125 points
+* Medium, 20–45 minutes: 150–250 points
+* Hard, 45–90 minutes: 300–500 points
+* Epic, 120+ minutes: 750–2,000 points
+
+These are recommendations, not rigid automatic rules.
+
+Implement a helper that can return a suggested range based on:
+
+* Difficulty
+* Duration
+* Activity type
+* Travel requirement
+* Physical effort
+* Complexity
+* Proof burden
+* Location requirement
+
+Do not let the mobile client choose the final reward.
+
+Admins will set or override the reward in Prompt 17.
+
+AI will suggest rewards in Prompt 18.
+
+⸻
+
+24. Duplicate Reward Prevention
+
+Prevent duplicate point awards.
+
+Use:
+
+* Unique idempotency key
+* Unique ledger constraint tied to the participation and reward type
+* Completion transaction
+* Server-side verification
+
+Example idempotency key concept:
+
+quest_completion:{participation_id}
+
+A repeated completion request must return the original successful result rather than insert a second reward.
+
+Users must not directly insert ledger entries.
+
+Users must not edit awarded_points.
+
+Test simultaneous duplicate-completion attempts.
+
+⸻
+
+25. Point Reversal Preparation
+
+Do not delete point transactions.
+
+Prepare trusted reversal support for cases such as:
+
+* Fraudulent proof discovered later
+* Administrative correction
+* Invalid completion
+* Duplicate legacy transaction
+
+A reversal should:
+
+* Reference the original transaction
+* Add an offsetting ledger entry
+* Be authorized
+* Be audited
+* Avoid changing the original ledger record
+
+Do not expose reversal controls in the user-facing app.
+
+The admin UI will use this later.
+
+⸻
+
+26. Quest Abandonment
+
+Implement abandonQuest.
+
+Rules:
+
+* Only the participation owner may request abandonment.
+* Completed participation cannot be abandoned.
+* Under-review proof cannot be silently discarded without a defined rule.
+* Abandonment should preserve history.
+* Abandonment does not award points.
+* Abandoned participation may or may not be restartable based on Quest configuration.
+* Active draft proof should be retained privately or safely invalidated according to documented behavior.
+
+Require confirmation at the future UI layer.
+
+Do not delete participation records.
+
+⸻
+
+27. Quest Expiration
+
+Implement expiration rules for:
+
+* Quest content availability ending
+* Participation-specific deadlines
+* Daily window ending
+* Monthly window ending
+* Time-limited active Quest
+* Administrative expiration
+
+Define whether an already-started Quest can continue after content availability ends.
+
+Recommended configurable behaviors:
+
+* must_complete_before_available_until
+* participation_deadline_after_start
+* started_users_may_finish
+* hard_expiration
+
+Use one explicit configuration rather than hidden assumptions.
+
+For Build 1, choose sensible defaults and document them.
+
+Expire records through:
+
+* Query-time evaluation
+* Scheduled server process later
+* Safe status update helpers
+
+Do not rely on the client remaining open.
+
+⸻
+
+28. Repeatable Quests
+
+Support:
+
+* Nonrepeatable Quest
+* Repeatable Quest
+* Repeat cooldown
+* Repeat limit readiness
+* Daily-window repeat restrictions
+
+Default behavior:
+
+* Daily Quest: once per configured daily occurrence
+* Monthly Quest: once per configured monthly occurrence
+* Geo-Quest: nonrepeatable unless explicitly configured
+
+Do not treat a recurring Daily Quest definition as permanently completed forever if it is designed to have separate occurrences.
+
+Use an occurrence model or a clear occurrence key where necessary.
+
+⸻
+
+29. Quest Occurrences
+
+Implement a practical model for recurring Quest instances.
+
+A Quest definition may produce a scheduled occurrence.
+
+An occurrence should support:
+
+* Quest definition
+* Occurrence key
+* Availability start
+* Availability end
+* Published state
+* Reward override if explicitly supported
+* Administrative priority
+* Completion uniqueness
+
+Examples:
+
+daily-quest-2026-07-18
+monthly-drop-2026-07
+
+Do not base uniqueness only on client-generated date strings.
+
+Use backend-controlled occurrence identifiers.
+
+If Prompt 3 did not create a Quest occurrence table and the current schema needs it, add a focused migration.
+
+Avoid duplicating all Quest content unnecessarily for every occurrence.
+
+⸻
+
+30. Active Quest Selection for Home
+
+Create a query or selector for Quest Home.
+
+Priority should generally be:
+
+1. Active Quest requiring immediate action
+2. Proof needing resubmission
+3. Proof under review
+4. Most recently active Quest
+5. Current prioritized Daily Quest when no active Quest exists
+
+The future Home screen must display only one dominant active Quest panel.
+
+Do not return a large unordered list as the primary Home experience.
+
+Create a separate query for supporting Daily, Monthly, and Geo previews.
+
+⸻
+
+31. Quest List Queries
+
+Create reusable paginated queries for:
+
+* Current Daily Quests
+* Current Monthly Quest Drops
+* Available Geo-Quests
+* Active participations
+* Completed participations
+* Awaiting-proof participations
+* Under-review participations
+* Expired participation history
+
+Support filters where relevant:
+
+* Quest type
+* Difficulty
+* Duration
+* Accessibility
+* Indoor/outdoor
+* Interest category
+* Location availability
+* Completion state
+
+Do not build a complicated filter UI yet.
+
+Use stable sorting.
+
+⸻
+
+32. Quest Detail Query
+
+Create one safe Quest-detail query that returns:
+
+* Public Quest content
+* Current availability
+* User participation state
+* Objectives
+* Steps
+* Reward
+* Duration
+* Difficulty
+* Accessibility notes
+* Safety notes
+* Proof requirements
+* Public location information
+* Media
+* Start eligibility
+* Appropriate primary action state
+
+Do not return:
+
+* Private validation geometry
+* Admin-only review notes
+* AI prompt content
+* Other users’ proof
+* Unpublished internal fields
+* Service secrets
+
+⸻
+
+33. Active Quest Query
+
+Create one active-participation query that returns only authorized data.
+
+Include:
+
+* Quest title
+* Participation status
+* Started timestamp
+* Deadline
+* Current objective
+* Completed and remaining steps
+* Proof state
+* Resubmission reason where allowed
+* Current user actions
+* Reward snapshot
+* Safe location requirement information
+
+Do not expose reviewer identity unnecessarily.
+
+Do not expose protected validation details.
+
+⸻
+
+34. Completion History
+
+Create paginated completion-history queries.
+
+Support:
+
+* Completed timestamp
+* Quest title
+* Quest type
+* Points awarded
+* Completion status
+* Public image
+* Occurrence label where appropriate
+
+History should remain stable even if the Quest is later archived.
+
+Use snapshots or retained relationships so past completion does not become unreadable.
+
+Do not expose archived internal content that was never public.
+
+⸻
+
+35. Quest State Machine
+
+Create a documented state machine for:
+
+Quest content
+
+Draft through archive.
+
+Participation
+
+Started through completion, rejection, abandonment, or expiration.
+
+Proof
+
+Draft through approval, rejection, or resubmission.
+
+Add reusable transition guards.
+
+Do not spread status-transition conditionals throughout many files.
+
+Create tests for allowed and forbidden transitions.
+
+⸻
+
+36. Server Trust Boundaries
+
+Document and enforce which operations may be client-requested and which must be trusted.
+
+Client may request
+
+* Start Quest
+* Abandon Quest
+* Save allowed step progress
+* Create proof draft
+* Submit proof
+* Request resubmission processing
+* Read own Quest state
+
+Trusted server or authorized reviewer must perform
+
+* Approve proof
+* Reject proof
+* Set protected location validation
+* Complete protected Quest
+* Award points
+* Reverse points
+* Publish Quest
+* Change reward
+* Change account role
+* Override completion
+
+Do not make an operation client-writable merely because RLS can identify the owner.
+
+Ownership is not sufficient for reward-sensitive mutations.
+
+⸻
+
+37. Secure Database Functions or RPCs
+
+Create secure functions where transactional integrity or protected mutations require them.
+
+Potential functions:
+
+* start_quest
+* abandon_quest
+* submit_quest_proof
+* complete_quest
+* get_quest_availability
+* get_active_quest_for_home
+* get_user_quest_summary
+
+Use exact names consistent with the project.
+
+Requirements for security definer functions:
+
+* Set explicit safe search path.
+* Validate auth.uid().
+* Validate account status.
+* Validate ownership.
+* Restrict execution grants.
+* Never accept authoritative reward values from the client.
+* Avoid dynamic SQL.
+* Document all privileged behavior.
+
+Do not use service-role access from the mobile client.
+
+⸻
+
+38. React Query Hooks
+
+Create stable hooks such as:
+
+* useDailyQuests
+* useMonthlyQuests
+* useGeoQuests
+* useQuestDetail
+* useQuestAvailability
+* useActiveQuest
+* useQuestParticipation
+* useQuestProgress
+* useCompletedQuests
+* useStartQuest
+* useAbandonQuest
+* useSubmitQuestProof
+* useQuestPointGuideline
+
+Adapt names to project conventions.
+
+Requirements:
+
+* Scope private queries to the authenticated user.
+* Use stable query keys.
+* Invalidate only relevant queries after mutations.
+* Avoid duplicate calls between Home and Quests.
+* Avoid client-only cache state becoming the source of truth.
+* Handle offline and retry behavior conservatively.
+* Do not automatically retry protected mutations repeatedly.
+
+⸻
+
+39. Query Key Structure
+
+Create centralized Quest query keys.
+
+Example:
+
+questKeys.all
+questKeys.lists()
+questKeys.daily(userId)
+questKeys.monthly(userId)
+questKeys.geo(userId, locationFilter)
+questKeys.detail(questId, userId)
+questKeys.active(userId)
+questKeys.progress(userId)
+questKeys.completed(userId)
+questKeys.participation(participationId)
+
+Do not include sensitive values such as precise coordinates unnecessarily in logged query keys.
+
+Round or abstract map-query inputs where appropriate later.
+
+⸻
+
+40. Domain Error Handling
+
+Create Quest-specific errors such as:
+
+* Quest not found
+* Quest unavailable
+* Quest expired
+* Quest paused
+* Already completed
+* Existing active participation
+* Repeat cooldown active
+* Not eligible
+* Location required
+* Location validation failed
+* Proof required
+* Proof already submitted
+* Proof under review
+* Invalid state transition
+* Reward already issued
+* Account restricted
+* Network unavailable
+* Unknown server error
+
+Map technical errors into safe messages.
+
+Do not show:
+
+* SQL
+* RLS policy names
+* Function internals
+* Hidden coordinates
+* Other user IDs
+* Raw Supabase payloads
+
+⸻
+
+41. Development Seed Data
+
+Create useful development seed data that exercises the domain.
+
+Include at minimum:
+
+Daily Quests
+
+* One easy no-proof Daily Quest
+* One medium image-proof Daily Quest
+* One interest-category Daily Quest
+
+Monthly Quest Drops
+
+* One active monthly Quest
+* One upcoming monthly Quest
+* One expired monthly Quest
+
+Geo-Quests
+
+* One available sample Geo-Quest
+* One upcoming Geo-Quest
+* One location-restricted sample
+* One Geo-Quest requiring completion validation
+
+Participation states
+
+* Not started
+* Active
+* Awaiting proof
+* Under review
+* Needs resubmission
+* Completed
+* Expired
+* Abandoned
+
+Use clearly fictional or development-safe content.
+
+Do not use dangerous real-world objectives.
+
+Do not use production claims.
+
+Do not publish precise sensitive locations.
+
+⸻
+
+42. Seed Quest Safety
+
+Sample Quests must be safe and broadly appropriate.
+
+Avoid:
+
+* Trespassing
+* Entering abandoned buildings
+* Distracted driving
+* Dangerous heights
+* Restricted areas
+* Contact with unknown substances
+* Medical challenges
+* Extreme exercise
+* Harassment
+* Surveillance
+* Photography of private individuals without consent
+* Illegal activity
+
+Include concise safety notes where appropriate.
+
+The later AI prompt must follow the same principle.
+
+⸻
+
+43. Minimal Development Diagnostics
+
+Create a development-only Quest domain diagnostics area if useful.
+
+It may show:
+
+* Current available Daily Quest
+* Current Monthly Quest
+* Current Geo-Quest count
+* Eligibility result
+* Active participation
+* State transition test controls
+* Point award result
+
+Requirements:
+
+* Development-only
+* Not part of approved production navigation
+* Must not weaken security
+* Must not use fake privileged actions in production
+* Clearly documented and removable
+
+Do not build a second Quest UI.
+
+⸻
+
+44. Notification Event Preparation
+
+Prepare domain event outputs for future notification generation.
+
+Examples:
+
+* Quest became available
+* Monthly Quest Drop published
+* Quest started
+* Proof submitted
+* Proof approved
+* Proof rejected
+* Resubmission requested
+* Quest completed
+* Quest expired
+
+Do not send push notifications yet.
+
+Do not let the domain service insert arbitrary user-facing notifications directly unless it uses an approved trusted event pattern.
+
+Document payloads for Prompt 21.
+
+⸻
+
+45. Analytics Event Preparation
+
+Prepare internal event hooks for future analytics:
+
+* Quest list viewed
+* Quest detail viewed
+* Quest start attempted
+* Quest started
+* Quest abandoned
+* Step completed
+* Proof started
+* Proof submitted
+* Quest completed
+* Quest expired
+
+Do not connect a third-party analytics provider.
+
+Do not log:
+
+* Proof image contents
+* Precise private location
+* Sensitive review notes
+* Hidden Quest validation data
+* Access tokens
+
+⸻
+
+46. RLS Verification
+
+Verify Quest-related RLS.
+
+At minimum:
+
+* Public users see only published and available-safe Quest fields.
+* Authenticated users see their own participation.
+* Users cannot see another user’s participation.
+* Users cannot see another user’s proof.
+* Users cannot set themselves completed.
+* Users cannot set awarded points.
+* Users cannot approve proof.
+* Users cannot read draft Quest content.
+* Users cannot read hidden Geo validation geometry.
+* Ordinary users cannot publish or change Quest rewards.
+* Point-ledger insertion remains protected.
+* Archived completion history remains readable to its owner where appropriate.
+
+Do not weaken RLS to make development easier.
+
+⸻
+
+47. Migration Adjustments
+
+If Prompt 3 omitted fields necessary for correct lifecycle behavior, add focused migrations.
+
+Potential additions may include:
+
+* Quest occurrences
+* Participation reward snapshot
+* Quest version reference
+* Completion idempotency constraint
+* Repeat occurrence key
+* Participation deadline behavior
+* Quest prerequisite relation
+* Proof requirement configuration
+* Administrative priority
+* Home-feature priority
+* Automatic versus manual review mode
+
+Do not replace the full schema unnecessarily.
+
+Create additive, ordered migrations.
+
+Document every change.
+
+⸻
+
+48. Automated Tests
+
+Add tests covering:
+
+Availability
+
+* Draft unavailable
+* Scheduled upcoming
+* Published available
+* Paused unavailable
+* Expired unavailable
+* Existing active participation
+* Completed nonrepeatable Quest
+* Repeat cooldown
+* Account restriction
+* Geo permission requirement
+
+Starting
+
+* Starts eligible Quest
+* Prevents duplicate starts
+* Rejects draft Quest
+* Rejects expired Quest
+* Rejects unauthorized user
+* Creates step progress
+* Stores reward snapshot
+
+Progress
+
+* Completes allowed simple step
+* Rejects protected step completion
+* Enforces order where required
+* Allows optional step behavior
+* Prevents another user’s update
+
+Proof
+
+* Creates draft
+* Validates required evidence
+* Submits once
+* Prevents edits after submission
+* Allows valid resubmission
+* Protects another user’s proof
+
+Completion
+
+* Completes validated Quest
+* Does not complete before required proof approval
+* Awards correct points
+* Awards points once
+* Handles simultaneous completion attempts
+* Uses reward snapshot
+* Inserts ledger transaction atomically
+
+Abandonment and expiration
+
+* Abandons eligible active Quest
+* Prevents abandoning completed Quest
+* Expires deadline
+* Preserves history
+* Awards no points
+
+RLS and security
+
+* User cannot change reward
+* User cannot approve proof
+* User cannot mark completion directly
+* User cannot insert points
+* Hidden Geo data remains protected
+
+Use local Supabase integration testing where available.
+
+⸻
+
+49. Documentation
+
+Create or update:
+
+/docs/QUEST_DOMAIN.md
+/docs/QUEST_STATE_MACHINE.md
+/docs/QUEST_SCHEDULING.md
+/docs/QUEST_PROOF_SYSTEM.md
+/docs/QUEST_POINT_AWARDS.md
+/docs/QUEST_SECURITY.md
+/docs/QUEST_TESTING.md
+
+Document:
+
+* Quest types
+* Content statuses
+* Participation statuses
+* Proof statuses
+* Allowed transitions
+* Availability evaluator
+* Eligibility rules
+* Daily and monthly occurrence behavior
+* Geo-Quest security
+* Start transaction
+* Completion transaction
+* Reward snapshot
+* Duplicate reward prevention
+* Abandonment
+* Expiration
+* Repeatability
+* Query hooks
+* Trusted server boundaries
+* Seed data
+* Test procedures
+* Remaining work for Prompt 7
+
+Update:
+
+/docs/PROJECT_CONSTITUTION.md
+replit.md
+
+only where necessary.
+
+Do not change approved navigation or visual direction.
+
+⸻
+
+50. Out of Scope
+
+Do not implement:
+
+* Finished Quest Home UI
+* Finished Quests list UI
+* Finished Quest detail UI
+* Finished Active Quest UI
+* Finished proof-upload UI
+* Quest Progress UI
+* Leaderboard UI
+* Mapbox
+* Final Geo-Quest location validation endpoint
+* Hunt
+* Custom Games
+* Admin Quest editor
+* Admin proof review UI
+* AI generation
+* Automated media moderation
+* Push notification delivery
+* Friends
+* Teams
+* Chat
+* Stripe
+* Memberships
+* Creator payouts
+
+This prompt establishes the domain logic those features will call.
+
+⸻
+
+51. Final Verification
+
+Before finishing:
+
+* Confirm the project compiles.
+* Confirm Quest types are centralized.
+* Confirm availability is evaluated consistently.
+* Confirm eligibility is centralized.
+* Confirm starting a Quest is idempotent.
+* Confirm duplicate participation is prevented.
+* Confirm repeat occurrence logic works.
+* Confirm reward snapshot behavior is documented and tested.
+* Confirm step progress rules work.
+* Confirm proof submission rules work.
+* Confirm users cannot approve their own proof.
+* Confirm users cannot mark themselves completed.
+* Confirm Quest completion and point insertion are atomic.
+* Confirm points are awarded once.
+* Confirm abandonment and expiration preserve history.
+* Confirm hidden Geo validation data remains protected.
+* Confirm development seed data covers major states.
+* Confirm no approved navigation or UI was redesigned.
+* Confirm tests pass or document any blocked integration tests.
+
+Resolve known in-scope errors before stopping.
+
+⸻
+
+Deliverables
+
+When complete, provide:
+
+1. Quest module files created or updated
+2. Quest domain types
+3. Quest availability evaluator
+4. Quest eligibility service
+5. Daily Quest logic
+6. Monthly Quest Drop logic
+7. Geo-Quest domain logic
+8. Quest occurrence model
+9. Start Quest transaction
+10. Participation state machine
+11. Step-progress logic
+12. Proof requirement and submission logic
+13. Completion transaction
+14. Point reward snapshot strategy
+15. Duplicate reward prevention
+16. Abandonment and expiration behavior
+17. Repeatability behavior
+18. React Query hooks and query keys
+19. Database migrations or RLS adjustments
+20. Seed data created
+21. Tests added and results
+22. Documentation created or updated
+23. Assumptions made
+24. Known limitations
+25. Exact remaining work for Prompt 7
+
+Do not begin Prompt 7.
+
+Do not redesign the application.
+
+Create a checkpoint named:
+
+Build 1 — Prompt 6 — Quest Domain Logic
