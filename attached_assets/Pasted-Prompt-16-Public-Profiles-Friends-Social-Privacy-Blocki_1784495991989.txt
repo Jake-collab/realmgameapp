@@ -1,0 +1,2510 @@
+Prompt 16 — Public Profiles, Friends, Social Privacy, Blocking, and Trusted Connections
+
+Copy this into Replit AI:
+
+# Worlds — Build 1, Prompt 16
+# Public Profiles, Friends, Social Privacy, Blocking, and Trusted Connections
+Continue from the current Worlds project and follow these documents as authoritative:
+- /docs/PROJECT_CONSTITUTION.md
+- /docs/DATABASE_ARCHITECTURE.md
+- /docs/ROW_LEVEL_SECURITY.md
+- /docs/AUTHENTICATION.md
+- /docs/PROFILE_AND_SETTINGS.md
+- /docs/NOTIFICATIONS.md
+- /docs/POINTS_SYSTEM.md
+- /docs/QUEST_PROGRESS.md
+- /docs/HUNT_PROGRESS.md
+- /docs/HUNT_LEADERBOARDS.md
+- /docs/ACHIEVEMENTS.md
+- /docs/TITLES.md
+- /docs/BADGES.md
+- /docs/PROGRESSION.md
+- /docs/MILESTONES.md
+- /docs/PROFILE_STATISTICS.md
+- /docs/ACHIEVEMENT_SECURITY.md
+- all documentation created in Prompts 1–15
+- replit.md
+- the approved UI/UX addendum
+- the approved authentication and navigation clarification
+The application is named:
+Worlds
+Prompt 5 implemented the authenticated user’s shared Profile, settings, privacy foundation, blocked-user readiness, notifications, and account controls.
+Prompts 6–14 completed Quest and Hunt gameplay, discovery, participation, proof, progress, completion history, and leaderboards.
+Prompt 15 implemented shared Worlds progression, achievements, milestones, titles, badges, and combined statistics.
+This prompt must implement the foundational social layer:
+- Safe public profiles
+- User discovery
+- Friend requests
+- Friendship management
+- Connection privacy
+- Blocking
+- Reporting entry points
+- Public achievement, title, badge, and statistics presentation
+- Privacy-aware Quest and Hunt invitations
+- Mutual-friend readiness
+- Notification integration
+- Deep-link support
+- Social security boundaries
+Do not implement a public activity feed.
+Do not implement direct messaging or Hunt chat.
+Do not implement groups, guilds, teams, followers, or creator subscriptions.
+Do not expose private participation, proof, location, invitation, account, or moderation information.
+Do not change the approved bottom navigation.
+Do not redesign Profile.
+---
+# Primary Objective
+Implement a secure, consent-based social foundation that allows users to:
+1. View privacy-safe public profiles.
+2. Search for eligible users.
+3. Send friend requests.
+4. Accept or decline friend requests.
+5. Cancel outgoing requests.
+6. Remove friends.
+7. Block users.
+8. Unblock users.
+9. Report users through the shared report system.
+10. Control who can discover, request, invite, and view them.
+11. View approved public achievements, titles, badges, and statistics.
+12. Invite eligible friends to Hunts through the existing trusted Hunt invitation operation.
+13. Preserve privacy and safety across Quest, Hunt, Progress, leaderboards, and notifications.
+The experience should feel:
+- Modern
+- Minimal
+- Safe
+- Private by default
+- Consent-based
+- Social without becoming feed-driven
+- Suitable for adults and general audiences
+- Consistent with the Worlds visual system
+---
+# 1. Preserve Approved Navigation
+Do not add a Friends bottom tab.
+Quest bottom navigation remains:
+1. Home
+2. Quests
+3. Map
+4. Progress
+5. Profile
+Hunt bottom navigation remains:
+1. Map
+2. My Hunts
+3. Progress
+4. Profile
+Social features must be accessible through:
+- Profile
+- Public Profile
+- Friend Requests
+- Friends
+- User Search
+- Hunt invitation flows
+- Notifications
+- Safe deep links
+Within the current user’s Profile, add or complete a section such as:
+- Friends
+- Friend Requests
+- Find People
+These are nested routes or Profile subsections, not bottom tabs.
+Do not add:
+- Feed
+- Messages
+- Chat
+- Groups
+- Followers
+- Following
+to primary navigation.
+---
+# 2. Social Feature Module
+Create a modular feature structure such as:
+```text
+/features/social/
+  components/
+  hooks/
+  screens/
+  services/
+  repositories/
+  schemas/
+  types/
+  queries/
+  mutations/
+  constants/
+  tests/
+
+Adapt to the current architecture.
+
+Responsibilities:
+
+Repositories
+
+Typed access to:
+
+* Public-profile projections
+* Friendships
+* Friend requests
+* Blocks
+* Social privacy settings
+* User discovery
+* Mutual-connection summaries
+* Report entry points
+
+Services
+
+Centralized rules for:
+
+* Public-profile visibility
+* User discovery
+* Friend-request eligibility
+* Friendship transitions
+* Blocking
+* Invitation eligibility
+* Social action resolution
+
+Screens
+
+Render:
+
+* Public Profile
+* Friends
+* Friend Requests
+* Find People
+* Social privacy settings
+* Blocked users
+
+Do not put raw Supabase calls directly in screens.
+
+Do not create a second profile system.
+
+⸻
+
+3. Social Domain Types
+
+Create centralized types for:
+
+* Public user profile
+* Private self profile
+* Social relationship
+* Friendship
+* Friendship status
+* Friend request
+* Friend request direction
+* Friend request status
+* Block relationship
+* User discovery result
+* Mutual-friend summary
+* Public progression summary
+* Public statistics summary
+* Social privacy settings
+* Public-profile visibility result
+* Friend-request eligibility result
+* Hunt-invitation eligibility result
+* Social action
+* Social report target
+
+Use generated database types as the persistence foundation.
+
+Avoid incompatible duplicate user-summary types across:
+
+* Leaderboards
+* Hunt invitations
+* Public Profiles
+* Achievements
+* Notifications
+
+Create a shared safe public-identity projection where appropriate.
+
+⸻
+
+4. Relationship Model
+
+Support these user-to-user states:
+
+* none
+* outgoing_request
+* incoming_request
+* friends
+* blocked_by_me
+* blocked_me
+* unavailable
+
+The client must not receive sensitive details about being blocked by another user unless product behavior requires a generic unavailable result.
+
+Recommended public presentation:
+
+Blocked by current user
+
+The current user may see:
+
+* You blocked this user
+
+Current user blocked by target
+
+Show a generic unavailable profile or restricted action state.
+
+Do not explicitly reveal:
+
+* This person blocked you
+
+unless the approved safety policy requires that wording.
+
+Do not create follower relationships.
+
+Friendship must be mutual.
+
+⸻
+
+5. Friend-Request States
+
+Support:
+
+* pending
+* accepted
+* declined
+* cancelled
+* expired
+
+Use exact current-schema values where possible.
+
+Requirements:
+
+* One authoritative active request per user pair.
+* Requests are directional until accepted.
+* Accepted friendship is mutual.
+* Declined and cancelled requests remain auditable.
+* Expired requests cannot be accepted.
+* Repeated taps remain idempotent.
+* A reverse pending request should be resolved safely rather than creating duplicates.
+
+Do not delete social history merely to simplify queries.
+
+⸻
+
+6. Canonical User Pairing
+
+Use a canonical user-pair representation for friendship and blocking constraints.
+
+For example:
+
+lower_user_id
+higher_user_id
+
+or another deterministic pair key.
+
+Requirements:
+
+* Prevent duplicate friendships.
+* Prevent simultaneous duplicate requests.
+* Support transactional request acceptance.
+* Preserve request direction separately.
+* Do not use client-generated pair keys as final authority.
+* Add unique constraints where appropriate.
+
+Document the chosen model.
+
+⸻
+
+7. Public Identity Projection
+
+Create one safe public-identity projection reusable by:
+
+* Public Profiles
+* Friends lists
+* Friend Requests
+* Hunt invitations
+* Leaderboards
+* Achievements
+* Notifications
+
+Allowed fields may include:
+
+* Public user reference
+* Display name
+* Username
+* Avatar
+* Active title
+* Pinned badges
+* Public bio
+* Public location label at broad approved granularity
+* Friendship state
+* Public-profile visibility
+
+Do not expose:
+
+* Email
+* Phone number
+* Date of birth
+* Exact address
+* Exact location
+* Authentication provider
+* Account role
+* Account restriction
+* Moderation history
+* Private settings
+* Internal user ID where an opaque public reference is preferable
+
+Do not use email addresses as public user identifiers.
+
+⸻
+
+8. Username Requirements
+
+Verify the existing username architecture.
+
+Requirements:
+
+* Usernames must be unique using normalized comparison.
+* Preserve original display capitalization where supported.
+* Trim whitespace.
+* Reject reserved system names.
+* Reject deceptive administrative impersonation.
+* Enforce a reasonable length.
+* Permit only the approved character set.
+* Do not allow invisible Unicode trickery.
+* Do not expose whether an email exists through username lookup.
+* Username changes must not break internal relationships.
+
+If username rules already exist, extend rather than replace them.
+
+Document reserved-name handling.
+
+⸻
+
+9. Public Profile Visibility
+
+Support profile visibility modes such as:
+
+* public
+* friends_only
+* private
+
+Use existing settings where possible.
+
+Public
+
+Eligible users may view approved public-profile fields.
+
+Friends Only
+
+Only accepted friends may view the extended approved profile.
+
+Nonfriends may see a minimal safe identity card where discovery settings allow it.
+
+Private
+
+Only the user may view their full profile.
+
+Others may receive either:
+
+* A minimal identity needed for an existing trusted interaction
+* Or a generic unavailable state
+
+Do not confuse profile visibility with discoverability.
+
+A user may be discoverable but keep extended profile details friends-only.
+
+⸻
+
+10. Discoverability Settings
+
+Support controls such as:
+
+* Discoverable by username
+* Discoverable by display name
+* Appear in suggested people
+* Allow friend requests
+* Allow Hunt invitations
+* Allow invitations from:
+    * Friends
+    * People I have interacted with, future
+    * Nobody
+* Show mutual-friend count
+* Show public achievements
+* Show public badges
+* Show active title
+* Show public statistics
+* Show completed Quest count
+* Show completed Hunt count
+* Show combined points
+* Show leaderboard identity according to Prompt 8 and Prompt 14 privacy
+
+Avoid excessive complexity in Build 1.
+
+Recommended initial defaults:
+
+* Username discovery: enabled
+* Display-name discovery: disabled or conservative
+* Suggested people: disabled until a safe suggestion engine exists
+* Friend requests: enabled
+* Hunt invitations: friends only
+* Mutual-friend count: enabled
+* Achievements: visible
+* Badges: visible
+* Active title: visible
+* Detailed statistics: friends only
+
+Use the project’s approved privacy posture if already documented.
+
+⸻
+
+11. Privacy Layers
+
+Keep these settings distinct:
+
+1. Profile visibility
+2. Discoverability
+3. Friend-request permission
+4. Hunt-invitation permission
+5. Progression visibility
+6. Statistics visibility
+7. Leaderboard visibility
+8. Activity visibility for future features
+
+Do not implement one master switch that creates ambiguous behavior.
+
+Provide clear user-facing descriptions.
+
+Example:
+
+Profile visibility controls who can open your profile. Discoverability controls whether people can find it through search.
+
+⸻
+
+12. Public Profile Screen
+
+Implement a polished Public Profile screen.
+
+Display only authorized fields:
+
+* Avatar
+* Display name
+* Username
+* Active title
+* Pinned badges
+* Public bio
+* Friendship state
+* Mutual-friend count where allowed
+* Public achievements preview
+* Public statistics summary
+* Quest and Hunt completion counts where visible
+* Combined points where visible
+* Joined date or account age only when approved
+* One dominant social action
+
+Possible primary actions:
+
+* Add Friend
+* Accept Request
+* Friends
+* Request Sent
+* Unblock
+* Profile Unavailable
+
+Secondary actions may include:
+
+* Invite to Hunt
+* Remove Friend
+* Block
+* Report
+
+Do not display a public activity timeline.
+
+Do not display proof, completed-Hunt locations, current Hunt participation, invitations, or exact recent activity.
+
+⸻
+
+13. Self-Profile Handling
+
+When the current user opens their own public-profile route:
+
+* Route to the existing self Profile.
+* Or render a clearly identified preview mode.
+
+Do not show:
+
+* Add Friend
+* Block
+* Report
+* Invite Yourself
+
+Provide a controlled option:
+
+* Preview Public Profile
+
+This preview must honor the selected privacy mode.
+
+Do not let preview mode grant access to fields other users cannot see.
+
+⸻
+
+14. Profile Header
+
+Create or extend reusable profile-header components.
+
+Display:
+
+* Avatar
+* Display name
+* Username
+* Active title
+* Pinned badges
+* Relationship state
+* Primary action
+
+Keep the visual hierarchy restrained.
+
+Do not display:
+
+* Raw point totals as the dominant profile identity
+* Large leaderboard rank
+* Multiple competing action buttons
+* Online presence
+* Last seen
+* Exact location
+
+Do not imply real-time availability.
+
+⸻
+
+15. Public Progression Presentation
+
+Reuse Prompt 15.
+
+A public profile may display:
+
+* Active title
+* Pinned badges
+* Achievement count
+* Selected public achievements
+* Quest completion count
+* Hunt completion count
+* Combined activities
+* Quest points
+* Hunt points
+* Combined points
+
+Each item must respect its own privacy setting.
+
+Do not expose:
+
+* Hidden achievements
+* Secret achievement requirements
+* Private milestone progress
+* Reversed transaction details
+* Internal achievement rules
+* Proof or completion evidence
+
+Achievements must be authoritative.
+
+⸻
+
+16. Public Achievement Preview
+
+Display a limited preview such as:
+
+* Up to three pinned or recent public achievements
+* View Achievements when authorized
+
+Do not display the complete private achievement history by default.
+
+A public achievement detail may include:
+
+* Name
+* Artwork
+* Description
+* Award date if visible
+* Category
+
+Do not expose internal rule expressions.
+
+Hidden achievements remain hidden until earned and made visible according to policy.
+
+⸻
+
+17. Titles and Badges
+
+Use Prompt 15’s systems.
+
+Requirements:
+
+* Show only unlocked titles.
+* Show only selected active title.
+* Show only pinned public badges.
+* Respect title and badge visibility.
+* Do not allow social screens to select or unlock titles.
+* Do not let users display unearned titles or badges.
+* Use safe fallback when artwork is unavailable.
+
+Title and badge selection remains in the user’s own Profile progression settings.
+
+⸻
+
+18. Public Statistics
+
+Create a privacy-aware public-statistics contract.
+
+Possible visible statistics:
+
+* Quests completed
+* Hunts completed
+* Total activities completed
+* Quest points
+* Hunt points
+* Combined points
+* Achievements earned
+* Account age
+
+Do not display:
+
+* Active Quest
+* Active Hunt
+* Current location
+* Exact completion locations
+* Proof counts
+* Rejection counts
+* Report history
+* Removal history
+* Safety restrictions
+
+Do not infer private statistics on the client.
+
+The backend should omit unauthorized values rather than returning them with a hidden flag where possible.
+
+⸻
+
+19. Find People
+
+Implement a Find People screen.
+
+Support username-based search.
+
+Optional conservative display-name search may be supported only when enabled by the target user and the product privacy settings.
+
+Search results may show:
+
+* Avatar
+* Display name
+* Username
+* Active title
+* Mutual-friend count where permitted
+* Relationship state
+* Primary action
+
+Do not search by:
+
+* Email
+* Phone number
+* Exact location
+* Private legal name
+* Proof contents
+* Contact-book data
+
+Do not upload the user’s phone contacts.
+
+Do not implement nearby-user discovery.
+
+⸻
+
+20. Search Privacy and Enumeration Protection
+
+Protect user discovery.
+
+Requirements:
+
+* Require authentication.
+* Use minimum query length.
+* Use debouncing.
+* Apply rate limits.
+* Limit result count.
+* Use stable pagination where needed.
+* Do not reveal hidden or blocked users.
+* Do not reveal account existence through email.
+* Do not return deactivated or suspended accounts.
+* Do not expose whether a private user exists when policy requires generic results.
+* Avoid unrestricted wildcard search over the full user table.
+
+Do not load all users into the client.
+
+Do not expose raw profile tables.
+
+⸻
+
+21. Search Ranking
+
+Use a simple, explainable Build 1 ranking:
+
+1. Exact normalized username match
+2. Username prefix match
+3. Approved display-name prefix match
+4. Existing friend
+5. Incoming request
+6. Mutual-friend count, only where allowed
+
+Do not rank by:
+
+* Exact geographic proximity
+* Private interaction history
+* Sensitive attributes
+* Hidden profile fields
+* Leaderboard score by default
+
+Do not create a complex recommendation engine.
+
+⸻
+
+22. User Suggestions
+
+Do not activate algorithmic People You May Know in Build 1 unless the existing roadmap explicitly requires it.
+
+Prepare a safe future contract using potential signals such as:
+
+* Mutual friends
+* Shared opted-in public communities, future
+* Explicit shared Hunt participation, only when privacy permits
+
+Do not use:
+
+* Location history
+* Contact uploads
+* Email-address matching
+* Proof metadata
+* Private invitation history
+* Blocked-user networks
+
+A controlled development placeholder is acceptable.
+
+⸻
+
+23. Friends Screen
+
+Implement a Friends screen accessible from Profile.
+
+Display:
+
+* Search within friends
+* Friend count
+* Paginated friend list
+* Public identity
+* Active title where visible
+* Pinned badge preview
+* Friendship date only if useful
+* Primary action:
+    * View Profile
+
+Secondary actions may include:
+
+* Invite to Hunt
+* Remove Friend
+* Block
+
+Do not display:
+
+* Online status
+* Last active
+* Current location
+* Current Quest or Hunt
+* Private invitation status
+* Proof state
+
+Use stable sorting.
+
+Recommended default sorting:
+
+* Display name
+* Or most recently added, if clearly labeled
+
+Do not infer closeness.
+
+⸻
+
+24. Friend Requests Screen
+
+Implement sections:
+
+* Received
+* Sent
+
+These are internal sections, not bottom tabs.
+
+Received
+
+Each row may show:
+
+* Public identity
+* Mutual-friend count
+* Request date
+* Accept
+* Decline
+* View Profile
+
+Sent
+
+Each row may show:
+
+* Public identity
+* Request date
+* Pending status
+* Cancel Request
+* View Profile
+
+Do not show declined or cancelled history in the primary pending view.
+
+Historical request records may remain backend-auditable.
+
+⸻
+
+25. Send Friend Request
+
+Implement a trusted sendFriendRequest operation.
+
+It must:
+
+1. Authenticate the requester.
+2. Verify both accounts are active.
+3. Prevent self-request.
+4. Check target discoverability and request permission.
+5. Check blocks in both directions.
+6. Check existing friendship.
+7. Check existing outgoing request.
+8. Check existing incoming request.
+9. Resolve reverse-request behavior safely.
+10. Apply rate limits and abuse controls.
+11. Create one pending request.
+12. Emit a notification-ready event.
+13. Return authoritative relationship state.
+
+Recommended reverse-request behavior:
+
+* When A requests B while B already has a valid pending request to A, accept the existing request transactionally if product policy permits.
+* Otherwise return Incoming Request and require explicit acceptance.
+
+Choose and document one behavior.
+
+Do not allow the client to create friendship rows directly.
+
+⸻
+
+26. Friend-Request Eligibility
+
+Create one centralized evaluator.
+
+Return structured states such as:
+
+* Eligible
+* Already Friends
+* Request Sent
+* Incoming Request
+* Requests Disabled
+* Blocked
+* Self
+* Target Unavailable
+* Account Restricted
+* Rate Limited
+* Cooldown Active
+
+Use safe reason codes.
+
+Do not reveal whether the target specifically blocked the current user.
+
+Do not duplicate this logic across Search, Public Profile, and Hunt invitation screens.
+
+⸻
+
+27. Accept Friend Request
+
+Implement a trusted acceptFriendRequest operation.
+
+It must:
+
+1. Authenticate the recipient.
+2. Verify request ownership.
+3. Verify pending status.
+4. Verify request has not expired or been cancelled.
+5. Recheck blocks in both directions.
+6. Recheck account states.
+7. Create the mutual friendship.
+8. Mark request accepted.
+9. Store response timestamp.
+10. Prevent duplicate friendship.
+11. Emit notification-ready event.
+12. Return authoritative relationship state.
+
+Request acceptance and friendship creation must be atomic.
+
+Repeated taps must return the existing friendship.
+
+Do not optimistically show friendship before server confirmation.
+
+⸻
+
+28. Decline Friend Request
+
+Implement a trusted declineFriendRequest.
+
+Requirements:
+
+* Only the recipient may decline.
+* Preserve the request record.
+* Store response timestamp.
+* Be idempotent.
+* Do not create a block.
+* Do not notify the requester unless the approved product behavior explicitly requires it.
+* Apply a reasonable re-request cooldown if supported.
+
+Use neutral wording.
+
+Do not label decline as rejection in user-facing UI unless approved.
+
+⸻
+
+29. Cancel Sent Request
+
+Implement cancelFriendRequest.
+
+Requirements:
+
+* Only the requester may cancel.
+* Only pending outgoing requests may be cancelled.
+* Preserve history.
+* Be idempotent.
+* Do not affect an accepted friendship.
+* Do not create a block.
+* Do not expose private target state.
+
+Button:
+
+Cancel Request
+
+Confirmation is optional when the action is easily reversible through a new request after cooldown.
+
+⸻
+
+30. Remove Friend
+
+Implement removeFriend.
+
+Requirements:
+
+* Either friend may remove the friendship.
+* Preserve auditable relationship history.
+* Remove mutual active friendship status atomically.
+* Do not delete profiles or past legitimate Hunt records.
+* Do not cancel already completed Hunt participation.
+* Define behavior for pending future invitations.
+* Emit no notification by default unless product policy requires it.
+* Re-request may be subject to cooldown.
+
+Before removal, show:
+
+Remove this person from your friends?
+
+Buttons:
+
+* Keep Friend
+* Remove Friend
+
+Do not use Block as the default removal action.
+
+⸻
+
+31. Blocking
+
+Implement a trusted blocking system.
+
+When user A blocks user B:
+
+* Remove any active friendship.
+* Cancel pending friend requests in both directions.
+* Prevent new friend requests.
+* Prevent future Hunt invitations in both directions.
+* Prevent public-profile access beyond the approved generic state.
+* Exclude users from each other’s search results.
+* Exclude user-specific suggestions.
+* Protect notification routes.
+* Prevent direct social interaction.
+* Preserve prior completed Quest and Hunt records.
+* Preserve moderation and audit history.
+
+Blocking must be transactional where practical.
+
+Do not delete legitimate historical transactions.
+
+⸻
+
+32. Block User Confirmation
+
+Before blocking, explain:
+
+* They will be removed from your friends.
+* Pending friend requests will be cancelled.
+* You will not be able to send each other Hunt invitations.
+* Their profile will no longer appear in your search results.
+* They will not receive a notification that you blocked them.
+
+Buttons:
+
+* Cancel
+* Block User
+
+Use clear but restrained destructive styling.
+
+Do not expose the blocker’s action through a notification.
+
+⸻
+
+33. Unblock User
+
+Implement a Blocked Users screen within privacy or safety settings.
+
+Each row should show:
+
+* Safe identity
+* Username where still permitted
+* Block date where useful
+* Unblock
+
+Unblocking:
+
+* Does not restore friendship.
+* Does not restore cancelled requests.
+* Does not restore expired invitations.
+* Allows future interaction according to current settings.
+* May apply a short safety cooldown before new friend requests.
+
+Require confirmation if appropriate.
+
+Do not automatically notify the unblocked user.
+
+⸻
+
+34. Blocked-by-Other Behavior
+
+When the current user has been blocked by another user:
+
+* Exclude that user from ordinary search.
+* Prevent friend requests.
+* Prevent Hunt invitations.
+* Restrict public-profile access.
+* Prevent deep-link information leakage.
+* Return a generic unavailable state.
+
+Do not say:
+
+This user blocked you.
+
+unless required by an approved policy.
+
+Do not expose the block timestamp or blocker action.
+
+⸻
+
+35. Hunt Invitation Integration
+
+Integrate the social system with Prompt 11 and Prompt 12 Hunt invitations.
+
+From a Hunt invitation flow, users may search or select eligible friends.
+
+Use the existing trusted inviteToHunt operation.
+
+The social layer must provide a safe eligibility result considering:
+
+* Friendship
+* Block status
+* Invitee account state
+* Invitee Hunt-invitation privacy
+* Existing invitation
+* Existing participation
+* Hunt capacity
+* Hunt privacy
+* Inviter authority
+
+Do not create a second Hunt invitation system.
+
+Do not let friendship bypass Hunt eligibility or capacity.
+
+⸻
+
+36. Invite Friend to Hunt
+
+A safe flow may be:
+
+Public Profile or Friends
+    ↓
+Invite to Hunt
+    ↓
+Select an eligible owned or hosted Hunt occurrence
+    ↓
+Review invitation
+    ↓
+Trusted Hunt invitation operation
+
+Alternatively, from Hunt management:
+
+Invite People
+    ↓
+Select eligible friends
+    ↓
+Send invitations
+
+For Prompt 16:
+
+* Implement the reusable friend selector and eligibility UI.
+* Integrate only with already-authorized Hunt invitation entry points.
+* Do not build the full creator or host control panel.
+* Do not let ordinary participants invite users unless the Hunt configuration permits it.
+
+Do not expose private Hunts the inviter does not control.
+
+⸻
+
+37. Hunt Invitation Privacy
+
+Support settings such as:
+
+* Friends may invite me
+* Nobody may invite me
+
+Prepare future support for:
+
+* Friends and people I have played with
+
+Do not activate interaction-history invitations until privacy rules are complete.
+
+When invitations are disabled:
+
+* Return a safe unavailable state.
+* Do not reveal private reasons.
+* Do not bypass the setting through a direct RPC call.
+
+Blocks override invitation settings.
+
+⸻
+
+38. Mutual Friends
+
+Support a privacy-safe mutual-friend count.
+
+Display only when:
+
+* Both users allow it
+* Neither user blocks the other
+* The viewer is authorized to see the profile
+
+For Build 1:
+
+* Count is sufficient.
+* Do not show the full mutual-friend list unless all involved visibility rules are carefully enforced.
+
+Example:
+
+3 mutual friends
+
+Do not expose hidden users through mutual-friend counts.
+
+Do not count suspended, deactivated, or blocked relationships.
+
+⸻
+
+39. Public Profile Action Resolver
+
+Create one centralized resolver.
+
+Possible actions:
+
+* View Profile
+* Add Friend
+* Request Sent
+* Accept Request
+* Friends
+* Invite to Hunt
+* Remove Friend
+* Block
+* Unblock
+* Report
+* Profile Unavailable
+
+Return:
+
+* Label
+* Enabled state
+* Action type
+* Destination or mutation
+* Reason
+* Confirmation requirement
+* Loading behavior
+
+Do not scatter relationship action logic across screens.
+
+⸻
+
+40. Reporting Entry Points
+
+Integrate with the existing or future shared report architecture.
+
+Allow reporting from:
+
+* Public Profile
+* Friend Request
+* Friends list
+* Hunt invitation context
+
+Initial report categories may include:
+
+* Harassment
+* Spam
+* Impersonation
+* Inappropriate profile
+* Threatening behavior
+* Scam or fraud
+* Other
+
+Requirements:
+
+* Report submission must be private.
+* Do not notify the reported user.
+* Do not automatically block unless the user separately chooses Block.
+* Offer Block after reporting where appropriate.
+* Preserve report audit records.
+* Rate-limit abuse.
+* Do not expose report status publicly.
+
+Do not implement the complete admin report-review UI in this prompt.
+
+⸻
+
+41. Profile Media Safety
+
+Reuse shared avatar and media infrastructure.
+
+Requirements:
+
+* Avatars use approved storage paths.
+* Public signed or transformed URLs follow the current media policy.
+* Removed avatars use safe fallbacks.
+* Profile media must remain moderation-ready.
+* Do not claim automated moderation has occurred.
+* Do not permit arbitrary remote image URLs.
+* Do not expose storage internals.
+* Respect blocked and private profile visibility.
+
+Automatic media moderation remains a later prompt.
+
+⸻
+
+42. Bio Safety
+
+Public bios must:
+
+* Use plain text.
+* Enforce a reasonable length.
+* Strip unsupported markup.
+* Avoid clickable arbitrary links in Build 1 unless safely handled.
+* Remain reportable.
+* Respect profile privacy.
+* Support moderation status.
+* Display a safe fallback if removed.
+
+Do not render arbitrary HTML.
+
+Do not automatically infer or display sensitive personal attributes.
+
+⸻
+
+43. Notification Integration
+
+Reuse the existing notification system.
+
+Create or connect notification types such as:
+
+* Friend request received
+* Friend request accepted
+* Hunt invitation received
+* Achievement-related social interaction only where approved, future
+
+Friend request received
+
+Open the incoming request or Public Profile.
+
+Friend request accepted
+
+Open the new friend’s Public Profile.
+
+Hunt invitation
+
+Continue opening Prompt 12’s Invitation Detail.
+
+Do not send notifications for:
+
+* Friend request declined
+* Friend removed
+* User blocked
+* User unblocked
+* Profile viewed
+* User searched
+
+unless explicitly approved.
+
+Do not build push delivery yet.
+
+⸻
+
+44. Notification Privacy
+
+Notification previews must not expose:
+
+* Private profile fields
+* Hidden title or badges
+* Block status
+* Report activity
+* Private Hunt location
+* Invite-only Hunt secrets
+* Exact user location
+
+When a block occurs after a notification was created:
+
+* Opening the notification must revalidate access.
+* Do not reveal stale private profile data.
+* Route to a generic unavailable state when necessary.
+
+⸻
+
+45. Deep Links
+
+Support safe deep links to:
+
+* Public Profile
+* Friends
+* Friend Requests → Received
+* Friend Requests → Sent
+* Find People
+* Social Privacy
+* Blocked Users
+* Hunt invitation selector where authorized
+
+Requirements:
+
+* Use opaque public references where appropriate.
+* Validate route parameters.
+* Reevaluate relationship and block status.
+* Reevaluate profile privacy.
+* Handle username changes.
+* Handle deactivated accounts.
+* Handle malformed notification payloads.
+* Do not leak private profile existence.
+* Do not expose internal user IDs in user-visible URLs where avoidable.
+
+⸻
+
+46. Social Privacy Settings Screen
+
+Extend Prompt 5’s privacy settings.
+
+Include clearly grouped controls:
+
+Profile
+
+* Profile visibility
+* Show bio
+* Show active title
+* Show badges
+* Show achievements
+* Show statistics
+
+Discovery
+
+* Find me by username
+* Find me by display name
+* Show mutual-friend count
+
+Connections
+
+* Allow friend requests
+* Allow Hunt invitations from friends
+
+Leaderboards
+
+Link to or reuse the existing leaderboard visibility setting.
+
+Safety
+
+* Blocked Users
+* Reporting information
+
+Do not duplicate settings in multiple places.
+
+Use server-backed authoritative settings.
+
+⸻
+
+47. Privacy Changes
+
+When privacy settings change:
+
+* Apply changes to new queries immediately.
+* Invalidate relevant public-profile caches.
+* Invalidate user-search results where necessary.
+* Invalidate friend and invitation eligibility.
+* Do not retroactively delete legitimate friendships.
+* Do not automatically remove existing friends.
+* Do not expose stale public fields through cached responses.
+* Revalidate deep links.
+
+Do not rely on a future app restart.
+
+⸻
+
+48. Account Status
+
+Apply account-state rules consistently.
+
+Suspended
+
+* Excluded from discovery.
+* Cannot send friend requests.
+* Cannot accept requests.
+* Cannot send Hunt invitations.
+* Public profile unavailable.
+* Existing relationships preserved for audit but not active interaction.
+
+Deactivated
+
+* Excluded from discovery.
+* Public identity replaced or hidden according to retention policy.
+* Cannot interact.
+* Historical shared Hunt records remain appropriately represented.
+
+Restricted
+
+* Apply the actual restriction flags.
+* Do not publicly label the account Restricted.
+
+Do not reveal another user’s account status.
+
+⸻
+
+49. Rate Limiting and Abuse Prevention
+
+Apply trusted rate limits to:
+
+* User search
+* Friend requests
+* Request cancellations
+* Repeated block/unblock cycles
+* Hunt invitations
+* User reports
+
+Prepare controls such as:
+
+* Requests per hour
+* Requests per day
+* Maximum pending outgoing requests
+* Re-request cooldown after decline
+* Cooldown after removal
+* Cooldown after unblock
+* Duplicate-request prevention
+
+Do not expose exact abuse thresholds in the client.
+
+Use safe user messages.
+
+Example:
+
+You’ve sent several requests recently. Try again later.
+
+⸻
+
+50. Pending Request Limits
+
+Set a configurable limit for active outgoing friend requests.
+
+Requirements:
+
+* Enforce server-side.
+* Do not count accepted, declined, cancelled, or expired requests as active.
+* Return current safe limit state.
+* Prevent spam accounts from creating unbounded requests.
+* Allow administrative configuration later.
+
+Do not hard-code policy throughout the UI.
+
+Use centralized configuration or constants.
+
+⸻
+
+51. Friend-Request Expiration
+
+Support optional request expiration.
+
+Recommended Build 1 behavior:
+
+* Pending requests expire after a configurable period such as 30 days.
+* Server time is authoritative.
+* Expired requests cannot be accepted.
+* Query-time checks protect stale rows.
+* Scheduled cleanup may update records.
+* Expired requests leave the primary pending view.
+
+Do not rely on the client to expire requests.
+
+Document the selected duration and make it configurable.
+
+⸻
+
+52. Friendship and Invitation Boundaries
+
+Friendship does not imply:
+
+* Permission to see private proof
+* Permission to see exact location
+* Permission to see active Hunts
+* Permission to join private Hunts
+* Automatic Hunt participation
+* Permission to message
+* Permission to edit another user’s content
+* Permission to see hidden achievements
+* Permission to bypass capacity or eligibility
+
+Document these trust boundaries.
+
+Friendship grants only the explicitly configured social visibility and interaction permissions.
+
+⸻
+
+53. Data Model
+
+Add focused tables or adapt existing ones.
+
+Potential tables:
+
+friend_requests
+friendships
+user_blocks
+social_privacy_settings
+public_profile_aliases
+social_action_audit
+
+Potential fields:
+
+Friend requests
+
+* ID
+* Requester ID
+* Recipient ID
+* Status
+* Created timestamp
+* Responded timestamp
+* Expires timestamp
+* Cancellation timestamp
+* Safe source context
+
+Friendships
+
+* ID
+* Canonical user A
+* Canonical user B
+* Created timestamp
+* Ended timestamp
+* Status
+
+Blocks
+
+* Blocker ID
+* Blocked ID
+* Created timestamp
+* Removed timestamp
+* Status
+
+Social privacy
+
+* User ID
+* Profile visibility
+* Username discoverability
+* Display-name discoverability
+* Friend-request permission
+* Hunt-invitation permission
+* Achievement visibility
+* Badge visibility
+* Title visibility
+* Statistics visibility
+* Mutual-friend visibility
+
+Do not duplicate Profile fields unnecessarily.
+
+Use additive ordered migrations.
+
+⸻
+
+54. RLS
+
+Implement and verify strict RLS.
+
+At minimum:
+
+Public profile data
+
+* Users may view only fields allowed by the target’s privacy settings and relationship state.
+* Public-profile views must not expose the underlying private profile row.
+
+Friend requests
+
+* Requester may see their outgoing request.
+* Recipient may see their incoming request.
+* Other users cannot view it.
+* Ordinary users cannot mark arbitrary requests accepted.
+* Trusted operations enforce transitions.
+
+Friendships
+
+* Both participants may view the active friendship.
+* Other users cannot enumerate private friend lists unless policy permits.
+* Ordinary users cannot forge friendship rows.
+
+Blocks
+
+* Blocker may view and manage their own blocks.
+* Blocked user cannot read the block row.
+* Other users cannot view blocks.
+
+Privacy settings
+
+* User may view and update their own settings.
+* Other users cannot read private settings directly.
+* Safe server projections may use settings internally.
+
+Do not use permissive RLS plus client filtering.
+
+⸻
+
+55. Secure RPCs or Server Functions
+
+Create trusted operations where appropriate:
+
+* search_public_users
+* get_public_profile
+* get_social_relationship
+* send_friend_request
+* accept_friend_request
+* decline_friend_request
+* cancel_friend_request
+* remove_friend
+* block_user
+* unblock_user
+* get_friends
+* get_received_friend_requests
+* get_sent_friend_requests
+* get_mutual_friend_count
+* get_hunt_invitation_eligibility
+
+Use naming consistent with the project.
+
+Requirements:
+
+* Validate auth.uid().
+* Validate account state.
+* Enforce privacy.
+* Enforce blocks.
+* Enforce rate limits.
+* Use explicit safe search paths.
+* Restrict execution grants.
+* Avoid dynamic SQL.
+* Use transactional state transitions.
+* Return safe display-ready fields.
+* Never require a service-role key in the mobile app.
+
+⸻
+
+56. User Search Contract
+
+Create a typed request and response.
+
+Example:
+
+type SearchPublicUsersRequest = {
+  query: string;
+  limit: number;
+  cursor?: string;
+};
+type PublicUserSearchResult = {
+  publicUserRef: string;
+  displayName: string;
+  username: string;
+  avatarPath?: string;
+  activeTitle?: string;
+  pinnedBadges?: PublicBadgeSummary[];
+  mutualFriendCount?: number;
+  relationshipState:
+    | "none"
+    | "outgoing_request"
+    | "incoming_request"
+    | "friends";
+};
+
+Requirements:
+
+* Do not return blocked users.
+* Do not return hidden accounts.
+* Do not return emails.
+* Do not return internal moderation state.
+* Validate page size.
+* Use deterministic pagination.
+
+⸻
+
+57. React Query Hooks
+
+Create or finalize hooks such as:
+
+* usePublicProfile
+* useSocialRelationship
+* useFriends
+* useReceivedFriendRequests
+* useSentFriendRequests
+* useSearchPeople
+* useSendFriendRequest
+* useAcceptFriendRequest
+* useDeclineFriendRequest
+* useCancelFriendRequest
+* useRemoveFriend
+* useBlockUser
+* useUnblockUser
+* useBlockedUsers
+* useSocialPrivacySettings
+* useUpdateSocialPrivacySettings
+* useMutualFriendCount
+* useHuntInvitationEligibility
+
+Requirements:
+
+* Stable user-scoped keys
+* Targeted invalidation
+* Conservative mutation retries
+* No optimistic friendship acceptance
+* No optimistic block success
+* No stale private profile persistence
+* Search cancellation
+* Privacy-aware caching
+* No email or exact-location values in query keys
+
+⸻
+
+58. Query Keys
+
+Create centralized keys.
+
+Example:
+
+socialKeys.all
+socialKeys.publicProfile(publicUserRef, viewerId)
+socialKeys.relationship(publicUserRef, viewerId)
+socialKeys.friends(userId, filters)
+socialKeys.requestsReceived(userId)
+socialKeys.requestsSent(userId)
+socialKeys.search(query, cursor, viewerId)
+socialKeys.blockedUsers(userId)
+socialKeys.privacySettings(userId)
+socialKeys.mutualFriends(publicUserRef, viewerId)
+socialKeys.huntInviteEligibility(huntId, occurrenceId, publicUserRef)
+
+Do not use private profile values in keys.
+
+Do not combine unrelated Quest or Hunt query namespaces.
+
+⸻
+
+59. Query Invalidation
+
+After sending a request:
+
+Invalidate:
+
+* Public Profile relationship
+* Sent requests
+* User search result
+* Relevant action resolver
+
+After accepting:
+
+Invalidate:
+
+* Received requests
+* Friends
+* Public Profile relationship for both users
+* User search
+* Mutual-friend summaries
+* Hunt invitation eligibility
+* Notifications
+
+After declining or cancelling:
+
+Invalidate:
+
+* Relevant request list
+* Public Profile relationship
+* User search
+
+After removing a friend:
+
+Invalidate:
+
+* Friends
+* Public Profile relationship
+* Mutual-friend counts
+* Hunt invitation eligibility
+* Public-profile field visibility
+
+After block or unblock:
+
+Invalidate:
+
+* Friends
+* Requests
+* Search
+* Public Profile
+* Mutual friends
+* Hunt invitations
+* Notifications where access must be revalidated
+
+After privacy update:
+
+Invalidate:
+
+* Self Profile
+* Public-profile projections
+* Search presence
+* Social action eligibility
+* Progression public views
+* Statistics public views
+
+Do not invalidate all Quest and Hunt gameplay data.
+
+⸻
+
+60. Offline Behavior
+
+Allow cached read-only access to:
+
+* Previously loaded friends list
+* Previously loaded own pending requests
+* Previously loaded public profile, subject to a stale-data warning
+* Own social privacy settings
+
+Do not allow offline actions to appear confirmed for:
+
+* Friend request
+* Accept
+* Decline
+* Cancel request
+* Remove friend
+* Block
+* Unblock
+* Hunt invitation
+* Report submission
+* Privacy update
+
+When offline:
+
+* Disable protected mutations.
+* Explain that a connection is required.
+* Do not queue a block action as though immediate.
+* Do not expose previously cached profile fields after access is known to be revoked.
+
+Full offline synchronization remains a later prompt.
+
+⸻
+
+61. Loading States
+
+Create layout-specific loading states for:
+
+* Public Profile
+* Profile progression preview
+* Friends
+* Friend Requests
+* User search
+* Relationship mutation
+* Blocked Users
+* Social privacy settings
+* Hunt friend selector
+* Mutual-friend count
+
+Avoid a single generic full-screen spinner.
+
+Preserve already authorized public content during safe nonblocking refreshes.
+
+Use blocking states for relationship mutations.
+
+⸻
+
+62. Empty States
+
+Implement deliberate empty states.
+
+Friends
+
+Friends you connect with will appear here.
+
+Primary action:
+
+Find People
+
+Received requests
+
+You don’t have any pending friend requests.
+
+Sent requests
+
+You haven’t sent any pending friend requests.
+
+Search
+
+Before query:
+
+Search by username to find people you know.
+
+No result:
+
+No matching profiles were found.
+
+Blocked Users
+
+You haven’t blocked anyone.
+
+Public progression hidden
+
+This user keeps their progression private.
+
+Do not imply why a specific user cannot be found.
+
+⸻
+
+63. Error States
+
+Handle independently:
+
+* Public Profile unavailable
+* Search unavailable
+* Friend list unavailable
+* Request unavailable
+* Request expired
+* Already friends
+* Requests disabled
+* User unavailable
+* Rate limited
+* Block conflict
+* Hunt invitation unavailable
+* Privacy update failed
+* Signed avatar unavailable
+* Network offline
+* Invalid deep link
+* Unknown safe error
+
+Provide:
+
+* Retry
+* Return to Profile
+* Return to Friends
+* Refresh
+* Open Settings where appropriate
+
+Do not expose raw SQL, RLS, Supabase, or moderation errors.
+
+⸻
+
+64. Shared Components
+
+Create or finalize components such as:
+
+* PublicProfileHeader
+* PublicProfileSummary
+* PublicProfileAction
+* PublicProgressionPreview
+* PublicStatisticsSummary
+* PublicAchievementPreview
+* PublicBadgeRow
+* ActiveTitleDisplay
+* RelationshipStatusBadge
+* FriendCard
+* FriendRequestCard
+* FriendRequestActions
+* UserSearchInput
+* UserSearchResult
+* MutualFriendSummary
+* SocialPrivacySection
+* SocialPrivacyControl
+* BlockUserConfirmation
+* RemoveFriendConfirmation
+* BlockedUserRow
+* HuntFriendSelector
+* SocialEmptyState
+* SocialSkeleton
+* SocialErrorState
+* ReportUserEntry
+
+Reuse existing:
+
+* Avatar
+* Button
+* Card
+* Modal
+* Bottom sheet
+* Badge
+* Achievement artwork
+* Settings row
+* Empty state
+* Loading primitives
+
+Do not duplicate design-system components.
+
+⸻
+
+65. Visual Hierarchy
+
+Follow the Worlds visual direction:
+
+* Deep blue
+* Green
+* White
+* Charcoal
+* Modern
+* Minimal
+* Restrained game-inspired details
+
+Public Profile should prioritize:
+
+1. Identity
+2. Relationship action
+3. Public progression
+4. Public statistics
+5. Secondary safety actions
+
+Friends and requests should prioritize:
+
+1. Identity
+2. Relationship state
+3. One clear action
+
+Do not turn profiles into dense gaming stat dashboards.
+
+Do not use oversized point totals, neon effects, or arcade-style decoration.
+
+⸻
+
+66. Accessibility
+
+Ensure:
+
+* Relationship state is announced textually.
+* Friend-request actions have explicit labels.
+* Buttons remain distinguishable beyond color.
+* Public-profile privacy states are readable.
+* Title and badge artwork has accessible labels.
+* Search results announce identity and relationship.
+* Dynamic search updates use an appropriate live region.
+* Confirmation dialogs move focus correctly.
+* Internal request sections announce selection.
+* Dynamic text scaling works.
+* Touch targets are appropriately sized.
+* Reduced motion is respected.
+* Destructive actions are clearly identified.
+
+Test with screen readers and increased text size.
+
+⸻
+
+67. Security Verification
+
+Verify:
+
+* Users cannot forge friendships.
+* Users cannot accept another recipient’s request.
+* Users cannot cancel another requester’s request.
+* Users cannot remove friendships they are not part of.
+* Users cannot create blocks on behalf of another user.
+* Blocked users cannot send friend requests.
+* Blocked users cannot send Hunt invitations.
+* Blocks remove active friendship access.
+* Private profiles do not expose protected fields.
+* Search does not expose hidden accounts.
+* Email search is unavailable.
+* Rate limits are server-side.
+* Hunt invitations still enforce Prompt 11 capacity and eligibility.
+* Public progression uses authoritative awards.
+* Users cannot display unearned titles or badges.
+* Service-role credentials are not bundled in the app.
+* Deep links cannot bypass profile privacy.
+* RLS protects requests, friendships, blocks, and settings.
+
+⸻
+
+68. Privacy Verification
+
+Verify:
+
+* Exact locations are never displayed.
+* Active Quest and Hunt participation remain private.
+* Proof remains private.
+* Invitation history remains private.
+* Block relationships remain private from blocked users.
+* Reports remain private.
+* Hidden achievements remain hidden.
+* Private statistics are omitted.
+* Hidden leaderboard identities remain hidden.
+* Mutual-friend counts do not reveal hidden users.
+* Search does not reveal suspended or deactivated accounts.
+* Public-profile cache is invalidated after privacy changes.
+* Username changes do not expose old private data.
+* Notification routes revalidate access.
+
+⸻
+
+69. Development Fixtures
+
+Create development-only fixtures covering:
+
+Profiles
+
+* Public profile
+* Friends-only profile
+* Private profile
+* Public achievements hidden
+* Statistics hidden
+* Anonymous leaderboard user
+* Active title and badges
+* No progression
+
+Relationships
+
+* No relationship
+* Outgoing request
+* Incoming request
+* Friends
+* Blocked by current user
+* Unavailable because of reverse block
+
+Requests
+
+* Pending received
+* Pending sent
+* Expired
+* Declined
+* Cancelled
+* Accepted
+* Rate-limited user
+* Requests-disabled user
+
+Search
+
+* Exact username result
+* Username-prefix results
+* No results
+* Hidden user excluded
+* Blocked user excluded
+* Suspended user excluded
+
+Hunt invitation eligibility
+
+* Eligible friend
+* Invitations disabled
+* Existing invitation
+* Existing participation
+* Hunt full
+* Blocked relationship
+* Unauthorized inviter
+
+Fixtures must not appear in production.
+
+Fixture actions must not mutate production social data.
+
+⸻
+
+70. Automated Tests
+
+Add tests covering:
+
+Public Profile
+
+* Public profile displays allowed fields
+* Friends-only profile limits nonfriend fields
+* Private profile protects fields
+* Self route redirects correctly
+* Hidden progression remains hidden
+* Unlocked title and badges display
+* Unearned title cannot display
+* Deep link revalidates privacy
+
+Search
+
+* Exact username search works
+* Prefix search works
+* Email search is unsupported
+* Hidden user excluded
+* Blocked user excluded
+* Suspended user excluded
+* Minimum query length enforced
+* Rate limit enforced
+* Pagination is stable
+
+Friend requests
+
+* Valid request succeeds
+* Self-request rejected
+* Duplicate request prevented
+* Reverse request handled according to policy
+* Requests-disabled target rejected
+* Blocked relationship rejected
+* Pending limit enforced
+* Request expiration enforced
+* Repeated send is idempotent
+
+Acceptance
+
+* Recipient accepts
+* Wrong user cannot accept
+* Expired request cannot be accepted
+* Cancelled request cannot be accepted
+* Friendship creation is atomic
+* Duplicate acceptance returns existing friendship
+* Block conflict prevents acceptance
+
+Decline and cancellation
+
+* Recipient may decline
+* Requester may cancel
+* Wrong users are rejected
+* History remains preserved
+* Decline does not create a block
+* Cancel does not affect accepted friendship
+
+Friendship removal
+
+* Either friend may remove
+* Third party cannot remove
+* Friendship history remains
+* Removed friend loses friends-only access
+* Re-request cooldown follows configuration
+
+Blocking
+
+* Block removes friendship
+* Block cancels pending requests
+* Block prevents search visibility
+* Block prevents friend requests
+* Block prevents Hunt invitations
+* Blocked user cannot read block row
+* Unblock does not restore friendship
+* Block operation is idempotent
+
+Hunt integration
+
+* Eligible friend may be invited through trusted operation
+* Friendship does not bypass capacity
+* Invitations-disabled user cannot be invited
+* Block overrides invitation permission
+* Existing participant cannot be reinvited
+* Unauthorized participant cannot invite
+
+Privacy and security
+
+* Another user cannot read private settings
+* Another user cannot enumerate requests
+* Another user cannot enumerate private friends
+* Public projection omits email
+* Public projection omits exact location
+* Mutual count excludes hidden and blocked users
+* Reports remain private
+* Client cannot forge relationship state
+
+Use local Supabase integration tests where available.
+
+⸻
+
+71. Documentation
+
+Create or update:
+
+/docs/SOCIAL_ARCHITECTURE.md
+/docs/PUBLIC_PROFILES.md
+/docs/FRIENDSHIPS.md
+/docs/FRIEND_REQUESTS.md
+/docs/USER_DISCOVERY.md
+/docs/SOCIAL_PRIVACY.md
+/docs/BLOCKING.md
+/docs/SOCIAL_REPORTING.md
+/docs/SOCIAL_HUNT_INVITATIONS.md
+/docs/SOCIAL_SECURITY.md
+/docs/SOCIAL_TESTING.md
+
+Document:
+
+* Social module boundaries
+* Public identity projection
+* Profile visibility
+* Discoverability
+* Progression visibility
+* Statistics visibility
+* Relationship states
+* Friend-request lifecycle
+* Canonical pair model
+* Request expiration
+* Pending-request limits
+* Request cooldowns
+* Friendship removal
+* Blocking behavior
+* Unblocking behavior
+* Blocked-by-other behavior
+* User search
+* Search ranking
+* Enumeration protection
+* Mutual-friend count
+* Hunt invitation integration
+* Reporting entry points
+* Notifications
+* Deep links
+* RLS
+* Rate limits
+* Offline behavior
+* Accessibility
+* Development fixtures
+* Tests
+* Remaining work for Prompt 17
+
+Update:
+
+* /docs/PROJECT_CONSTITUTION.md
+* /docs/PROFILE_AND_SETTINGS.md
+* replit.md
+
+only where necessary.
+
+Do not change approved navigation or visual direction.
+
+⸻
+
+72. Out of Scope
+
+Do not implement:
+
+* Public activity feed
+* Following or followers
+* Direct messages
+* Hunt chat
+* Quest chat
+* Group chat
+* Presence
+* Online status
+* Last seen
+* Live location
+* Nearby users
+* Contact-book import
+* Phone-number discovery
+* Email discovery
+* Groups
+* Guilds
+* Teams
+* User-generated Hunt creation
+* User-generated Quest creation
+* Host control panel
+* Participant-management dashboard
+* Admin moderation console
+* Admin report review
+* Automated media moderation
+* AI content generation
+* Push-notification delivery
+* Full offline synchronization
+* Stripe
+* Memberships
+* Paid Hunt tickets
+* Creator payouts
+* Social sharing
+* Algorithmic People You May Know
+
+Prompt 17 will implement the user-facing Hunt creation and editing system, including drafts, stops, clues, safety, scheduling, privacy, proof requirements, location configuration, preview, submission for moderation, and creator-owned Hunt management.
+
+⸻
+
+73. Final Verification
+
+Before finishing:
+
+* Confirm no new bottom tab was added.
+* Confirm Profile remains the social entry point.
+* Confirm public profiles use a safe field projection.
+* Confirm email and exact location never appear publicly.
+* Confirm profile visibility and discoverability remain separate.
+* Confirm private profiles protect extended fields.
+* Confirm username search is authenticated and rate-limited.
+* Confirm hidden, blocked, suspended, and deactivated users are excluded appropriately.
+* Confirm friend requests are idempotent.
+* Confirm friendship acceptance is atomic.
+* Confirm duplicate friendships are impossible.
+* Confirm expired requests cannot be accepted.
+* Confirm request limits and cooldowns are server-enforced.
+* Confirm removal preserves history.
+* Confirm blocking removes active social access.
+* Confirm blocking prevents friend requests and Hunt invitations.
+* Confirm unblocking does not restore friendship.
+* Confirm blocked users cannot read block records.
+* Confirm public achievements, titles, badges, and statistics respect privacy.
+* Confirm unearned titles and badges cannot be displayed.
+* Confirm friendship does not expose proof, active participation, or exact locations.
+* Confirm Hunt invitations reuse Prompt 11’s trusted operation.
+* Confirm friendship cannot bypass Hunt capacity or eligibility.
+* Confirm reports remain private.
+* Confirm deep links revalidate access.
+* Confirm notifications do not reveal block or report activity.
+* Confirm RLS protects friendships, requests, blocks, and settings.
+* Confirm development fixtures do not appear in production.
+* Confirm the app compiles.
+* Confirm tests pass or clearly document blocked integration tests.
+* Confirm no approved UI or navigation was redesigned.
+
+Resolve known in-scope errors before stopping.
+
+⸻
+
+Deliverables
+
+When complete, provide:
+
+1. Social module files created or updated
+2. Safe public-identity projection
+3. Public Profile screen
+4. Self-profile preview behavior
+5. Public progression presentation
+6. Public achievement preview
+7. Public title and badge presentation
+8. Public statistics behavior
+9. User discovery and search
+10. Search ranking and enumeration protection
+11. Friends screen
+12. Received and Sent request sections
+13. Friend-request eligibility evaluator
+14. Send Friend Request flow
+15. Accept Friend Request transaction
+16. Decline Friend Request flow
+17. Cancel Request flow
+18. Remove Friend flow
+19. Blocking transaction
+20. Unblocking flow
+21. Blocked-by-other behavior
+22. Social privacy settings
+23. Mutual-friend count
+24. Hunt friend selector
+25. Hunt invitation eligibility integration
+26. Reporting entry points
+27. Notification integration
+28. Deep-link routes
+29. React Query hooks, keys, and invalidation
+30. Offline, loading, empty, and error behavior
+31. Database migrations, RPCs, indexes, or RLS changes
+32. Rate-limit and cooldown configuration
+33. Tests added and results
+34. Documentation created or updated
+35. Assumptions made
+36. Known limitations
+37. Exact remaining work for Prompt 17
+
+Do not begin Prompt 17.
+
+Do not redesign the application.
+
+Create a checkpoint named:
+
+Build 1 — Prompt 16 — Public Profiles, Friends, and Social Privacy

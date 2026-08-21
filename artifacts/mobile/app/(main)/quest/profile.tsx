@@ -4,6 +4,12 @@
  * Shared player profile. Hosts the progression overview (achievements,
  * stats, active title, pinned badge) and navigation into subsections.
  *
+ * Social entry points added in Prompt 16:
+ * - Friends
+ * - Friend Requests
+ * - Find People
+ * - Privacy (social settings)
+ *
  * Settings, achievements, titles, badges, and statistics all live
  * beneath this screen — not in separate bottom tabs.
  */
@@ -17,6 +23,8 @@ import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useProgressOverview } from '@/features/progression/hooks/useProgressOverview';
+import { useReceivedFriendRequests } from '@/features/social/hooks/useReceivedFriendRequests';
+import { useFriends } from '@/features/social/hooks/useFriends';
 import ProgressOverviewCard from '@/components/progression/ProgressOverviewCard';
 
 const WORLDS_PURPLE = '#7C3AED';
@@ -26,11 +34,12 @@ interface ProfileLinkProps {
   icon: React.ComponentProps<typeof Feather>['name'];
   label: string;
   sublabel?: string;
+  badge?: number;
   onPress: () => void;
   color?: string;
 }
 
-function ProfileLink({ icon, label, sublabel, onPress, color }: ProfileLinkProps) {
+function ProfileLink({ icon, label, sublabel, badge, onPress, color }: ProfileLinkProps) {
   const colors = useColors();
   return (
     <Pressable
@@ -40,7 +49,7 @@ function ProfileLink({ icon, label, sublabel, onPress, color }: ProfileLinkProps
       ]}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={label + (sublabel ? `: ${sublabel}` : '')}
+      accessibilityLabel={label + (sublabel ? `: ${sublabel}` : '') + (badge ? `, ${badge} pending` : '')}
     >
       <View style={[styles.linkIcon, { backgroundColor: (color ?? colors.muted) + '18' }]}>
         <Feather name={icon} size={18} color={color ?? colors.mutedForeground} />
@@ -51,6 +60,13 @@ function ProfileLink({ icon, label, sublabel, onPress, color }: ProfileLinkProps
           <Text style={[styles.linkSublabel, { color: colors.mutedForeground }]}>{sublabel}</Text>
         )}
       </View>
+      {badge !== undefined && badge > 0 && (
+        <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+          <Text style={[styles.badgeText, { color: colors.primaryForeground }]}>
+            {badge > 9 ? '9+' : badge}
+          </Text>
+        </View>
+      )}
       <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
     </Pressable>
   );
@@ -60,9 +76,13 @@ export default function QuestProfileScreen() {
   const colors   = useColors();
   const { user } = useAuth();
   const overview = useProgressOverview();
+  const received = useReceivedFriendRequests();
+  const friends  = useFriends();
 
   const displayName = (user as any)?.user_metadata?.display_name ?? 'Explorer';
   const username    = (user as any)?.user_metadata?.username;
+  const pendingCount = received.data?.length ?? 0;
+  const friendsCount = friends.data?.length;
 
   return (
     <ScrollView
@@ -100,9 +120,8 @@ export default function QuestProfileScreen() {
         achievementsCount: 0, combinedPoints: 0, totalActivities: 0,
       }} isLoading={overview.isLoading} />
 
-      {/* Navigation links */}
+      {/* Progress links */}
       <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>Progress</Text>
-
       <ProfileLink
         icon="award"
         label="Achievements"
@@ -111,24 +130,56 @@ export default function QuestProfileScreen() {
         color={WORLDS_PURPLE}
       />
 
-      <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>Account</Text>
+      {/* Social links */}
+      <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>Social</Text>
+      <ProfileLink
+        icon="users"
+        label="Friends"
+        sublabel={friendsCount !== undefined ? `${friendsCount} connected` : undefined}
+        onPress={() => router.push('/friends')}
+        color={colors.primary}
+      />
+      <ProfileLink
+        icon="user-plus"
+        label="Friend Requests"
+        sublabel="Received &amp; sent"
+        badge={pendingCount}
+        onPress={() => router.push('/friend-requests')}
+        color={colors.primary}
+      />
+      <ProfileLink
+        icon="search"
+        label="Find People"
+        sublabel="Search by username"
+        onPress={() => router.push('/find-people')}
+        color={colors.primary}
+      />
 
+      {/* Account links */}
+      <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>Account</Text>
+      <ProfileLink
+        icon="shield"
+        label="Privacy"
+        sublabel="Profile, discovery, connections"
+        onPress={() => router.push('/social-privacy')}
+        color={colors.mutedForeground}
+      />
       <ProfileLink
         icon="settings"
         label="Settings"
-        sublabel="Notifications, privacy, account"
+        sublabel="Notifications, account"
         onPress={() => {}}
         color={colors.mutedForeground}
       />
       <ProfileLink
         icon="help-circle"
-        label="Help & Support"
+        label="Help &amp; Support"
         onPress={() => {}}
         color={colors.mutedForeground}
       />
       <ProfileLink
         icon="file-text"
-        label="Terms & Privacy"
+        label="Terms &amp; Privacy"
         onPress={() => {}}
         color={colors.mutedForeground}
       />
@@ -179,4 +230,9 @@ const styles = StyleSheet.create({
   linkBody: { flex: 1, gap: 2 },
   linkLabel: { fontFamily: fontFamily.medium, fontSize: fontSize.sm },
   linkSublabel: { fontFamily: fontFamily.regular, fontSize: fontSize.xs },
+  badge: {
+    minWidth: 20, height: 20, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4,
+  },
+  badgeText: { fontFamily: fontFamily.bold, fontSize: fontSize.xs },
 });

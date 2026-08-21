@@ -94,6 +94,32 @@ export default function MainLayout() {
         options={{ animation: 'slide_from_right' }}
       />
 
+      {/* Social deep screens — Prompt 16 (no tab bar) */}
+      <Stack.Screen
+        name="public-profile/[userRef]"
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="friends"
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="friend-requests"
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="find-people"
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="social-privacy"
+        options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="blocked-users"
+        options={{ animation: 'slide_from_right' }}
+      />
+
       {/* Hunt Progress deep screens — appear over the tab UI (no tab bar) */}
       <Stack.Screen
         name="hunt-completion-detail/[participationId]"

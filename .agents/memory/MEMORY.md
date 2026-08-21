@@ -10,3 +10,4 @@
 - [Active Hunt Gameplay Architecture](active-hunt-gameplay-architecture.md) — Prompt 13: stopActionResolver, proof draft, location validation, 4 new RPCs, isOrdered added to ActiveHunt, 677 tests (644 passing).
 - [Hunt Progress Architecture](hunt-progress-architecture.md) — Prompt 14: leaderboards, In Action, Completed, 4 deep screens, 13 components, 10 hooks, migration 024, 727 tests (694 passing).
 - [Progression Domain Architecture](progression-architecture.md) — Prompt 15: Achievements, Titles, Badges, Milestones, Statistics, Profile screen. 053_progression.sql, 9 hooks, 10 components, 780 tests (747 passing).
+- [Social Domain Architecture](social-architecture.md) — Prompt 16: public profiles, friends, requests, blocking, privacy, reporting, Hunt invite eligibility. 026_social.sql, 19 RPCs, 19 hooks, 16 components, 6 screens, 851 tests (818 passing).
