@@ -65,6 +65,7 @@ describe('Custom Hunt creator validation', () => {
       summary: 'A useful summary',
       description: 'A description long enough for validation.',
       safetyAcknowledged: true,
+      publicAccessConfirmed: true,
       stops: [stop],
     });
     expect(result.valid).toBe(true);
