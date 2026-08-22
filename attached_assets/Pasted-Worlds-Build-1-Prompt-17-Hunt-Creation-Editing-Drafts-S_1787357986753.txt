@@ -1,0 +1,2707 @@
+Worlds — Build 1, Prompt 17
+
+Hunt Creation, Editing, Drafts, Stops, Clues, Moderation Submission, and Creator Management
+
+Continue from the current Worlds project and follow these documents as authoritative:
+
+* /docs/PROJECT_CONSTITUTION.md
+* /docs/DATABASE_ARCHITECTURE.md
+* /docs/ROW_LEVEL_SECURITY.md
+* /docs/HUNT_DOMAIN.md
+* /docs/HUNT_STATE_MACHINE.md
+* /docs/HUNT_PRIVACY.md
+* /docs/HUNT_INVITATIONS.md
+* /docs/HUNT_PARTICIPATION.md
+* /docs/HUNT_STOPS_AND_CLUES.md
+* /docs/HUNT_PROOF_SYSTEM.md
+* /docs/HUNT_POINT_AWARDS.md
+* /docs/HUNT_SECURITY.md
+* /docs/HUNT_MAP.md
+* /docs/HUNT_DISCOVERY.md
+* /docs/HUNT_DETAIL_UI.md
+* /docs/MY_HUNTS.md
+* /docs/HUNT_READY_STATE.md
+* /docs/ACTIVE_HUNT_UI.md
+* /docs/HUNT_STOP_FLOW.md
+* /docs/HUNT_PROOF_UI.md
+* /docs/HUNT_COMPLETION_UI.md
+* /docs/HUNT_PROGRESS.md
+* /docs/HUNT_COMPLETION_HISTORY.md
+* /docs/HUNT_LEADERBOARDS.md
+* /docs/SOCIAL_ARCHITECTURE.md
+* /docs/PUBLIC_PROFILES.md
+* /docs/FRIENDSHIPS.md
+* /docs/SOCIAL_PRIVACY.md
+* /docs/BLOCKING.md
+* all shared Mapbox/geospatial documentation created in Prompts 9–10
+* all progression documentation created in Prompt 15
+* all documentation created in Prompts 1–16
+* replit.md
+* the approved UI/UX addendum
+* the approved authentication/navigation clarification
+
+The application is named:
+
+Worlds
+
+Prompts 11–14 completed the Hunt domain, map/discovery, joining, invitations, active gameplay, proof, completion, Progress, and leaderboards.
+
+Prompt 16 added public profiles, friends, social privacy, blocking, and safe friend-based Hunt invitation eligibility.
+
+This prompt must implement the complete user-facing Custom Hunt creation and creator-management system.
+
+Do not rebuild Hunt gameplay logic.
+
+Do not duplicate the map, media, proof, moderation, social, notification, points, or authentication systems.
+
+Do not add payments, creator payouts, subscriptions, ticketing, paid Hunts, paid hints, or monetization.
+
+Do not allow user-created Hunts to bypass moderation.
+
+Do not redesign the approved navigation.
+
+⸻
+
+Primary Objective
+
+Implement a guided creator flow allowing an eligible Worlds user to:
+
+1. Start a Custom Hunt draft.
+2. Enter Hunt details.
+3. Choose privacy and participation settings.
+4. Configure scheduling.
+5. Choose a public starting area.
+6. Add Hunt stops.
+7. Add clues.
+8. Add location requirements where appropriate.
+9. Add proof requirements.
+10. Configure ordered or unordered progression.
+11. Add accessibility and safety notes.
+12. Invite friends where appropriate.
+13. Preview the Hunt exactly as players will see it.
+14. Validate the draft.
+15. Submit it for moderation.
+16. View moderation status.
+17. Make requested changes.
+18. Publish when approved and eligible.
+19. Manage future occurrences.
+20. Cancel or archive appropriately.
+21. View creator-owned Hunt status.
+22. Preserve draft data safely.
+
+The experience should feel:
+
+* Simple
+* Guided
+* Creative
+* Map-oriented
+* Safe
+* Mobile-first
+* Not like a giant admin form
+* Easy enough for a normal user to create a Hunt without understanding the backend
+
+⸻
+
+1. Preserve Approved Hunt Navigation
+
+Hunt bottom navigation remains exactly:
+
+1. Map
+2. My Hunts
+3. Progress
+4. Profile
+
+Custom Hunt creation is entered through:
+
+My Hunts → + Create
+
+Do not add:
+
+* Create as a bottom tab
+* Creator as a bottom tab
+* Host as a bottom tab
+* Builder as a bottom tab
+* Studio as a bottom tab
+
+Within My Hunts, keep the existing sections:
+
+* Active
+* Ready
+* Completed
+* Invitations
+* Create Hunt
+
+The + Create control should remain clearly visible.
+
+Do not rebuild My Hunts from scratch.
+
+⸻
+
+2. Hunt Creation Route Structure
+
+Create a nested creator flow.
+
+Suggested route structure:
+
+/hunt/create
+/hunt/create/[draftId]/details
+/hunt/create/[draftId]/privacy
+/hunt/create/[draftId]/schedule
+/hunt/create/[draftId]/start
+/hunt/create/[draftId]/stops
+/hunt/create/[draftId]/stop/[stopId]
+/hunt/create/[draftId]/invite
+/hunt/create/[draftId]/preview
+/hunt/create/[draftId]/review
+
+Adapt to Expo Router conventions and the existing architecture.
+
+Also create creator-management routes such as:
+
+/hunt/manage
+/hunt/manage/[huntId]
+/hunt/manage/[huntId]/occurrences
+/hunt/manage/[huntId]/participants
+
+Do not expose unfinished privileged controls.
+
+⸻
+
+3. Guided Creation Flow
+
+Use the approved simplified guided flow:
+
+1. Basic details
+2. Privacy and scheduling
+3. Starting location
+4. Add stops
+5. Add clues and validation
+6. Invite players
+7. Review and create
+
+The UI may divide this into a few more implementation screens, but the user should perceive a simple seven-stage flow.
+
+Do not present one giant form.
+
+Show progress such as:
+
+Step 3 of 7
+
+Allow:
+
+* Back
+* Save and Exit
+* Continue
+
+Do not force the user to complete the entire Hunt in one session.
+
+⸻
+
+4. Draft Creation
+
+When a user taps + Create:
+
+1. Verify authentication.
+2. Verify account is eligible to create Custom Hunts.
+3. Create one draft record transactionally.
+4. Set owner to the authenticated user.
+5. Set type to custom.
+6. Set status to draft.
+7. Store a creation-version identifier.
+8. Route into Basic Details.
+9. Return the existing newest incomplete draft only if product policy explicitly allows resume behavior.
+10. Do not create multiple empty drafts from rapid repeated taps.
+
+The client must not set:
+
+* Admin approval
+* Published status
+* Moderation approval
+* Platform ownership
+* Creator verification status
+
+⸻
+
+5. Creator Eligibility
+
+Create a centralized creator eligibility evaluator.
+
+Possible checks:
+
+* Authenticated
+* Active account
+* Onboarding complete
+* Not suspended
+* Not creator-restricted
+* No blocking moderation restriction
+* Hunt creation feature enabled
+* Draft limit not exceeded
+
+Return safe states such as:
+
+* Eligible
+* Account Restricted
+* Creation Temporarily Disabled
+* Draft Limit Reached
+* Feature Disabled
+
+Do not expose internal moderation details.
+
+Do not hardcode this logic only into the UI.
+
+⸻
+
+6. Draft Limits
+
+Prevent abusive or accidental unlimited draft creation.
+
+Use configurable limits such as:
+
+* Maximum active drafts
+* Maximum submitted Hunts awaiting moderation
+* Creation rate limit
+
+Do not hardcode arbitrary limits throughout the codebase.
+
+Use centralized configuration.
+
+Show a safe message such as:
+
+Finish or remove an existing draft before creating another Hunt.
+
+Do not silently delete old drafts.
+
+⸻
+
+7. Draft Autosave
+
+Implement reliable draft autosave.
+
+Save after meaningful changes such as:
+
+* Details edited
+* Privacy changed
+* Schedule changed
+* Starting area selected
+* Stop added
+* Stop reordered
+* Clue changed
+* Proof requirement changed
+* Image added
+* Invite selection changed
+
+Requirements:
+
+* Debounce autosave.
+* Show Save state:
+    * Saving
+    * Saved
+    * Unable to Save
+* Retry safely.
+* Preserve unsaved local changes during recoverable network failure.
+* Avoid duplicate mutation calls.
+* Do not overwrite newer server changes with stale local state.
+* Restore draft after app restart.
+
+Do not falsely show Saved before server confirmation.
+
+⸻
+
+8. Draft Ownership
+
+Only the Hunt owner may edit their draft unless future co-host editing is explicitly implemented.
+
+Requirements:
+
+* RLS enforces ownership.
+* Deep links do not bypass ownership.
+* Another user cannot guess a draft ID and open it.
+* Staff may access draft moderation only through authorized administrative routes.
+* Creator cannot transfer draft ownership through client fields.
+* Blocked social users do not gain draft access through invitation.
+
+⸻
+
+9. Basic Details
+
+Step 1 should include:
+
+* Hunt title
+* Short summary
+* Full description
+* Cover image
+* Difficulty
+* Estimated duration
+* Optional category/interests
+* Participation mode
+* Ordered or unordered structure
+
+Use concise forms.
+
+Title
+
+* Required
+* Sensible min/max
+* Plain text
+* Trim whitespace
+
+Summary
+
+* Required
+* Short
+* Used in Map preview
+
+Description
+
+* Required
+* Plain text
+* No arbitrary HTML
+
+Difficulty
+
+Use shared difficulty values.
+
+Do not create a Hunt-specific incompatible difficulty system.
+
+Estimated duration
+
+Use practical selectable or numeric duration.
+
+Do not imply exact completion time.
+
+⸻
+
+10. Cover Image
+
+Allow creator cover-image upload.
+
+Use existing media infrastructure.
+
+Flow:
+
+1. Select image.
+2. Validate type and size.
+3. Compress.
+4. Preview.
+5. Upload privately.
+6. Create media asset.
+7. Associate with draft.
+8. Keep moderation state.
+
+Requirements:
+
+* Cover image remains nonpublic while draft or pending review.
+* Do not claim it has been automatically scanned.
+* Pending/rejected media must not become public.
+* Allow replacement before submission.
+* Handle orphan cleanup safely.
+* Reuse shared uploader.
+
+Do not accept arbitrary remote image URLs.
+
+⸻
+
+11. Participation Mode
+
+Allow:
+
+* Solo
+* Group
+* Solo or Group
+
+Use Prompt 11 domain configuration.
+
+Explain simply:
+
+Solo
+
+Players complete the Hunt individually.
+
+Group
+
+Players participate together.
+
+Solo or Group
+
+Either option is allowed.
+
+Do not expose complex group-reward configuration in Build 1.
+
+Use the existing simple reward model.
+
+⸻
+
+12. Ordered vs Unordered
+
+Allow creator to choose:
+
+Ordered
+
+Stops must be completed in sequence.
+
+Unordered
+
+Authorized stops may be completed in any order.
+
+Explain visually.
+
+Do not expose partially ordered graph rules.
+
+Do not let the creator accidentally convert a published active Hunt structure without versioning.
+
+Changes after players join must follow version and occurrence rules.
+
+⸻
+
+13. Privacy
+
+Allow:
+
+* Public
+* Unlisted
+* Invite Only
+* Private
+
+Explain each clearly.
+
+Public
+
+Can appear on the public Hunt Map after approval.
+
+Unlisted
+
+Accessible through direct access but not ordinary discovery.
+
+Invite Only
+
+Only invited players may access.
+
+Private
+
+Only the creator and explicitly authorized participants may access.
+
+Do not imply moderation is skipped for private Hunts if uploaded media or safety requirements still require review.
+
+⸻
+
+14. Scheduling
+
+Allow creator to configure:
+
+* Available/start date
+* Start time
+* Join deadline
+* Completion deadline
+* Optional end date
+* Time zone
+* Individual start vs scheduled start
+* Host-controlled start where supported
+
+Use native date/time controls.
+
+Store authoritative values in UTC.
+
+Show the creator the selected local timezone.
+
+Do not create ambiguous local timestamps.
+
+Validate:
+
+* Join deadline before completion deadline
+* Start not after end
+* Completion deadline not before start
+* Moderation lead-time readiness
+* Reasonable future/past limits
+
+Do not allow impossible schedule configurations.
+
+⸻
+
+15. Recurring Hunts
+
+Do not build a complex recurring scheduler in Build 1.
+
+Support:
+
+* One scheduled occurrence
+* Future duplicate-Hunt action
+* Future occurrence management architecture
+
+If existing domain supports multiple occurrences, allow simple occurrence creation after approval.
+
+Do not add cron-style recurrence UI.
+
+Do not expose RRULE configuration.
+
+⸻
+
+16. Starting Location
+
+Step 3 should use the shared Mapbox architecture.
+
+Creator can:
+
+* Search for a location
+* Move map
+* Tap/select a safe public starting area
+* Add public location label
+* Add general meeting instructions
+* Choose whether the player must be physically present to start
+
+Do not request the creator’s current location automatically.
+
+Do not assume creator location equals Hunt location.
+
+Do not expose private validation geometry directly to participants.
+
+⸻
+
+17. Public Starting Area
+
+Store a public display location separate from private validation geometry.
+
+Public starting area may include:
+
+* Landmark
+* Park
+* Venue entrance
+* General public meeting area
+* Approximate map marker
+
+Require creator acknowledgment:
+
+* They have permission to use the location.
+* The area is publicly accessible or legitimately available to participants.
+* The Hunt does not require trespassing.
+
+Do not allow creation instructions that intentionally direct participants into restricted property.
+
+⸻
+
+18. Start Validation
+
+Allow the creator to configure:
+
+* Start anywhere
+* Must begin within starting area
+
+If within-area start is selected:
+
+* Use the shared secure geospatial validation model.
+* Creator selects an allowed public region through a safe map-editing interface.
+* Private validation geometry must remain server-protected.
+* Apply reasonable minimum/maximum validation radius.
+* Prevent absurdly tiny or giant geofences.
+* Do not expose raw anti-abuse thresholds.
+
+Do not let creators define arbitrary hidden server logic.
+
+⸻
+
+19. Add Stops Screen
+
+Step 4 should show a clean list of Hunt stops.
+
+Each stop row should show:
+
+* Stop number if ordered
+* Stop title
+* Required or optional
+* Location/activity indicator
+* Proof requirement indicator
+* Completion status of draft validation
+* Drag handle for reordering where appropriate
+* Edit
+* Duplicate
+* Delete
+
+Primary action:
+
++ Add Stop
+
+Do not show huge forms inline.
+
+⸻
+
+20. Stop Creation
+
+When adding a stop, open a focused editor.
+
+Each stop may include:
+
+* Title
+* Instruction
+* Required or optional
+* Public display location
+* Clue
+* Proof requirement
+* Validation requirement
+* Estimated effort
+* Safety note
+* Accessibility note
+* Time window
+* Media
+
+Do not require every field.
+
+Only show fields relevant to the selected stop type.
+
+⸻
+
+21. Stop Types
+
+Keep Build 1 stop structure simple.
+
+Support:
+
+* Location stop
+* Activity stop
+* Clue/riddle stop
+* Mixed stop
+
+These are creator-facing templates, not necessarily separate database enums if the existing proof/validation configuration already models them.
+
+Do not add dozens of stop types.
+
+Do not create a separate mini-game framework.
+
+⸻
+
+22. Stop Reordering
+
+For ordered Hunts:
+
+* Allow drag-and-drop or move-up/move-down controls.
+* Update sort order.
+* Preserve stable stop IDs.
+* Validate sequential clue dependencies after reorder.
+* Do not accidentally duplicate stops.
+* Autosave.
+
+For unordered Hunts:
+
+* Reordering is visual organization only.
+* Do not imply completion order.
+
+Do not reorder a published active Hunt version destructively.
+
+⸻
+
+23. Delete Stop
+
+Before deleting a stop:
+
+* Confirm.
+* Explain that associated clue/proof configuration will be removed from the draft.
+* Prevent deletion if it would leave a Hunt with zero required stops.
+* Preserve media cleanup rules.
+* Do not reuse deleted stop IDs accidentally.
+
+For published/active Hunt versions:
+
+* Do not delete stops in-place when participants exist.
+* Require a new version or future occurrence configuration.
+
+⸻
+
+24. Duplicate Stop
+
+Allow a creator to duplicate a draft stop.
+
+Copy:
+
+* Title with clear “Copy” marker
+* Instruction
+* Proof config
+* General clue structure
+* Safety/accessibility fields
+
+Do not blindly copy:
+
+* Exact private validation geometry without creator review
+* Submission records
+* Completion data
+* Participant state
+
+Require the creator to revalidate location if the duplicate contains geographic requirements.
+
+⸻
+
+25. Clue Editor
+
+Step 5 should allow creator to define the clue for each stop.
+
+Support:
+
+* Text clue
+* Image clue
+* Text + image clue
+* Riddle-style clue
+
+Fields may include:
+
+* Clue text
+* Optional clue image
+* Optional hint
+* Reveal rule
+* Public area label
+
+Do not allow arbitrary HTML.
+
+Do not include future stop secret data in public Hunt summaries.
+
+⸻
+
+26. Riddle Validation
+
+Fix the prior known Hunt weakness: riddles must not be treated as generic GPS completion.
+
+For riddle-style stops, support an actual answer model.
+
+Creator may define:
+
+* Correct answer
+* One or more normalized accepted answers
+* Case sensitivity setting
+* Whitespace normalization
+* Optional punctuation normalization
+* Optional admin-review-only mode
+
+Requirements:
+
+* Correct answers remain server-private.
+* Do not send accepted answers to the client.
+* Validate answer server-side.
+* Rate-limit guesses.
+* Prevent trivial answer extraction from API payloads.
+* Record safe attempt state if needed.
+* Do not expose exact accepted variants after failure.
+
+Do not implement cryptographic puzzle infrastructure.
+
+⸻
+
+27. Riddle Answer Normalization
+
+Use a clear normalization strategy:
+
+* Trim
+* Normalize case when case-insensitive
+* Collapse repeated whitespace
+* Optional punctuation normalization
+* Unicode normalization where safe
+
+Do not use fuzzy AI matching by default.
+
+Do not accept answers with broad edit distance unless explicitly configured later.
+
+For Build 1, exact normalized matching is sufficient.
+
+⸻
+
+28. Riddle Attempt Limits
+
+Allow configurable safe attempt behavior.
+
+Recommended:
+
+* Unlimited with short rate limit for low-stakes Hunts
+* Optional max attempts for specific Hunts later
+
+Do not expose hidden anti-abuse thresholds.
+
+Do not automatically disqualify a user after one wrong answer.
+
+Do not create paid additional attempts.
+
+⸻
+
+29. Clue Reveal Rule
+
+Allow simple reveal rules:
+
+* At Hunt start
+* After previous required stop
+* At scheduled time
+* After trusted location check where supported
+
+Do not create a general rule-expression engine.
+
+For ordered Hunts, default:
+
+* First clue at start
+* Next clue after prior stop completion
+
+For unordered Hunts, default:
+
+* All currently authorized stop clues available at start
+
+Do not expose future clues early.
+
+⸻
+
+30. Stop Location Configuration
+
+For a location stop, allow creator to:
+
+* Search location
+* Drop/select public map point
+* Name the public location
+* Define safe public display area
+* Define private validation area through controlled controls
+* Choose location required at:
+    * Stop completion
+    * Before clue reveal
+    * Start of stop
+* Set broad validation type:
+    * Radius
+    * Approved polygon if shared map editor already supports it safely
+
+Do not expose raw latitude/longitude text fields as the primary UX.
+
+Do not allow malformed coordinates.
+
+⸻
+
+31. Remote Stop Placement
+
+Fix the prior known Hunt weakness where remote drops could default to 0,0.
+
+Requirements:
+
+* Any geographic stop requiring coordinates must have valid coordinates before save.
+* Reject missing location.
+* Reject latitude outside -90..90.
+* Reject longitude outside -180..180.
+* Explicitly reject placeholder 0,0 unless the creator intentionally selects a real location there and the platform policy permits it.
+* Require a public location label.
+* Require map confirmation.
+
+Do not silently substitute coordinates.
+
+⸻
+
+32. Validation Radius
+
+For radius-based validation:
+
+* Use a safe slider or controlled preset.
+* Do not expose arbitrary extreme values.
+* Use a sensible allowed range based on the existing shared geo architecture.
+* Validate server-side.
+
+Possible product-safe range:
+
+* Minimum practical radius
+* Maximum practical radius
+
+Do not hardcode the old 20m default / 200m max unless the current schema still requires those values and the project documents confirm them.
+
+Use centralized configuration.
+
+Do not add hidden extra grace tolerance in client code.
+
+All server grace logic must be documented and consistent.
+
+⸻
+
+33. Proof Requirements
+
+Allow creator to configure proof per stop:
+
+* None
+* Text
+* Image
+* Location
+* Text + Image
+* Image + Location
+* Manual Confirmation
+* Riddle Answer
+
+Use only proof types supported by the current shared domain.
+
+Do not allow creators to invent executable validation rules.
+
+Do not allow creators to directly approve their own participant proof through the mobile client unless host review is explicitly supported later.
+
+For Build 1, manual review may route to platform moderation/admin review.
+
+⸻
+
+34. Image Proof Configuration
+
+If image proof is selected:
+
+Allow:
+
+* Number of images required
+* Simple instruction
+* Optional example image
+* Whether manual review is required
+
+Do not expose automatic image scanning controls yet.
+
+Do not promise AI moderation.
+
+All participant proof remains private.
+
+⸻
+
+35. Text Proof Configuration
+
+If text proof is selected:
+
+Allow creator to define:
+
+* Prompt
+* Minimum length
+* Maximum length
+* Manual-review requirement
+
+Do not allow arbitrary regex execution from user-authored data.
+
+Do not allow embedded scripts or HTML.
+
+⸻
+
+36. Riddle Proof Configuration
+
+If Riddle Answer is selected:
+
+Require:
+
+* Public question/clue
+* Server-private accepted answer(s)
+* Attempt behavior
+* Optional hint
+* Optional manual-review fallback
+
+Do not store answers in public stop rows.
+
+Do not return answer fields through ordinary Hunt Detail or Active Hunt queries.
+
+⸻
+
+37. QR Readiness
+
+Prior planning identified fake QR scanning as a gap.
+
+For Custom Hunts in Build 1:
+
+* Do not expose QR validation unless the actual camera scanner and trusted token validation are implemented.
+* If QR infrastructure is already properly implemented, allow a future-ready disabled option.
+* Otherwise omit QR from creator proof options.
+
+Do not create another fake text-input QR system.
+
+Document QR as future work if still unavailable.
+
+⸻
+
+38. Stop Safety
+
+Each stop should support:
+
+* Creator safety note
+* Platform-standard safety warning
+* Terrain note
+* Indoor/outdoor
+* Daylight recommendation
+* Operating-hours note
+* Public-access confirmation
+
+Creator must affirm:
+
+* No trespassing required.
+* No dangerous driving behavior required.
+* No illegal activity required.
+* No unsafe heights or hazardous conditions required.
+* No harassment or privacy invasion required.
+* No activity requiring users to photograph private individuals without consent.
+
+Do not let creators disable core platform safety requirements.
+
+⸻
+
+39. Accessibility
+
+Allow creator to provide:
+
+* Wheelchair accessibility
+* Stairs
+* Walking requirement
+* Terrain
+* Seating
+* Indoor/outdoor
+* Visual/hearing considerations
+* Alternative completion notes where appropriate
+
+Do not infer accessibility automatically.
+
+Do not require accessibility metadata if genuinely unknown, but encourage completion.
+
+⸻
+
+40. Stop Time Windows
+
+Allow optional stop-level windows such as:
+
+* Available after
+* Must complete before
+* Daylight-only note
+* Venue hours
+
+Validate against Hunt-level schedule.
+
+Do not allow:
+
+* Stop available after overall Hunt expiration
+* Required stop ending before Hunt start
+* Impossible ordered timing
+
+Do not infer operating hours from Mapbox.
+
+⸻
+
+41. Invite Players
+
+Step 6 integrates Prompt 16 social/friends infrastructure.
+
+For invite-only/private Hunts:
+
+Allow creator to select eligible friends.
+
+Use:
+
+* Friends list
+* Search friends
+* Eligibility status
+
+Do not allow:
+
+* Email invites
+* Phone-number invites
+* Contact-book upload
+* Nonfriend discovery through this selector unless product policy allows it later
+
+Use the existing trusted Hunt invitation operation only after the Hunt/occurrence is in a state where invitations are valid.
+
+For draft review, selections may remain intended invitees until publication.
+
+⸻
+
+42. Draft Invitees
+
+Before Hunt approval/publication, store intended invitee references separately from live Hunt invitations.
+
+Requirements:
+
+* Do not send real invitations from an unapproved draft.
+* Creator may add/remove intended invitees.
+* Apply block and social privacy rules.
+* Revalidate eligibility at actual invitation-send time.
+* Do not guarantee capacity merely because someone is selected in a draft.
+
+After publication:
+
+* Convert eligible intended invitees through the trusted invitation flow.
+* Handle failures individually.
+* Notify creator of skipped invalid invitees safely.
+
+⸻
+
+43. Participant Limit
+
+Allow creator to configure:
+
+* Maximum participants
+* Minimum participants where group Hunt requires it
+
+Apply safe platform limits.
+
+Do not allow:
+
+* Zero maximum
+* Negative values
+* Unbounded extreme capacity
+* Minimum greater than maximum
+
+For solo Hunts:
+
+* Participant capacity still controls occurrence access but does not create group logic.
+
+Use server-side validation.
+
+⸻
+
+44. Creator Reward Configuration
+
+Do not expose arbitrary reward configuration without controls.
+
+Use shared Hunt point guidelines.
+
+Creator may receive:
+
+* Suggested Hunt point reward
+* Recommended range
+
+Factors may include:
+
+* Number of required stops
+* Difficulty
+* Estimated duration
+* Travel burden
+* Proof burden
+* Location complexity
+* Physical effort
+
+For Build 1:
+
+* User creator may suggest or choose within an allowed platform range.
+* Platform moderation/admin has final authority over published point values.
+* Do not let a creator create enormous rewards.
+
+Store:
+
+* Creator requested reward
+* Moderation-approved authoritative reward
+
+The client must never award points.
+
+⸻
+
+45. Hunt Point Suggestions
+
+Use centralized recommendation logic.
+
+Example factors:
+
+* 1–2 simple stops → lower range
+* Multi-stop moderate Hunt → medium range
+* Long, difficult, validated Hunt → higher range
+
+Do not hardcode one point value per stop.
+
+Do not reward unsafe travel speed.
+
+Do not make more distance automatically mean more points without context.
+
+Do not allow creator reward values to bypass moderation.
+
+⸻
+
+46. Draft Validation
+
+Before Review step, run a complete validator.
+
+Validate at minimum:
+
+* Title
+* Summary
+* Description
+* Cover image status where required
+* Privacy
+* Participation mode
+* Schedule
+* Starting location
+* At least one required stop
+* Stop ordering
+* Each required stop complete
+* Clues
+* Proof requirements
+* Riddle private answers
+* Geo coordinates
+* Geofence validity
+* Participant capacity
+* Safety acknowledgment
+* Accessibility warnings
+* Reward range
+* Draft ownership
+
+Return issues grouped by creation step.
+
+Do not let the user hunt through random fields to find an error.
+
+⸻
+
+47. Review Screen
+
+Step 7 should show a concise complete preview summary:
+
+* Hunt cover
+* Title
+* Summary
+* Privacy
+* Schedule
+* Participation mode
+* Estimated duration
+* Difficulty
+* Reward
+* Starting area
+* Required stop count
+* Optional stop count
+* Proof summary
+* Safety summary
+* Intended invitees
+* Moderation state
+
+Provide:
+
+* Preview as Player
+* Edit
+* Submit for Review
+
+Do not publish directly from an ordinary creator draft.
+
+⸻
+
+48. Player Preview
+
+Implement a true player-preview mode.
+
+Preview:
+
+* Hunt Map preview
+* Hunt Detail preview
+* Authorized start information
+* Ordered/unordered presentation
+* Public clues as they would appear initially
+* Safety/accessibility
+* Point reward proposal
+* Privacy behavior
+
+Do not reveal in player preview:
+
+* Private riddle answers
+* Secret validation geometry
+* Future locked clue content
+* Moderation notes
+
+Preview mode must not create participation.
+
+Preview must not award points.
+
+⸻
+
+49. Preview Locked Content
+
+Provide a creator-only separate mode if necessary:
+
+Creator Structure Preview
+
+This may show:
+
+* Full stop order
+* Full clue structure
+* Private validation summary
+
+It must be clearly different from Player Preview.
+
+Do not accidentally render server-private answer values into reusable client screens.
+
+Private accepted riddle answers should be shown only in the secure creator editor, not in generic Hunt Detail preview components.
+
+⸻
+
+50. Submit for Moderation
+
+Implement a trusted submitHuntForReview operation.
+
+It must:
+
+1. Authenticate creator.
+2. Verify ownership.
+3. Verify draft status.
+4. Run authoritative full validation.
+5. Verify no required media is rejected.
+6. Verify safety acknowledgments.
+7. Snapshot submitted version.
+8. Set status to pending_review.
+9. Record submitted timestamp.
+10. Create moderation case or review record.
+11. Prevent editing of the submitted snapshot.
+12. Emit moderation-ready event.
+13. Return status.
+
+Do not let the creator directly set:
+
+* Approved
+* Published
+* Rejected
+
+⸻
+
+51. Submitted Snapshot
+
+When submitting:
+
+Preserve a versioned immutable snapshot of:
+
+* Hunt details
+* Stops
+* Clues
+* Proof requirements
+* Point request
+* Safety configuration
+* Schedule
+* Public display geometry
+* Private validation geometry version references
+* Media references
+
+Requirements:
+
+* Moderator reviews the submitted version.
+* Creator edits after submission must create a revision/draft rather than mutate the version under review.
+* Active participants must later use the approved version.
+
+Do not clone large media files unnecessarily.
+
+Reference immutable media versions where practical.
+
+⸻
+
+52. Moderation States
+
+Creator-facing moderation states:
+
+* Draft
+* Pending Review
+* Changes Requested
+* Approved
+* Scheduled
+* Published
+* Paused
+* Rejected
+* Archived
+
+Use consistent labels.
+
+Do not expose raw backend moderation codes.
+
+Do not display internal moderator identity unless approved.
+
+Do not expose internal risk scores.
+
+⸻
+
+53. Changes Requested
+
+When moderation requests changes:
+
+Show:
+
+* Changes Requested
+* User-safe review summary
+* Affected section(s)
+* Requested corrections
+* Edit Hunt
+* Resubmit for Review
+
+Requirements:
+
+* Preserve prior submitted version.
+* Create new revision.
+* Do not overwrite the moderation record.
+* Do not expose moderator-only notes.
+* Do not force the creator to recreate the Hunt.
+
+After resubmission:
+
+* Increment version.
+* Re-run validation.
+* Return to Pending Review.
+
+⸻
+
+54. Rejected Hunt
+
+If rejected:
+
+Show:
+
+* Rejected status
+* User-safe reason
+* Whether revision is allowed
+* Support or appeal-ready path
+* Duplicate to New Draft where policy allows
+
+Do not:
+
+* Publish
+* Invite players
+* Award points
+* Show publicly on Hunt Map
+
+Do not expose confidential safety or moderation signals.
+
+⸻
+
+55. Approved Hunt
+
+When approved:
+
+* Store authoritative approved version.
+* Store authoritative point reward.
+* Preserve moderation decision.
+* Determine next state:
+    * Scheduled
+    * Published
+    * Ready for creator scheduling, depending on product rules
+
+If approved schedule is already valid and policy permits automatic publication:
+
+* Trusted backend may schedule publication.
+
+Ordinary client must not directly set Published.
+
+⸻
+
+56. Publishing
+
+Publication must occur through trusted backend rules.
+
+Verify:
+
+* Approved version
+* Schedule valid
+* Required media allowed
+* Privacy valid
+* Creator active
+* Location still valid
+* Occurrence configuration valid
+* No safety suspension
+* Point reward approved
+
+Public Hunts then become eligible for Prompt 12 Map discovery.
+
+Invite-only/private Hunts follow their privacy rules.
+
+Do not expose draft versions publicly.
+
+⸻
+
+57. Active Window Enforcement
+
+Fix the prior known Hunt gap: Hunt active windows must actually be enforced.
+
+All queries must honor:
+
+* available_from
+* available_until
+* occurrence start
+* join window
+* completion window
+* stop-specific windows
+
+Requirements:
+
+* Future Hunts do not appear Available Now.
+* Expired Hunts do not appear joinable.
+* Active Hunt state follows server time.
+* Public Map query filters appropriately.
+* My Hunts may still show historical records.
+* Creator management shows the actual current schedule state.
+
+Do not rely only on UI labels.
+
+⸻
+
+58. Creator-Owned Hunts
+
+Add a creator-owned Hunt area within My Hunts / Create Hunt.
+
+Suggested secondary views:
+
+* Drafts
+* In Review
+* Approved/Scheduled
+* Published
+* Archived
+
+Do not add a new bottom tab.
+
+Each creator Hunt row may show:
+
+* Cover image
+* Title
+* Status
+* Privacy
+* Date
+* Participants
+* Draft validation state
+* Primary action
+
+Possible actions:
+
+* Continue Editing
+* View Review Status
+* Manage Hunt
+* Preview
+* Duplicate
+* Archive
+
+⸻
+
+59. Creator Hunt Management
+
+For approved or published Hunts, provide a management screen.
+
+Display:
+
+* Hunt status
+* Occurrence
+* Schedule
+* Participant count
+* Capacity
+* Invitations
+* Start model
+* Completion count
+* Current moderation state
+* Public Map state
+* Basic creator analytics placeholders
+* Safe management actions
+
+Do not turn this into the full admin panel.
+
+Creators must not access:
+
+* Other users’ private proof
+* Moderator-only data
+* Platform-wide statistics
+* Internal anti-cheat details
+* Account statuses
+
+⸻
+
+60. Edit Published Hunt
+
+Do not mutate active Hunt content destructively.
+
+If no participants exist and publication has not started:
+
+* Allow safe edit where domain rules permit.
+
+If participants have joined or Hunt is active:
+
+* Require a new version for content changes.
+* Preserve current participant snapshot.
+* Apply new version to a future occurrence.
+* Safety-critical admin changes may override through trusted moderation only.
+
+Do not alter clues, locations, or rewards underneath active participants.
+
+⸻
+
+61. Duplicate Hunt
+
+Allow creator to duplicate one of their Hunts into a new Draft.
+
+Copy:
+
+* Basic details
+* Stop structure
+* Clues
+* Proof requirements
+* Safety/accessibility
+* Privacy preference
+* General schedule template
+
+Do not copy as authoritative:
+
+* Participants
+* Invitations
+* Completion records
+* Proof
+* Moderation decision
+* Published status
+* Occurrence IDs
+* Point award approval
+* Exact schedule timestamps without user review
+
+Require revalidation of geographic locations.
+
+⸻
+
+62. Archive Draft or Hunt
+
+Allow:
+
+Draft
+
+Delete or archive depending on data policy.
+
+Published historical Hunt
+
+Archive.
+
+Do not hard-delete Hunts with:
+
+* Participants
+* Invitations
+* Proof
+* Point transactions
+* Moderation history
+* Audit logs
+
+Archived Hunts must remain available to historical participant Progress where appropriate.
+
+⸻
+
+63. Cancel Scheduled Hunt
+
+Allow creator to request cancellation when authorized.
+
+Use Prompt 11 trusted cancellation operation.
+
+Before cancellation show:
+
+* Participants will be notified.
+* New joins will stop.
+* Existing progress will be preserved.
+* Completion points will not be awarded unless policy says otherwise.
+
+Require confirmation.
+
+Do not allow the creator to erase the occurrence.
+
+Do not expose refunds because payments are not in Build 1.
+
+⸻
+
+64. Participant View
+
+Creator management may display a limited participant list where authorized.
+
+Allowed fields:
+
+* Public identity
+* Participation status
+* Joined date
+* Ready state
+* Completion state
+
+Do not show:
+
+* Exact location
+* Private proof contents
+* Account restriction
+* Private notification settings
+* Other private profile fields
+
+Participant-removal controls belong only where Prompt 11 already authorizes them.
+
+Do not build a complex host dashboard yet.
+
+⸻
+
+65. Host Controls
+
+Implement only simple host controls already supported by the domain.
+
+May include:
+
+* Start host-controlled Hunt
+* View readiness
+* Cancel occurrence
+* Remove participant with confirmation where authorized
+
+Do not implement:
+
+* Chat
+* Live tracking
+* Live map of players
+* Remote clue manipulation
+* Real-time manual scoring
+* Point editing
+
+Do not expand this into an event-operations console.
+
+⸻
+
+66. Creator Analytics — Build 1
+
+Implement a lightweight creator summary, not a full analytics platform.
+
+Show:
+
+* Hunt views where reliable event data exists
+* Joins
+* Completions
+* Completion rate
+* Average approved point reward
+* Most-completed Hunt
+* Most-selected creator Hunt
+* Stop abandonment summary if safely calculated
+* Public Hunt status
+
+Do not expose:
+
+* Individual player movement
+* Exact location trails
+* Private proof
+* Sensitive anti-cheat data
+
+If analytics infrastructure is not yet implemented, prepare typed queries and empty states rather than invent values.
+
+⸻
+
+67. Creator Analytics Empty State
+
+If event tracking is not connected:
+
+Creator analytics will appear as players begin participating in your published Hunts.
+
+Do not show fake statistics.
+
+Do not add third-party analytics yet.
+
+⸻
+
+68. Moderation Preparation
+
+All user-created Hunt content must be moderation-ready.
+
+Moderatable entities include:
+
+* Hunt title
+* Description
+* Cover image
+* Stops
+* Clues
+* Hint text
+* Images
+* Public location descriptions
+* Creator bio reference where relevant
+
+Prepare statuses:
+
+* Pending
+* Approved
+* Rejected
+* Manual Review
+
+Do not implement automatic third-party image moderation yet.
+
+Prompt 20 or later moderation integration should plug into the same media/content records.
+
+⸻
+
+69. Reportability
+
+Published Custom Hunts must be reportable from player-facing screens.
+
+Do not implement a second report system.
+
+Reuse the shared report architecture.
+
+Allow reports for:
+
+* Unsafe Hunt
+* Inappropriate content
+* Misleading location
+* Trespassing concern
+* Harassment
+* Scam
+* Other
+
+Creator must not see reporter identity.
+
+Admin review is later.
+
+⸻
+
+70. Safety Validation
+
+Before Hunt submission, perform content safety checks that do not require a third-party AI provider.
+
+Use structural validation:
+
+* Public-access confirmation
+* Safety acknowledgment
+* Required location fields
+* Nonzero coordinates
+* Schedule validity
+* Proof validity
+* No missing clue
+* No malformed riddle answer config
+* No impossible capacity
+* No missing required stop
+
+Do not pretend structural checks prove the Hunt is safe.
+
+Human/admin moderation remains authoritative for Build 1.
+
+⸻
+
+71. Versioning
+
+Implement explicit Hunt definition versioning.
+
+A version should preserve:
+
+* Content
+* Stop structure
+* Clues
+* Validation configuration
+* Proof requirements
+* Reward request/approval
+* Safety data
+* Media references
+* Creator
+* Approval state
+* Created timestamp
+
+Participants should reference the approved version active at join/start.
+
+Do not silently point active participants to a new editor version.
+
+⸻
+
+72. Draft Revision Model
+
+Creator edits should operate against a mutable draft revision.
+
+Upon submission:
+
+* Snapshot revision becomes immutable.
+* New changes create next draft revision.
+* Approved version remains immutable for historical activity.
+
+Do not create duplicate full records unnecessarily if versioned child records already solve the problem cleanly.
+
+Document the chosen model.
+
+⸻
+
+73. RLS
+
+Verify creator RLS.
+
+Creator may:
+
+* Read their own drafts.
+* Edit their own mutable drafts.
+* View their moderation status.
+* View safe participant summaries where authorized.
+* Manage their own approved Hunts through trusted operations.
+
+Creator may not:
+
+* Approve their own Hunt.
+* Change moderation status.
+* Change approved reward directly.
+* Publish a rejected Hunt.
+* View another creator’s drafts.
+* View private participant proof.
+* View moderator-only notes.
+* Alter participant points.
+* Alter audit logs.
+* Bypass invitation settings.
+* Change platform ownership.
+
+Public users must not access draft tables.
+
+⸻
+
+74. Trusted Operations
+
+Create or finalize trusted operations such as:
+
+* create_hunt_draft
+* update_hunt_draft
+* add_hunt_stop
+* update_hunt_stop
+* delete_hunt_stop
+* reorder_hunt_stops
+* duplicate_hunt_stop
+* validate_hunt_draft
+* submit_hunt_for_review
+* create_hunt_revision
+* duplicate_hunt_to_draft
+* archive_hunt_draft
+* get_creator_hunts
+* get_creator_hunt_detail
+* get_creator_hunt_participants
+* get_creator_hunt_summary
+
+Use existing project naming conventions.
+
+Requirements:
+
+* Validate auth.uid().
+* Validate ownership.
+* Validate account status.
+* Safe search paths.
+* Restricted grants.
+* Transactional changes.
+* Idempotency where needed.
+* No dynamic SQL.
+* No client-controlled approval state.
+* No client-controlled point award.
+
+⸻
+
+75. Creator Query Hooks
+
+Create hooks such as:
+
+* useCreatorHunts
+* useCreatorHuntDraft
+* useCreateHuntDraft
+* useUpdateHuntDraft
+* useHuntDraftValidation
+* useAddHuntStop
+* useUpdateHuntStop
+* useDeleteHuntStop
+* useReorderHuntStops
+* useDuplicateHuntStop
+* useSubmitHuntForReview
+* useCreatorHuntModerationStatus
+* useDuplicateHunt
+* useArchiveHunt
+* useCreatorHuntParticipants
+* useCreatorHuntAnalytics
+
+Use stable query keys.
+
+Do not mix creator queries into public Hunt discovery keys.
+
+⸻
+
+76. Creator Query Keys
+
+Example:
+
+creatorHuntKeys.all
+creatorHuntKeys.list(userId, status)
+creatorHuntKeys.draft(draftId, userId)
+creatorHuntKeys.validation(draftId, version)
+creatorHuntKeys.reviewStatus(huntId, userId)
+creatorHuntKeys.manage(huntId, userId)
+creatorHuntKeys.participants(huntId, occurrenceId, userId)
+creatorHuntKeys.analytics(huntId, userId)
+
+Do not place:
+
+* Private riddle answers
+* Exact private geometry
+* Moderation notes
+* Proof content
+
+in query keys.
+
+⸻
+
+77. Query Invalidation
+
+After draft update:
+
+Invalidate:
+
+* Draft
+* Draft validation
+* Preview
+
+After stop change:
+
+Invalidate:
+
+* Draft
+* Stop list
+* Validation
+* Preview
+
+After submission:
+
+Invalidate:
+
+* Draft
+* Creator Hunt list
+* Review status
+* Preview
+
+After approval/publish event:
+
+Invalidate:
+
+* Creator Hunt list
+* Manage screen
+* Public Hunt Map where relevant
+* Hunt Detail
+
+After cancellation:
+
+Invalidate:
+
+* Creator manage
+* Participants
+* Public discovery
+* My Hunts
+* Notifications
+
+Do not invalidate unrelated Quest data.
+
+⸻
+
+78. Offline Behavior
+
+Allow local draft resilience where safe.
+
+The creator may continue editing a temporarily cached draft UI when offline, but:
+
+* Clearly mark unsynced changes.
+* Do not say Saved.
+* Do not submit for moderation offline.
+* Do not publish offline.
+* Do not send invitations offline.
+* Do not cancel occurrences offline.
+* Do not change participant state offline.
+
+Full synchronization belongs in Prompt 22.
+
+Avoid building a second complicated sync engine.
+
+⸻
+
+79. Loading States
+
+Create tailored states for:
+
+* Draft creation
+* Draft restoration
+* Basic details
+* Map location selection
+* Stop list
+* Stop editor
+* Media upload
+* Validation
+* Preview
+* Submission
+* Moderation status
+* Creator Hunt list
+* Manage Hunt
+* Participant summary
+* Creator analytics
+
+Do not use one indefinite spinner.
+
+Preserve previously loaded safe draft state during background refresh.
+
+⸻
+
+80. Empty States
+
+Examples:
+
+No creator Hunts
+
+Create your first Hunt and build an adventure for other players.
+
+Primary action:
+
+Create Hunt
+
+No stops
+
+Add the first stop in your Hunt.
+
+Primary action:
+
++ Add Stop
+
+No intended invitees
+
+You can invite friends now or manage invitations after approval.
+
+No published Hunts
+
+Approved Hunts will appear here after review.
+
+No analytics
+
+Analytics will appear after players begin participating.
+
+Do not show fake creator data.
+
+⸻
+
+81. Error States
+
+Handle:
+
+* Draft unavailable
+* Draft ownership changed/unavailable
+* Save failed
+* Map unavailable
+* Invalid location
+* Media upload failed
+* Stop validation failed
+* Riddle config invalid
+* Schedule invalid
+* Draft validation failed
+* Moderation submission failed
+* Changes requested
+* Rejected
+* Publish unavailable
+* Creator restricted
+* Network offline
+* Invalid deep link
+* Unknown safe error
+
+Provide:
+
+* Retry
+* Continue Editing
+* Return to My Hunts
+* Open affected step
+* Contact Support where appropriate
+
+Do not expose raw SQL, RLS, Mapbox, storage, or moderation errors.
+
+⸻
+
+82. UI Components
+
+Create or finalize reusable components such as:
+
+* HuntCreatorStepper
+* DraftSaveStatus
+* CreatorHuntCard
+* HuntDetailsForm
+* PrivacySelector
+* ParticipationModeSelector
+* ScheduleEditor
+* MapLocationPicker
+* StartingAreaEditor
+* StopList
+* StopEditor
+* StopTypeSelector
+* StopReorderHandle
+* ClueEditor
+* RiddleEditor
+* RiddleAnswerEditor
+* ProofRequirementEditor
+* LocationValidationEditor
+* SafetyEditor
+* AccessibilityEditor
+* InviteFriendSelector
+* HuntDraftValidationSummary
+* HuntPlayerPreview
+* CreatorStructurePreview
+* ModerationStatusCard
+* ChangesRequestedPanel
+* CreatorHuntManagePanel
+* ParticipantSummary
+* CreatorAnalyticsSummary
+
+Reuse existing:
+
+* Buttons
+* Inputs
+* Media uploader
+* Map
+* Bottom sheet
+* Modal
+* Avatar
+* Friend selector
+* Empty state
+* Status badge
+* Safety notice
+
+Do not duplicate the design system.
+
+⸻
+
+83. Visual Design
+
+Maintain Worlds UI direction:
+
+* Deep blue
+* Green
+* White
+* Charcoal
+* Minimal
+* Modern
+* Exploratory
+
+Creator experience should feel more like:
+
+guided adventure builder
+
+and less like:
+
+database admin panel
+
+Use:
+
+* Clear step numbers
+* Large map interaction where geographic
+* Short forms
+* Plain-language explanations
+* Preview states
+* Safe defaults
+
+Avoid:
+
+* Giant tables
+* Nested dashboards
+* Dense technical language
+* Raw coordinate fields
+* JSON editors
+* Backend terminology
+
+⸻
+
+84. Accessibility
+
+Ensure:
+
+* Stepper announces current step.
+* Autosave status is announced appropriately.
+* Inputs have visible labels.
+* Errors identify the field and step.
+* Map picker has a non-map accessible fallback where possible.
+* Stop reorder supports non-drag controls.
+* Proof-type options announce selected state.
+* Riddle accepted-answer fields are clearly marked private.
+* Image upload controls are accessible.
+* Review validation summary links to affected fields.
+* Destructive actions are clearly labeled.
+* Dynamic type works.
+* Reduced motion is respected.
+* Touch targets are appropriately sized.
+
+⸻
+
+85. Security Verification
+
+Verify:
+
+* Only owner can edit draft.
+* Creator cannot approve own Hunt.
+* Creator cannot publish rejected Hunt.
+* Creator cannot change approved reward directly.
+* Draft private geometry is protected.
+* Riddle answers remain server-private.
+* Public preview does not expose secret answers.
+* Player preview does not create participation.
+* Draft media does not become public.
+* Pending-review snapshots are immutable.
+* Active participant Hunt versions are stable.
+* Creator cannot view participant private proof.
+* Creator cannot award points.
+* Creator cannot bypass capacity.
+* Creator cannot bypass social invitation rules.
+* Service-role credentials are absent from the client.
+* Public Map never returns drafts.
+
+⸻
+
+86. Privacy Verification
+
+Verify:
+
+* Creator’s exact current location is not stored unless intentionally used as Hunt location.
+* Intended invitees remain private.
+* Participant list is only visible to authorized creator/host roles.
+* Invitee block rules are honored.
+* Draft location geometry is not publicly accessible.
+* Secret clues are not public.
+* Riddle answers are not public.
+* Participant proof is not creator-visible unless future policy explicitly allows host review.
+* Creator analytics do not expose player movement.
+* Moderation notes are split into creator-safe and internal fields.
+
+⸻
+
+87. Development Fixtures
+
+Create development-only creator fixtures covering:
+
+* Empty draft
+* Complete valid draft
+* Draft with missing title
+* Draft with invalid schedule
+* Draft with no required stop
+* Ordered three-stop Hunt
+* Unordered Hunt
+* Location stop
+* Activity stop
+* Riddle stop
+* Image-proof stop
+* Image + location stop
+* Invalid 0,0 stop
+* Bad geofence
+* Intended invitees
+* Pending moderation
+* Changes requested
+* Approved
+* Rejected
+* Scheduled
+* Published
+* Archived
+* Creator restricted
+
+Fixtures must not appear in production.
+
+Fixture moderation actions must not affect production data.
+
+⸻
+
+88. Automated Tests
+
+Add tests covering:
+
+Draft creation
+
+* Eligible user creates draft
+* Restricted user rejected
+* Double tap creates one draft
+* Owner set correctly
+* Draft private by default
+* Draft limit enforced
+
+Autosave
+
+* Saves valid changes
+* Debounces
+* Shows saving/saved/failure
+* Retries safely
+* Does not overwrite newer data
+* Restores draft after restart
+
+Basic details
+
+* Validates title
+* Validates summary
+* Validates duration
+* Uses shared difficulty
+* Media remains private
+
+Privacy and scheduling
+
+* Public/unlisted/invite/private stored correctly
+* Invalid schedule rejected
+* UTC conversion correct
+* Join deadline rules enforced
+* Active windows enforced
+
+Starting location
+
+* Valid location saves
+* Missing location rejected where required
+* 0,0 placeholder rejected
+* Invalid coordinates rejected
+* Public and private geometry separated
+* Location ownership not inferred from user GPS
+
+Stops
+
+* Add stop
+* Edit stop
+* Delete stop
+* Prevent zero required stops at final validation
+* Reorder ordered Hunt
+* Duplicate stop
+* Stable stop IDs preserved
+
+Clues
+
+* Text clue
+* Image clue
+* Riddle clue
+* Future locked clue remains private
+* Clue sequencing validates
+
+Riddles
+
+* Accepted answers stored privately
+* Client cannot retrieve answer
+* Normalization works
+* Wrong answer rejected safely
+* Rate limit enforced
+
+Proof configuration
+
+* Text
+* Image
+* Location
+* Mixed proof
+* Invalid config rejected
+* QR option unavailable unless real scanner exists
+
+Invitees
+
+* Friends selector works
+* Blocked user excluded
+* Invitations-disabled friend excluded
+* Draft selection does not send invitation
+* Eligibility rechecked after publication
+
+Validation
+
+* Complete valid draft passes
+* Missing fields grouped by step
+* Invalid location fails
+* Invalid capacity fails
+* Invalid reward fails
+* Unsafe structural omissions fail
+
+Submission
+
+* Creator may submit own valid draft
+* Another user cannot submit it
+* Invalid draft rejected
+* Snapshot immutable
+* Status becomes Pending Review
+* Double submission idempotent
+
+Moderation revision
+
+* Changes Requested editable
+* Prior submitted version preserved
+* Resubmission creates new version
+* Creator cannot modify internal moderator fields
+
+Publishing
+
+* Draft cannot publish
+* Rejected cannot publish
+* Approved valid version can transition through trusted backend
+* Public discovery shows only published public Hunt
+* Invite-only does not enter public map
+
+Versioning
+
+* Active participants remain on approved version
+* Editing creates future version
+* Reward snapshot stable
+* Stop changes do not alter active participation
+
+Security
+
+* Creator cannot approve
+* Creator cannot set points awarded
+* Creator cannot view participant proof
+* Public cannot access draft
+* Riddle answer protected
+* Private geometry protected
+* Service-role credential absent
+
+Use local Supabase integration tests where available.
+
+⸻
+
+89. Documentation
+
+Create or update:
+
+* /docs/HUNT_CREATOR.md
+* /docs/HUNT_CREATION_FLOW.md
+* /docs/HUNT_DRAFTS.md
+* /docs/HUNT_CREATOR_MAP_EDITOR.md
+* /docs/HUNT_STOP_EDITOR.md
+* /docs/HUNT_CLUE_EDITOR.md
+* /docs/HUNT_RIDDLE_VALIDATION.md
+* /docs/HUNT_CREATOR_PROOF_CONFIGURATION.md
+* /docs/HUNT_CREATOR_SAFETY.md
+* /docs/HUNT_CREATOR_INVITATIONS.md
+* /docs/HUNT_CREATOR_MODERATION.md
+* /docs/HUNT_VERSIONING.md
+* /docs/HUNT_CREATOR_MANAGEMENT.md
+* /docs/HUNT_CREATOR_SECURITY.md
+* /docs/HUNT_CREATOR_TESTING.md
+
+Document:
+
+* Creation flow
+* Draft lifecycle
+* Autosave
+* Creator eligibility
+* Privacy
+* Scheduling
+* Map selection
+* Public vs private geometry
+* Stops
+* Ordering
+* Clues
+* Riddles
+* Proof setup
+* Safety
+* Accessibility
+* Intended invitees
+* Reward recommendation
+* Validation
+* Preview
+* Moderation submission
+* Changes Requested
+* Rejection
+* Approval
+* Publication
+* Versioning
+* Published Hunt editing
+* Duplication
+* Archival
+* Cancellation
+* Participant summaries
+* Creator analytics
+* RLS
+* Privacy
+* Tests
+* Remaining work for Prompt 18
+
+Update:
+
+* /docs/PROJECT_CONSTITUTION.md
+* /docs/MY_HUNTS.md
+* replit.md
+
+only where necessary.
+
+Do not alter approved bottom navigation or visual direction.
+
+⸻
+
+90. Out of Scope
+
+Do not implement:
+
+* Creator payments
+* Paid Hunts
+* Ticketing
+* Stripe
+* Creator payouts
+* Revenue sharing
+* Premium Hunt creation
+* Paid hints
+* Hunt marketplace
+* Public creator storefronts
+* Hunt chat
+* Live participant location
+* Turn-by-turn navigation
+* Automatic AI Hunt creation
+* Automatic third-party image moderation
+* Admin moderation UI
+* Admin proof-review UI
+* Full host operations dashboard
+* Creator-to-player messaging
+* Contact-book invites
+* Email invites
+* SMS invites
+* Quest creation by users
+* Game Zones
+* Outbreak
+* New game modes
+
+Prompt 18 will move into the admin panel foundation and full platform administration, including user management, Quest management, Hunt moderation, Custom Hunt review, submissions, reports, audit logs, settings, and operational controls.
+
+⸻
+
+91. Final Verification
+
+Before finishing, confirm:
+
+* My Hunts still provides the + Create entry.
+* Hunt bottom navigation remains Map, My Hunts, Progress, Profile.
+* Creator flow feels like a guided builder rather than admin software.
+* Draft creation is idempotent.
+* Draft autosave works.
+* Only owners can edit drafts.
+* Public and private location geometry are separated.
+* Geographic stops cannot silently save invalid 0,0 coordinates.
+* Ordered and unordered Hunt structures work.
+* Riddle answers are validated server-side and remain private.
+* QR is not exposed as fake text input.
+* Proof configuration reuses the existing proof system.
+* Safety acknowledgment is required.
+* Invite selections respect friendship, blocks, and invitation privacy.
+* Draft invite selections do not prematurely send invitations.
+* Reward values remain bounded and subject to moderation.
+* Full draft validation identifies errors by creator step.
+* Player Preview does not expose secrets.
+* Creator preview does not create participation.
+* Submission creates an immutable review snapshot.
+* Creator cannot approve their own Hunt.
+* Changes Requested preserves prior versions.
+* Rejected Hunts do not publish.
+* Published Hunts honor their active window.
+* Active participants remain on the version they joined.
+* Published edits do not mutate active participant rules.
+* Creator management does not expose participant private proof.
+* Creator cannot alter awarded points.
+* Creator analytics do not expose player movement.
+* Drafts do not appear publicly.
+* Invite-only/private Hunts obey discovery rules.
+* Development fixtures never appear in production.
+* App compiles.
+* Tests pass or blocked tests are clearly documented.
+* No approved UI or navigation was redesigned.
+
+Resolve known in-scope errors before stopping.
+
+⸻
+
+Deliverables
+
+When complete, provide:
+
+1. Hunt creator feature files created or updated
+2. + Create entry behavior
+3. Guided seven-stage creation flow
+4. Draft creation and ownership
+5. Draft limits
+6. Autosave and restore
+7. Basic Details
+8. Cover-image flow
+9. Privacy settings
+10. Participation mode
+11. Ordered/unordered configuration
+12. Scheduling
+13. Starting-area map editor
+14. Public/private geometry separation
+15. Stop list
+16. Stop editor
+17. Stop reordering
+18. Stop duplication/deletion
+19. Clue editor
+20. Riddle-answer validation
+21. Geographic validation editor
+22. Invalid coordinate / 0,0 protection
+23. Proof-requirement editor
+24. Safety configuration
+25. Accessibility configuration
+26. Intended invitee selector
+27. Participant-capacity settings
+28. Point reward recommendation and moderation boundary
+29. Draft validator
+30. Player Preview
+31. Creator Structure Preview
+32. Submit-for-review transaction
+33. Immutable submitted snapshot
+34. Moderation-state presentation
+35. Changes Requested flow
+36. Rejection behavior
+37. Approval/publication readiness
+38. Active-window enforcement
+39. Creator-owned Hunt lists
+40. Creator Hunt management
+41. Published-Hunt versioning
+42. Duplicate Hunt
+43. Archive/cancellation flows
+44. Limited host controls
+45. Creator analytics foundation
+46. React Query hooks, keys, and invalidation
+47. Database migrations, RPCs, indexes, or RLS changes
+48. Tests added and results
+49. Documentation created or updated
+50. Assumptions made
+51. Known limitations
+52. Exact remaining work for Prompt 18
+
+Do not begin Prompt 18.
+
+Do not redesign the application.
+
+Create checkpoint:
+
+Build 1 — Prompt 17 — Custom Hunt Creation and Creator Management
