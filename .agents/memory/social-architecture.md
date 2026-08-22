@@ -34,7 +34,6 @@ description: Prompt 16 social layer — public profiles, friendships, friend req
 
 ## What is NOT yet built (deferred)
 
-- `HuntFriendSelector` component — friend list filtered by Hunt eligibility; hook exists, UI is a stub. Wired fully in Prompt 17 (Hunt creation).
 - Settings / Help / Sign Out on profile screen — still `onPress={() => {}}`.
 
 ## Why
