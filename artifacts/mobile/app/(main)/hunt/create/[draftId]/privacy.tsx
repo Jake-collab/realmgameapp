@@ -14,6 +14,6 @@ export default function Privacy() {
     <Text style={[creatorStyles.label,{color:colors.foreground,marginTop:20}]}>Participation</Text>{(['solo','group','solo_or_group'] as const).map(v=><Button key={v} fullWidth variant={c.payload.participationMode===v?'primary':'outline'} onPress={()=>c.setPayload({...c.payload,participationMode:v})}>{v==='solo'?'Solo':v==='group'?'Group':'Solo or group'}</Button>)}
     <Text style={[creatorStyles.label,{color:colors.foreground,marginTop:20}]}>Progression</Text><View style={{flexDirection:'row',gap:8}}>{(['ordered','unordered'] as const).map(v=><Button key={v} variant={c.payload.stopOrdering===v?'primary':'outline'} onPress={()=>c.setPayload({...c.payload,stopOrdering:v})}>{v==='ordered'?'In order':'Any order'}</Button>)}</View>
     <Input label="Maximum participants" keyboardType="number-pad" value={String(c.payload.maxParticipants)} onChangeText={v=>c.setPayload({...c.payload,maxParticipants:Math.min(500,Math.max(1,Number(v)||1))})} />
-    <CreatorNext onPress={()=>router.push(`/(main)/hunt/create/${id}/start`)} />
+    <CreatorNext onPress={()=>router.push(`/(main)/hunt/create/${id}/schedule`)} />
   </CreatorStepLayout>;
 }

@@ -115,6 +115,14 @@ BEGIN
   IF COALESCE((p->>'maxParticipants')::integer,0) < 1 THEN
     issues := issues || jsonb_build_array(jsonb_build_object('step','privacy','code','capacity','message','Choose a participant limit.'));
   END IF;
+  IF COALESCE((p->>'publicAccessConfirmed')::boolean,false) = false THEN
+    issues := issues || jsonb_build_array(jsonb_build_object('step','start','code','public_access','message','Confirm that participants can access the starting area without trespassing.'));
+  END IF;
+  IF COALESCE((p->>'startAnywhere')::boolean,true) = false AND
+     (COALESCE(p->'publicStartingArea'->>'label','') = '' OR
+      COALESCE((p->'publicStartingArea'->>'confirmed')::boolean,false) = false) THEN
+    issues := issues || jsonb_build_array(jsonb_build_object('step','start','code','starting_area','message','Confirm a public starting area or choose start anywhere.'));
+  END IF;
   IF COALESCE((p->>'safetyAcknowledged')::boolean,false) = false THEN
     issues := issues || jsonb_build_array(jsonb_build_object('step','review','code','safety','message','Confirm that this Hunt is safe and does not require trespassing.'));
   END IF;

@@ -109,6 +109,14 @@ export function validateCreatorDraft(payload: HuntCreatorPayload): DraftValidati
   if (!payload.maxParticipants || payload.maxParticipants < 1 || payload.maxParticipants > 500) issues.push({ step:'privacy', code:'capacity', message:'Choose between 1 and 500 participants.' });
   if (payload.startsAt && payload.endsAt && new Date(payload.endsAt) < new Date(payload.startsAt))
     issues.push({ step:'privacy', code:'schedule', message:'The end must be after the start.' });
+  if (payload.startsAt && Number.isNaN(new Date(payload.startsAt).getTime()))
+    issues.push({ step:'privacy', code:'schedule_start', message:'Enter a valid start date and time.' });
+  if (payload.endsAt && Number.isNaN(new Date(payload.endsAt).getTime()))
+    issues.push({ step:'privacy', code:'schedule_end', message:'Enter a valid end date and time.' });
+  if (!payload.startAnywhere && (!payload.publicStartingArea?.label.trim() || !payload.publicStartingArea.confirmed))
+    issues.push({ step:'start', code:'starting_area', message:'Confirm a public starting area or choose start anywhere.' });
+  if (!payload.publicAccessConfirmed)
+    issues.push({ step:'start', code:'public_access', message:'Confirm that participants can access the starting area without trespassing.' });
   if (!payload.safetyAcknowledged) issues.push({ step:'review', code:'safety', message:'Confirm that the Hunt is safe and does not require trespassing.' });
   const required = payload.stops.filter(stop => stop.required);
   if (!required.length) issues.push({ step:'stops', code:'required_stop', message:'Add at least one required stop.' });

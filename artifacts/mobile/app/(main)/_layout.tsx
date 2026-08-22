@@ -141,6 +141,7 @@ export default function MainLayout() {
       <Stack.Screen name="hunt/create" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="hunt/create/[draftId]/details" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="hunt/create/[draftId]/privacy" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="hunt/create/[draftId]/schedule" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="hunt/create/[draftId]/start" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="hunt/create/[draftId]/stops" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="hunt/create/[draftId]/stop/[stopId]" options={{ animation: 'slide_from_right' }} />
