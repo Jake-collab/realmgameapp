@@ -49,6 +49,7 @@ import {
   resolveReward,
   updateModerationSettings,
 } from "../lib/moderation-state";
+import { persistIntegritySnapshot, persistModerationResult } from "../lib/supabase-moderation";
 
 const router: IRouter = Router();
 
@@ -313,7 +314,9 @@ router.post("/admin/moderation/scan/text", requireAdmin("moderation.manage"), as
     return;
   }
   const outcome = await moderateText(input.data.text, input.data.context, input.data);
-  res.json({ ...outcome, persistence: createModerationRequest({ entityType: input.data.entityType, entityId: input.data.entityId, context: input.data.context, contentHash: outcome.result.contentHash, result: outcome.result, outcome }) });
+  const localPersistence = createModerationRequest({ entityType: input.data.entityType, entityId: input.data.entityId, context: input.data.context, contentHash: outcome.result.contentHash, result: outcome.result, outcome });
+  const databasePersistence = await persistModerationResult({ idempotencyKey: localPersistence.request.idempotencyKey, entityType: input.data.entityType, entityId: input.data.entityId, context: input.data.context, contentHash: outcome.result.contentHash, result: outcome.result, outcome }).catch((error: unknown) => ({ persisted: false, reason: error instanceof Error ? error.message : "Database persistence failed." }));
+  res.json({ ...outcome, persistence: { local: localPersistence, database: databasePersistence } });
 });
 
 router.post("/admin/moderation/scan/image", requireAdmin("moderation.manage"), async (req, res) => {
@@ -331,10 +334,12 @@ router.post("/admin/moderation/scan/image", requireAdmin("moderation.manage"), a
     return;
   }
   const outcome = await moderateImage(input.data, input.data);
-  res.json({ ...outcome, persistence: createModerationRequest({ entityType: input.data.entityType, entityId: input.data.entityId, context: input.data.context, contentHash: outcome.result.contentHash, result: outcome.result, outcome }) });
+  const localPersistence = createModerationRequest({ entityType: input.data.entityType, entityId: input.data.entityId, context: input.data.context, contentHash: outcome.result.contentHash, result: outcome.result, outcome });
+  const databasePersistence = await persistModerationResult({ idempotencyKey: localPersistence.request.idempotencyKey, entityType: input.data.entityType, entityId: input.data.entityId, context: input.data.context, contentHash: outcome.result.contentHash, result: outcome.result, outcome }).catch((error: unknown) => ({ persisted: false, reason: error instanceof Error ? error.message : "Database persistence failed." }));
+  res.json({ ...outcome, persistence: { local: localPersistence, database: databasePersistence } });
 });
 
-router.post("/admin/integrity/evaluate", requireAdmin("integrity.manage"), (req, res) => {
+router.post("/admin/integrity/evaluate", requireAdmin("integrity.manage"), async (req, res) => {
   const input = z.object({
     mockLocation: z.boolean().optional(),
     horizontalAccuracyMeters: z.number().nonnegative().nullable().optional(),
@@ -356,7 +361,9 @@ router.post("/admin/integrity/evaluate", requireAdmin("integrity.manage"), (req,
     return;
   }
   const { userId, entityType, entityId, ...signals } = input.data;
-  res.json(createIntegritySnapshot({ userId, entityType, entityId, signals }));
+  const snapshot = createIntegritySnapshot({ userId, entityType, entityId, signals });
+  const databasePersistence = await persistIntegritySnapshot({ userId, entityType, entityId, snapshot }).catch((error: unknown) => ({ persisted: false, reason: error instanceof Error ? error.message : "Database persistence failed." }));
+  res.json({ ...snapshot, persistence: databasePersistence });
 });
 
 router.post("/admin/reports/triage", requireAdmin("moderation.manage"), (req, res) => {
