@@ -26,6 +26,13 @@ import {
   type QuestGenerationType,
 } from "../lib/ai-quest";
 import { z } from "zod";
+import {
+  applyModerationPolicy,
+  moderationDiagnostics,
+  moderateImage,
+  moderateText,
+} from "../lib/moderation";
+import { calculateIntegrityRisk, triageReport } from "../lib/integrity";
 
 const router: IRouter = Router();
 
@@ -270,6 +277,76 @@ router.get("/admin/ai/settings", requireAdmin("ai.settings.read"), (_req, res) =
       monthlyRequestLimit: 1000,
     },
   });
+});
+
+router.get("/admin/moderation/diagnostics", requireAdmin("moderation.read"), async (_req, res) => {
+  res.json(await moderationDiagnostics());
+});
+
+router.post("/admin/moderation/scan/text", requireAdmin("moderation.manage"), async (req, res) => {
+  const input = z.object({
+    text: z.string().trim().min(1).max(12000),
+    context: z.enum(["public_text", "ai_quest", "profile", "private_proof"]),
+    accountInGoodStanding: z.boolean().default(true),
+    reported: z.boolean().default(false),
+  }).safeParse(req.body);
+  if (!input.success) {
+    res.status(400).json({ error: "Text and a supported moderation context are required." });
+    return;
+  }
+  res.json(await moderateText(input.data.text, input.data.context, input.data));
+});
+
+router.post("/admin/moderation/scan/image", requireAdmin("moderation.manage"), async (req, res) => {
+  const input = z.object({
+    contentHash: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+    mediaUrl: z.string().url().max(2048).optional(),
+    context: z.enum(["public_media", "private_proof", "profile"]),
+    accountInGoodStanding: z.boolean().default(true),
+    reported: z.boolean().default(false),
+  }).refine((value) => value.contentHash || value.mediaUrl, "A content hash or server-accessible media URL is required.").safeParse(req.body);
+  if (!input.success) {
+    res.status(400).json({ error: "A content hash or server-accessible media URL and context are required." });
+    return;
+  }
+  res.json(await moderateImage(input.data, input.data));
+});
+
+router.post("/admin/integrity/evaluate", requireAdmin("integrity.manage"), (req, res) => {
+  const input = z.object({
+    mockLocation: z.boolean().optional(),
+    horizontalAccuracyMeters: z.number().nonnegative().nullable().optional(),
+    speedKmh: z.number().nonnegative().nullable().optional(),
+    submissionsInWindow: z.number().int().nonnegative().optional(),
+    duplicateParticipation: z.boolean().optional(),
+    duplicateMediaReuse: z.boolean().optional(),
+    vpnDetected: z.boolean().optional(),
+    repeatedGeoFailures: z.number().int().nonnegative().optional(),
+    repeatedRiddleGuesses: z.number().int().nonnegative().optional(),
+    impossibleTimeSequence: z.boolean().optional(),
+    serverTimestampAnomaly: z.boolean().optional(),
+  }).safeParse(req.body);
+  if (!input.success) {
+    res.status(400).json({ error: "Integrity signals are invalid." });
+    return;
+  }
+  res.json(calculateIntegrityRisk(input.data));
+});
+
+router.post("/admin/reports/triage", requireAdmin("moderation.manage"), (req, res) => {
+  const input = z.object({
+    reason: z.string().trim().min(1).max(80),
+    targetType: z.string().trim().min(1).max(40),
+    independentReporters: z.number().int().nonnegative().default(0),
+    relatedOpenCases: z.number().int().nonnegative().default(0),
+    targetPublic: z.boolean().default(false),
+    activeHuntRisk: z.boolean().default(false),
+  }).safeParse(req.body);
+  if (!input.success) {
+    res.status(400).json({ error: "Report triage inputs are invalid." });
+    return;
+  }
+  res.json(triageReport(input.data));
 });
 
 export default router;

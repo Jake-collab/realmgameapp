@@ -12,7 +12,11 @@ export type AdminPermission =
   | "ai.prompts.read"
   | "ai.prompts.edit"
   | "ai.settings.read"
-  | "ai.settings.edit";
+  | "ai.settings.edit"
+  | "moderation.read"
+  | "moderation.manage"
+  | "integrity.read"
+  | "integrity.manage";
 
 export type AdminRole = "user" | "creator" | "moderator" | "admin" | "super_admin";
 
@@ -35,7 +39,7 @@ declare global {
 const rolePermissions: Record<AdminRole, AdminPermission[]> = {
   user: [],
   creator: [],
-  moderator: ["admin.read", "admin.review.read", "admin.diagnostics.read", "ai.read"],
+  moderator: ["admin.read", "admin.review.read", "admin.diagnostics.read", "ai.read", "moderation.read", "moderation.manage", "integrity.read"],
   admin: [
     "admin.read",
     "admin.users.read",
@@ -48,6 +52,10 @@ const rolePermissions: Record<AdminRole, AdminPermission[]> = {
     "ai.prompts.read",
     "ai.prompts.edit",
     "ai.settings.read",
+    "moderation.read",
+    "moderation.manage",
+    "integrity.read",
+    "integrity.manage",
   ],
   super_admin: [
     "admin.read",
@@ -62,6 +70,10 @@ const rolePermissions: Record<AdminRole, AdminPermission[]> = {
     "ai.prompts.edit",
     "ai.settings.read",
     "ai.settings.edit",
+    "moderation.read",
+    "moderation.manage",
+    "integrity.read",
+    "integrity.manage",
   ],
 };
 

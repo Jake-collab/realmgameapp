@@ -1,0 +1,2297 @@
+## Prompt 20 — Automated Moderation, Image Safety Scanning, Report Automation, and Anti-Cheat Hardening
+
+Copy this into Replit AI:
+
+````text
+# Worlds — Build 1, Prompt 20
+# Automated Moderation, Image Safety Scanning, Report Automation, and Anti-Cheat Hardening
+
+Continue from the current Worlds project and treat Prompts 1–19 and all existing project documentation as authoritative.
+
+The application is named:
+
+Worlds
+
+Prompts 1–19 implemented:
+
+- Authentication
+- Profiles and onboarding
+- Interest Bubbles
+- Quest gameplay
+- Hunt gameplay
+- Mapbox integration
+- Secure Geo validation
+- Proof submission
+- Quest and Hunt Progress
+- Leaderboards
+- Achievements and progression
+- Social/friends/privacy
+- Custom Hunt creation
+- Admin Panel
+- Admin moderation queues
+- AI Quest generation
+- Admin-editable Daily, Monthly, and Geo Quest AI prompts
+
+This prompt must implement the next safety and integrity layer:
+
+1. Automated image appropriateness scanning
+2. Text/content safety scanning
+3. Moderation-provider abstraction
+4. Media moderation workflow automation
+5. Proof-image moderation readiness
+6. Public profile/media moderation
+7. Custom Hunt content moderation
+8. AI-generated Quest moderation handoff
+9. Report triage automation
+10. Duplicate-report detection
+11. Safety-risk scoring
+12. Anti-cheat scoring hardening
+13. Mock-location handling
+14. Impossible-speed detection
+15. GPS accuracy handling
+16. Submission burst detection
+17. Duplicate Quest/Hunt submission detection
+18. VPN signal handling
+19. Quarantined-points integrity
+20. Manual override and appeal readiness
+21. Audit trails
+22. Moderation diagnostics
+23. Scheduled moderation jobs
+24. Privacy boundaries
+25. Human review for high-risk decisions
+
+Do not implement Stripe, memberships, creator payouts, paid Hunts, Game Zones, Outbreak, direct messaging, or Hunt chat.
+
+Do not allow automated moderation to autonomously make irreversible high-risk account decisions.
+
+---
+
+# 1. Core Principle
+
+Automation may:
+
+- Approve clearly safe low-risk content when configured
+- Flag questionable content
+- Quarantine content
+- Route to manual review
+- Calculate integrity risk
+- Prioritize moderation queues
+
+Automation must NOT automatically:
+
+- Permanently ban a user
+- Permanently suspend a user
+- Delete historical evidence
+- Reverse major point balances without trusted policy
+- Reject ambiguous safety-sensitive cases without review
+- Expose moderation internals to ordinary users
+
+High-impact enforcement must remain reviewable.
+
+---
+
+# 2. Moderation Provider Abstraction
+
+Create a provider abstraction such as:
+
+```ts
+interface ModerationProvider {
+  moderateImage(...)
+  moderateText(...)
+  healthCheck(...)
+}
+````
+
+Support:
+
+* Current provider
+* Future provider replacement
+* Development stub
+* Manual-only mode
+
+Do not tightly couple moderation logic to one vendor.
+
+Do not place provider secrets in the client.
+
+---
+
+# 3. Server-Side Moderation Only
+
+All moderation-provider calls must occur server-side.
+
+Allowed architecture:
+
+```text
+Upload or content submission
+    ↓
+Trusted backend / Edge Function
+    ↓
+Moderation provider
+    ↓
+Normalized result
+    ↓
+Platform moderation policy
+    ↓
+Approve / Flag / Quarantine / Manual Review
+```
+
+Do not call the moderation provider directly from Expo or browser client code.
+
+---
+
+# 4. Environment Configuration
+
+Use secure environment variables such as:
+
+```env
+MODERATION_PROVIDER=
+MODERATION_API_KEY=
+MODERATION_MODEL=
+```
+
+Use actual project naming conventions.
+
+Requirements:
+
+* Never return secret value to clients
+* Never log secret value
+* Diagnostics show Configured / Missing only
+* Missing provider must not crash core gameplay
+* Manual moderation must still work if provider is down
+
+---
+
+# 5. Moderation Result Model
+
+Create a normalized result structure.
+
+Example:
+
+```ts
+type ModerationResult = {
+  decision:
+    | "safe"
+    | "warning"
+    | "manual_review"
+    | "blocked";
+
+  categories: {
+    category: string;
+    score?: number;
+    matched?: boolean;
+  }[];
+
+  provider: string;
+  model?: string;
+  providerReference?: string;
+  checkedAt: string;
+};
+```
+
+Do not expose raw provider payloads directly throughout the app.
+
+Store only needed normalized metadata plus an optional protected raw reference if operationally necessary.
+
+---
+
+# 6. Platform Moderation Policy Layer
+
+Provider output is not the final product policy.
+
+Create a centralized moderation-policy engine.
+
+Input:
+
+* Provider signals
+* Content type
+* User/account context
+* Whether content is public or private
+* Whether content is proof
+* Prior moderation state
+
+Output:
+
+* Allow
+* Allow but flag
+* Quarantine
+* Manual review
+* Reject
+
+Do not scatter moderation thresholds across UI code.
+
+---
+
+# 7. Moderation Categories
+
+Prepare support for categories such as:
+
+* Sexual content
+* Nudity
+* Graphic violence
+* Self-harm
+* Threats
+* Hate or harassment
+* Illegal activity
+* Drugs
+* Weapons
+* Extremist content
+* Personal/private information
+* Scam/fraud
+* Spam
+* Dangerous challenge/activity
+* Other platform-policy categories
+
+Use provider-neutral category names internally where possible.
+
+Do not expose sensitive provider scoring details to ordinary users.
+
+---
+
+# 8. Image Moderation Targets
+
+Automated image scanning should support:
+
+* Profile avatars
+* Public Hunt cover images
+* Hunt clue images
+* Public Quest images
+* Future creator public media
+* Quest proof images
+* Hunt proof images
+
+Apply different policy depending on context.
+
+Public media may require stronger publication gating.
+
+Private proof media may remain private while still being scanned for safety and abuse.
+
+---
+
+# 9. Public Media Upload Flow
+
+For public media:
+
+```text
+Upload
+  ↓
+Private pending storage
+  ↓
+Moderation scan
+  ↓
+Safe
+  → Approved
+Warning
+  → Manual Review
+Blocked
+  → Rejected or Quarantined
+```
+
+Do not expose pending public media before approval.
+
+Do not move rejected content to a public bucket.
+
+---
+
+# 10. Proof Image Moderation
+
+Proof images are private.
+
+Moderation should help detect:
+
+* Inappropriate uploads
+* Clearly unrelated abusive content
+* Dangerous or illegal content
+* Obvious attempts to abuse the platform
+
+But proof moderation must not replace Quest/Hunt validity review.
+
+An image can be:
+
+* Safe content
+* Yet invalid proof
+
+or:
+
+* Moderation-warning content
+* Yet still relevant to the Quest
+
+Keep these decisions separate.
+
+---
+
+# 11. Proof Validity vs Safety
+
+Use separate states:
+
+## Safety moderation
+
+* Safe
+* Warning
+* Manual Review
+* Blocked
+
+## Proof validity
+
+* Pending
+* Approved
+* Needs Resubmission
+* Rejected
+
+Do not combine these into one status.
+
+Example:
+
+A harmless unrelated selfie may be:
+
+* Safety = Safe
+* Proof validity = Rejected
+
+A valid location photo containing disturbing content may be:
+
+* Safety = Manual Review
+* Proof validity = Pending
+
+---
+
+# 12. Media Moderation Schema
+
+Add or extend fields such as:
+
+* moderation_status
+* moderation_provider
+* moderation_model
+* moderation_checked_at
+* moderation_categories
+* moderation_policy_version
+* moderation_review_required
+* moderation_reviewed_by
+* moderation_reviewed_at
+* moderation_user_visible_reason
+* moderation_internal_reason
+
+Do not put secret provider credentials in these rows.
+
+---
+
+# 13. Moderation Idempotency
+
+Each media/content version should only trigger duplicate scans when necessary.
+
+Use idempotency based on:
+
+* Media asset version
+* Content hash
+* Moderation policy version
+
+If unchanged content has already been checked under current policy:
+
+* Reuse result where safe.
+
+Do not repeatedly incur paid scans from UI refresh.
+
+---
+
+# 14. Content Hashing
+
+Use safe file/content hashing for duplicate moderation and abuse detection.
+
+Possible uses:
+
+* Detect identical rejected public images
+* Avoid repeated moderation charges
+* Detect reused proof image across submissions
+
+Do not expose hashes publicly.
+
+Do not treat image hash matching alone as proof of fraud.
+
+---
+
+# 15. Duplicate Proof Image Detection
+
+Prepare integrity signal:
+
+* Same image reused across unrelated Quest/Hunt submissions
+* Same user reuses same media repeatedly
+* Multiple accounts submit identical media
+
+Create a flag, not an automatic ban.
+
+Risk depends on context.
+
+Example:
+
+Same image used twice for a repeatable text/image activity may be suspicious.
+
+Same generic profile image reused as avatar is not relevant to Quest proof.
+
+---
+
+# 16. Text Moderation
+
+Moderate appropriate user-generated public text:
+
+* Public bio
+* Custom Hunt title
+* Hunt description
+* Hunt clues
+* Hunt hints
+* Public location description
+* User-facing creator content
+* Future social text
+
+Proof text may also be scanned where policy requires.
+
+Do not scan internal admin notes through consumer moderation policy.
+
+---
+
+# 17. Text Moderation Workflow
+
+For public creator text:
+
+```text
+Save Draft
+   ↓
+Optional precheck
+   ↓
+Submit for moderation
+   ↓
+Automated text safety scan
+   ↓
+Manual review where needed
+```
+
+Do not block draft autosave simply because content is questionable.
+
+Prevent publication instead.
+
+---
+
+# 18. AI-Generated Quest Moderation Handoff
+
+AI-generated Quest candidates from Prompt 19 already have structural safety checks.
+
+Add moderation handoff:
+
+```text
+AI Candidate
+   ↓
+AI safety validation
+   ↓
+Platform automated moderation
+   ↓
+Admin review
+   ↓
+Quest Draft
+```
+
+Do not assume AI-generated content is automatically safe.
+
+Do not bypass normal Quest review.
+
+---
+
+# 19. Custom Hunt Moderation Handoff
+
+Prompt 17 Custom Hunts should automatically collect moderation state for:
+
+* Cover image
+* Description
+* Clues
+* Riddle clue text
+* Hint text
+* Public location description
+
+Prompt 18 moderation screen should display consolidated automated results.
+
+Do not require moderators to visit multiple disconnected screens to understand one Hunt.
+
+---
+
+# 20. Moderation Summary
+
+Create one aggregated moderation summary for an entity.
+
+Example:
+
+```text
+Custom Hunt Moderation
+
+Text:
+PASS
+
+Cover Image:
+PASS
+
+Clue Image #1:
+MANUAL REVIEW
+
+Safety Structure:
+PASS
+
+Overall:
+MANUAL REVIEW REQUIRED
+```
+
+Overall result must be conservative.
+
+One blocked required component prevents publication.
+
+---
+
+# 21. Public Profile Moderation
+
+Integrate:
+
+* Avatar moderation
+* Bio text moderation
+* Username/display-name reserved-word and impersonation checks
+
+Do not auto-ban a user for one rejected avatar.
+
+Possible response:
+
+* Remove/reject media
+* Ask user to replace
+* Flag account if repeated severe abuse
+
+---
+
+# 22. Moderation Queue Automation
+
+Prompt 18 manual queue should now support automatic prioritization.
+
+Priority factors may include:
+
+* Severity category
+* Public vs private content
+* Repeat offender signals
+* Reports
+* Child-safety or extreme-danger categories if supported
+* Proof tied to active reward
+* High-visibility public creator content
+
+Do not let queue priority become automatic guilt.
+
+---
+
+# 23. Automatic Safe Approval
+
+Allow configurable auto-approval for narrowly defined low-risk content.
+
+Example:
+
+Public image where:
+
+* Provider reports safe
+* No reports
+* No duplicate banned hash
+* Account in good standing
+* Policy permits automatic approval
+
+Do not enable auto-approval globally by default if the project policy has not chosen it.
+
+Admin settings should allow:
+
+* Manual-only
+* Low-risk auto-approval
+* Mixed mode
+
+---
+
+# 24. Manual Review Requirement
+
+Force manual review when:
+
+* Provider returns warning
+* Provider confidence ambiguous
+* Safety-critical content
+* Prior severe moderation history
+* Duplicate banned content signal
+* Reported content
+* High-risk public Hunt location/content combination
+* Provider unavailable when publication requires scan
+
+Do not allow ordinary creators to override.
+
+---
+
+# 25. Provider Failure Handling
+
+If moderation provider fails:
+
+For public media awaiting publication:
+
+* Keep Pending / Manual Review
+* Do not publish if policy requires scan
+
+For private proof:
+
+* Preserve upload
+* Allow proof review queue to continue if manual review is available
+* Mark moderation unavailable
+
+Do not delete uploads.
+
+Do not claim Safe.
+
+---
+
+# 26. Report Automation
+
+Extend Prompt 18 Reports.
+
+When a report is submitted:
+
+1. Normalize reason.
+2. Detect duplicate report from same reporter/target.
+3. Identify related open reports.
+4. Calculate triage priority.
+5. Attach safe entity context.
+6. Route to queue.
+7. Do not notify reported user.
+
+Do not auto-enforce serious sanctions solely from report count.
+
+---
+
+# 27. Duplicate Report Detection
+
+Avoid report spam.
+
+Signals:
+
+* Same reporter + same target + same category in short period
+* Repeated identical report text
+* Existing open report
+
+Possible behavior:
+
+* Merge related report
+* Add evidence to existing case
+* Limit duplicate creation
+
+Do not hide legitimate new evidence.
+
+---
+
+# 28. Report Priority Model
+
+Create an explainable report priority score.
+
+Inputs may include:
+
+* Report category
+* Target type
+* Number of independent reporters
+* Existing related open cases
+* Severity
+* Whether content is currently public
+* Whether an active Hunt may place users at risk
+
+Do not include sensitive protected attributes.
+
+Do not make final moderation decision automatically.
+
+---
+
+# 29. Report Clustering
+
+Group related reports.
+
+Examples:
+
+* Multiple users report same Hunt
+* Same public image reported repeatedly
+* Multiple reports about same user behavior
+
+Create case relationship.
+
+Do not expose reporter identities across reports unnecessarily.
+
+---
+
+# 30. Anti-Cheat Canonical Engine
+
+Implement one canonical anti-cheat engine.
+
+Inputs may include:
+
+* GPS/mock-location signal
+* Location accuracy
+* Movement speed
+* Submission frequency
+* Duplicate participation/submission
+* Media reuse
+* VPN signal
+* Repeated failed geo validation
+* Repeated failed riddle attempts
+* Impossible time sequence
+* Server timestamp anomalies
+* Account history
+
+Output:
+
+* Risk score
+* Risk band
+* Individual signals
+* Recommended action
+* Review requirement
+
+Do not scatter independent score formulas across Edge Functions.
+
+---
+
+# 31. Canonical Risk Bands
+
+Use configurable bands such as:
+
+```text
+0–19    Low
+20–39   Elevated
+40–59   Medium
+60–79   High
+80–100  Critical
+```
+
+These are examples.
+
+Audit current platform settings first.
+
+If Prompt 18 already centralized values, use those.
+
+Do not hardcode the range separately in mobile/client.
+
+---
+
+# 32. Previously Discussed Signals
+
+Audit and correctly implement the previously planned signals including:
+
+* Mock location detected
+* GPS accuracy > configured threshold
+* Implausible speed
+* Extreme teleport-like movement
+* Burst submissions
+* Duplicate Quest pending/approved
+* VPN signal
+
+Earlier historical reference included:
+
+* Mock location around +50
+* Accuracy >100m around +15
+* 5+ submissions in 10 min around +25
+* Duplicate Quest around +20
+* VPN around +5
+* Increasing risk for high/impossible speeds
+
+Do not blindly use these exact weights if Prompt 18 already changed them.
+
+There must be one configurable source of truth.
+
+---
+
+# 33. Mock Location
+
+If platform/device APIs provide a mock-location signal:
+
+* Capture it as one integrity signal
+* Do not trust it as perfect
+* Server records signal
+* High risk weight may apply
+* Manual review for significant reward or repeated pattern
+
+Do not automatically permanently ban on one mock-location signal.
+
+---
+
+# 34. Location Accuracy
+
+Use horizontal accuracy.
+
+Poor accuracy should generally:
+
+* Prevent precise validation
+* Allow retry
+* Add modest integrity signal when repeated or suspicious
+
+Do not punish users heavily for normal GPS noise.
+
+Do not count an ordinary poor signal as fraud by itself.
+
+---
+
+# 35. Impossible Speed
+
+Use server-side time difference and trusted validation coordinates where available.
+
+Calculate speed between validated events.
+
+Risk examples:
+
+* Plausible human/vehicle movement
+* Elevated
+* High
+* Critical teleport-like
+
+Important:
+
+Do not infer cheating simply because users traveled by car between separate Hunts.
+
+Context matters.
+
+Only compare events where speed relationship is operationally meaningful.
+
+---
+
+# 36. Speed Safety
+
+Do not gamify speed.
+
+Never show anti-cheat speed values to consumers as a score to beat.
+
+Do not rank players by fastest location arrival.
+
+Do not encourage unsafe driving.
+
+---
+
+# 37. Submission Burst Detection
+
+Detect unusual proof submission patterns.
+
+Example:
+
+* Many submissions within a very short window
+
+Use configurable window and threshold.
+
+Consider:
+
+* Different Quests
+* Same Quest retries
+* Batch network reconnect
+* Legitimate offline recovery in future
+
+Do not automatically sanction without context.
+
+---
+
+# 38. Duplicate Participation/Submission
+
+Detect:
+
+* Duplicate active participation
+* Repeated proof on same requirement
+* Same Quest occurrence completed twice
+* Same Hunt occurrence completed twice
+* Duplicate completion transactions
+
+Many of these should already be prevented transactionally.
+
+Anti-cheat engine should flag legacy/inconsistent anomalies.
+
+Do not use anti-cheat as a replacement for database uniqueness constraints.
+
+---
+
+# 39. VPN Signal
+
+Treat VPN as weak contextual signal.
+
+VPN alone must never:
+
+* Ban
+* Suspend
+* Reject proof
+* Reverse points
+
+It may slightly increase risk or provide context.
+
+This is an explicit platform rule.
+
+---
+
+# 40. Repeated Geo Validation Failures
+
+Track repeated failures such as:
+
+* Outside region
+* Stale readings
+* Impossible accuracy
+* Rapid retries
+
+Distinguish:
+
+* Normal user searching for the exact area
+* Suspicious scripted attempts
+
+Use rate limiting first.
+
+Do not automatically penalize ordinary retries.
+
+---
+
+# 41. Riddle Guess Abuse
+
+For Hunt riddles:
+
+Track:
+
+* Guess rate
+* Repeated rapid guesses
+* Excessive account-wide guessing
+
+Apply:
+
+* Short cooldown
+* Rate limit
+* Integrity signal where extreme
+
+Do not reveal accepted answers.
+
+Do not ban a user for normal puzzle attempts.
+
+---
+
+# 42. Media Reuse Signal
+
+If identical proof image hash appears across unrelated rewards:
+
+* Add signal
+* Show related submissions to moderator
+* Do not automatically reject unless policy specifically permits near-certain duplicate fraud
+
+Keep public image duplicate handling separate from proof fraud.
+
+---
+
+# 43. Impossible Time Sequence
+
+Detect impossible event ordering such as:
+
+* Completion before start
+* Proof before participation
+* Final stop before earlier ordered stop
+* Validation captured far in future
+* Event timestamps materially inconsistent with server receipt
+
+Most should be prevented by trusted transactions.
+
+Flag legacy anomalies.
+
+---
+
+# 44. Server Time Authority
+
+Use server timestamps for authoritative state.
+
+Device timestamp may be accepted only as supporting metadata.
+
+Never use device time alone for:
+
+* Reward
+* Availability
+* Completion ordering
+* Anti-cheat final decision
+
+---
+
+# 45. Composite Risk Calculation
+
+Create a deterministic function.
+
+Example contract:
+
+```ts
+calculateIntegrityRisk(signals, policyVersion)
+```
+
+Return:
+
+```ts
+{
+  score,
+  band,
+  signals,
+  recommendedAction,
+  requiresReview,
+  policyVersion
+}
+```
+
+Do not return private thresholds to ordinary clients.
+
+---
+
+# 46. Risk Snapshot
+
+When a submission or completion is evaluated, store the risk snapshot used at that time.
+
+Include:
+
+* Policy version
+* Score
+* Band
+* Signal IDs
+* Created timestamp
+
+Do not recalculate historical case state silently when future weights change.
+
+Allow Admin to view both:
+
+* Original risk
+* Current policy hypothetical result, optionally
+
+---
+
+# 47. Recommended Actions
+
+Map risk to recommendations, not necessarily automatic sanctions.
+
+Possible:
+
+* None
+* Warn
+* Manual Review
+* Quarantine Reward
+* Temporary Submission Restriction
+* Escalate Moderator
+* Escalate Admin
+
+Do not directly map Critical → permanent ban without review.
+
+---
+
+# 48. Point Quarantine Hardening
+
+Use append-only/derived logic.
+
+When reward is quarantined:
+
+* Completion may remain recorded
+* Reward state is held from spendable/leaderboard totals according to current architecture
+* Quarantine reason recorded
+* Moderator can Release or Reverse
+
+Do not maintain contradictory point totals in multiple mutable columns.
+
+Audit existing `points_quarantined` implementation.
+
+Prefer ledger-derived balances if architecture supports it.
+
+---
+
+# 49. Leaderboard Exclusion
+
+Quarantined or invalidated reward must not count toward public leaderboards.
+
+Use the same qualifying-transaction rules as Prompt 8/14.
+
+Do not simply hide the user while leaving suspicious points in ranking totals.
+
+---
+
+# 50. Release Quarantined Reward
+
+Trusted release operation:
+
+1. Verify permission.
+2. Verify quarantine exists.
+3. Verify no prior release/reversal.
+4. Mark or insert trusted release representation.
+5. Update derived balance.
+6. Update leaderboard.
+7. Notify user where appropriate.
+8. Audit.
+
+Idempotent.
+
+---
+
+# 51. Reverse Quarantined Reward
+
+Trusted reversal:
+
+1. Verify original reward.
+2. Create append-only offset transaction.
+3. Resolve quarantine.
+4. Update derived totals.
+5. Update leaderboard.
+6. Mark completion adjustment.
+7. Audit.
+8. Notify user if policy requires.
+
+Never delete original reward.
+
+---
+
+# 52. User Warning Flow
+
+For low/moderate integrity cases, support a safe warning.
+
+Examples:
+
+* Repeated invalid location attempts
+* Unusual submission behavior
+
+Do not accuse the user of cheating as a fact unless verified.
+
+Suggested wording:
+
+```text
+We detected unusual activity on this submission. Your points may remain pending while it is reviewed.
+```
+
+Internal signals remain hidden.
+
+---
+
+# 53. Admin Anti-Cheat Case View
+
+Extend Prompt 18 Anti-Cheat detail.
+
+Display:
+
+* User
+* Quest/Hunt
+* Submission/completion
+* Score
+* Risk band
+* Signal list
+* Timeline
+* Related prior flags
+* Quarantined points
+* Moderation status
+* Recommended action
+
+Actions:
+
+* No Action
+* Warn
+* Release
+* Quarantine
+* Reverse
+* Restrict
+* Escalate
+
+Require reasons for high-impact actions.
+
+---
+
+# 54. Anti-Cheat Appeal Readiness
+
+Prepare future appeal capability.
+
+Store:
+
+* Enforcement event
+* User-facing reason
+* Appeal eligibility
+* Appeal status
+
+Do not build a large appeal portal unless already scheduled.
+
+At minimum, admin actions should be reviewable and traceable.
+
+---
+
+# 55. Automated Proof Triage
+
+Use moderation + integrity signals to route proof.
+
+Example:
+
+```text
+Safe media
++ low integrity risk
++ manual proof required
+→ Normal review queue
+
+Safe media
++ high integrity risk
+→ High-priority review
+
+Blocked media
+→ Moderation review before proof validity
+
+Automatic trusted location-only validation
++ low risk
+→ Existing automatic completion path
+```
+
+Do not automatically approve image/text proof based solely on safety moderation.
+
+---
+
+# 56. Automated Low-Risk Validation
+
+Only use automatic completion for proof types already designed to be trusted automatically, such as:
+
+* Server-validated location
+* No-proof tasks
+* Other explicitly trusted deterministic checks
+
+Do not use a general moderation model as proof correctness validator.
+
+---
+
+# 57. Public Content Removal Automation
+
+When automated provider marks severe public content as Blocked:
+
+Configurable behavior may:
+
+* Quarantine immediately
+* Remove from public display
+* Create urgent moderation case
+
+Do not permanently delete before review.
+
+Store reason and version.
+
+---
+
+# 58. Repeated Severe Abuse
+
+Create account-level moderation signal if repeated severe content occurs.
+
+This may increase review priority.
+
+Do not automatically permanently suspend solely based on count.
+
+High-risk action requires authorized moderator/admin review.
+
+---
+
+# 59. Report + Automated Moderation Correlation
+
+When reported content already has moderation metadata:
+
+Show it in report case.
+
+Examples:
+
+* Provider Safe
+* Provider Warning
+* Provider Blocked
+
+Human report may contradict automation.
+
+Do not dismiss a report merely because provider said Safe.
+
+Do not automatically convict because provider said Blocked.
+
+---
+
+# 60. Moderator Decision Feedback
+
+Store moderator outcome relative to automated result.
+
+Examples:
+
+* Automation correct
+* False positive
+* False negative
+* Ambiguous
+
+Use aggregate metrics to assess provider quality.
+
+Do not automatically retrain external provider from this data.
+
+---
+
+# 61. Moderation Quality Dashboard
+
+Admin diagnostics should show:
+
+* Images scanned
+* Text items scanned
+* Safe rate
+* Warning rate
+* Block rate
+* Manual-review rate
+* Provider failure rate
+* Moderator disagreement rate
+* False-positive estimate
+* False-negative estimate where measurable
+* Average review time
+
+Do not invent data.
+
+---
+
+# 62. Anti-Cheat Quality Dashboard
+
+Show:
+
+* Flags generated
+* Review rate
+* Quarantine rate
+* Release rate
+* Reversal rate
+* Most common signals
+* Mock-location flags
+* VPN-only flags
+* Duplicate media flags
+* False-positive moderator outcomes
+
+Do not expose this dashboard to ordinary users.
+
+---
+
+# 63. Moderation Settings
+
+Extend Admin Settings with:
+
+## Image moderation
+
+* Enabled
+* Provider
+* Public auto-approval mode
+* Warning thresholds
+* Manual-review policy
+
+## Text moderation
+
+* Enabled
+* Provider
+* Public-content policy
+
+## Proof moderation
+
+* Enabled
+* Manual-review routing behavior
+
+## Anti-cheat
+
+* Signal weights
+* Risk bands
+* Quarantine threshold
+* Review threshold
+* Rate-limit configuration
+
+High-impact settings require audit reason.
+
+---
+
+# 64. Safety Configuration Versioning
+
+All moderation and anti-cheat policies must have versions.
+
+Store:
+
+* Policy version
+* Effective date
+* Actor
+* Configuration
+* Change reason
+
+Historical moderation/integrity cases should reference the version applied.
+
+Do not silently rewrite historical scores.
+
+---
+
+# 65. Provider Diagnostics
+
+Create diagnostics:
+
+* Image moderation provider reachable
+* Text moderation provider reachable
+* Last scan
+* Last error
+* Average latency
+* Rate-limit state
+* Failure count
+
+Do not show secrets.
+
+---
+
+# 66. Scheduled Moderation Jobs
+
+Implement/reuse scheduled jobs for:
+
+* Retry failed moderation scans
+* Process pending moderation queue
+* Expire stale moderation locks
+* Recheck content after policy migration if explicitly required
+* Clean temporary rejected media according to retention policy
+
+Do not rescan every image constantly.
+
+---
+
+# 67. Moderation Job Idempotency
+
+Jobs must:
+
+* Avoid duplicate scans
+* Avoid duplicate cases
+* Avoid duplicate enforcement
+* Be retry-safe
+
+Use:
+
+* Media version
+* Moderation request ID
+* Policy version
+* Idempotency key
+
+---
+
+# 68. Review Claiming
+
+Moderation cases should support:
+
+* Unassigned
+* Assigned
+* Claimed by me
+
+Use optimistic concurrency.
+
+If another reviewer resolves while open:
+
+Show:
+
+```text
+This case was updated by another moderator. Refresh before taking action.
+```
+
+Do not overwrite.
+
+---
+
+# 69. Internal vs User-Facing Reasons
+
+Maintain strict separation.
+
+## Internal
+
+Can include:
+
+* Provider categories
+* Anti-cheat signals
+* Moderator analysis
+
+## User-facing
+
+Should contain:
+
+* Concise actionable reason
+* No secret thresholds
+* No detection-method details
+
+Never leak internal text into consumer notifications.
+
+---
+
+# 70. Appeals / Disputes Data Model
+
+Prepare records such as:
+
+* enforcement_event_id
+* eligible_for_appeal
+* appeal_status
+* submitted_at
+* resolved_at
+
+Do not implement full consumer appeal UI unless current project requires it.
+
+Admin should be able to attach a future appeal to original action.
+
+---
+
+# 71. Location Data Privacy
+
+Anti-cheat must not create continuous user location surveillance.
+
+Only use:
+
+* Submitted protected validation events
+* Necessary timestamps
+* Limited retained coordinates per current retention policy
+
+Do not collect ordinary map browsing coordinates for anti-cheat.
+
+Do not reconstruct full travel routes.
+
+---
+
+# 72. Exact Location Retention Cleanup
+
+Use scheduled cleanup from Prompt 18.
+
+Verify exact validation coordinates are:
+
+* Deleted
+* Reduced precision
+* Or otherwise minimized
+
+after configured retention period.
+
+Do not delete derived validation result or audit evidence needed for integrity.
+
+Document actual behavior.
+
+---
+
+# 73. Media Retention
+
+Define handling for rejected/private moderation media.
+
+Do not permanently retain abusive uploads indefinitely unless needed for:
+
+* Moderation appeal
+* Legal/safety obligations
+* Repeat-abuse detection
+
+Use retention policy.
+
+Do not delete active case evidence prematurely.
+
+---
+
+# 74. Moderation Audit Logs
+
+Audit:
+
+* Automated decision
+* Human review
+* Override
+* Quarantine
+* Restore
+* Rejection
+* Content removal
+* User warning
+* Restriction
+* Point release
+* Point reversal
+
+Do not log full private image content.
+
+Reference asset/case IDs.
+
+---
+
+# 75. Consumer Moderation States
+
+Users should receive simple states.
+
+For public media:
+
+* Processing
+* Approved
+* Needs Changes
+* Removed
+
+For proof:
+
+* Submitted
+* Under Review
+* Needs Resubmission
+* Approved
+* Rejected
+
+Do not show:
+
+* Provider score
+* Category confidence
+* Risk score
+* VPN signal
+* Mock-location detection detail
+
+---
+
+# 76. Creator Moderation Feedback
+
+For Custom Hunt media/text issues, show actionable feedback by section.
+
+Example:
+
+```text
+Cover image needs changes.
+
+Reason:
+The image does not meet Worlds public-content guidelines.
+
+Upload a replacement to continue review.
+```
+
+Do not expose provider internals.
+
+---
+
+# 77. Profile Moderation Feedback
+
+If avatar rejected:
+
+* Keep previous approved avatar if available
+* Show replacement prompt
+* Do not make profile unusable
+
+If bio removed:
+
+* Show safe reason
+* Allow edit/resubmit
+
+Do not automatically suspend unless severity/repetition warrants review.
+
+---
+
+# 78. Report Submission UX Integration
+
+Verify consumer report entry points work from:
+
+* Public Profile
+* Hunt
+* Custom Hunt
+* Quest where appropriate
+* Media where appropriate
+
+Report UX should be:
+
+1. Choose reason
+2. Optional description
+3. Submit
+4. Confirmation
+5. Optional Block User when target is user
+
+Do not expose case status unless future policy allows it.
+
+---
+
+# 79. Report Rate Limits
+
+Prevent report abuse.
+
+Server-side limits:
+
+* Repeated same target/category
+* Excessive reports per hour/day
+
+Do not prevent legitimate safety escalation because of a simplistic limit.
+
+Allow serious category override path if needed.
+
+---
+
+# 80. Automated Report Acknowledgment
+
+After report submission:
+
+```text
+Thanks. Your report was submitted for review.
+```
+
+Do not promise outcome.
+
+Do not reveal whether another user has reported the same target.
+
+---
+
+# 81. Safety-Critical Hunt Handling
+
+If a public Custom Hunt receives a credible high-priority safety report:
+
+Configurable trusted action may:
+
+* Temporarily remove from discovery
+* Pause new joins
+* Keep current participants informed
+* Open urgent moderation case
+
+Do not automatically delete the Hunt.
+
+Do not silently alter active participant clues.
+
+Use existing pause/cancel/version rules.
+
+---
+
+# 82. AI Quest Safety Incident
+
+If an AI-generated published Quest is later reported unsafe:
+
+* Treat exactly like any other Quest
+* Pause if needed
+* Review provenance
+* Inspect AI prompt/version
+* Preserve audit
+
+Do not treat AI source as an excuse to bypass responsibility.
+
+Use generation provenance from Prompt 19 for investigation.
+
+---
+
+# 83. Provider-Neutral Storage
+
+Do not store business logic tied to vendor-specific category names everywhere.
+
+Create mapping:
+
+```text
+Provider categories
+   ↓
+Worlds moderation categories
+```
+
+This allows provider replacement.
+
+---
+
+# 84. Manual-Only Fallback
+
+System must support:
+
+```text
+MODERATION_AUTOMATION_ENABLED=false
+```
+
+or equivalent configuration.
+
+When disabled:
+
+* Uploads remain Pending
+* Manual moderation works
+* Gameplay and creator systems do not crash
+* Proof review continues
+
+Automation is an enhancement, not a dependency for the entire application.
+
+---
+
+# 85. Local Development Stub
+
+Create a development moderation stub.
+
+Allow simulated:
+
+* Safe
+* Warning
+* Manual review
+* Blocked
+* Provider failure
+
+Do not use real provider calls in every local test.
+
+Development stub must never be active in production accidentally.
+
+---
+
+# 86. Production Guard
+
+Production startup should verify:
+
+* Moderation mode configured
+* Provider configured when automation required
+* Required secrets present
+* Stub disabled
+
+If automation is optional/manual-only:
+
+* Allow production manual mode deliberately
+
+Do not silently fall back from intended provider to development stub.
+
+---
+
+# 87. Database / Backend Additions
+
+Potential additions:
+
+```text
+moderation_requests
+moderation_results
+moderation_cases
+moderation_policy_versions
+integrity_policy_versions
+integrity_risk_snapshots
+integrity_signals
+enforcement_events
+moderation_feedback
+report_case_links
+```
+
+Do not duplicate existing tables unnecessarily.
+
+Extend current architecture.
+
+---
+
+# 88. RLS
+
+Verify:
+
+Ordinary users:
+
+* Can view only their own user-visible moderation state where needed
+* Cannot view provider output
+* Cannot view integrity risk
+* Cannot view internal moderation notes
+* Cannot view enforcement internals
+
+Moderators/Admins:
+
+* Access only according to permission
+
+Proof media:
+
+* Remains private
+
+Reports:
+
+* Reporter can submit
+* Reported user cannot read case
+* Staff access permission-controlled
+
+---
+
+# 89. Trusted Functions
+
+Create or finalize secure operations such as:
+
+* `request_media_moderation`
+* `request_text_moderation`
+* `process_moderation_result`
+* `calculate_integrity_risk`
+* `create_integrity_case`
+* `quarantine_reward`
+* `release_quarantined_reward`
+* `reverse_reward`
+* `triage_report`
+* `merge_duplicate_report`
+* `resolve_moderation_case`
+
+Use project naming conventions.
+
+All trusted operations must verify:
+
+* Auth
+* Role
+* Permission
+* Entity state
+* Idempotency
+
+---
+
+# 90. React Query Admin Integration
+
+Create keys such as:
+
+```text
+moderationKeys.queue(filters)
+moderationKeys.case(id)
+moderationKeys.media(id)
+moderationKeys.providerHealth()
+moderationKeys.quality()
+
+integrityKeys.queue(filters)
+integrityKeys.case(id)
+integrityKeys.policy()
+integrityKeys.quality()
+
+reportKeys.queue(filters)
+reportKeys.case(id)
+```
+
+Do not expose admin moderation caches to consumer screens.
+
+---
+
+# 91. Consumer Query Invalidation
+
+After public media approval/rejection:
+
+Invalidate relevant:
+
+* Profile
+* Hunt Detail
+* Quest Detail
+* Creator draft/manage screen
+
+After proof moderation decision:
+
+Invalidate:
+
+* Active Quest/Hunt
+* Progress
+* Submission Detail
+* Notifications
+* Points where completion/reversal occurs
+
+After Hunt pause:
+
+Invalidate:
+
+* Public Hunt Map
+* Hunt Detail
+* My Hunts
+* Active Hunt where necessary
+
+Use targeted invalidation.
+
+---
+
+# 92. Loading States
+
+Create distinct states for:
+
+* Media scan
+* Text scan
+* Manual review queue
+* Report triage
+* Anti-cheat calculation
+* Point quarantine action
+* Provider diagnostics
+
+Do not use generic endless spinner.
+
+---
+
+# 93. Error States
+
+Handle:
+
+* Provider unavailable
+* Scan timeout
+* Unsupported file
+* Malformed provider response
+* Moderation state conflict
+* Case already resolved
+* Integrity calculation failure
+* Quarantine already resolved
+* Report duplicate
+* Permission denied
+
+Do not expose raw provider secrets or internal SQL.
+
+---
+
+# 94. Automated Tests — Image Moderation
+
+Test:
+
+* Public image uploaded privately
+* Safe result approves when policy allows
+* Warning routes manual review
+* Blocked content never becomes public
+* Provider failure preserves asset safely
+* Duplicate unchanged media avoids unnecessary scan
+* Client cannot fake moderation state
+* Rejected media remains inaccessible publicly
+
+---
+
+# 95. Automated Tests — Text Moderation
+
+Test:
+
+* Safe Hunt text
+* Warning text
+* Blocked text
+* Draft still saves
+* Publication blocked appropriately
+* Moderator can review
+* Internal notes protected
+* User sees only safe reason
+
+---
+
+# 96. Automated Tests — Proof
+
+Test:
+
+* Safety and proof validity are distinct
+* Safe image may still fail proof validity
+* Unsafe proof routes moderation
+* Proof remains private
+* Automated moderation cannot directly award points
+* Manual proof approval still uses trusted completion path
+
+---
+
+# 97. Automated Tests — Reports
+
+Test:
+
+* Duplicate report detected
+* Independent reports grouped
+* Priority calculated
+* Reporter identity protected
+* Report count alone does not suspend user
+* High-priority Hunt report can route urgent review
+* Case resolution audited
+
+---
+
+# 98. Automated Tests — Anti-Cheat
+
+Test:
+
+* Mock-location signal adds canonical risk
+* Poor GPS accuracy handled modestly
+* Implausible movement signal works
+* VPN alone remains weak
+* Burst submissions flagged
+* Duplicate submission flagged
+* Media reuse flagged
+* Normal GPS retry does not over-penalize
+* Risk snapshot stores policy version
+* Recommended action generated
+
+---
+
+# 99. Automated Tests — Quarantine
+
+Test:
+
+* High-risk reward can quarantine
+* Quarantined reward excluded from leaderboard
+* Release works once
+* Reverse creates offset transaction
+* Original reward remains
+* Duplicate release/reversal blocked
+* User cannot self-release
+* Audit created
+
+---
+
+# 100. Automated Tests — Security
+
+Test:
+
+* Provider secret absent from frontend
+* Ordinary user cannot read moderation result internals
+* Ordinary user cannot read anti-cheat score
+* Reported user cannot read report case
+* Proof media remains private
+* Moderator permissions enforced
+* Automated action cannot permanently ban without trusted review path
+* Stubs disabled in production
+
+---
+
+# 101. Diagnostics
+
+Extend Admin Diagnostics with:
+
+## Moderation
+
+* Provider health
+* Image scan success rate
+* Text scan success rate
+* Queue backlog
+* Oldest pending case
+
+## Integrity
+
+* Risk engine health
+* Open high-risk cases
+* Quarantined rewards
+* Last policy version
+
+## Reports
+
+* Open reports
+* Urgent reports
+* Average triage age
+
+Do not show secrets.
+
+---
+
+# 102. Documentation
+
+Create or update:
+
+* `/docs/MODERATION_ARCHITECTURE.md`
+* `/docs/IMAGE_MODERATION.md`
+* `/docs/TEXT_MODERATION.md`
+* `/docs/PROOF_MODERATION.md`
+* `/docs/MODERATION_POLICY.md`
+* `/docs/MODERATION_PROVIDER.md`
+* `/docs/REPORT_TRIAGE.md`
+* `/docs/REPORT_AUTOMATION.md`
+* `/docs/ANTI_CHEAT.md`
+* `/docs/INTEGRITY_RISK_MODEL.md`
+* `/docs/POINT_QUARANTINE.md`
+* `/docs/MODERATION_PRIVACY.md`
+* `/docs/MODERATION_SECURITY.md`
+* `/docs/MODERATION_JOBS.md`
+* `/docs/MODERATION_DIAGNOSTICS.md`
+* `/docs/MODERATION_TESTING.md`
+
+Update:
+
+* `/docs/PROJECT_CONSTITUTION.md`
+* `/docs/ADMIN_MEDIA_MODERATION.md`
+* `/docs/ADMIN_REPORTS.md`
+* `/docs/ADMIN_ANTI_CHEAT.md`
+* `/docs/ADMIN_DIAGNOSTICS.md`
+* `replit.md`
+
+only where necessary.
+
+---
+
+# 103. Out of Scope
+
+Do not implement:
+
+* Permanent automated bans
+* Automatic irreversible account deletion
+* Face recognition
+* Identity recognition
+* Biometric classification
+* Live user surveillance
+* Background location tracking
+* Contact scraping
+* AI proof correctness scoring as authoritative
+* Direct messages
+* Hunt chat
+* Stripe
+* Paid Hunts
+* Creator payouts
+* Premium membership
+* Game Zones
+* Outbreak
+* New game modes
+
+Prompt 21 should implement the complete notification delivery and engagement infrastructure, including push notifications, scheduled reminders, deep-link delivery, permission flows, job processing, user notification preferences, and Quest/Hunt lifecycle notification reliability.
+
+---
+
+# 104. Final Verification
+
+Before finishing, confirm:
+
+* Image moderation provider abstraction exists.
+* Text moderation provider abstraction exists.
+* Secrets remain server-side.
+* Public media remains private until publication-safe.
+* Proof media remains private.
+* Safety moderation and proof validity remain separate.
+* Profile avatars and Custom Hunt public media are moderation-ready.
+* AI-generated Quest content passes into the same moderation system.
+* Provider failure does not break gameplay.
+* Manual moderation remains functional.
+* Moderation results are idempotent.
+* Duplicate media can avoid unnecessary rescans.
+* Duplicate proof-media reuse is an integrity signal, not automatic guilt.
+* Report triage detects duplicates.
+* Report count does not automatically sanction users.
+* Canonical anti-cheat engine exists.
+* Signal weights have one source of truth.
+* Mock location is handled.
+* GPS accuracy is handled proportionately.
+* Impossible movement detection exists.
+* Submission burst detection exists.
+* Duplicate submission detection exists.
+* VPN remains a weak signal only.
+* Riddle guess abuse is rate-limited.
+* Risk snapshots preserve policy version.
+* High-risk automation recommends review rather than automatic permanent ban.
+* Quarantined rewards do not count toward leaderboards.
+* Reward release/reversal is append-only and idempotent.
+* Exact location surveillance has not been introduced.
+* Moderation/report/integrity actions are audited.
+* Consumers never receive provider scores or anti-cheat internals.
+* Development moderation stub cannot run in production accidentally.
+* Tests pass or blocked integration tests are documented.
+* App compiles.
+* Approved Quest/Hunt UI and navigation remain unchanged.
+
+Resolve all known in-scope errors before stopping.
+
+---
+
+# Deliverables
+
+When complete provide:
+
+1. Moderation provider abstraction
+2. Server-side moderation integration
+3. Image moderation
+4. Text moderation
+5. Public-media moderation flow
+6. Proof-image moderation flow
+7. Safety vs proof-validity separation
+8. Media moderation schema
+9. Content hashing/idempotency
+10. Duplicate proof-media integrity signal
+11. AI Quest moderation handoff
+12. Custom Hunt moderation summary
+13. Public Profile moderation integration
+14. Automatic queue prioritization
+15. Configurable low-risk auto-approval
+16. Manual-review routing
+17. Provider failure fallback
+18. Report duplicate detection
+19. Report priority scoring
+20. Report clustering
+21. Canonical anti-cheat engine
+22. Canonical signal-weight configuration
+23. Mock-location handling
+24. GPS-accuracy handling
+25. Impossible-speed handling
+26. Submission-burst detection
+27. Duplicate submission detection
+28. VPN weak-signal behavior
+29. Geo validation retry integrity
+30. Riddle abuse handling
+31. Media reuse signal
+32. Impossible-time-sequence checks
+33. Composite risk calculation
+34. Risk snapshots and policy versioning
+35. Recommended-action engine
+36. Point quarantine hardening
+37. Leaderboard exclusion
+38. Release/reversal workflows
+39. Moderator case view
+40. Appeal readiness
+41. Automated proof triage
+42. Public content quarantine/removal workflow
+43. Repeated-abuse escalation signals
+44. Report/moderation correlation
+45. Moderator feedback metrics
+46. Moderation quality dashboard
+47. Anti-cheat quality dashboard
+48. Moderation settings
+49. Policy versioning
+50. Provider diagnostics
+51. Scheduled moderation jobs
+52. Review claiming/concurrency safety
+53. Internal vs user-facing reasons
+54. Location-retention privacy
+55. Media-retention policy
+56. Consumer moderation-state UX
+57. Creator moderation feedback
+58. Report submission integration
+59. Safety-critical Hunt handling
+60. AI Quest incident handling
+61. Provider-neutral category mapping
+62. Manual-only fallback mode
+63. Development moderation stub
+64. Production safeguards
+65. Database/RPC/Edge Function/RLS changes
+66. React Query integration
+67. Tests and results
+68. Documentation
+69. Assumptions
+70. Known limitations
+71. Exact remaining work for Prompt 21
+
+Do not begin Prompt 21.
+
+Do not redesign the consumer application.
+
+Create checkpoint:
+
+Build 1 — Prompt 20 — Automated Moderation and Integrity Hardening
+
+```
+```
