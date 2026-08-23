@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/worlds-admin/"
+title = "Worlds Admin Panel"
+description = "A secure staff operations console for Worlds, corresponding to the mobile Quest and Hunt platform with dashboards, moderation queues, user management, configuration, audit, and diagnostics."
+version = "1.0.0"
+id = "artifacts/worlds-admin"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/worlds-admin/" ]
+localPort = 20541
+
+[services.development]
+run = "pnpm --filter @workspace/worlds-admin run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/worlds-admin", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/worlds-admin/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20541"
+BASE_PATH = "/worlds-admin/"
