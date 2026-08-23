@@ -119,6 +119,8 @@ type AiResponse = {
   generatedAt?: string;
   items?: Array<Record<string, unknown>>;
   settings?: Record<string, unknown>;
+  prompt?: AiPrompt & { type: string };
+  plan?: { diagnostics?: string[]; replacementAllowed?: boolean; publishRequiresReview?: boolean };
 };
 type AiPrompt = {
   systemInstructions: string;
@@ -152,6 +154,12 @@ export function AIPage({ data }: { data: AdminData }) {
     proofInstructions: '',
     outputFormat: '',
   });
+  const [interestCluster, setInterestCluster] = useState('');
+  const [theme, setTheme] = useState('');
+  const [targetMonth, setTargetMonth] = useState('');
+  const [locationContext, setLocationContext] = useState('');
+  const [approximateArea, setApproximateArea] = useState('');
+  const [selectedVersion, setSelectedVersion] = useState('');
 
   useEffect(() => {
     const requiredPermission = location === '/ai/generate'
@@ -175,20 +183,47 @@ export function AIPage({ data }: { data: AdminData }) {
 
   useEffect(() => {
     const first = result?.items?.[0] as AiPrompt | undefined;
-    if (first) setPrompt(first);
+    if (first) {
+      setPrompt(first);
+      setSelectedVersion(String(first.version ?? ''));
+    }
+    if (result?.prompt) {
+      setPrompt(result.prompt);
+      setSelectedVersion(String(result.prompt.version));
+    }
   }, [result]);
 
   const generate = async () => {
     setLoading(true);
     setMessage('');
     try {
+      const variables = type === 'daily'
+        ? { current_date: new Date().toISOString().slice(0, 10), interest_cluster: interestCluster }
+        : type === 'monthly'
+          ? { current_date: new Date().toISOString().slice(0, 10), theme, target_month: targetMonth }
+          : { current_date: new Date().toISOString().slice(0, 10), public_location_context: locationContext, approximate_area: approximateArea };
       const value = await aiFetch('/generate', {
         method: 'POST',
-        body: JSON.stringify({ type, quantity: Number(quantity), variables: { current_date: new Date().toISOString().slice(0, 10) }, testOnly: true }),
+        body: JSON.stringify({ type, quantity: Number(quantity), variables, testOnly: true }),
       });
       setResult(value);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Generation failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const changeVersion = async (action: 'activate' | 'deactivate' | 'restore') => {
+    if (!selectedVersion) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      const response = await aiFetch(`/prompts/${type}/versions/${selectedVersion}/${action}`, { method: 'POST', body: '{}' });
+      setResult(response);
+      setMessage(`Prompt version ${selectedVersion} ${action}d.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Prompt lifecycle update failed.');
     } finally {
       setLoading(false);
     }
@@ -225,13 +260,18 @@ export function AIPage({ data }: { data: AdminData }) {
           <div className="toolbar">
             <label className="field">Quest type<select value={type} onChange={(event) => setType(event.target.value as typeof type)}><option value="daily">Daily</option><option value="monthly">Monthly</option><option value="geo">Geo</option></select></label>
             <label className="field">Quantity<input type="number" min="1" max="20" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
+            {type === 'daily' && <label className="field">Interest cluster<input value={interestCluster} onChange={(event) => setInterestCluster(event.target.value)} placeholder="urban gardening" /></label>}
+            {type === 'monthly' && <><label className="field">Monthly theme<input value={theme} onChange={(event) => setTheme(event.target.value)} placeholder="Spring reset" /></label><label className="field">Target month<input type="month" value={targetMonth} onChange={(event) => setTargetMonth(event.target.value)} /></label></>}
+            {type === 'geo' && <><label className="field">Public location context<input value={locationContext} onChange={(event) => setLocationContext(event.target.value)} placeholder="Public library district" /></label><label className="field">Approximate area<input value={approximateArea} onChange={(event) => setApproximateArea(event.target.value)} placeholder="Downtown" /></label></>}
             <button className="btn btn-primary" onClick={() => void generate()} disabled={loading || !data.session.data.permissions.includes('ai.generate')}>Generate preview</button>
           </div>
+          {result?.plan && <div className="notice"><AlertTriangle /><span>{result.plan.diagnostics?.join(' ') || 'Candidate review is required.'} Never publish directly from AI generation.</span></div>}
           {result && <pre className="code-panel">{JSON.stringify(result, null, 2)}</pre>}
         </section>
       ) : location === '/ai/prompts' ? (
         <section className="panel" style={{ marginTop: 25 }}>
           <div className="panel-header"><div><div className="panel-title">Independent Quest prompt templates</div><div className="panel-kicker">Every save creates a new version; history is never overwritten</div></div><span className="tag blue">Version {prompt.version ?? 1}</span></div>
+          <div className="toolbar"><label className="field">Quest lane<select value={type} onChange={(event) => setType(event.target.value as typeof type)}><option value="daily">Daily</option><option value="monthly">Monthly</option><option value="geo">Geo</option></select></label><label className="field">Version<input value={selectedVersion} onChange={(event) => setSelectedVersion(event.target.value)} inputMode="numeric" /></label><button className="btn btn-quiet" onClick={() => void changeVersion('activate')} disabled={loading || !data.session.data.permissions.includes('ai.prompts.edit')}>Activate</button><button className="btn btn-quiet" onClick={() => void changeVersion('deactivate')} disabled={loading || !data.session.data.permissions.includes('ai.prompts.edit')}>Deactivate</button><button className="btn btn-quiet" onClick={() => void changeVersion('restore')} disabled={loading || !data.session.data.permissions.includes('ai.prompts.edit')}>Restore as new</button></div>
           <div className="form-grid">
             {([
               ['systemInstructions', 'System prompt'],

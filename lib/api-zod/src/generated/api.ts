@@ -223,6 +223,21 @@ export const ListAdminAiPromptVersionsResponse = zod.object({
 
 
 /**
+ * @summary Activate, deactivate, or restore a prompt version
+ */
+
+
+
+export const ChangeAdminAiPromptVersionStateParams = zod.object({
+  "type": zod.enum(['daily', 'monthly', 'geo']),
+  "version": zod.coerce.number().min(1),
+  "action": zod.enum(['activate', 'deactivate', 'restore'])
+})
+
+export const ChangeAdminAiPromptVersionStateResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary Generate reviewable Quest candidates
  */
 export const generateAdminAiQuestBodyTestOnlyDefault = true;

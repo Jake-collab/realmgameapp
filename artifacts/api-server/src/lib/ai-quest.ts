@@ -118,6 +118,7 @@ function loadState(): LocalState {
 }
 
 const state = loadState();
+const requestWindows = new Map<string, { startedAt: number; count: number }>();
 
 function persistState() {
   if (process.env.NODE_ENV === "production" && !process.env.AI_LOCAL_STATE_PATH) return;
@@ -238,6 +239,20 @@ export function getGenerationPlan(type: QuestGenerationType, quantity: number, v
       ? [`Monthly theme: ${variables.theme ?? "unassigned"}`, `Target month: ${variables.target_month ?? "unassigned"}`, "Balance difficulty and points across the staged batch."]
       : [`Grounding area: ${variables.approximate_area ?? "unassigned"}`, "Claim verification and exact-coordinate validation remain a human review step."];
   return { type, quantity, diagnostics, replacementAllowed: true, publishRequiresReview: true };
+}
+
+export function consumeGenerationQuota(requestedBy: string, quantity: number) {
+  const now = Date.now();
+  const windowMs = 60 * 60 * 1000;
+  const limit = Math.max(1, Number(process.env.AI_RATE_LIMIT_PER_HOUR ?? 100));
+  const current = requestWindows.get(requestedBy);
+  const window = !current || now - current.startedAt >= windowMs ? { startedAt: now, count: 0 } : current;
+  if (window.count + quantity > limit) {
+    return { allowed: false, remaining: Math.max(0, limit - window.count), retryAfterSeconds: Math.ceil((window.startedAt + windowMs - now) / 1000) };
+  }
+  window.count += quantity;
+  requestWindows.set(requestedBy, window);
+  return { allowed: true, remaining: limit - window.count, retryAfterSeconds: 0 };
 }
 
 export async function generateQuest(type: QuestGenerationType, variables: Record<string, string>, requestedBy = "staff") {

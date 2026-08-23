@@ -166,6 +166,34 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AdminAiPromptPage" }
+  /admin/ai/prompts/{type}/versions/{version}/{action}:
+    post:
+      operationId: changeAdminAiPromptVersionState
+      tags: [admin]
+      summary: Activate, deactivate, or restore a prompt version
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema: { type: string, enum: [daily, monthly, geo] }
+        - name: version
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - name: action
+          in: path
+          required: true
+          schema: { type: string, enum: [activate, deactivate, restore] }
+      responses:
+        "200":
+          description: Updated prompt version
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { description: Invalid lifecycle operation }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "404": { description: Prompt version not found }
   /admin/ai/generate:
     post:
       operationId: generateAdminAiQuest

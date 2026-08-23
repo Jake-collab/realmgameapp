@@ -320,3 +320,5 @@ page?: PageParameter;
 pageSize?: PageSizeParameter;
 };
 
+export type ChangeAdminAiPromptVersionState200 = { [key: string]: unknown };
+

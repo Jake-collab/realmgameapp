@@ -38,6 +38,7 @@ export * from './adminSession';
 export * from './adminSessionRole';
 export * from './adminUser';
 export * from './adminUserPage';
+export * from './changeAdminAiPromptVersionState200';
 export * from './healthStatus';
 export * from './listAdminAuditLogsParams';
 export * from './listAdminQuestsParams';

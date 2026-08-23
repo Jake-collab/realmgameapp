@@ -33,6 +33,7 @@ import type {
   AdminReviewQueues,
   AdminSession,
   AdminUserPage,
+  ChangeAdminAiPromptVersionState200,
   HealthStatus,
   ListAdminAuditLogsParams,
   ListAdminQuestsParams,
@@ -934,6 +935,81 @@ export function useListAdminAiPromptVersions<TData = Awaited<ReturnType<typeof l
 
 
 
+
+export const getChangeAdminAiPromptVersionStateUrl = (type: 'daily' | 'monthly' | 'geo',
+    version: number,
+    action: 'activate' | 'deactivate' | 'restore',) => {
+
+
+
+
+  return `/api/admin/ai/prompts/${type}/versions/${version}/${action}`
+}
+
+/**
+ * @summary Activate, deactivate, or restore a prompt version
+ */
+export const changeAdminAiPromptVersionState = async (type: 'daily' | 'monthly' | 'geo',
+    version: number,
+    action: 'activate' | 'deactivate' | 'restore', options?: RequestInit): Promise<ChangeAdminAiPromptVersionState200> => {
+
+  return customFetch<ChangeAdminAiPromptVersionState200>(getChangeAdminAiPromptVersionStateUrl(type,version,action),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getChangeAdminAiPromptVersionStateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeAdminAiPromptVersionState>>, TError,{type: 'daily' | 'monthly' | 'geo';version: number;action: 'activate' | 'deactivate' | 'restore'}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeAdminAiPromptVersionState>>, TError,{type: 'daily' | 'monthly' | 'geo';version: number;action: 'activate' | 'deactivate' | 'restore'}, TContext> => {
+
+const mutationKey = ['changeAdminAiPromptVersionState'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeAdminAiPromptVersionState>>, {type: 'daily' | 'monthly' | 'geo';version: number;action: 'activate' | 'deactivate' | 'restore'}> = (props) => {
+          const {type,version,action} = props ?? {};
+
+          return  changeAdminAiPromptVersionState(type,version,action,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeAdminAiPromptVersionStateMutationResult = NonNullable<Awaited<ReturnType<typeof changeAdminAiPromptVersionState>>>
+
+    export type ChangeAdminAiPromptVersionStateMutationError = ErrorType<void>
+
+    /**
+ * @summary Activate, deactivate, or restore a prompt version
+ */
+export const useChangeAdminAiPromptVersionState = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeAdminAiPromptVersionState>>, TError,{type: 'daily' | 'monthly' | 'geo';version: number;action: 'activate' | 'deactivate' | 'restore'}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changeAdminAiPromptVersionState>>,
+        TError,
+        {type: 'daily' | 'monthly' | 'geo';version: number;action: 'activate' | 'deactivate' | 'restore'},
+        TContext
+      > => {
+      return useMutation(getChangeAdminAiPromptVersionStateMutationOptions(options));
+    }
 
 export const getGenerateAdminAiQuestUrl = () => {
 

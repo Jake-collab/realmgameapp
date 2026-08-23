@@ -15,6 +15,7 @@ import { getRolePermissions, requireAdmin, resolveAdminPrincipal } from "../lib/
 import {
   createPromptVersion,
   changePromptState,
+  consumeGenerationQuota,
   generateQuest,
   getGenerationPlan,
   listPromptVersions,
@@ -234,6 +235,12 @@ router.post("/admin/ai/generate", requireAdmin("ai.generate"), async (req, res) 
   }
   const plan = getGenerationPlan(input.data.type, input.data.quantity, input.data.variables);
   const requestedBy = req.adminPrincipal?.userId ?? "staff";
+  const quota = consumeGenerationQuota(requestedBy, input.data.quantity);
+  if (!quota.allowed) {
+    res.setHeader("Retry-After", String(quota.retryAfterSeconds));
+    res.status(429).json({ error: "AI generation rate limit reached.", ...quota });
+    return;
+  }
   const results = await Promise.all(
     Array.from({ length: input.data.quantity }, () => generateQuest(input.data.type, input.data.variables, requestedBy)),
   );
