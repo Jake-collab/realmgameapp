@@ -7,6 +7,7 @@ import { spacing, radius } from '@/constants/spacing';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { useUserSettings, useUpdateUserSettings, defaultUserSettings } from '@/features/profile/hooks/useUserSettings';
 import type { UserSettingsRow } from '@/lib/supabase/database.types';
+import { usePushPermission } from '@/features/notifications/usePushPermission';
 
 function ToggleRow({ label, description, value, onChange }: { label: string; description?: string; value: boolean; onChange: (value: boolean) => void }) {
   const colors = useColors();
@@ -23,6 +24,7 @@ function ChoiceRow<T extends string>({ label, options, value, onChange }: { labe
 
 export default function SettingsScreen() {
   const colors = useColors(); const query = useUserSettings(); const update = useUpdateUserSettings();
+  const push = usePushPermission();
   const settings: UserSettingsRow = query.data ?? defaultUserSettings;
   const save = (payload: Partial<UserSettingsRow>) => { if (!query.data) { Alert.alert('Settings unavailable', 'Connect your account to save settings.'); return; } update.mutate(payload); };
   return <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.content}>
@@ -30,6 +32,13 @@ export default function SettingsScreen() {
     {query.isLoading && <ActivityIndicator color={colors.primary} />}
     {!query.data && !query.isLoading && <View style={[styles.info, { backgroundColor: colors.muted }]}><Text style={[styles.description, { color: colors.mutedForeground }]}>Settings are shown with safe defaults until your account connection is available.</Text></View>}
     <Text style={[styles.section, { color: colors.mutedForeground }]}>Notifications</Text>
+    <View style={[styles.info, { backgroundColor: colors.muted }]}>
+      <Text style={[styles.label, { color: colors.foreground }]}>Push notifications</Text>
+      <Text style={[styles.description, { color: colors.mutedForeground }]}>
+        {push.status === 'granted' || push.status === 'provisional' ? 'Enabled on this device.' : push.status === 'denied' ? 'Disabled by your device settings.' : 'Get timely updates about Quests, Hunts, and progress.'}
+      </Text>
+      {push.status === 'denied' ? <Pressable onPress={() => void push.openSettings()}><Text style={{ color: colors.primary, fontFamily: fontFamily.medium }}>Open Settings</Text></Pressable> : push.status === 'not_asked' ? <Pressable onPress={() => void push.request()}><Text style={{ color: colors.primary, fontFamily: fontFamily.medium }}>Enable Notifications</Text></Pressable> : null}
+    </View>
     <ToggleRow label="Quest availability" value={settings.notify_quest_available} onChange={v => save({ notify_quest_available: v })} />
     <ToggleRow label="Monthly drops" value={settings.notify_monthly_drop} onChange={v => save({ notify_monthly_drop: v })} />
     <ToggleRow label="Hunt invitations" value={settings.notify_hunt_invitation} onChange={v => save({ notify_hunt_invitation: v })} />

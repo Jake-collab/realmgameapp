@@ -9,20 +9,20 @@
  */
 
 import React from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
 import { useAppStore } from '@/lib/store';
+import { router } from 'expo-router';
 
 export default function NotificationBell() {
   const colors = useColors();
   const unreadCount = useAppStore((s) => s.unreadCount);
 
   function handlePress() {
-    // TODO (Build 11): Navigate to notifications screen
-    Alert.alert('Notifications', 'Notifications screen coming in Build 11.');
+    router.push('/notifications');
   }
 
   return (
@@ -49,7 +49,7 @@ export default function NotificationBell() {
           ]}
         >
           <Text style={styles.badgeText}>
-            {unreadCount > 9 ? '9+' : unreadCount}
+            {unreadCount > 99 ? '99+' : unreadCount}
           </Text>
         </View>
       )}

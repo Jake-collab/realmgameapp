@@ -4,6 +4,51 @@ export type NotificationCategory = "quest" | "hunt" | "social" | "progress" | "m
 export type NotificationStatus = "scheduled" | "queued" | "sending" | "sent" | "delivered" | "failed" | "cancelled" | "suppressed";
 export type PushPlatform = "ios" | "android" | "web";
 
+export interface PushNotificationMessage {
+  token: string;
+  title: string;
+  body: string;
+  data?: Record<string, string>;
+}
+
+export interface PushNotificationProvider {
+  send(message: PushNotificationMessage): Promise<{ providerMessageId?: string }>;
+  sendBatch(messages: PushNotificationMessage[]): Promise<Array<{ providerMessageId?: string; error?: string }>>;
+  validateToken(token: string): Promise<boolean>;
+  healthCheck(): Promise<{ configured: boolean; reachable: boolean }>;
+}
+
+/** Provider-neutral fallback. It never claims delivery succeeded. */
+export class NoopPushProvider implements PushNotificationProvider {
+  async send(_message: PushNotificationMessage): Promise<{ providerMessageId?: string }> { throw new Error("Push provider is not configured"); }
+  async sendBatch(messages: PushNotificationMessage[]) { return messages.map(() => ({ error: "provider_not_configured" })); }
+  async validateToken(_token: string) { return false; }
+  async healthCheck() { return { configured: false, reachable: false }; }
+}
+
+/** Expo is intentionally isolated here; domain code only sees the provider contract. */
+export class ExpoPushProvider implements PushNotificationProvider {
+  constructor(private readonly accessToken: string | undefined = process.env.EXPO_ACCESS_TOKEN) {}
+  private get configured() { return Boolean(this.accessToken); }
+  async send(message: PushNotificationMessage) {
+    if (!this.configured) throw new Error("Expo push provider is not configured");
+    const response = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST", headers: { "content-type": "application/json", ...(this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : {}) },
+      body: JSON.stringify({ to: message.token, title: message.title, body: message.body, data: message.data }),
+    });
+    if (!response.ok) throw new Error(`Expo push request failed (${response.status})`);
+    const json = await response.json() as { data?: { id?: string } };
+    return { providerMessageId: json.data?.id };
+  }
+  async sendBatch(messages: PushNotificationMessage[]) {
+    const results: Array<{ providerMessageId?: string; error?: string }> = [];
+    for (const message of messages) { try { results.push(await this.send(message)); } catch (error) { results.push({ error: error instanceof Error ? error.message : "push_failed" }); } }
+    return results;
+  }
+  async validateToken(token: string) { return /^Expo(nent)?PushToken\[.+\]$/.test(token); }
+  async healthCheck() { return { configured: this.configured, reachable: false }; }
+}
+
 export interface NotificationEvent {
   eventId: string;
   idempotencyKey: string;
@@ -124,6 +169,7 @@ export class NotificationStore {
     return record;
   }
   list(userId: string) { return [...this.notifications.values()].filter(n => n.userId === userId && !n.archivedAt).sort((a, b) => b.createdAt.localeCompare(a.createdAt)); }
+  all() { return [...this.notifications.values()]; }
   unread(userId: string) { return this.list(userId).filter(n => !n.readAt).length; }
   markRead(userId: string, id: string) { const n = this.notifications.get(id); if (n?.userId === userId) n.readAt = new Date().toISOString(); return n ?? null; }
   markAllRead(userId: string) { this.list(userId).filter(n => !n.readAt).forEach(n => { n.readAt = new Date().toISOString(); }); }

@@ -311,6 +311,7 @@ const operationConfig: Record<string, { eyebrow: string; title: string; descript
 export function OperationsPage({ data }: { data: AdminData }) {
   const [location] = useLocation();
   if (location.startsWith('/moderation/')) return <ModerationOperationsPage data={data} location={location} />;
+  if (location === '/notifications') return <NotificationOperationsPage data={data} />;
   const config = operationConfig[location] || operationConfig['/hunts'];
   const isQuestLane = location.startsWith('/quests/');
   const queues = data.reviewQueues.data?.queues;
@@ -331,6 +332,25 @@ export function OperationsPage({ data }: { data: AdminData }) {
       <div className="notice" style={{ marginTop: 18 }}><AlertTriangle /><span>This lane is intentionally truthful about its connection state. No local placeholder records are presented as real platform data.</span></div>
     </div>
   );
+}
+
+function NotificationOperationsPage({ data }: { data: AdminData }) {
+  const overview = data.notifications.overview.data;
+  const metrics = overview?.metrics;
+  return <div className="page-wrap">
+    <PageHeader eyebrow="Platform / communication" title="Administrative notifications" description="Monitor delivery infrastructure without exposing push tokens or provider credentials." actions={<RefreshButton onClick={() => { void data.notifications.overview.refetch(); void data.notifications.diagnostics.refetch(); }} loading={data.notifications.overview.isFetching} />} />
+    <div className="metrics-grid" style={{ marginTop: 26 }}>
+      {[
+        ['Created today', metrics?.notificationsCreatedToday], ['Push attempts', metrics?.pushAttempts], ['Successful pushes', metrics?.successfulPushes],
+        ['Failed sends', metrics?.failedSends], ['Invalid tokens', metrics?.invalidTokens], ['Scheduled pending', metrics?.pendingScheduled], ['Queue backlog', metrics?.queueBacklog],
+      ].map(([label, value]) => <div className="metric-card" key={String(label)}><div className="metric-label">{label}</div><div className="metric-value">{value ?? '—'}</div><div className="metric-detail">Platform-reported value</div></div>)}
+    </div>
+    <div className="content-grid" style={{ marginTop: 22 }}>
+      <section className="panel"><div className="panel-header"><div><div className="panel-title">Provider and queue</div><div className="panel-kicker">Server-side delivery status</div></div><StatusBadge status={overview?.provider.configured ? 'configured' : 'unavailable'} /></div>{overview ? <div className="empty-state"><strong>{overview.provider.configured ? 'Provider configured' : 'Push provider unavailable'}</strong><p>{overview.provider.reason ?? 'Delivery health is ready for inspection.'}</p><p className="identity-handle">Persistence: {overview.persistence}</p></div> : <UnavailableState onRetry={() => void data.notifications.overview.refetch()} />}</section>
+      <section className="panel"><div className="panel-header"><div><div className="panel-title">Self-test</div><div className="panel-kicker">Only sends to your own registered device</div></div></div><button className="btn btn-primary" onClick={() => data.notifications.test.mutate()} disabled={data.notifications.test.isPending || !data.session.data?.authorized}>Send test notification</button>{data.notifications.test.isSuccess && <p className="identity-handle" style={{ marginTop: 12 }}>Test notification queued for your account.</p>}<div className="notice" style={{ marginTop: 18 }}><LockKeyhole /><span>Provider secrets and raw push tokens are never shown in the Admin Panel.</span></div></section>
+    </div>
+    <div className="notice" style={{ marginTop: 18 }}><AlertTriangle /><span>Notification records remain independent from push delivery. A failed push never removes in-app history.</span></div>
+  </div>;
 }
 
 function ModerationOperationsPage({ data, location }: { data: AdminData; location: string }) {

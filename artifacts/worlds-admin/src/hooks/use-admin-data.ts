@@ -22,6 +22,20 @@ async function moderationFetch<T>(url: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export type NotificationAdminData = {
+  metrics: { notificationsCreatedToday: number; pushAttempts: number; successfulPushes: number; failedSends: number; invalidTokens: number; pendingScheduled: number; queueBacklog: number; averageDeliveryLatencyMs: number | null };
+  provider: { configured: boolean; reachable: boolean; reason?: string };
+  persistence: string;
+};
+
+export function useNotificationAdminData(enabled = true) {
+  const client = useQueryClient();
+  const overview = useQuery<NotificationAdminData>({ queryKey: ['/admin/notifications'], enabled, queryFn: () => moderationFetch<NotificationAdminData>('/api/admin/notifications') });
+  const diagnostics = useQuery({ queryKey: ['/admin/notifications/diagnostics'], enabled, queryFn: () => moderationFetch<Record<string, unknown>>('/api/admin/notifications/diagnostics') });
+  const test = useMutation({ mutationFn: () => moderationFetch('/api/admin/notifications/test', { method: 'POST', body: '{}' }), onSuccess: () => void client.invalidateQueries({ queryKey: ['/admin/notifications'] }) });
+  return { overview, diagnostics, test };
+}
+
 export type ModerationCase = {
   id: string; entityType: string; entityId: string; context: string; status: string; decision: string | null;
   priority: string; outcome: { action?: string; reason?: string } | null; assignedModeratorId: string | null;
@@ -70,6 +84,7 @@ export function useAdminData() {
     query: { queryKey: getGetAdminDiagnosticsQueryKey(), enabled: can('admin.diagnostics.read') },
   });
   const moderation = useModerationData(session.data?.authorized === true && permissions.some((permission) => permission === 'moderation.read' || permission === 'integrity.read'));
+  const notifications = useNotificationAdminData(session.data?.authorized === true && permissions.includes('admin.read'));
 
-  return { session, dashboard, reviewQueues, users, quests, audit, diagnostics, moderation };
+  return { session, dashboard, reviewQueues, users, quests, audit, diagnostics, moderation, notifications };
 }

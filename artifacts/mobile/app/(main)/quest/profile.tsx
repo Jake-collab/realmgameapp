@@ -22,6 +22,7 @@ import { useColors } from '@/hooks/useColors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useAppStore } from '@/lib/store';
 import { useProgressOverview } from '@/features/progression/hooks/useProgressOverview';
 import { useReceivedFriendRequests } from '@/features/social/hooks/useReceivedFriendRequests';
 import { useFriends } from '@/features/social/hooks/useFriends';
@@ -75,6 +76,7 @@ function ProfileLink({ icon, label, sublabel, badge, onPress, color }: ProfileLi
 export default function QuestProfileScreen() {
   const colors   = useColors();
   const { user, signOut } = useAuth();
+  const unreadCount = useAppStore((s) => s.unreadCount);
   const overview = useProgressOverview();
   const received = useReceivedFriendRequests();
   const friends  = useFriends();
@@ -165,6 +167,14 @@ export default function QuestProfileScreen() {
         color={colors.mutedForeground}
       />
       <ProfileLink
+        icon="bell"
+        label="Notifications"
+        sublabel="Updates, invitations, and progress"
+        badge={unreadCount}
+        onPress={() => router.push('/notifications')}
+        color={colors.primary}
+      />
+      <ProfileLink
         icon="settings"
         label="Settings"
         sublabel="Notifications, account"
@@ -180,16 +190,16 @@ export default function QuestProfileScreen() {
        <ProfileLink
         icon="file-text"
         label="Terms &amp; Privacy"
-         onPress={() => Alert.alert('Sign out?', 'You can sign back in anytime.', [
-           { text: 'Cancel', style: 'cancel' },
-           { text: 'Sign Out', style: 'destructive', onPress: () => { void signOut(); } },
-         ])}
+        onPress={() => Alert.alert('Terms & Privacy', 'Review the Worlds terms and privacy policy from the account help area.')}
         color={colors.mutedForeground}
       />
       <ProfileLink
         icon="log-out"
         label="Sign Out"
-        onPress={() => {}}
+        onPress={() => Alert.alert('Sign out?', 'You can sign back in anytime.', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign Out', style: 'destructive', onPress: () => { void signOut(); } },
+        ])}
         color={colors.destructive}
       />
 

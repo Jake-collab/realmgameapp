@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request } from "express";
+import { randomUUID } from "node:crypto";
 import {
   GetAdminDashboardResponse,
   GetAdminDiagnosticsResponse,
@@ -50,6 +51,7 @@ import {
   updateModerationSettings,
 } from "../lib/moderation-state";
 import { persistIntegritySnapshot, persistModerationResult } from "../lib/supabase-moderation";
+import { notificationStore, renderNotification, type NotificationEvent } from "../lib/notifications";
 
 const router: IRouter = Router();
 
@@ -106,6 +108,56 @@ router.get("/admin/session", async (req, res) => {
     permissions: [],
     reason: result.reason,
   }));
+});
+
+router.get("/admin/notifications", requireAdmin("admin.read"), (_req, res) => {
+  const items = notificationStore.all();
+  res.json({
+    metrics: {
+      notificationsCreatedToday: items.filter(item => item.createdAt.slice(0, 10) === new Date().toISOString().slice(0, 10)).length,
+      pushAttempts: 0,
+      successfulPushes: 0,
+      failedSends: 0,
+      invalidTokens: 0,
+      pendingScheduled: 0,
+      queueBacklog: 0,
+      averageDeliveryLatencyMs: null,
+    },
+    provider: { configured: Boolean(process.env.EXPO_ACCESS_TOKEN), reachable: false, reason: "Provider health checks require configured server credentials." },
+    delivery: [],
+    scheduled: [],
+    persistence: "local_restart_safe",
+  });
+});
+
+router.get("/admin/notifications/diagnostics", requireAdmin("admin.diagnostics.read"), (_req, res) => {
+  res.json({
+    providerConfigured: Boolean(process.env.EXPO_ACCESS_TOKEN),
+    providerReachable: false,
+    queueHealth: "unavailable_without_scheduler",
+    oldestQueuedJob: null,
+    invalidTokenCount: 0,
+    lastSuccessfulSend: null,
+    lastFailedSend: null,
+    receiptProcessing: "not_configured",
+    fanoutHealth: "not_configured",
+  });
+});
+
+router.post("/admin/notifications/test", requireAdmin("admin.read"), (req, res) => {
+  const principal = req.adminPrincipal;
+  if (!principal) { res.status(403).json({ error: "Staff authorization required." }); return; }
+  const event: NotificationEvent = {
+    eventId: randomUUID(),
+    idempotencyKey: `admin_test:${principal.userId}:${Date.now()}`,
+    userId: principal.userId,
+    type: "ACCOUNT_SECURITY",
+    category: "account",
+    variables: { message: "This is a test notification from the Worlds Admin Panel." },
+    deepLink: "worlds://notifications",
+  };
+  const record = notificationStore.process(event);
+  res.status(201).json({ test: true, notification: record ?? renderNotification(event) });
 });
 
 router.get("/admin/dashboard", requireAdmin("admin.read"), (_req, res) => {
