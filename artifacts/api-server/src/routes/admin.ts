@@ -12,6 +12,16 @@ import {
   ListAdminAuditLogsQueryParams,
 } from "@workspace/api-zod";
 import { getRolePermissions, requireAdmin, resolveAdminPrincipal } from "../lib/admin-auth";
+import {
+  createPromptVersion,
+  generateQuest,
+  listPromptVersions,
+  questGenerationTypes,
+  validatePromptVariables,
+  aiConfiguration,
+  type QuestGenerationType,
+} from "../lib/ai-quest";
+import { z } from "zod";
 
 const router: IRouter = Router();
 
@@ -129,6 +139,108 @@ router.get("/admin/diagnostics", requireAdmin("admin.diagnostics.read"), (_req, 
     ],
     generatedAt: new Date(),
   }));
+});
+
+router.get("/admin/ai/overview", requireAdmin("ai.read"), (_req, res) => {
+  res.json({
+    provider: aiConfiguration(),
+    promptTemplates: questGenerationTypes.map((type) => ({
+      type,
+      versions: listPromptVersions(type).length,
+      activeVersion: listPromptVersions(type).find((item) => item.active)?.version ?? null,
+    })),
+    generationPolicy: "draft_only",
+    generatedAt: new Date().toISOString(),
+  });
+});
+
+router.get("/admin/ai/prompts", requireAdmin("ai.prompts.read"), (_req, res) => {
+  res.json({ items: listPromptVersions() });
+});
+
+router.get("/admin/ai/prompts/:type", requireAdmin("ai.prompts.read"), (req, res) => {
+  if (!questGenerationTypes.includes(req.params.type as QuestGenerationType)) {
+    res.status(400).json({ error: "Unknown Quest prompt type." });
+    return;
+  }
+  res.json({ items: listPromptVersions(req.params.type as QuestGenerationType) });
+});
+
+router.post("/admin/ai/prompts/:type/versions", requireAdmin("ai.prompts.edit"), (req, res) => {
+  if (!questGenerationTypes.includes(req.params.type as QuestGenerationType)) {
+    res.status(400).json({ error: "Unknown Quest prompt type." });
+    return;
+  }
+  const input = z.object({
+    systemInstructions: z.string().min(1),
+    contentInstructions: z.string().min(1),
+    safetyInstructions: z.string().min(1),
+    pointInstructions: z.string().min(1),
+    proofInstructions: z.string().min(1),
+    outputFormat: z.string().min(1),
+    changeReason: z.string().min(1).max(500),
+  }).safeParse(req.body);
+  if (!input.success) {
+    res.status(400).json({ error: "Prompt fields and change reason are required.", issues: input.error.issues });
+    return;
+  }
+  const principal = req.adminPrincipal;
+  res.status(201).json({
+    prompt: createPromptVersion(req.params.type as QuestGenerationType, {
+      ...input.data,
+      updatedBy: principal?.userId ?? "staff",
+    }),
+  });
+});
+
+router.post("/admin/ai/prompts/:type/preview", requireAdmin("ai.prompts.read"), (req, res) => {
+  const input = z.object({ template: z.string(), variables: z.record(z.string(), z.string()) }).safeParse(req.body);
+  if (!input.success) {
+    res.status(400).json({ error: "A template and string variables are required." });
+    return;
+  }
+  res.json({ preview: validatePromptVariables(input.data.template, input.data.variables) });
+});
+
+router.post("/admin/ai/generate", requireAdmin("ai.generate"), async (req, res) => {
+  const input = z.object({
+    type: z.enum(questGenerationTypes),
+    variables: z.record(z.string(), z.string()).default({}),
+    testOnly: z.boolean().default(true),
+    quantity: z.number().int().min(1).max(20).default(1),
+  }).safeParse(req.body);
+  if (!input.success) {
+    res.status(400).json({ error: "Generation type and valid variables are required." });
+    return;
+  }
+  const results = await Promise.all(
+    Array.from({ length: input.data.quantity }, () => generateQuest(input.data.type, input.data.variables)),
+  );
+  res.json({
+    mode: input.data.testOnly ? "TEST_GENERATION — NOT SAVED" : "DRAFT_CANDIDATES — REVIEW REQUIRED",
+    results,
+    saved: false,
+  });
+});
+
+router.get("/admin/ai/history", requireAdmin("ai.read"), (_req, res) => {
+  res.json({ items: [], note: "Generation history will populate after provider-backed requests are enabled." });
+});
+
+router.get("/admin/ai/settings", requireAdmin("ai.settings.read"), (_req, res) => {
+  res.json({
+    provider: aiConfiguration(),
+    settings: {
+      generationEnabled: Boolean(process.env.AI_API_KEY),
+      automatedGenerationEnabled: false,
+      outputTokenLimit: Number(process.env.AI_MAX_OUTPUT_TOKENS ?? 2000),
+      temperature: Number(process.env.AI_TEMPERATURE ?? 0.4),
+      requestTimeoutMs: Number(process.env.AI_REQUEST_TIMEOUT_MS ?? 15000),
+      maxRetries: 0,
+      dailyRequestLimit: 100,
+      monthlyRequestLimit: 1000,
+    },
+  });
 });
 
 export default router;

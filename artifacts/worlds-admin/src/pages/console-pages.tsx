@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { AlertTriangle, ArrowUpRight, Check, ChevronRight, Database, FileText, LockKeyhole, Search, SlidersHorizontal, UsersRound } from 'lucide-react';
 import { useAdminData } from '@/hooks/use-admin-data';
@@ -108,6 +108,137 @@ export function DiagnosticsPage({ data }: { data: AdminData }) {
       <PageHeader eyebrow="Platform / health" title="Diagnostics" description="Safe, read-only checks for the services that power staff operations." actions={<RefreshButton onClick={() => void data.diagnostics.refetch()} loading={data.diagnostics.isFetching} />} />
       <div style={{ display: 'flex', gap: 10, margin: '26px 0 17px', flexWrap: 'wrap' }}><span className="tag green" data-testid="status-diagnostics-summary">{diagnostics ? `${diagnostics.checks.length - unavailableCount} healthy` : 'Status unavailable'}</span>{diagnostics && unavailableCount > 0 && <span className="tag orange">{unavailableCount} need attention</span>}<span className="mono" style={{ alignSelf: 'center', fontSize: 10, color: 'hsl(var(--muted-foreground))' }}>{diagnostics?.generatedAt ? `Generated ${fmtDateTime(diagnostics.generatedAt)}` : 'Awaiting platform response'}</span></div>
       {data.diagnostics.isError ? <div className="panel"><ErrorState onRetry={() => void data.diagnostics.refetch()} /></div> : <DiagnosticsList checks={diagnostics?.checks} loading={data.diagnostics.isLoading} onRetry={() => void data.diagnostics.refetch()} />}
+    </div>
+  );
+}
+
+type AiResponse = {
+  provider?: { configured: boolean; provider: string | null; model: string | null };
+  promptTemplates?: Array<{ type: string; versions: number; activeVersion: number | null }>;
+  generationPolicy?: string;
+  generatedAt?: string;
+  items?: Array<Record<string, unknown>>;
+  settings?: Record<string, unknown>;
+};
+type AiPrompt = {
+  systemInstructions: string;
+  contentInstructions: string;
+  safetyInstructions: string;
+  pointInstructions: string;
+  proofInstructions: string;
+  outputFormat: string;
+  version?: number;
+  active?: boolean;
+};
+
+async function aiFetch(path: string, init?: RequestInit): Promise<AiResponse> {
+  const response = await fetch(`/api/admin/ai${path}`, { credentials: 'include', ...init, headers: { 'content-type': 'application/json', ...(init?.headers || {}) } });
+  if (!response.ok) throw new Error(response.status === 503 ? 'AI services are unavailable until configured.' : 'AI request was not authorized.');
+  return response.json() as Promise<AiResponse>;
+}
+
+export function AIPage({ data }: { data: AdminData }) {
+  const [location] = useLocation();
+  const [result, setResult] = useState<AiResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
+  const [type, setType] = useState<'daily' | 'monthly' | 'geo'>('daily');
+  const [quantity, setQuantity] = useState('1');
+  const [prompt, setPrompt] = useState<AiPrompt>({
+    systemInstructions: '',
+    contentInstructions: '',
+    safetyInstructions: '',
+    pointInstructions: '',
+    proofInstructions: '',
+    outputFormat: '',
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    void aiFetch(location === '/ai' ? '/overview' : location === '/ai/prompts' ? '/prompts' : location === '/ai/settings' ? '/settings' : '/history')
+      .then((value) => { if (!cancelled) setResult(value); })
+      .catch((error: Error) => { if (!cancelled) setMessage(error.message); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [location]);
+
+  useEffect(() => {
+    const first = result?.items?.[0] as AiPrompt | undefined;
+    if (first) setPrompt(first);
+  }, [result]);
+
+  const generate = async () => {
+    setLoading(true);
+    setMessage('');
+    try {
+      const value = await aiFetch('/generate', {
+        method: 'POST',
+        body: JSON.stringify({ type, quantity: Number(quantity), variables: { current_date: new Date().toISOString().slice(0, 10) }, testOnly: true }),
+      });
+      setResult(value);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Generation failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const savePrompt = async () => {
+    setLoading(true);
+    setMessage('');
+    try {
+      const response = await aiFetch(`/prompts/${type}/versions`, {
+        method: 'POST',
+        body: JSON.stringify({ ...prompt, changeReason: 'Updated from Admin AI Studio' }),
+      });
+      setResult(response);
+      setMessage('New prompt version saved. It remains inactive until explicitly activated.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Prompt could not be saved.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!data.session.data?.authorized) {
+    return <div className="page-wrap"><PageHeader eyebrow="AI studio" title="AI access unavailable" description="An authorized staff session is required before AI tools can be opened." /><UnavailableState /></div>;
+  }
+  const title = location === '/ai' ? 'AI Quest Studio' : location === '/ai/prompts' ? 'Prompt templates' : location === '/ai/settings' ? 'AI settings' : 'Generate Quest candidates';
+  return (
+    <div className="page-wrap">
+      <PageHeader eyebrow="AI studio / Quest content" title={title} description="AI creates reviewable Quest candidates only. It never publishes content or writes to the points ledger." />
+      {message && <div className="notice" style={{ marginTop: 20 }}><AlertTriangle /><span>{message}</span></div>}
+      {location === '/ai/generate' ? (
+        <section className="panel" style={{ marginTop: 25 }}>
+          <div className="panel-header"><div><div className="panel-title">Generate candidates</div><div className="panel-kicker">TEST GENERATION — NOT SAVED</div></div><span className="tag orange">Draft only</span></div>
+          <div className="toolbar">
+            <label className="field">Quest type<select value={type} onChange={(event) => setType(event.target.value as typeof type)}><option value="daily">Daily</option><option value="monthly">Monthly</option><option value="geo">Geo</option></select></label>
+            <label className="field">Quantity<input type="number" min="1" max="20" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
+            <button className="btn btn-primary" onClick={() => void generate()} disabled={loading || !data.session.data.permissions.includes('ai.generate')}>Generate preview</button>
+          </div>
+          {result && <pre className="code-panel">{JSON.stringify(result, null, 2)}</pre>}
+        </section>
+      ) : location === '/ai/prompts' ? (
+        <section className="panel" style={{ marginTop: 25 }}>
+          <div className="panel-header"><div><div className="panel-title">Independent Quest prompt templates</div><div className="panel-kicker">Every save creates a new version; history is never overwritten</div></div><span className="tag blue">Version {prompt.version ?? 1}</span></div>
+          <div className="form-grid">
+            {([
+              ['systemInstructions', 'System prompt'],
+              ['contentInstructions', 'Content instructions'],
+              ['safetyInstructions', 'Safety rules'],
+              ['pointInstructions', 'Point instructions'],
+              ['proofInstructions', 'Proof instructions'],
+              ['outputFormat', 'Output format'],
+            ] as const).map(([key, label]) => <label className="field" key={key}>{label}<textarea value={prompt[key]} onChange={(event) => setPrompt((current) => ({ ...current, [key]: event.target.value }))} rows={3} /></label>)}
+          </div>
+          <div className="panel-footer"><span className="identity-handle">Supported types: Daily, Monthly, Geo · no secrets or private user data are available to templates.</span><button className="btn btn-primary" onClick={() => void savePrompt()} disabled={loading || !data.session.data.permissions.includes('ai.prompts.edit')}>Save new version</button></div>
+        </section>
+      ) : (
+        <section className="panel" style={{ marginTop: 25 }}>
+          <div className="panel-header"><div><div className="panel-title">{location === '/ai/prompts' ? 'Independent Quest prompts' : 'Configuration status'}</div><div className="panel-kicker">Server-controlled and reviewable</div></div><span className={`tag ${result?.provider?.configured ? 'green' : 'orange'}`}>{result?.provider?.configured ? 'Configured' : 'Unavailable'}</span></div>
+          {loading ? <TableSkeleton columns={3} /> : result ? <pre className="code-panel">{JSON.stringify(result, null, 2)}</pre> : <UnavailableState />}
+        </section>
+      )}
     </div>
   );
 }

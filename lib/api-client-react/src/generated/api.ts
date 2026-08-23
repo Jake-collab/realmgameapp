@@ -6,16 +6,26 @@
  * OpenAPI spec version: 0.1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
 
 import type {
+  AdminAiGenerationRequest,
+  AdminAiGenerationResponse,
+  AdminAiHistory,
+  AdminAiOverview,
+  AdminAiPromptPage,
+  AdminAiSettings,
   AdminAuditPage,
   AdminDashboard,
   AdminDiagnostics,
@@ -30,7 +40,7 @@ import type {
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
-import type { ErrorType } from '../custom-fetch';
+import type { ErrorType , BodyType } from '../custom-fetch';
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -682,6 +692,462 @@ export function useGetAdminDiagnostics<TData = Awaited<ReturnType<typeof getAdmi
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetAdminDiagnosticsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAdminAiOverviewUrl = () => {
+
+
+
+
+  return `/api/admin/ai/overview`
+}
+
+/**
+ * @summary Get safe AI generation overview
+ */
+export const getAdminAiOverview = async ( options?: RequestInit): Promise<AdminAiOverview> => {
+
+  return customFetch<AdminAiOverview>(getGetAdminAiOverviewUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminAiOverviewQueryKey = () => {
+    return [
+    `/api/admin/ai/overview`
+    ] as const;
+    }
+
+
+export const getGetAdminAiOverviewQueryOptions = <TData = Awaited<ReturnType<typeof getAdminAiOverview>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminAiOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminAiOverviewQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminAiOverview>>> = ({ signal }) => getAdminAiOverview({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminAiOverview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminAiOverviewQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminAiOverview>>>
+export type GetAdminAiOverviewQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get safe AI generation overview
+ */
+
+export function useGetAdminAiOverview<TData = Awaited<ReturnType<typeof getAdminAiOverview>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminAiOverview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminAiOverviewQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAdminAiPromptsUrl = () => {
+
+
+
+
+  return `/api/admin/ai/prompts`
+}
+
+/**
+ * @summary List versioned Quest prompt templates
+ */
+export const listAdminAiPrompts = async ( options?: RequestInit): Promise<AdminAiPromptPage> => {
+
+  return customFetch<AdminAiPromptPage>(getListAdminAiPromptsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminAiPromptsQueryKey = () => {
+    return [
+    `/api/admin/ai/prompts`
+    ] as const;
+    }
+
+
+export const getListAdminAiPromptsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminAiPrompts>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAiPrompts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminAiPromptsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminAiPrompts>>> = ({ signal }) => listAdminAiPrompts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminAiPrompts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminAiPromptsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminAiPrompts>>>
+export type ListAdminAiPromptsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List versioned Quest prompt templates
+ */
+
+export function useListAdminAiPrompts<TData = Awaited<ReturnType<typeof listAdminAiPrompts>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAiPrompts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminAiPromptsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListAdminAiPromptVersionsUrl = (type: 'daily' | 'monthly' | 'geo',) => {
+
+
+
+
+  return `/api/admin/ai/prompts/${type}`
+}
+
+/**
+ * @summary List prompt versions for a Quest type
+ */
+export const listAdminAiPromptVersions = async (type: 'daily' | 'monthly' | 'geo', options?: RequestInit): Promise<AdminAiPromptPage> => {
+
+  return customFetch<AdminAiPromptPage>(getListAdminAiPromptVersionsUrl(type),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminAiPromptVersionsQueryKey = (type: 'daily' | 'monthly' | 'geo',) => {
+    return [
+    `/api/admin/ai/prompts/${type}`
+    ] as const;
+    }
+
+
+export const getListAdminAiPromptVersionsQueryOptions = <TData = Awaited<ReturnType<typeof listAdminAiPromptVersions>>, TError = ErrorType<unknown>>(type: 'daily' | 'monthly' | 'geo', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAiPromptVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminAiPromptVersionsQueryKey(type);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminAiPromptVersions>>> = ({ signal }) => listAdminAiPromptVersions(type, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: type !== null && type !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminAiPromptVersions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminAiPromptVersionsQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminAiPromptVersions>>>
+export type ListAdminAiPromptVersionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List prompt versions for a Quest type
+ */
+
+export function useListAdminAiPromptVersions<TData = Awaited<ReturnType<typeof listAdminAiPromptVersions>>, TError = ErrorType<unknown>>(
+ type: 'daily' | 'monthly' | 'geo', options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAiPromptVersions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminAiPromptVersionsQueryOptions(type,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGenerateAdminAiQuestUrl = () => {
+
+
+
+
+  return `/api/admin/ai/generate`
+}
+
+/**
+ * @summary Generate reviewable Quest candidates
+ */
+export const generateAdminAiQuest = async (adminAiGenerationRequest: AdminAiGenerationRequest, options?: RequestInit): Promise<AdminAiGenerationResponse> => {
+
+  return customFetch<AdminAiGenerationResponse>(getGenerateAdminAiQuestUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminAiGenerationRequest)
+  }
+);}
+
+
+
+
+
+export const getGenerateAdminAiQuestMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateAdminAiQuest>>, TError,{data: BodyType<AdminAiGenerationRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateAdminAiQuest>>, TError,{data: BodyType<AdminAiGenerationRequest>}, TContext> => {
+
+const mutationKey = ['generateAdminAiQuest'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateAdminAiQuest>>, {data: BodyType<AdminAiGenerationRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  generateAdminAiQuest(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateAdminAiQuestMutationResult = NonNullable<Awaited<ReturnType<typeof generateAdminAiQuest>>>
+    export type GenerateAdminAiQuestMutationBody = BodyType<AdminAiGenerationRequest>
+    export type GenerateAdminAiQuestMutationError = ErrorType<void>
+
+    /**
+ * @summary Generate reviewable Quest candidates
+ */
+export const useGenerateAdminAiQuest = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateAdminAiQuest>>, TError,{data: BodyType<AdminAiGenerationRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateAdminAiQuest>>,
+        TError,
+        {data: BodyType<AdminAiGenerationRequest>},
+        TContext
+      > => {
+      return useMutation(getGenerateAdminAiQuestMutationOptions(options));
+    }
+
+export const getListAdminAiHistoryUrl = () => {
+
+
+
+
+  return `/api/admin/ai/history`
+}
+
+/**
+ * @summary List AI generation history
+ */
+export const listAdminAiHistory = async ( options?: RequestInit): Promise<AdminAiHistory> => {
+
+  return customFetch<AdminAiHistory>(getListAdminAiHistoryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminAiHistoryQueryKey = () => {
+    return [
+    `/api/admin/ai/history`
+    ] as const;
+    }
+
+
+export const getListAdminAiHistoryQueryOptions = <TData = Awaited<ReturnType<typeof listAdminAiHistory>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAiHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminAiHistoryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminAiHistory>>> = ({ signal }) => listAdminAiHistory({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminAiHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminAiHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminAiHistory>>>
+export type ListAdminAiHistoryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List AI generation history
+ */
+
+export function useListAdminAiHistory<TData = Awaited<ReturnType<typeof listAdminAiHistory>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminAiHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminAiHistoryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAdminAiSettingsUrl = () => {
+
+
+
+
+  return `/api/admin/ai/settings`
+}
+
+/**
+ * @summary Get safe AI settings
+ */
+export const getAdminAiSettings = async ( options?: RequestInit): Promise<AdminAiSettings> => {
+
+  return customFetch<AdminAiSettings>(getGetAdminAiSettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminAiSettingsQueryKey = () => {
+    return [
+    `/api/admin/ai/settings`
+    ] as const;
+    }
+
+
+export const getGetAdminAiSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getAdminAiSettings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminAiSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminAiSettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminAiSettings>>> = ({ signal }) => getAdminAiSettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminAiSettings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminAiSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminAiSettings>>>
+export type GetAdminAiSettingsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get safe AI settings
+ */
+
+export function useGetAdminAiSettings<TData = Awaited<ReturnType<typeof getAdminAiSettings>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminAiSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminAiSettingsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

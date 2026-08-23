@@ -125,6 +125,88 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminDiagnostics"
+  /admin/ai/overview:
+    get:
+      operationId: getAdminAiOverview
+      tags: [admin]
+      summary: Get safe AI generation overview
+      responses:
+        "200":
+          description: AI overview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminAiOverview" }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "503": { description: AI or staff service unavailable }
+  /admin/ai/prompts:
+    get:
+      operationId: listAdminAiPrompts
+      tags: [admin]
+      summary: List versioned Quest prompt templates
+      responses:
+        "200":
+          description: Prompt versions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminAiPromptPage" }
+  /admin/ai/prompts/{type}:
+    get:
+      operationId: listAdminAiPromptVersions
+      tags: [admin]
+      summary: List prompt versions for a Quest type
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema: { type: string, enum: [daily, monthly, geo] }
+      responses:
+        "200":
+          description: Prompt versions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminAiPromptPage" }
+  /admin/ai/generate:
+    post:
+      operationId: generateAdminAiQuest
+      tags: [admin]
+      summary: Generate reviewable Quest candidates
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminAiGenerationRequest" }
+      responses:
+        "200":
+          description: Candidate or safe unavailable result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminAiGenerationResponse" }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "503": { description: AI or staff service unavailable }
+  /admin/ai/history:
+    get:
+      operationId: listAdminAiHistory
+      tags: [admin]
+      summary: List AI generation history
+      responses:
+        "200":
+          description: Generation history
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminAiHistory" }
+  /admin/ai/settings:
+    get:
+      operationId: getAdminAiSettings
+      tags: [admin]
+      summary: Get safe AI settings
+      responses:
+        "200":
+          description: Settings without secrets
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminAiSettings" }
 components:
   parameters:
     Search:
@@ -204,6 +286,50 @@ components:
           type: string
           enum: [available, unavailable]
         detail: { type: ["string", "null"] }
+    AdminAiOverview:
+      type: object
+      additionalProperties: true
+      required: [provider, promptTemplates, generationPolicy, generatedAt]
+      properties:
+        provider: { type: object, additionalProperties: true }
+        promptTemplates: { type: array, items: { type: object, additionalProperties: true } }
+        generationPolicy: { type: string }
+        generatedAt: { type: string, format: date-time }
+    AdminAiPromptPage:
+      type: object
+      additionalProperties: true
+      required: [items]
+      properties:
+        items: { type: array, items: { type: object, additionalProperties: true } }
+    AdminAiGenerationRequest:
+      type: object
+      required: [type]
+      properties:
+        type: { type: string, enum: [daily, monthly, geo] }
+        variables: { type: object, additionalProperties: { type: string } }
+        testOnly: { type: boolean, default: true }
+        quantity: { type: integer, minimum: 1, maximum: 20, default: 1 }
+    AdminAiGenerationResponse:
+      type: object
+      additionalProperties: true
+      required: [mode, results, saved]
+      properties:
+        mode: { type: string }
+        results: { type: array, items: { type: object, additionalProperties: true } }
+        saved: { type: boolean }
+    AdminAiHistory:
+      type: object
+      additionalProperties: true
+      required: [items]
+      properties:
+        items: { type: array, items: { type: object, additionalProperties: true } }
+    AdminAiSettings:
+      type: object
+      additionalProperties: true
+      required: [provider, settings]
+      properties:
+        provider: { type: object, additionalProperties: true }
+        settings: { type: object, additionalProperties: true }
     AdminDashboard:
       type: object
       required: [metrics, actionQueue, generatedAt]

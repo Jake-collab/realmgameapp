@@ -50,6 +50,73 @@ export interface AdminMetric {
   detail?: string | null;
 }
 
+export type AdminAiOverviewProvider = { [key: string]: unknown };
+
+export type AdminAiOverviewPromptTemplatesItem = { [key: string]: unknown };
+
+export interface AdminAiOverview {
+  provider: AdminAiOverviewProvider;
+  promptTemplates: AdminAiOverviewPromptTemplatesItem[];
+  generationPolicy: string;
+  generatedAt: string;
+  [key: string]: unknown;
+ }
+
+export type AdminAiPromptPageItemsItem = { [key: string]: unknown };
+
+export interface AdminAiPromptPage {
+  items: AdminAiPromptPageItemsItem[];
+  [key: string]: unknown;
+ }
+
+export type AdminAiGenerationRequestType = typeof AdminAiGenerationRequestType[keyof typeof AdminAiGenerationRequestType];
+
+
+export const AdminAiGenerationRequestType = {
+  daily: 'daily',
+  monthly: 'monthly',
+  geo: 'geo',
+} as const;
+
+export type AdminAiGenerationRequestVariables = {[key: string]: string};
+
+export interface AdminAiGenerationRequest {
+  type: AdminAiGenerationRequestType;
+  variables?: AdminAiGenerationRequestVariables;
+  testOnly?: boolean;
+  /**
+     * @minimum 1
+     * @maximum 20
+     */
+  quantity?: number;
+}
+
+export type AdminAiGenerationResponseResultsItem = { [key: string]: unknown };
+
+export interface AdminAiGenerationResponse {
+  mode: string;
+  results: AdminAiGenerationResponseResultsItem[];
+  saved: boolean;
+  [key: string]: unknown;
+ }
+
+export type AdminAiHistoryItemsItem = { [key: string]: unknown };
+
+export interface AdminAiHistory {
+  items: AdminAiHistoryItemsItem[];
+  [key: string]: unknown;
+ }
+
+export type AdminAiSettingsProvider = { [key: string]: unknown };
+
+export type AdminAiSettingsSettings = { [key: string]: unknown };
+
+export interface AdminAiSettings {
+  provider: AdminAiSettingsProvider;
+  settings: AdminAiSettingsSettings;
+  [key: string]: unknown;
+ }
+
 export type AdminQueueItemPriority = typeof AdminQueueItemPriority[keyof typeof AdminQueueItemPriority];
 
 

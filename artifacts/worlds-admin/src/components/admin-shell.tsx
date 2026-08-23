@@ -40,6 +40,15 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
+    label: 'AI studio',
+    items: [
+      { href: '/ai', label: 'AI overview', icon: Sparkles, permission: 'ai.read' },
+      { href: '/ai/prompts', label: 'Prompt templates', icon: FileClock, permission: 'ai.prompts.read' },
+      { href: '/ai/generate', label: 'Generate Quests', icon: Target, permission: 'ai.generate' },
+      { href: '/ai/settings', label: 'AI settings', icon: Settings, permission: 'ai.settings.read' },
+    ],
+  },
+  {
     label: 'Review & safety',
     items: [
       { href: '/quests/submissions', label: 'Proof review', icon: ClipboardCheck, permission: 'admin.review.read' },

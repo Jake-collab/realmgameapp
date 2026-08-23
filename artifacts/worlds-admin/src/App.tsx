@@ -15,6 +15,7 @@ import {
   QuestsPage,
   SettingsPage,
   UsersPage,
+  AIPage,
 } from '@/pages/console-pages';
 import NotFound from '@/pages/not-found';
 
@@ -59,6 +60,10 @@ function Router() {
           <Route path="/quests/monthly"><OperationsPage data={data} /></Route>
           <Route path="/quests/geo"><OperationsPage data={data} /></Route>
           <Route path="/quests/submissions"><OperationsPage data={data} /></Route>
+          <Route path="/ai"><AIPage data={data} /></Route>
+          <Route path="/ai/prompts"><AIPage data={data} /></Route>
+          <Route path="/ai/generate"><AIPage data={data} /></Route>
+          <Route path="/ai/settings"><AIPage data={data} /></Route>
           <Route path="/hunts"><OperationsPage data={data} /></Route>
           <Route path="/moderation/media"><OperationsPage data={data} /></Route>
           <Route path="/moderation/reports"><OperationsPage data={data} /></Route>

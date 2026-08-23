@@ -6,6 +6,21 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminAiGenerationRequest';
+export * from './adminAiGenerationRequestType';
+export * from './adminAiGenerationRequestVariables';
+export * from './adminAiGenerationResponse';
+export * from './adminAiGenerationResponseResultsItem';
+export * from './adminAiHistory';
+export * from './adminAiHistoryItemsItem';
+export * from './adminAiOverview';
+export * from './adminAiOverviewPromptTemplatesItem';
+export * from './adminAiOverviewProvider';
+export * from './adminAiPromptPage';
+export * from './adminAiPromptPageItemsItem';
+export * from './adminAiSettings';
+export * from './adminAiSettingsProvider';
+export * from './adminAiSettingsSettings';
 export * from './adminAuditEvent';
 export * from './adminAuditPage';
 export * from './adminDashboard';

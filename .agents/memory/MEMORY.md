@@ -12,3 +12,4 @@
 - [Progression Domain Architecture](progression-architecture.md) — Prompt 15: Achievements, Titles, Badges, Milestones, Statistics, Profile screen. 053_progression.sql, 9 hooks, 10 components, 780 tests (747 passing).
 - [Social Domain Architecture](social-architecture.md) — Prompt 16: public profiles, friends, requests, blocking, privacy, reporting, Hunt invite eligibility. 026_social.sql, 19 RPCs, 19 hooks, 16 components, 6 screens, 851 tests (818 passing).
 - [Creator safety boundary](creator-safety-boundary.md) — creator drafts may hold private answers and exact geometry, but validation requires explicit public-access and safety acknowledgments before review.
+- [Admin AI boundary](admin-ai-boundary.md) — AI credentials and generation stay server-side, fail closed without configuration, and always enter human Quest review.

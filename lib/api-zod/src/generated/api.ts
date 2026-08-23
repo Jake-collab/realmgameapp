@@ -191,3 +191,74 @@ export const GetAdminDiagnosticsResponse = zod.object({
 })
 
 
+/**
+ * @summary Get safe AI generation overview
+ */
+export const GetAdminAiOverviewResponse = zod.object({
+  "provider": zod.record(zod.string(), zod.unknown()),
+  "promptTemplates": zod.array(zod.record(zod.string(), zod.unknown())),
+  "generationPolicy": zod.string(),
+  "generatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List versioned Quest prompt templates
+ */
+export const ListAdminAiPromptsResponse = zod.object({
+  "items": zod.array(zod.record(zod.string(), zod.unknown()))
+})
+
+
+/**
+ * @summary List prompt versions for a Quest type
+ */
+export const ListAdminAiPromptVersionsParams = zod.object({
+  "type": zod.enum(['daily', 'monthly', 'geo'])
+})
+
+export const ListAdminAiPromptVersionsResponse = zod.object({
+  "items": zod.array(zod.record(zod.string(), zod.unknown()))
+})
+
+
+/**
+ * @summary Generate reviewable Quest candidates
+ */
+export const generateAdminAiQuestBodyTestOnlyDefault = true;
+export const generateAdminAiQuestBodyQuantityDefault = 1;
+export const generateAdminAiQuestBodyQuantityMax = 20;
+
+
+
+export const GenerateAdminAiQuestBody = zod.object({
+  "type": zod.enum(['daily', 'monthly', 'geo']),
+  "variables": zod.record(zod.string(), zod.string()).optional(),
+  "testOnly": zod.boolean().default(generateAdminAiQuestBodyTestOnlyDefault),
+  "quantity": zod.number().min(1).max(generateAdminAiQuestBodyQuantityMax).default(generateAdminAiQuestBodyQuantityDefault)
+})
+
+export const GenerateAdminAiQuestResponse = zod.object({
+  "mode": zod.string(),
+  "results": zod.array(zod.record(zod.string(), zod.unknown())),
+  "saved": zod.boolean()
+})
+
+
+/**
+ * @summary List AI generation history
+ */
+export const ListAdminAiHistoryResponse = zod.object({
+  "items": zod.array(zod.record(zod.string(), zod.unknown()))
+})
+
+
+/**
+ * @summary Get safe AI settings
+ */
+export const GetAdminAiSettingsResponse = zod.object({
+  "provider": zod.record(zod.string(), zod.unknown()),
+  "settings": zod.record(zod.string(), zod.unknown())
+})
+
+
