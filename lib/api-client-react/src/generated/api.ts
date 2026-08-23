@@ -34,10 +34,19 @@ import type {
   AdminSession,
   AdminUserPage,
   ChangeAdminAiPromptVersionState200,
+  EvaluateAdminIntegrityRisk200,
+  EvaluateAdminIntegrityRiskBody,
+  GetAdminModerationDiagnostics200,
   HealthStatus,
   ListAdminAuditLogsParams,
   ListAdminQuestsParams,
-  ListAdminUsersParams
+  ListAdminUsersParams,
+  ScanAdminModerationImage200,
+  ScanAdminModerationImageBody,
+  ScanAdminModerationText200,
+  ScanAdminModerationTextBody,
+  TriageAdminReport200,
+  TriageAdminReportBody
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -704,6 +713,367 @@ export function useGetAdminDiagnostics<TData = Awaited<ReturnType<typeof getAdmi
 
 
 
+
+export const getGetAdminModerationDiagnosticsUrl = () => {
+
+
+
+
+  return `/api/admin/moderation/diagnostics`
+}
+
+/**
+ * @summary Get safe moderation provider diagnostics
+ */
+export const getAdminModerationDiagnostics = async ( options?: RequestInit): Promise<GetAdminModerationDiagnostics200> => {
+
+  return customFetch<GetAdminModerationDiagnostics200>(getGetAdminModerationDiagnosticsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminModerationDiagnosticsQueryKey = () => {
+    return [
+    `/api/admin/moderation/diagnostics`
+    ] as const;
+    }
+
+
+export const getGetAdminModerationDiagnosticsQueryOptions = <TData = Awaited<ReturnType<typeof getAdminModerationDiagnostics>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminModerationDiagnostics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminModerationDiagnosticsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminModerationDiagnostics>>> = ({ signal }) => getAdminModerationDiagnostics({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminModerationDiagnostics>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminModerationDiagnosticsQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminModerationDiagnostics>>>
+export type GetAdminModerationDiagnosticsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get safe moderation provider diagnostics
+ */
+
+export function useGetAdminModerationDiagnostics<TData = Awaited<ReturnType<typeof getAdminModerationDiagnostics>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminModerationDiagnostics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminModerationDiagnosticsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getScanAdminModerationTextUrl = () => {
+
+
+
+
+  return `/api/admin/moderation/scan/text`
+}
+
+/**
+ * @summary Scan text through the server moderation policy
+ */
+export const scanAdminModerationText = async (scanAdminModerationTextBody: ScanAdminModerationTextBody, options?: RequestInit): Promise<ScanAdminModerationText200> => {
+
+  return customFetch<ScanAdminModerationText200>(getScanAdminModerationTextUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(scanAdminModerationTextBody)
+  }
+);}
+
+
+
+
+
+export const getScanAdminModerationTextMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scanAdminModerationText>>, TError,{data: BodyType<ScanAdminModerationTextBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof scanAdminModerationText>>, TError,{data: BodyType<ScanAdminModerationTextBody>}, TContext> => {
+
+const mutationKey = ['scanAdminModerationText'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof scanAdminModerationText>>, {data: BodyType<ScanAdminModerationTextBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  scanAdminModerationText(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ScanAdminModerationTextMutationResult = NonNullable<Awaited<ReturnType<typeof scanAdminModerationText>>>
+    export type ScanAdminModerationTextMutationBody = BodyType<ScanAdminModerationTextBody>
+    export type ScanAdminModerationTextMutationError = ErrorType<void>
+
+    /**
+ * @summary Scan text through the server moderation policy
+ */
+export const useScanAdminModerationText = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scanAdminModerationText>>, TError,{data: BodyType<ScanAdminModerationTextBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof scanAdminModerationText>>,
+        TError,
+        {data: BodyType<ScanAdminModerationTextBody>},
+        TContext
+      > => {
+      return useMutation(getScanAdminModerationTextMutationOptions(options));
+    }
+
+export const getScanAdminModerationImageUrl = () => {
+
+
+
+
+  return `/api/admin/moderation/scan/image`
+}
+
+/**
+ * @summary Scan image metadata through the server moderation policy
+ */
+export const scanAdminModerationImage = async (scanAdminModerationImageBody: ScanAdminModerationImageBody, options?: RequestInit): Promise<ScanAdminModerationImage200> => {
+
+  return customFetch<ScanAdminModerationImage200>(getScanAdminModerationImageUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(scanAdminModerationImageBody)
+  }
+);}
+
+
+
+
+
+export const getScanAdminModerationImageMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scanAdminModerationImage>>, TError,{data: BodyType<ScanAdminModerationImageBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof scanAdminModerationImage>>, TError,{data: BodyType<ScanAdminModerationImageBody>}, TContext> => {
+
+const mutationKey = ['scanAdminModerationImage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof scanAdminModerationImage>>, {data: BodyType<ScanAdminModerationImageBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  scanAdminModerationImage(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ScanAdminModerationImageMutationResult = NonNullable<Awaited<ReturnType<typeof scanAdminModerationImage>>>
+    export type ScanAdminModerationImageMutationBody = BodyType<ScanAdminModerationImageBody>
+    export type ScanAdminModerationImageMutationError = ErrorType<void>
+
+    /**
+ * @summary Scan image metadata through the server moderation policy
+ */
+export const useScanAdminModerationImage = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scanAdminModerationImage>>, TError,{data: BodyType<ScanAdminModerationImageBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof scanAdminModerationImage>>,
+        TError,
+        {data: BodyType<ScanAdminModerationImageBody>},
+        TContext
+      > => {
+      return useMutation(getScanAdminModerationImageMutationOptions(options));
+    }
+
+export const getEvaluateAdminIntegrityRiskUrl = () => {
+
+
+
+
+  return `/api/admin/integrity/evaluate`
+}
+
+/**
+ * @summary Calculate a privacy-safe integrity risk result
+ */
+export const evaluateAdminIntegrityRisk = async (evaluateAdminIntegrityRiskBody: EvaluateAdminIntegrityRiskBody, options?: RequestInit): Promise<EvaluateAdminIntegrityRisk200> => {
+
+  return customFetch<EvaluateAdminIntegrityRisk200>(getEvaluateAdminIntegrityRiskUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(evaluateAdminIntegrityRiskBody)
+  }
+);}
+
+
+
+
+
+export const getEvaluateAdminIntegrityRiskMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof evaluateAdminIntegrityRisk>>, TError,{data: BodyType<EvaluateAdminIntegrityRiskBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof evaluateAdminIntegrityRisk>>, TError,{data: BodyType<EvaluateAdminIntegrityRiskBody>}, TContext> => {
+
+const mutationKey = ['evaluateAdminIntegrityRisk'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof evaluateAdminIntegrityRisk>>, {data: BodyType<EvaluateAdminIntegrityRiskBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  evaluateAdminIntegrityRisk(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EvaluateAdminIntegrityRiskMutationResult = NonNullable<Awaited<ReturnType<typeof evaluateAdminIntegrityRisk>>>
+    export type EvaluateAdminIntegrityRiskMutationBody = BodyType<EvaluateAdminIntegrityRiskBody>
+    export type EvaluateAdminIntegrityRiskMutationError = ErrorType<void>
+
+    /**
+ * @summary Calculate a privacy-safe integrity risk result
+ */
+export const useEvaluateAdminIntegrityRisk = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof evaluateAdminIntegrityRisk>>, TError,{data: BodyType<EvaluateAdminIntegrityRiskBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof evaluateAdminIntegrityRisk>>,
+        TError,
+        {data: BodyType<EvaluateAdminIntegrityRiskBody>},
+        TContext
+      > => {
+      return useMutation(getEvaluateAdminIntegrityRiskMutationOptions(options));
+    }
+
+export const getTriageAdminReportUrl = () => {
+
+
+
+
+  return `/api/admin/reports/triage`
+}
+
+/**
+ * @summary Calculate explainable report priority
+ */
+export const triageAdminReport = async (triageAdminReportBody: TriageAdminReportBody, options?: RequestInit): Promise<TriageAdminReport200> => {
+
+  return customFetch<TriageAdminReport200>(getTriageAdminReportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(triageAdminReportBody)
+  }
+);}
+
+
+
+
+
+export const getTriageAdminReportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triageAdminReport>>, TError,{data: BodyType<TriageAdminReportBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof triageAdminReport>>, TError,{data: BodyType<TriageAdminReportBody>}, TContext> => {
+
+const mutationKey = ['triageAdminReport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof triageAdminReport>>, {data: BodyType<TriageAdminReportBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  triageAdminReport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TriageAdminReportMutationResult = NonNullable<Awaited<ReturnType<typeof triageAdminReport>>>
+    export type TriageAdminReportMutationBody = BodyType<TriageAdminReportBody>
+    export type TriageAdminReportMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Calculate explainable report priority
+ */
+export const useTriageAdminReport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof triageAdminReport>>, TError,{data: BodyType<TriageAdminReportBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof triageAdminReport>>,
+        TError,
+        {data: BodyType<TriageAdminReportBody>},
+        TContext
+      > => {
+      return useMutation(getTriageAdminReportMutationOptions(options));
+    }
 
 export const getGetAdminAiOverviewUrl = () => {
 

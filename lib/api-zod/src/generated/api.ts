@@ -192,6 +192,64 @@ export const GetAdminDiagnosticsResponse = zod.object({
 
 
 /**
+ * @summary Get safe moderation provider diagnostics
+ */
+export const GetAdminModerationDiagnosticsResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Scan text through the server moderation policy
+ */
+export const scanAdminModerationTextBodyTextMax = 12000;
+
+
+
+export const ScanAdminModerationTextBody = zod.object({
+  "text": zod.string().max(scanAdminModerationTextBodyTextMax),
+  "context": zod.enum(['public_text', 'ai_quest', 'profile', 'private_proof']),
+  "accountInGoodStanding": zod.boolean().optional(),
+  "reported": zod.boolean().optional()
+})
+
+export const ScanAdminModerationTextResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Scan image metadata through the server moderation policy
+ */
+export const scanAdminModerationImageBodyContentHashRegExp = new RegExp('^[a-f0-9]{64}$');
+export const scanAdminModerationImageBodyMediaUrlMax = 2048;
+
+
+
+export const ScanAdminModerationImageBody = zod.object({
+  "contentHash": zod.string().regex(scanAdminModerationImageBodyContentHashRegExp).optional(),
+  "mediaUrl": zod.string().max(scanAdminModerationImageBodyMediaUrlMax).optional(),
+  "context": zod.enum(['public_media', 'private_proof', 'profile']),
+  "accountInGoodStanding": zod.boolean().optional(),
+  "reported": zod.boolean().optional()
+})
+
+export const ScanAdminModerationImageResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Calculate a privacy-safe integrity risk result
+ */
+export const EvaluateAdminIntegrityRiskBody = zod.record(zod.string(), zod.unknown())
+
+export const EvaluateAdminIntegrityRiskResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
+ * @summary Calculate explainable report priority
+ */
+export const TriageAdminReportBody = zod.record(zod.string(), zod.unknown())
+
+export const TriageAdminReportResponse = zod.record(zod.string(), zod.unknown())
+
+
+/**
  * @summary Get safe AI generation overview
  */
 export const GetAdminAiOverviewResponse = zod.object({

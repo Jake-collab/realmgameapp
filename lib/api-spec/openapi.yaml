@@ -125,6 +125,107 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminDiagnostics"
+  /admin/moderation/diagnostics:
+    get:
+      operationId: getAdminModerationDiagnostics
+      tags: [admin]
+      summary: Get safe moderation provider diagnostics
+      responses:
+        "200":
+          description: Provider status without secrets
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+  /admin/moderation/scan/text:
+    post:
+      operationId: scanAdminModerationText
+      tags: [admin]
+      summary: Scan text through the server moderation policy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text, context]
+              properties:
+                text: { type: string, maxLength: 12000 }
+                context: { type: string, enum: [public_text, ai_quest, profile, private_proof] }
+                accountInGoodStanding: { type: boolean }
+                reported: { type: boolean }
+      responses:
+        "200":
+          description: Normalized moderation outcome
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { description: Invalid scan request }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+  /admin/moderation/scan/image:
+    post:
+      operationId: scanAdminModerationImage
+      tags: [admin]
+      summary: Scan image metadata through the server moderation policy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [context]
+              properties:
+                contentHash: { type: string, pattern: "^[a-f0-9]{64}$" }
+                mediaUrl: { type: string, maxLength: 2048 }
+                context: { type: string, enum: [public_media, private_proof, profile] }
+                accountInGoodStanding: { type: boolean }
+                reported: { type: boolean }
+      responses:
+        "200":
+          description: Normalized moderation outcome
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { description: Invalid scan request }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+  /admin/integrity/evaluate:
+    post:
+      operationId: evaluateAdminIntegrityRisk
+      tags: [admin]
+      summary: Calculate a privacy-safe integrity risk result
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: Risk snapshot for staff systems
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { description: Invalid integrity signals }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+  /admin/reports/triage:
+    post:
+      operationId: triageAdminReport
+      tags: [admin]
+      summary: Calculate explainable report priority
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: Review priority result
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
   /admin/ai/overview:
     get:
       operationId: getAdminAiOverview

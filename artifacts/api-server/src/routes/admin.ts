@@ -27,7 +27,6 @@ import {
 } from "../lib/ai-quest";
 import { z } from "zod";
 import {
-  applyModerationPolicy,
   moderationDiagnostics,
   moderateImage,
   moderateText,

@@ -52,9 +52,9 @@ const navGroups: NavGroup[] = [
     label: 'Review & safety',
     items: [
       { href: '/quests/submissions', label: 'Proof review', icon: ClipboardCheck, permission: 'admin.review.read' },
-      { href: '/moderation/media', label: 'Media moderation', icon: ListChecks },
-      { href: '/moderation/reports', label: 'Reports', icon: Flag },
-      { href: '/moderation/anti-cheat', label: 'Anti-cheat', icon: ShieldCheck },
+      { href: '/moderation/media', label: 'Media moderation', icon: ListChecks, permission: 'moderation.read' },
+      { href: '/moderation/reports', label: 'Reports', icon: Flag, permission: 'moderation.read' },
+      { href: '/moderation/anti-cheat', label: 'Anti-cheat', icon: ShieldCheck, permission: 'integrity.read' },
     ],
   },
   {

@@ -320,5 +320,56 @@ page?: PageParameter;
 pageSize?: PageSizeParameter;
 };
 
+export type GetAdminModerationDiagnostics200 = { [key: string]: unknown };
+
+export type ScanAdminModerationTextBodyContext = typeof ScanAdminModerationTextBodyContext[keyof typeof ScanAdminModerationTextBodyContext];
+
+
+export const ScanAdminModerationTextBodyContext = {
+  public_text: 'public_text',
+  ai_quest: 'ai_quest',
+  profile: 'profile',
+  private_proof: 'private_proof',
+} as const;
+
+export type ScanAdminModerationTextBody = {
+  /** @maxLength 12000 */
+  text: string;
+  context: ScanAdminModerationTextBodyContext;
+  accountInGoodStanding?: boolean;
+  reported?: boolean;
+};
+
+export type ScanAdminModerationText200 = { [key: string]: unknown };
+
+export type ScanAdminModerationImageBodyContext = typeof ScanAdminModerationImageBodyContext[keyof typeof ScanAdminModerationImageBodyContext];
+
+
+export const ScanAdminModerationImageBodyContext = {
+  public_media: 'public_media',
+  private_proof: 'private_proof',
+  profile: 'profile',
+} as const;
+
+export type ScanAdminModerationImageBody = {
+  /** @pattern ^[a-f0-9]{64}$ */
+  contentHash?: string;
+  /** @maxLength 2048 */
+  mediaUrl?: string;
+  context: ScanAdminModerationImageBodyContext;
+  accountInGoodStanding?: boolean;
+  reported?: boolean;
+};
+
+export type ScanAdminModerationImage200 = { [key: string]: unknown };
+
+export type EvaluateAdminIntegrityRiskBody = { [key: string]: unknown };
+
+export type EvaluateAdminIntegrityRisk200 = { [key: string]: unknown };
+
+export type TriageAdminReportBody = { [key: string]: unknown };
+
+export type TriageAdminReport200 = { [key: string]: unknown };
+
 export type ChangeAdminAiPromptVersionState200 = { [key: string]: unknown };
 
