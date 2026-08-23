@@ -11,6 +11,7 @@ import {
   ListAdminUsersQueryParams,
   ListAdminAuditLogsQueryParams,
 } from "@workspace/api-zod";
+import { getRolePermissions, requireAdmin, resolveAdminPrincipal } from "../lib/admin-auth";
 
 const router: IRouter = Router();
 
@@ -40,11 +41,36 @@ function unavailableMetric(label: string, detail: string) {
   return { label, value: null, status: "unavailable" as const, detail };
 }
 
-router.get("/admin/session", (req, res) => {
-  res.json(getUnavailableSession(req));
+router.get("/admin/session", async (req, res) => {
+  const result = await resolveAdminPrincipal(req);
+  if (result.kind === "authorized") {
+    res.json(GetAdminSessionResponse.parse({
+      authenticated: true,
+      authorized: true,
+      role: result.principal.role,
+      displayName: result.principal.displayName,
+      username: result.principal.username,
+      permissions: result.principal.permissions,
+      reason: null,
+    }));
+    return;
+  }
+  if (result.kind === "unauthenticated") {
+    res.json(getUnavailableSession(req));
+    return;
+  }
+  res.json(GetAdminSessionResponse.parse({
+    authenticated: result.kind === "unauthorized",
+    authorized: false,
+    role: "user",
+    displayName: null,
+    username: null,
+    permissions: [],
+    reason: result.reason,
+  }));
 });
 
-router.get("/admin/dashboard", (_req, res) => {
+router.get("/admin/dashboard", requireAdmin("admin.read"), (_req, res) => {
   res.json(GetAdminDashboardResponse.parse({
     metrics: [
       unavailableMetric("Active users", "Supabase connection required"),
@@ -59,7 +85,7 @@ router.get("/admin/dashboard", (_req, res) => {
   }));
 });
 
-router.get("/admin/users", (req, res) => {
+router.get("/admin/users", requireAdmin("admin.users.read"), (req, res) => {
   const query = ListAdminUsersQueryParams.parse(req.query);
   res.json(ListAdminUsersResponse.parse({
     items: [],
@@ -69,7 +95,7 @@ router.get("/admin/users", (req, res) => {
   }));
 });
 
-router.get("/admin/quests", (req, res) => {
+router.get("/admin/quests", requireAdmin("admin.quests.read"), (req, res) => {
   const query = ListAdminQuestsQueryParams.parse(req.query);
   res.json(ListAdminQuestsResponse.parse({
     items: [],
@@ -79,11 +105,11 @@ router.get("/admin/quests", (req, res) => {
   }));
 });
 
-router.get("/admin/review-queues", (_req, res) => {
+router.get("/admin/review-queues", requireAdmin("admin.review.read"), (_req, res) => {
   res.json(GetAdminReviewQueuesResponse.parse({ queues: [] }));
 });
 
-router.get("/admin/audit", (req, res) => {
+router.get("/admin/audit", requireAdmin("admin.audit.read"), (req, res) => {
   const query = ListAdminAuditLogsQueryParams.parse(req.query);
   res.json(ListAdminAuditLogsResponse.parse({
     items: [],
@@ -93,7 +119,7 @@ router.get("/admin/audit", (req, res) => {
   }));
 });
 
-router.get("/admin/diagnostics", (_req, res) => {
+router.get("/admin/diagnostics", requireAdmin("admin.diagnostics.read"), (_req, res) => {
   res.json(GetAdminDiagnosticsResponse.parse({
     checks: [
       { name: "Supabase", status: "unavailable", summary: "Connect Supabase to enable staff data and trusted operations.", checkedAt: new Date() },

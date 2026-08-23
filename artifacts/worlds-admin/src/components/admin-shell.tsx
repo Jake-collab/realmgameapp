@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import type { AdminSession } from '@workspace/api-client-react';
 
-type NavItem = { href: string; label: string; icon: LucideIcon };
+type NavItem = { href: string; label: string; icon: LucideIcon; permission?: string };
 type NavGroup = { label: string; items: NavItem[] };
 
 const navGroups: NavGroup[] = [
@@ -32,8 +32,8 @@ const navGroups: NavGroup[] = [
   {
     label: 'Operations',
     items: [
-      { href: '/users', label: 'Users', icon: Users },
-      { href: '/quests', label: 'Quests', icon: Target },
+      { href: '/users', label: 'Users', icon: Users, permission: 'admin.users.read' },
+      { href: '/quests', label: 'Quests', icon: Target, permission: 'admin.quests.read' },
       { href: '/hunts', label: 'Hunts', icon: Orbit },
       { href: '/interests', label: 'Interests', icon: Sparkles },
       { href: '/achievements', label: 'Achievements', icon: Trophy },
@@ -42,7 +42,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'Review & safety',
     items: [
-      { href: '/quests/submissions', label: 'Proof review', icon: ClipboardCheck },
+      { href: '/quests/submissions', label: 'Proof review', icon: ClipboardCheck, permission: 'admin.review.read' },
       { href: '/moderation/media', label: 'Media moderation', icon: ListChecks },
       { href: '/moderation/reports', label: 'Reports', icon: Flag },
       { href: '/moderation/anti-cheat', label: 'Anti-cheat', icon: ShieldCheck },
@@ -52,8 +52,8 @@ const navGroups: NavGroup[] = [
     label: 'Platform',
     items: [
       { href: '/notifications', label: 'Notifications', icon: Bell },
-      { href: '/audit', label: 'Audit log', icon: FileClock },
-      { href: '/diagnostics', label: 'Diagnostics', icon: Gauge },
+      { href: '/audit', label: 'Audit log', icon: FileClock, permission: 'admin.audit.read' },
+      { href: '/diagnostics', label: 'Diagnostics', icon: Gauge, permission: 'admin.diagnostics.read' },
       { href: '/settings', label: 'Settings', icon: Settings },
     ],
   },
@@ -102,6 +102,8 @@ export function AdminShell({
               {group.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = current === item.href || (item.href !== '/dashboard' && current.startsWith(`${item.href}/`));
+                if (item.permission && !session?.authorized && !session?.permissions.includes(item.permission)) return null;
+                if (item.permission && session?.authorized && !session.permissions.includes(item.permission)) return null;
                 return (
                   <Link
                     href={item.href}
@@ -122,8 +124,8 @@ export function AdminShell({
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <span className="status-dot" />
             <div>
-              <div style={{ fontSize: 11, fontWeight: 700 }}>Operations online</div>
-              <div style={{ color: 'hsl(var(--sidebar-foreground) / .45)', fontSize: 10, marginTop: 2 }}>API connection monitored</div>
+               <div style={{ fontSize: 11, fontWeight: 700 }}>{session?.authorized ? 'Operations online' : 'Access unavailable'}</div>
+               <div style={{ color: 'hsl(var(--sidebar-foreground) / .45)', fontSize: 10, marginTop: 2 }}>{session?.authorized ? 'API connection monitored' : 'Staff session required'}</div>
             </div>
           </div>
           <div style={{ borderTop: '1px solid hsl(var(--sidebar-border))', marginTop: 15, paddingTop: 13, display: 'flex', gap: 9, alignItems: 'center' }}>
