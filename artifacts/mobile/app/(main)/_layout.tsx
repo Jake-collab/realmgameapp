@@ -119,6 +119,8 @@ export default function MainLayout() {
         name="blocked-users"
         options={{ animation: 'slide_from_right' }}
       />
+      <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
+      <Stack.Screen name="help" options={{ animation: 'slide_from_right' }} />
 
       {/* Hunt Progress deep screens — appear over the tab UI (no tab bar) */}
       <Stack.Screen

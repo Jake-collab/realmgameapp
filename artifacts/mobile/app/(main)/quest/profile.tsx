@@ -15,7 +15,7 @@
  */
 
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
@@ -74,7 +74,7 @@ function ProfileLink({ icon, label, sublabel, badge, onPress, color }: ProfileLi
 
 export default function QuestProfileScreen() {
   const colors   = useColors();
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const overview = useProgressOverview();
   const received = useReceivedFriendRequests();
   const friends  = useFriends();
@@ -168,19 +168,22 @@ export default function QuestProfileScreen() {
         icon="settings"
         label="Settings"
         sublabel="Notifications, account"
-        onPress={() => {}}
+         onPress={() => router.push('/settings')}
         color={colors.mutedForeground}
       />
       <ProfileLink
         icon="help-circle"
         label="Help &amp; Support"
-        onPress={() => {}}
+         onPress={() => router.push('/help')}
         color={colors.mutedForeground}
       />
-      <ProfileLink
+       <ProfileLink
         icon="file-text"
         label="Terms &amp; Privacy"
-        onPress={() => {}}
+         onPress={() => Alert.alert('Sign out?', 'You can sign back in anytime.', [
+           { text: 'Cancel', style: 'cancel' },
+           { text: 'Sign Out', style: 'destructive', onPress: () => { void signOut(); } },
+         ])}
         color={colors.mutedForeground}
       />
       <ProfileLink
