@@ -1,0 +1,2511 @@
+# Worlds — Build 1, Prompt 22
+
+## Offline Mode, Sync, Recovery, Conflict Resolution, and Reliability
+
+Continue from the existing **Worlds** project.
+
+Treat all completed Prompts 1–21, the current database schema, application code, server architecture, and documentation as authoritative.
+
+The application is:
+
+**Worlds**
+
+Supported game modes remain:
+
+* Quest
+* Hunt
+
+Do not implement:
+
+* Game Zones
+* Outbreak
+
+Prompts 1–21 completed the primary gameplay, Admin Panel, AI Quest generation, moderation, anti-cheat, notifications, social systems, creator tooling, Mapbox integration, proof workflows, points, leaderboards, and secure backend architecture.
+
+Throughout earlier prompts, certain features were intentionally marked as:
+
+**Full offline synchronization belongs in Prompt 22.**
+
+This prompt must now implement that layer.
+
+---
+
+# Primary Objective
+
+Make Worlds resilient to:
+
+* No internet
+* Weak cellular service
+* Temporary Supabase outages
+* Temporary Mapbox outages
+* Upload interruptions
+* App termination
+* Device restart
+* Network switching
+* Duplicate mutation attempts
+* Lost server responses
+* Background/foreground transitions
+* Multi-device conflicts
+* Stale cache
+* Partial sync
+* User logout during pending work
+
+while preserving strict server authority for:
+
+* Quest completion
+* Hunt completion
+* Points
+* Proof submission
+* Location validation
+* Friend/social actions
+* Hunt invitations
+* Moderation
+* Admin actions
+* Publication
+* AI generation
+
+Offline functionality must never create fake authoritative success.
+
+---
+
+# 1. Core Offline Principle
+
+Use this rule everywhere:
+
+```text
+Offline may preserve intent and evidence.
+
+Offline may NOT fabricate server confirmation.
+```
+
+For example:
+
+Allowed offline:
+
+* Read previously cached Quest information
+* Read previously authorized Hunt clue
+* Draft text proof
+* Capture proof image
+* Edit creator Hunt draft locally
+* Browse previously loaded map data
+* Mark in-app notification read locally for later sync
+* Queue safe non-authoritative actions where approved
+
+Not allowed offline:
+
+* Award points
+* Approve proof
+* Validate protected location
+* Complete Quest authoritatively
+* Complete Hunt authoritatively
+* Accept Hunt invitation as confirmed
+* Join a full Hunt as confirmed
+* Change leaderboard rank
+* Publish Hunt
+* Moderate content
+* Generate AI content and claim it succeeded
+
+---
+
+# 2. Offline Architecture
+
+Create one shared synchronization layer.
+
+Suggested structure:
+
+```text
+/features/offline/
+  storage/
+  queue/
+  sync/
+  conflicts/
+  connectivity/
+  recovery/
+  hooks/
+  services/
+  types/
+  tests/
+```
+
+Responsibilities:
+
+## Local Storage
+
+Persists safe offline state.
+
+## Mutation Queue
+
+Queues approved retryable actions.
+
+## Sync Engine
+
+Processes queued work after connectivity returns.
+
+## Conflict Resolver
+
+Handles stale local state versus newer server state.
+
+## Connectivity Service
+
+Tracks useful network status.
+
+## Recovery
+
+Restores interrupted work after restart.
+
+Do not create separate offline systems for Quest, Hunt, Notifications, and Creator flows.
+
+---
+
+# 3. Storage Technology Audit
+
+Before implementing:
+
+Audit current project for:
+
+* AsyncStorage
+* Expo SecureStore
+* SQLite
+* React Query persistence
+* Zustand persistence
+* Existing offline queue
+* File-system storage
+
+Choose the smallest correct architecture.
+
+Recommended separation:
+
+## SecureStore
+
+Use for:
+
+* Small sensitive tokens/settings only where already appropriate
+
+## AsyncStorage / persisted React Query
+
+Use for:
+
+* Safe lightweight cached state
+
+## SQLite or equivalent structured local database
+
+Use if needed for:
+
+* Durable mutation queue
+* Draft state
+* Submission metadata
+* Larger structured offline records
+
+## File system
+
+Use for:
+
+* Locally captured proof images waiting to upload
+
+Do not store large binary images as base64 in AsyncStorage.
+
+---
+
+# 4. Connectivity State
+
+Create canonical connectivity states:
+
+* Online
+* Offline
+* Limited
+* Unknown
+* Recovering
+
+Do not treat "device connected to Wi-Fi" as proof that backend is reachable.
+
+Use:
+
+* Network connectivity
+* Supabase reachability where necessary
+* Actual request results
+
+Avoid aggressive pinging.
+
+---
+
+# 5. Connectivity UI
+
+Show subtle global states.
+
+Examples:
+
+## Offline
+
+```text
+You're offline. Some actions will sync when your connection returns.
+```
+
+## Reconnecting
+
+```text
+Reconnecting…
+```
+
+## Synced
+
+Avoid a large persistent success message.
+
+Use compact status only when relevant.
+
+Do not cover gameplay unnecessarily.
+
+---
+
+# 6. Offline Capability Matrix
+
+Create a documented capability matrix.
+
+Example:
+
+| Feature           | Offline Read                 | Offline Draft    | Queue Mutation                   | Requires Online       |
+| ----------------- | ---------------------------- | ---------------- | -------------------------------- | --------------------- |
+| Quest Detail      | Yes, cached                  | N/A              | No                               | Fresh availability    |
+| Quest text proof  | Yes                          | Yes              | Conditional                      | Final submission      |
+| Quest image proof | Yes                          | Yes              | Conditional                      | Upload + submit       |
+| Geo validation    | No authoritative validation  | No               | No                               | Yes                   |
+| Hunt clue         | Previously authorized only   | N/A              | No                               | New clue unlock       |
+| Hunt proof        | Yes                          | Yes              | Conditional                      | Final submission      |
+| Hunt join         | Cached view only             | No               | No                               | Yes                   |
+| Friend request    | Cached profiles              | No               | Optional only if policy approves | Prefer online         |
+| Creator draft     | Yes                          | Yes              | Yes                              | Moderation submission |
+| Notifications     | Yes                          | Read-state queue | Yes                              | New notifications     |
+| Leaderboards      | Cached only                  | No               | No                               | Fresh ranking         |
+| Admin             | Minimal/no offline mutations | No               | No                               | Yes                   |
+
+Implement according to actual architecture.
+
+---
+
+# 7. React Query Persistence
+
+Persist only safe query data.
+
+Potential persisted queries:
+
+* Quest summaries
+* Quest Detail
+* Active Quest
+* Quest Progress summaries
+* Hunt Map summaries
+* Hunt Detail
+* Active Hunt
+* Current authorized clue
+* My Hunts
+* Public Profile safe projection
+* Notifications
+* Profile settings
+* Creator drafts
+* Achievement/progress summaries
+
+Do not persist:
+
+* Private validation geometry
+* Admin secrets
+* AI prompt templates unless Admin-specific secure policy allows
+* Push tokens where unnecessary
+* Moderation provider data
+* Anti-cheat thresholds
+* Service-role data
+* Other users' private proof
+
+---
+
+# 8. Cache Metadata
+
+Every persisted server record should preserve:
+
+* Last fetched timestamp
+* Data version if available
+* Entity version
+* User/account context
+* Stale status
+* Cache schema version
+
+Do not present stale content as current without qualification where freshness matters.
+
+---
+
+# 9. Cache User Isolation
+
+Persisted cache must be scoped to authenticated user.
+
+On logout:
+
+* Clear protected user-specific cache
+* Clear active Hunt/Quest private content
+* Clear proof drafts according to user choice/policy
+* Clear notification cache
+* Clear private signed URLs
+* Cancel/secure pending queued actions
+
+Another account on the same device must never see prior user's protected data.
+
+---
+
+# 10. Cache Schema Versioning
+
+Version local offline storage.
+
+When app updates:
+
+* Detect old schema
+* Migrate safely
+* Or invalidate incompatible cache
+
+Do not crash because persisted structures changed.
+
+Do not retain incompatible private content indefinitely.
+
+---
+
+# 11. Mutation Queue
+
+Create a durable mutation queue.
+
+Each queued operation should contain:
+
+* Queue item ID
+* User ID
+* Mutation type
+* Entity reference
+* Safe payload
+* Idempotency key
+* Created at
+* Last attempted at
+* Attempt count
+* Status
+* Dependency IDs
+* Local asset references
+* Conflict strategy
+
+Statuses:
+
+* Pending
+* Waiting for dependency
+* Syncing
+* Failed retryable
+* Needs user attention
+* Completed
+* Cancelled
+
+Do not store secrets.
+
+---
+
+# 12. Queue Eligibility
+
+Not every mutation should be queued.
+
+Categorize mutations:
+
+## Safe to queue automatically
+
+Examples:
+
+* Notification read state
+* Creator draft edits
+* Profile preference edits where conflict rules are defined
+* Non-authoritative text draft sync
+* Local media upload intent
+
+## Queue only after explicit user action
+
+Examples:
+
+* Proof submission intent after user presses Submit
+* Creator draft save
+
+## Must require live server connection
+
+Examples:
+
+* Join Hunt
+* Accept invitation
+* Start Hunt requiring availability
+* Location validation
+* Quest completion
+* Hunt completion
+* Point-related action
+* Moderation action
+* Admin role change
+* Hunt publication
+* AI generation
+
+Do not blindly queue every failed API mutation.
+
+---
+
+# 13. Idempotency
+
+All queued mutations must use deterministic idempotency.
+
+Examples:
+
+```text
+proof_submission:{localSubmissionId}
+creator_draft_save:{draftId}:{localVersion}
+notification_read:{notificationId}
+proof_media_upload:{localAssetId}
+```
+
+When retry occurs:
+
+* Server must return existing successful result when possible
+* Do not duplicate submission
+* Do not duplicate upload record
+* Do not duplicate notification action
+
+This is critical.
+
+---
+
+# 14. Dependency Graph
+
+Support dependencies.
+
+Example proof submission:
+
+```text
+Local image
+   ↓
+Upload media
+   ↓
+Create media record
+   ↓
+Submit proof
+   ↓
+Server review state
+```
+
+Proof submission should wait for upload dependency.
+
+Do not submit proof with missing media IDs.
+
+---
+
+# 15. Queue Ordering
+
+Process queued operations based on:
+
+1. Required dependencies
+2. Entity order
+3. User action priority
+4. Creation time
+
+Do not let a later draft save overwrite a newer local draft through old queue ordering.
+
+Collapse superseded update operations where safe.
+
+---
+
+# 16. Superseded Draft Mutations
+
+For rapidly edited drafts:
+
+Example:
+
+```text
+Update title A
+Update title B
+Update title C
+```
+
+If none were sent:
+
+Collapse to latest safe draft state.
+
+Do not waste network calls.
+
+Do not collapse immutable actions such as proof submission.
+
+---
+
+# 17. Sync Engine
+
+When connectivity returns:
+
+1. Revalidate authenticated session.
+2. Verify current user matches queue owner.
+3. Refresh critical server state.
+4. Process dependencies.
+5. Process safe queued mutations.
+6. Handle conflicts.
+7. Update local state.
+8. Refresh affected React Query keys.
+9. Remove completed queue items after retention window.
+
+Do not immediately blast every queued operation concurrently.
+
+Use bounded concurrency.
+
+---
+
+# 18. Automatic Sync Triggers
+
+Trigger sync when:
+
+* App enters foreground
+* Network returns
+* User manually taps Retry
+* Authentication restored
+* Periodic safe foreground interval where useful
+
+Do not run high-frequency background loops.
+
+---
+
+# 19. Manual Sync
+
+Provide a small manual:
+
+**Sync Now**
+
+only where useful, such as Settings or offline status panel.
+
+Do not require users to manually sync normal usage.
+
+---
+
+# 20. Sync Status
+
+Allow useful states:
+
+* All changes synced
+* 2 changes waiting
+* Uploading proof
+* Needs your attention
+
+Do not expose technical queue internals to normal users.
+
+---
+
+# 21. Conflict Resolution Principles
+
+Use server authority for protected gameplay.
+
+Use explicit resolution for editable user content.
+
+Conflict types:
+
+* Server newer
+* Local newer
+* Both changed
+* Entity deleted
+* Entity state finalized
+* Permission revoked
+* User no longer eligible
+
+Do not silently overwrite important data.
+
+---
+
+# 22. Server-Wins Domains
+
+Always prefer server state for:
+
+* Quest availability
+* Hunt availability
+* Participation status
+* Proof review status
+* Points
+* Leaderboards
+* Moderation status
+* User restrictions
+* Invitations
+* Hunt capacity
+* Clue authorization
+* Achievements
+* Notifications created by backend
+* Account status
+
+Local cache may temporarily display stale data but must yield after refresh.
+
+---
+
+# 23. Local-Draft Domains
+
+For mutable user-authored drafts:
+
+* Creator Hunt draft
+* Proof text draft before submission
+* Profile bio/settings draft where appropriate
+
+Use version comparison.
+
+If both server and local changed:
+
+* Attempt field-aware merge where safe
+* Otherwise show conflict UI
+
+Do not silently discard user's unsaved work.
+
+---
+
+# 24. Conflict UI
+
+Use plain language.
+
+Example:
+
+```text
+This Hunt draft was changed on another device.
+
+Choose which version to keep.
+```
+
+Options:
+
+* Keep This Device's Changes
+* Use Latest Saved Version
+* Review Differences
+
+Do not show raw JSON.
+
+---
+
+# 25. Optimistic Concurrency
+
+Use entity version or updated-at preconditions for editable records.
+
+Example:
+
+```text
+update where id = X and version = localBaseVersion
+```
+
+If zero rows:
+
+Conflict.
+
+Do not blindly overwrite.
+
+---
+
+# 26. Creator Hunt Offline Drafting
+
+Prompt 17 creator drafts should support meaningful offline editing.
+
+Allow:
+
+* Edit title
+* Description
+* Safety
+* Accessibility
+* Clue text
+* Riddle text
+* Stop ordering
+* Proof configuration
+* Draft metadata
+
+Allow local image selection.
+
+For map-dependent changes:
+
+* Allow cached public location display when available
+* Require online verification before submission
+
+Do not allow offline:
+
+* Submit for moderation
+* Publish
+* Send real invitations
+* Cancel occurrence
+* Admin approval
+
+---
+
+# 27. Creator Autosave Offline
+
+When offline:
+
+Display:
+
+**Saved on this device**
+
+not:
+
+**Saved**
+
+When sync completes:
+
+Display:
+
+**Saved**
+
+Use clear distinction.
+
+Do not falsely imply server persistence.
+
+---
+
+# 28. Creator Media Offline
+
+If creator selects cover/clue image offline:
+
+* Store local asset reference
+* Show local preview
+* Mark Pending Upload
+* Queue upload
+* Prevent moderation submission until uploaded/scanned
+
+Do not lose image on app restart.
+
+---
+
+# 29. Quest Offline Read
+
+Previously loaded Quest content may remain available offline.
+
+Display stale indicator where relevant.
+
+Examples:
+
+* Quest Detail
+* Active Quest instructions
+* Proof requirements
+* Completed progress
+
+Do not claim:
+
+* Still available
+* Still within time window
+* Still eligible
+
+without server confirmation.
+
+---
+
+# 30. Starting Quest Offline
+
+Default policy:
+
+Do NOT authoritatively start a new Quest offline.
+
+Reason:
+
+Start may depend on:
+
+* Availability
+* Capacity-like rules
+* Geo validation
+* Prerequisites
+* Server snapshot
+
+If product allows a simple no-risk Quest to start offline in future, it must use pre-authorized occurrence token/snapshot architecture.
+
+Do not implement that complexity unless existing domain already supports it.
+
+---
+
+# 31. Active Quest Offline
+
+If Quest was already active and cached:
+
+Allow user to:
+
+* Read instructions
+* Draft proof
+* Capture evidence
+* Review progress
+
+Do not finalize completion until server sync.
+
+---
+
+# 32. Quest Text Proof Offline
+
+Allow text proof draft.
+
+Store:
+
+* Quest participation
+* Requirement version
+* Local text
+* Last edited timestamp
+
+Do not mark Submitted.
+
+If user taps Submit while offline:
+
+Option A preferred:
+
+* Store explicit submission intent
+* Show:
+  **Waiting for connection to submit**
+
+Queue only if all server-sensitive prerequisites are still revalidated before actual submission.
+
+---
+
+# 33. Quest Image Proof Offline
+
+Allow:
+
+* Capture/select image
+* Preview
+* Remove/replace
+* Preserve local file
+
+Mark:
+
+**Waiting to upload**
+
+When online:
+
+1. Revalidate participation.
+2. Upload media.
+3. Moderate according to Prompt 20.
+4. Submit proof.
+
+Do not delete local image until upload/submission reaches durable server state.
+
+---
+
+# 34. Proof Submission Revalidation
+
+Before queued proof submission:
+
+Revalidate:
+
+* User still authenticated
+* Participation exists
+* Quest still accepts submission
+* Requirement version matches
+* Submission not already sent
+* Proof still permitted
+* Hunt/Quest not cancelled where relevant
+
+If invalid:
+
+Set:
+
+**Needs Your Attention**
+
+Do not discard evidence.
+
+---
+
+# 35. Proof Queue Failure UX
+
+Example:
+
+```text
+This Quest can no longer accept the proof you saved.
+
+Your photo is still stored on this device.
+```
+
+Actions:
+
+* View Quest
+* Save Photo to Device if supported
+* Remove Draft
+
+Do not silently delete.
+
+---
+
+# 36. Location Validation Offline
+
+Protected Geo validation requires online trusted server validation.
+
+Do not show success offline.
+
+If location requirement is encountered offline:
+
+Show:
+
+```text
+A connection is required to verify your location.
+```
+
+Allow user to continue viewing instructions.
+
+Do not queue a raw location for later validation as if equivalent to current presence unless the domain explicitly supports timestamped delayed validation.
+
+Default: do not.
+
+---
+
+# 37. Hunt Offline Read
+
+For active Hunt:
+
+Cache only currently authorized content.
+
+Allow offline viewing of:
+
+* Current authorized clue
+* Current public stop info
+* Completed-stop summary
+* Safety information
+* Previously loaded map context
+
+Do not cache future locked clue content.
+
+---
+
+# 38. Hunt Secret Preservation
+
+Offline cache must never contain:
+
+* Future locked clues
+* Private riddle answers
+* Private validation geometry
+* Hidden stop locations
+* Admin-only content
+
+Do not fetch it merely "for offline readiness."
+
+Authorization remains content-level.
+
+---
+
+# 39. Hunt Offline Map
+
+Previously loaded map tiles/data may remain available according to Mapbox caching rules.
+
+Allow:
+
+* Cached public markers
+* Cached active stop location
+
+Do not implement full downloadable offline Mapbox regions unless already supported and intentionally desired.
+
+Do not imply complete map availability offline.
+
+---
+
+# 40. Hunt Start Offline
+
+Do not start a new Hunt offline.
+
+Start requires server verification of:
+
+* Occurrence
+* Participant state
+* Start window
+* Capacity/minimum participants
+* Host state
+* Version
+* Optional Geo validation
+
+Show connection requirement.
+
+---
+
+# 41. Active Hunt Offline
+
+Allow current authorized Hunt to continue only in read/draft mode.
+
+Possible:
+
+* Read clue
+* Travel
+* Draft proof
+* Capture image
+* Complete local non-authoritative activity note
+
+Do not unlock next clue until trusted stop completion succeeds online.
+
+---
+
+# 42. Ordered Hunt Offline Boundary
+
+If current stop is completed locally but requires server confirmation:
+
+Do NOT reveal next ordered clue.
+
+Show:
+
+```text
+Stop evidence saved. Connect to continue the Hunt.
+```
+
+This protects clue sequencing.
+
+---
+
+# 43. Unordered Hunt Offline
+
+Allow browsing only stops already authorized and cached.
+
+Do not expose newly unlocked or server-dependent stops.
+
+---
+
+# 44. Hunt Riddle Offline
+
+Default:
+
+Riddle answer validation requires server connection because accepted answers remain server-private.
+
+Do not cache correct answers.
+
+If offline:
+
+Allow user to type a draft answer if useful.
+
+Do not mark correct/incorrect until server response.
+
+---
+
+# 45. Hunt Proof Offline
+
+Use same durable proof-draft architecture as Quest.
+
+Support:
+
+* Text
+* Image
+* Mixed proof
+
+Location remains online-only unless future delayed-validation policy exists.
+
+---
+
+# 46. Hunt Completion Offline
+
+Never mark full Hunt completed offline.
+
+Do not award points.
+
+If final proof is waiting:
+
+Show:
+
+**Ready to sync**
+
+Completion occurs after trusted server processing.
+
+---
+
+# 47. Social Offline
+
+Allow cached:
+
+* Friends
+* Public profiles
+* Pending requests
+
+Protected mutations should generally require online:
+
+* Send friend request
+* Accept
+* Decline
+* Block
+* Unblock
+* Hunt invitation
+
+Blocking is safety-sensitive.
+
+Do not queue a block for indefinite later execution while presenting it as active.
+
+If offline and user taps Block:
+
+Show that connection is required.
+
+---
+
+# 48. Profile Settings Offline
+
+Low-risk personal settings may queue where conflict behavior is clear.
+
+Examples:
+
+* Appearance
+* Notification preference
+* Privacy setting
+
+However, privacy changes may affect exposure immediately.
+
+Recommended:
+
+* Require server confirmation for privacy-sensitive changes before claiming they are active.
+* Preserve local intent and retry.
+
+Show pending state.
+
+---
+
+# 49. Notification Read-State Offline
+
+Safe to queue:
+
+* Mark read
+* Mark all read
+* Archive
+
+Use idempotent mutation.
+
+Local UI can update optimistically.
+
+On failure:
+
+Sync later.
+
+---
+
+# 50. Push Preference Offline
+
+Allow local edit draft.
+
+Do not claim server preference updated until synced.
+
+OS push permission changes remain device-local and immediate.
+
+Server delivery preference syncs when online.
+
+---
+
+# 51. Achievement and Leaderboard Offline
+
+Allow cached display.
+
+Mark stale when necessary.
+
+Do not calculate authoritative new rank locally.
+
+Do not award achievements locally.
+
+After reconnect:
+
+Refresh server state.
+
+---
+
+# 52. Admin Offline Policy
+
+Admin Panel should generally require live connectivity for mutations.
+
+Allow cached read-only screens sparingly.
+
+Do NOT queue high-risk Admin actions such as:
+
+* Suspend
+* Restrict
+* Approve proof
+* Reject proof
+* Approve Hunt
+* Change points
+* Edit critical settings
+* Change roles
+* Publish
+
+Show:
+
+```text
+Admin actions require an active connection.
+```
+
+---
+
+# 53. AI Offline Policy
+
+AI generation requires online connectivity.
+
+Prompt text draft may be saved locally where safe.
+
+Do not queue expensive generation blindly for later unless job submission itself is confirmed server-side.
+
+---
+
+# 54. Moderation Offline Policy
+
+Moderation decisions require server.
+
+Do not queue:
+
+* Approve
+* Reject
+* Quarantine
+* Reverse points
+
+as though action is complete.
+
+Reviewer may read cached case content only if security policy permits.
+
+---
+
+# 55. File Upload Queue
+
+Create reusable upload queue.
+
+Each local asset record includes:
+
+* Local asset ID
+* Owner user
+* File path
+* MIME type
+* Size
+* Hash
+* Associated domain
+* Associated draft/submission
+* Upload status
+* Retry count
+* Remote asset ID after success
+
+Statuses:
+
+* Local
+* Waiting
+* Uploading
+* Uploaded
+* Failed
+* Cancelled
+
+---
+
+# 56. Upload Resilience
+
+Support:
+
+* Retry after interruption
+* Restart after app relaunch
+* Prevent duplicate remote assets
+* File existence check
+* Hash verification
+* Upload timeout
+* Maximum retry limit
+
+Use resumable upload if current storage/provider supports it reliably.
+
+If not, retry full upload safely using idempotency.
+
+---
+
+# 57. Local File Retention
+
+Do not delete local evidence immediately after upload response.
+
+Delete only after:
+
+* Remote upload durable
+* Submission durable
+* User no longer needs recovery copy
+* Retention rules permit
+
+Prevent uncontrolled local storage growth.
+
+---
+
+# 58. Local Storage Cleanup
+
+Implement cleanup policy for:
+
+* Old completed queue items
+* Uploaded proof files
+* Cancelled drafts
+* Expired signed media
+* Old map/query cache
+* Temporary compressed images
+
+Do not delete active unsynced proof.
+
+---
+
+# 59. Storage Pressure
+
+Detect local storage failures.
+
+If device storage is low:
+
+* Warn before proof capture if file cannot be stored
+* Do not pretend image saved
+* Let user retry after clearing space
+
+Do not crash.
+
+---
+
+# 60. Signed URL Offline Behavior
+
+Signed URLs may expire while offline.
+
+Do not assume cached URL remains usable forever.
+
+For proof/media:
+
+* Cache local file only when policy permits and user owns it
+* Otherwise show unavailable placeholder
+
+Refresh signed URL after reconnect.
+
+---
+
+# 61. Multi-Device Conflict
+
+Examples:
+
+* Hunt completed on phone while tablet offline
+* Proof submitted elsewhere
+* Creator draft edited on two devices
+* Friend request accepted elsewhere
+
+On reconnect:
+
+Server state wins for finalized state.
+
+Local unsent drafts must be preserved separately if they contain useful unsaved content.
+
+Do not overwrite newer final state.
+
+---
+
+# 62. Finalized Entity Conflict
+
+If queued mutation targets finalized entity:
+
+Example:
+
+* Proof draft queued
+* Quest completed on another device
+
+Queue result:
+
+**No longer needed / already completed**
+
+Do not treat as severe failure.
+
+Preserve local evidence for reasonable recovery period.
+
+---
+
+# 63. Versioned Creator Conflict
+
+For creator draft conflict:
+
+Store:
+
+* Base version
+* Local version
+* Server version
+
+Attempt merge by independent fields.
+
+Example:
+
+Server changed schedule.
+Local changed description.
+
+Merge may be safe.
+
+If both changed description:
+
+Prompt user.
+
+---
+
+# 64. Merge Strategy
+
+Use three-way merge where practical:
+
+* Base
+* Local
+* Server
+
+Do not implement generic JSON merge for sensitive domain objects without field rules.
+
+Define per-domain merge policy.
+
+---
+
+# 65. Stop List Conflicts
+
+Creator Hunt stop reorder is conflict-sensitive.
+
+If server stop list changed while local user reordered:
+
+Do not silently apply outdated order.
+
+Show conflict.
+
+Allow:
+
+* Use Server Version
+* Reapply My Order where possible
+* Review
+
+---
+
+# 66. Proof Draft Conflict
+
+Proof submissions are generally single-user and immutable after submission.
+
+If server already has submitted proof:
+
+* Do not submit local duplicate.
+* Associate local state with server record when idempotency matches.
+* If different proof exists, require user attention.
+
+Do not create multiple active submissions unless state machine permits resubmission.
+
+---
+
+# 67. Offline Error Classification
+
+Normalize:
+
+* No connection
+* Backend unavailable
+* Authentication expired
+* Permission changed
+* Conflict
+* Entity finalized
+* Upload failed
+* File missing
+* Server rejected
+* Retry limit reached
+
+Do not show raw storage/Supabase errors.
+
+---
+
+# 68. Retryable vs Permanent Failures
+
+Retryable:
+
+* Timeout
+* Temporary network failure
+* 5xx
+* Provider temporary error
+
+Permanent or user-attention:
+
+* Permission revoked
+* Entity expired
+* Requirement changed
+* Invalid payload
+* User restricted
+* Participation cancelled
+
+Do not retry permanent failures forever.
+
+---
+
+# 69. Backoff
+
+Use capped exponential backoff with jitter for automatic retry.
+
+Do not repeatedly retry every second.
+
+Allow manual Retry.
+
+---
+
+# 70. Queue Dead Letter
+
+After max retry attempts:
+
+Move item to:
+
+**Needs Attention**
+
+Do not discard.
+
+Provide contextual action.
+
+---
+
+# 71. Pending Sync Panel
+
+Add a simple user-facing screen, likely under Settings or storage/offline area:
+
+**Offline & Sync**
+
+Show:
+
+* Connection state
+* All Synced / Pending changes
+* Proof uploads waiting
+* Creator changes waiting
+* Failed items needing attention
+* Sync Now
+
+Do not show technical mutation names.
+
+---
+
+# 72. Pending Proof UX
+
+Example:
+
+```text
+Quest proof
+Waiting to upload
+
+Captured 4:18 PM
+```
+
+Actions:
+
+* Retry
+* View Draft
+* Remove
+
+Do not allow remove without confirmation if user may lose evidence.
+
+---
+
+# 73. Pending Creator Draft UX
+
+Example:
+
+```text
+Custom Hunt draft
+2 changes waiting to sync
+```
+
+Action:
+
+* Open Draft
+* Retry
+
+---
+
+# 74. App Restart Recovery
+
+After app restart:
+
+Restore:
+
+* Auth session
+* Active safe cache
+* Proof drafts
+* Local media references
+* Mutation queue
+* Creator drafts
+* Last sync state
+
+Then:
+
+* Check network
+* Revalidate session
+* Sync if appropriate
+
+Do not lose pending proof because process was killed.
+
+---
+
+# 75. Background Termination During Upload
+
+If process ends during upload:
+
+On restart:
+
+* Detect incomplete upload
+* Check remote state/idempotency
+* Resume/retry
+* Avoid duplicate file record
+
+---
+
+# 76. Authentication Expiration
+
+If auth expires while queue contains work:
+
+Pause queue.
+
+Prompt login.
+
+After same user logs back in:
+
+Resume.
+
+If different user logs in:
+
+Do not process previous user's queue.
+
+Keep or securely clear per policy.
+
+---
+
+# 77. Logout With Pending Work
+
+Before logout, if pending unsynced proof/draft exists:
+
+Warn:
+
+```text
+You have changes on this device that haven't synced yet.
+```
+
+Options:
+
+* Stay Signed In
+* Sign Out Anyway
+
+Explain whether local drafts will be retained or removed.
+
+Do not surprise user.
+
+---
+
+# 78. Account Switching
+
+Never process queue owned by another account.
+
+Use account-scoped local storage.
+
+Do not expose prior user's proof files.
+
+---
+
+# 79. Account Deletion
+
+Before account deletion:
+
+* Cancel queue
+* Delete private local drafts per policy
+* Remove local proof media
+* Clear cache
+* Disable device association
+
+Do not later sync deleted user's pending work.
+
+---
+
+# 80. Mapbox Failure Separate From Internet
+
+Mapbox may fail while Supabase works.
+
+Handle separately.
+
+Examples:
+
+* Map unavailable
+* List content still usable
+* Active Hunt textual clue still available
+* Geo validation may still work if location capture/backend works
+
+Do not treat Mapbox outage as total app offline.
+
+---
+
+# 81. Supabase Failure Separate From Internet
+
+Device may be online but backend unavailable.
+
+Enter:
+
+**Service temporarily unavailable**
+
+Queue only approved safe operations.
+
+Do not claim online authoritative success.
+
+---
+
+# 82. Partial Service Health
+
+Track capabilities:
+
+* Backend
+* Storage
+* Mapbox
+* Push
+* AI/admin only
+* Moderation/admin only
+
+Consumer offline engine should care primarily about:
+
+* Backend
+* Storage
+* Map
+
+Do not block all app functions because push provider is down.
+
+---
+
+# 83. Cache Freshness
+
+Define freshness by data type.
+
+Examples:
+
+* Active Quest/Hunt: short stale window
+* Static Quest instructions: longer
+* Leaderboard: moderate
+* Public profile: moderate
+* Admin safety state: short / online-only
+
+Document.
+
+Do not use one global stale time.
+
+---
+
+# 84. Stale UI Labels
+
+Use subtle labels:
+
+* Last updated 10 min ago
+* Offline copy
+* Refresh when connected
+
+Do not plaster every cached card with warning.
+
+Use only where decision depends on freshness.
+
+---
+
+# 85. Pessimistic Protected Actions
+
+Use pessimistic UI for:
+
+* Proof Submit confirmation
+* Join Hunt
+* Start Hunt
+* Complete Quest
+* Complete Hunt
+* Friend acceptance
+* Block
+* Admin actions
+
+Do not optimistically declare success before backend.
+
+---
+
+# 86. Optimistic Low-Risk Actions
+
+May use optimistic local updates for:
+
+* Notification read
+* Local draft edits
+* Some preference toggles
+
+Must rollback or reconcile on server rejection.
+
+---
+
+# 87. Queued Proof Submission UI
+
+If user presses Submit while offline:
+
+Use explicit state:
+
+**Queued — waiting for connection**
+
+Do not say:
+
+**Submitted**
+
+Once server confirms:
+
+Change to:
+
+**Submitted**
+
+This wording distinction is required.
+
+---
+
+# 88. Queued Upload Notifications
+
+Optional local in-app notification after background/foreground sync:
+
+**Your Quest proof was uploaded and submitted.**
+
+Only show after server confirmation.
+
+Do not send external push to self unless useful.
+
+---
+
+# 89. Sync Event Logging
+
+Create diagnostic logs for:
+
+* Queue created
+* Retry
+* Conflict
+* Completion
+* Permanent failure
+* File missing
+* Auth mismatch
+
+Keep logs privacy-safe.
+
+Do not log proof content or full local file path into remote analytics.
+
+---
+
+# 90. Admin Sync Diagnostics
+
+Extend Admin Diagnostics with aggregate health only where useful:
+
+* Client sync error counts
+* Upload failure rate
+* Proof queue failure rate
+* Common conflict reasons
+* App version distribution
+
+Do not allow Admin to browse private local device queues.
+
+---
+
+# 91. Consumer Sync Diagnostics
+
+Add development-only diagnostics:
+
+* Queue count
+* Last sync
+* Connectivity state
+* Failed item type
+* Cache size
+
+Do not expose this technical screen in production unless useful support tooling requires it.
+
+---
+
+# 92. Support Export
+
+Prepare optional user-triggered support bundle.
+
+May include:
+
+* App version
+* Device platform
+* Sync error codes
+* Queue item metadata
+* Connectivity state
+
+Must exclude:
+
+* Proof media
+* Exact GPS
+* Tokens
+* Passwords
+* AI/admin secrets
+
+Do not implement automatic upload without consent.
+
+---
+
+# 93. Storage Encryption
+
+Use platform-provided secure storage where appropriate for sensitive small values.
+
+For private local proof media:
+
+Use app-private storage.
+
+Do not place proof images in public shared directories unless user explicitly exports them.
+
+Document platform limitations.
+
+---
+
+# 94. Local Database Privacy
+
+If SQLite is used:
+
+* Store in app sandbox
+* Do not store service secrets
+* Minimize private data
+* Clear on logout/account deletion according to policy
+
+If encryption is available in existing architecture, use it appropriately.
+
+Do not invent unsupported encryption claims.
+
+---
+
+# 95. Screenshot / OS Backup Limitations
+
+Document that app-private data protection depends partly on operating system/device security.
+
+If platform supports excluding sensitive files from cloud backup, consider it for proof cache.
+
+Do not promise absolute confidentiality beyond platform capabilities.
+
+---
+
+# 96. Offline Abuse Resistance
+
+Offline architecture must not allow client to forge:
+
+* Old timestamps
+* Fake completion order
+* Fake location
+* Fake reward
+* Unauthorized clue unlock
+
+Server revalidates every authoritative queued mutation.
+
+Offline queue is intent/evidence transport only.
+
+---
+
+# 97. Submission Capture Timestamp
+
+For offline proof media:
+
+Store client capture timestamp as metadata.
+
+Server receipt timestamp remains authoritative for processing.
+
+Do not use capture timestamp alone to bypass Quest deadline.
+
+If product policy allows delayed proof captured before deadline:
+
+Require explicit server-side rule.
+
+Do not infer it.
+
+---
+
+# 98. Deadline Crossing Offline
+
+If Quest/Hunt expires while user is offline:
+
+Queued proof must be evaluated by server policy.
+
+Possible outcomes:
+
+* Accept if proof captured while active and policy permits
+* Reject as expired
+* Route manual review
+
+Do not decide entirely on client.
+
+Document current canonical policy.
+
+---
+
+# 99. Offline Deadline UX
+
+While offline near known deadline:
+
+Show:
+
+```text
+This activity may expire before you reconnect.
+```
+
+Do not claim exact remaining eligibility based solely on stale cache.
+
+---
+
+# 100. Notification + Offline Integration
+
+When device reconnects:
+
+* Refresh Notification Center
+* Process local read-state queue
+* Deep-link destination refreshes authoritative state
+
+Do not create duplicate notifications because offline queue retried domain actions.
+
+Idempotency must prevent this.
+
+---
+
+# 101. Push After Delayed Sync
+
+If offline proof sync later gets approved asynchronously:
+
+Normal Prompt 21 notification pipeline applies.
+
+Do not create separate offline notification system.
+
+---
+
+# 102. Telemetry
+
+Track aggregate reliability metrics:
+
+* Offline sessions
+* Queue success rate
+* Upload retry rate
+* Conflict rate
+* Permanent sync failure rate
+* Average sync delay
+
+Do not collect proof content or location trails.
+
+---
+
+# 103. Performance
+
+Offline persistence must not:
+
+* Freeze UI
+* Serialize giant query cache every render
+* Read every proof file at startup
+* Sync unlimited queue concurrently
+
+Use:
+
+* Incremental persistence
+* Bounded concurrency
+* Pagination
+* Lazy file loading
+
+---
+
+# 104. Battery Usage
+
+Do not implement aggressive background polling.
+
+Sync primarily on:
+
+* Foreground
+* Connectivity restored
+* Explicit action
+
+Use OS-supported background task only if current app architecture already supports it safely and it materially improves proof upload reliability.
+
+Do not rely on background execution guarantees.
+
+---
+
+# 105. Background Sync Readiness
+
+Prepare optional future background upload support.
+
+For Build 1:
+
+Foreground/reconnect sync must work completely.
+
+Background sync is a bonus only if stable.
+
+Do not block release on unreliable background task behavior.
+
+---
+
+# 106. Database Changes
+
+Add only necessary server support.
+
+Potential additions:
+
+* Client mutation idempotency records
+* Draft version fields
+* Proof submission idempotency
+* Media upload idempotency
+* Entity versions
+* Safe last-modified fields
+* Sync-compatible RPC responses
+
+Do not create server tables for every local queue item.
+
+Queue primarily belongs on device.
+
+---
+
+# 107. Trusted Mutation Response Contract
+
+Protected mutation responses should return:
+
+* Result
+* Entity ID
+* Current server version
+* Already processed state
+* Safe conflict code
+* Current authoritative status
+
+This helps client reconcile idempotently.
+
+---
+
+# 108. Conflict Error Codes
+
+Use stable codes such as:
+
+```text
+VERSION_CONFLICT
+ENTITY_FINALIZED
+ENTITY_EXPIRED
+PERMISSION_CHANGED
+ALREADY_SUBMITTED
+ALREADY_COMPLETED
+REQUIREMENT_CHANGED
+AUTH_USER_MISMATCH
+```
+
+Do not parse human error strings.
+
+---
+
+# 109. React Query Integration
+
+Create hooks/services such as:
+
+```text
+useConnectivity()
+useOfflineQueue()
+usePendingSyncCount()
+useSyncStatus()
+useProofDraft()
+useQueuedUploads()
+useCreatorOfflineDraft()
+```
+
+Do not make screens directly manipulate SQLite/local queue.
+
+---
+
+# 110. Query Restoration
+
+On startup:
+
+Restore persisted cache before network fetch where useful.
+
+Then:
+
+* Render safe cached content
+* Start background authoritative refresh
+* Reconcile
+
+Do not wait for network just to show cached active instructions.
+
+---
+
+# 111. Queue Testing Utilities
+
+Development-only controls:
+
+* Force Offline
+* Simulate Weak Network
+* Fail Next Upload
+* Fail Backend Request
+* Simulate Conflict
+* Simulate Auth Expiry
+* Simulate App Restart
+* Simulate Mapbox Down
+
+Do not ship visible production debug controls.
+
+---
+
+# 112. Automated Tests — Storage
+
+Test:
+
+* Cache persists
+* User isolation
+* Schema migration
+* Logout clears protected data
+* Account switching cannot see previous cache
+* Proof file persists after restart
+* Cleanup preserves pending items
+
+---
+
+# 113. Automated Tests — Queue
+
+Test:
+
+* Enqueue safe operation
+* Dependency ordering
+* Idempotency
+* Retry
+* Backoff
+* Dead-letter state
+* Queue restored after restart
+* Wrong user queue not processed
+* Completed item removed safely
+
+---
+
+# 114. Automated Tests — Quest Offline
+
+Test:
+
+* Cached Quest opens
+* Active Quest instructions available
+* Start Quest requires online
+* Text proof drafts offline
+* Image proof persists
+* Submit shows Queued, not Submitted
+* Reconnect uploads and submits
+* Expired Quest conflict handled
+* Location validation requires online
+* No points awarded offline
+
+---
+
+# 115. Automated Tests — Hunt Offline
+
+Test:
+
+* Current authorized clue available
+* Future clue absent
+* Start Hunt requires online
+* Ordered next clue remains locked
+* Riddle answer not cached
+* Proof draft works
+* Location validation requires online
+* Hunt completion requires online
+* No points awarded offline
+
+---
+
+# 116. Automated Tests — Creator
+
+Test:
+
+* Draft edits offline
+* Autosave shows Saved on Device
+* Local image preserved
+* Reconnect syncs
+* Concurrent server edit detected
+* Safe merge
+* Unsafe merge shows conflict
+* Submit for moderation requires online
+* Invite sending requires online
+
+---
+
+# 117. Automated Tests — Media
+
+Test:
+
+* Interrupted upload resumes/retries
+* Duplicate upload avoided
+* Missing local file handled
+* Upload success survives lost response
+* Local asset retained until durable submission
+* Cleanup removes completed temporary file
+
+---
+
+# 118. Automated Tests — Multi-Device
+
+Test:
+
+* Quest completed elsewhere
+* Hunt stop completed elsewhere
+* Proof submitted elsewhere
+* Creator draft edited elsewhere
+* Friend request resolved elsewhere
+* Stale local state yields to server
+* Unsaved local draft preserved where useful
+
+---
+
+# 119. Automated Tests — Security
+
+Test:
+
+* Offline cannot forge reward
+* Offline cannot forge completion
+* Offline cannot reveal locked clue
+* Offline cannot bypass Hunt capacity
+* Offline cannot fake Geo validation
+* Queue payload cannot alter protected server fields
+* Previous user's queue cannot sync under new user
+* Local cache never contains private validation geometry
+
+---
+
+# 120. Automated Tests — Connectivity
+
+Test:
+
+* True offline
+* Backend unavailable with internet
+* Mapbox unavailable only
+* Storage unavailable only
+* Reconnect
+* Reconnect mid-upload
+* Foreground refresh
+* Network switching
+* Limited connection
+
+---
+
+# 121. Documentation
+
+Create/update:
+
+* `/docs/OFFLINE_ARCHITECTURE.md`
+* `/docs/OFFLINE_CAPABILITY_MATRIX.md`
+* `/docs/OFFLINE_STORAGE.md`
+* `/docs/OFFLINE_QUEUE.md`
+* `/docs/OFFLINE_SYNC.md`
+* `/docs/OFFLINE_CONFLICTS.md`
+* `/docs/OFFLINE_PROOF.md`
+* `/docs/OFFLINE_HUNT.md`
+* `/docs/OFFLINE_QUEST.md`
+* `/docs/OFFLINE_CREATOR.md`
+* `/docs/OFFLINE_MEDIA.md`
+* `/docs/OFFLINE_SECURITY.md`
+* `/docs/OFFLINE_PRIVACY.md`
+* `/docs/OFFLINE_RECOVERY.md`
+* `/docs/OFFLINE_TESTING.md`
+
+Update:
+
+* Project Constitution
+* Quest documentation
+* Hunt documentation
+* Creator documentation
+* Proof documentation
+* Notification documentation
+* `replit.md`
+
+only as necessary.
+
+---
+
+# 122. Out of Scope
+
+Do NOT implement:
+
+* Game Zones
+* Outbreak
+* Full downloadable offline world maps
+* Background continuous location
+* Peer-to-peer sync
+* Bluetooth multiplayer
+* Offline point awarding
+* Offline authoritative Quest/Hunt completion
+* Offline friend acceptance
+* Offline moderation
+* Offline Admin actions
+* Offline AI generation
+* Stripe
+* Paid Hunts
+* Creator payouts
+* Direct messages
+* Hunt chat
+* New gameplay modes
+
+Do not redesign approved UI.
+
+---
+
+# 123. Final Full Audit
+
+Before stopping, audit the implementation end to end.
+
+Confirm:
+
+* One shared offline/sync architecture exists.
+* Offline capability matrix is documented.
+* User-specific cache is isolated.
+* Logout/account switching protects data.
+* Local cache schema is versioned.
+* Mutation queue survives app restart.
+* Queue uses idempotency.
+* Dependency processing works.
+* Retry/backoff works.
+* Permanent failures move to Needs Attention.
+* Server remains authoritative for protected gameplay.
+* Quest Detail can render cached content.
+* Active Quest can preserve proof draft.
+* Quest location validation cannot succeed offline.
+* Quest completion cannot succeed offline.
+* Hunt current authorized clue can remain cached.
+* Future Hunt clues are not cached.
+* Hunt start cannot succeed offline.
+* Hunt riddle answers are never cached.
+* Hunt next clue remains locked until server confirms stop completion.
+* Hunt completion cannot succeed offline.
+* Proof images survive app restart.
+* Interrupted uploads recover.
+* Queued proof says Queued, not Submitted.
+* Reconnect revalidates participation before submission.
+* Creator Hunt drafts can be edited offline.
+* Creator offline autosave distinguishes local vs server save.
+* Creator moderation submission requires online.
+* Social safety-sensitive actions do not falsely complete offline.
+* Notification read-state sync works.
+* Leaderboards remain server-authoritative.
+* Admin mutations require online.
+* AI generation requires online.
+* Moderation decisions require online.
+* Multi-device conflicts resolve safely.
+* Finalized server state cannot be overwritten by stale client queue.
+* No private validation geometry is persisted locally.
+* No hidden Hunt secrets are preloaded.
+* Local sensitive files remain app-private.
+* Local cleanup does not delete unsynced evidence.
+* Mapbox outage is distinguished from total offline state.
+* Backend outage is handled independently.
+* Partial service health does not unnecessarily disable whole app.
+* App restart recovery works.
+* Auth expiration pauses sync.
+* Wrong account cannot process another account's queue.
+* Offline cannot forge timestamps/rewards/completion.
+* Tests pass or blocked platform integration tests are documented.
+* App compiles.
+* Approved Quest/Hunt navigation remains unchanged.
+* Game Zones and Outbreak were not introduced.
+
+Fix all in-scope failures found during this audit before stopping.
+
+---
+
+# Deliverables
+
+When complete provide:
+
+1. Offline architecture
+2. Storage technology audit and selected implementation
+3. Connectivity service
+4. Offline capability matrix
+5. React Query persistence
+6. User-scoped cache isolation
+7. Cache schema versioning
+8. Durable mutation queue
+9. Queue eligibility rules
+10. Dependency processing
+11. Idempotency
+12. Sync engine
+13. Sync triggers
+14. Conflict architecture
+15. Server-wins domain rules
+16. Draft merge rules
+17. Conflict UI
+18. Creator Hunt offline drafting
+19. Creator offline autosave
+20. Creator media queue
+21. Quest offline read behavior
+22. Quest proof drafts
+23. Quest image proof recovery
+24. Quest protected online-only boundaries
+25. Hunt offline read behavior
+26. Hunt secret/clue protection
+27. Hunt proof drafts
+28. Hunt protected online-only boundaries
+29. Social offline behavior
+30. Notification offline integration
+31. Achievement/leaderboard cached behavior
+32. Admin offline policy
+33. AI/moderation offline policy
+34. File-upload queue
+35. Upload retry/recovery
+36. Local-file retention
+37. Storage cleanup
+38. Multi-device conflict handling
+39. Authentication-expiry handling
+40. Logout/account-switch protection
+41. Mapbox/backend partial-failure handling
+42. Cache freshness behavior
+43. Queued/Submitted UX distinction
+44. Sync diagnostics
+45. Local security/privacy safeguards
+46. Database/RPC/idempotency changes
+47. React Query hooks
+48. Development testing utilities
+49. Automated tests/results
+50. Documentation
+51. Assumptions
+52. Known limitations
+53. Exact remaining work for Prompt 23
+
+Do not begin Prompt 23.
+
+Do not redesign the consumer application.
+
+Create checkpoint:
+
+**Build 1 — Prompt 22 — Offline Sync, Recovery, and Reliability**
