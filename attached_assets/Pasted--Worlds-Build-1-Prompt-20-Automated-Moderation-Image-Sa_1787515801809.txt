@@ -1,0 +1,97 @@
+# Worlds — Build 1, Prompt 20
+# Automated Moderation, Image Safety Scanning, Report Automation, and Anti-Cheat Hardening
+
+Continue from the current Worlds project and treat Prompts 1–19 and all existing project documentation as authoritative.
+
+The application is named:
+
+Worlds
+
+Prompts 1–19 implemented:
+
+- Authentication
+- Profiles and onboarding
+- Interest Bubbles
+- Quest gameplay
+- Hunt gameplay
+- Mapbox integration
+- Secure Geo validation
+- Proof submission
+- Quest and Hunt Progress
+- Leaderboards
+- Achievements and progression
+- Social/friends/privacy
+- Custom Hunt creation
+- Admin Panel
+- Admin moderation queues
+- AI Quest generation
+- Admin-editable Daily, Monthly, and Geo Quest AI prompts
+
+This prompt must implement the next safety and integrity layer:
+
+1. Automated image appropriateness scanning
+2. Text/content safety scanning
+3. Moderation-provider abstraction
+4. Media moderation workflow automation
+5. Proof-image moderation readiness
+6. Public profile/media moderation
+7. Custom Hunt content moderation
+8. AI-generated Quest moderation handoff
+9. Report triage automation
+10. Duplicate-report detection
+11. Safety-risk scoring
+12. Anti-cheat scoring hardening
+13. Mock-location handling
+14. Impossible-speed detection
+15. GPS accuracy handling
+16. Submission burst detection
+17. Duplicate Quest/Hunt submission detection
+18. VPN signal handling
+19. Quarantined-points integrity
+20. Manual override and appeal readiness
+21. Audit trails
+22. Moderation diagnostics
+23. Scheduled moderation jobs
+24. Privacy boundaries
+25. Human review for high-risk decisions
+
+Do not implement Stripe, memberships, creator payouts, paid Hunts, Game Zones, Outbreak, direct messaging, or Hunt chat.
+
+Do not allow automated moderation to autonomously make irreversible high-risk account decisions.
+
+---
+
+# 1. Core Principle
+
+Automation may:
+
+- Approve clearly safe low-risk content when configured
+- Flag questionable content
+- Quarantine content
+- Route to manual review
+- Calculate integrity risk
+- Prioritize moderation queues
+
+Automation must NOT automatically:
+
+- Permanently ban a user
+- Permanently suspend a user
+- Delete historical evidence
+- Reverse major point balances without trusted policy
+- Reject ambiguous safety-sensitive cases without review
+- Expose moderation internals to ordinary users
+
+High-impact enforcement must remain reviewable.
+
+---
+
+# 2. Moderation Provider Abstraction
+
+Create a provider abstraction such as:
+
+```ts
+interface ModerationProvider {
+  moderateImage(...)
+  moderateText(...)
+  healthCheck(...)
+}
