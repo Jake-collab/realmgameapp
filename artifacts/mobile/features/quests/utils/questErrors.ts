@@ -160,6 +160,10 @@ const ERROR_CONFIG: Record<QuestErrorCode, { message: string; canRetry: boolean 
     message: "Your account doesn't have access to this right now.",
     canRetry: false,
   },
+  SERVICE_UNAVAILABLE: {
+    message: 'Quest progress is temporarily unavailable. Nothing was saved.',
+    canRetry: true,
+  },
   NETWORK_UNAVAILABLE: {
     message: 'Check your internet connection and try again.',
     canRetry: true,

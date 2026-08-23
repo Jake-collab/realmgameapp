@@ -48,7 +48,6 @@ export interface CreateDraftInput {
   locationLng?: number;
   locationAccuracyMeters?: number;
 }
-
 export interface ProofOperationResult {
   success: boolean;
   proof: ProofSubmissionRow | null;
@@ -65,7 +64,14 @@ export async function createQuestProofDraft(input: CreateDraftInput): Promise<Pr
   const { participationId, userId } = input;
 
   if (!isSupabaseConfigured()) {
-    return { success: true, proof: buildMockProof(participationId, userId) };
+    return {
+      success: false,
+      proof: null,
+      error: makeQuestError(
+        'SERVICE_UNAVAILABLE',
+        'Supabase is not configured; proof cannot be saved.',
+      ),
+    };
   }
 
   // Check for existing draft
@@ -120,7 +126,14 @@ export async function updateQuestProofDraft(
   }
 ): Promise<ProofOperationResult> {
   if (!isSupabaseConfigured()) {
-    return { success: true, proof: null };
+    return {
+      success: false,
+      proof: null,
+      error: makeQuestError(
+        'SERVICE_UNAVAILABLE',
+        'Supabase is not configured; proof changes cannot be saved.',
+      ),
+    };
   }
 
   const existing = await fetchCurrentProof(proofId).catch(() => null);
@@ -204,7 +217,14 @@ export async function submitQuestProof(
   participationId: string
 ): Promise<ProofOperationResult> {
   if (!isSupabaseConfigured()) {
-    return { success: true, proof: buildMockProof(participationId, userId) };
+    return {
+      success: false,
+      proof: null,
+      error: makeQuestError(
+        'SERVICE_UNAVAILABLE',
+        'Supabase is not configured; proof submission cannot be saved.',
+      ),
+    };
   }
 
   const proof = await fetchCurrentProof(participationId).catch(() => null);
@@ -275,27 +295,4 @@ async function createResubmissionDraft(
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-function buildMockProof(participationId: string, userId: string): ProofSubmissionRow {
-  const now = new Date().toISOString();
-  return {
-    id: 'dev-proof-' + Math.random().toString(36).slice(2, 8),
-    user_id: userId,
-    quest_participation_id: participationId,
-    hunt_stop_progress_id: null,
-    submission_type: 'none',
-    text_response: null,
-    location_lat: null,
-    location_lng: null,
-    location_accuracy_meters: null,
-    status: 'draft',
-    moderation_status: 'pending',
-    review_notes: null,
-    reviewer_id: null,
-    submitted_at: null,
-    reviewed_at: null,
-    previous_submission_id: null,
-    created_at: now,
-    updated_at: now,
-  };
-}
 

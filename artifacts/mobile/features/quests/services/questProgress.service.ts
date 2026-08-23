@@ -15,6 +15,7 @@
 import { isSupabaseConfigured } from '@/lib/supabase/client';
 import {
   fetchParticipationById,
+  fetchQuestById,
   fetchStepProgress,
   upsertStepProgress,
   updateParticipationStatus,
@@ -24,7 +25,7 @@ import { normalizeQuestError, makeQuestError } from '../utils/questErrors';
 import { onStepCompleted } from '../events/questEvents';
 import { canSubmitProof } from '../stateMachine/participation.machine';
 import { computeProgressHelpers } from './questCompletion.service';
-import type { QuestObjectiveRow, QuestStepProgressRow, StepStatus } from '@/lib/supabase/database.types';
+import type { QuestObjectiveRow, QuestStepProgressRow } from '@/lib/supabase/database.types';
 
 // ─── Step progress operations ─────────────────────────────────────────────────
 
@@ -48,10 +49,7 @@ export async function beginStep(input: BeginStepInput): Promise<BeginStepResult>
   const { participationId, stepId, userId } = input;
 
   if (!isSupabaseConfigured()) {
-    return {
-      success: true,
-      stepProgress: buildMockStepProgress(participationId, stepId, 'in_progress'),
-    };
+    return { success: false, stepProgress: null, error: unavailableError('Step progress cannot be saved.') };
   }
 
   // Verify ownership via participation load
@@ -98,8 +96,24 @@ export interface CompleteSimpleStepResult {
 export async function completeSimpleStep(input: CompleteSimpleStepInput): Promise<CompleteSimpleStepResult> {
   const { participationId, stepId, userId, objective } = input;
 
-  // Guard: only none-proof steps can be self-completed by client
-  if (objective.proof_type !== 'none') {
+  if (!isSupabaseConfigured()) {
+    return {
+      success: false,
+      stepProgress: null,
+      error: unavailableError('Step completion cannot be saved.'),
+    };
+  }
+
+  const participation = await safeLoadParticipation(participationId, userId);
+  if (!participation.ok) return { success: false, stepProgress: null, error: participation.error };
+
+  const trustedObjective = await loadTrustedObjective(participation.data.quest_id, stepId);
+  if (!trustedObjective) {
+    return { success: false, stepProgress: null, error: makeQuestError('NOT_ELIGIBLE', 'Step does not belong to this quest') };
+  }
+
+  // Guard: only trusted none-proof steps can be self-completed by client.
+  if (!isClientObjectiveCompatible(objective, trustedObjective)) {
     return {
       success: false,
       stepProgress: null,
@@ -108,24 +122,13 @@ export async function completeSimpleStep(input: CompleteSimpleStepInput): Promis
   }
 
   // Guard: location-required steps validated server-side
-  if (objective.location_requirement_type !== 'none') {
+  if (trustedObjective.location_requirement_type !== 'none') {
     return {
       success: false,
       stepProgress: null,
       error: makeQuestError('LOCATION_VALIDATION_FAILED', 'Location steps require server validation'),
     };
   }
-
-  if (!isSupabaseConfigured()) {
-    return {
-      success: true,
-      stepProgress: buildMockStepProgress(participationId, stepId, 'completed'),
-      readiness: { allRequiredDone: false, progressPercent: null },
-    };
-  }
-
-  const participation = await safeLoadParticipation(participationId, userId);
-  if (!participation.ok) return { success: false, stepProgress: null, error: participation.error };
 
   try {
     const progress = await upsertStepProgress(participationId, stepId, {
@@ -167,7 +170,17 @@ export async function skipOptionalStep(
   }
 
   if (!isSupabaseConfigured()) {
-    return { success: true, stepProgress: buildMockStepProgress(participationId, stepId, 'skipped') };
+    return { success: false, stepProgress: null, error: unavailableError('Step skipping cannot be saved.') };
+  }
+
+  const participation = await safeLoadParticipation(participationId, userId);
+  if (!participation.ok) return { success: false, stepProgress: null, error: participation.error };
+  if (!canSubmitProof(participation.data.status)) {
+    return { success: false, stepProgress: null, error: makeQuestError('INVALID_STATE_TRANSITION') };
+  }
+  const trustedObjective = await loadTrustedObjective(participation.data.quest_id, stepId);
+  if (!trustedObjective || !trustedObjective.is_optional) {
+    return { success: false, stepProgress: null, error: makeQuestError('NOT_ELIGIBLE', 'Step is not an optional step for this quest') };
   }
 
   try {
@@ -231,7 +244,7 @@ async function safeLoadParticipation(
     if (!participation) {
       return { ok: false, error: makeQuestError('QUEST_NOT_FOUND') };
     }
-    if (participation.user_id !== userId) {
+    if (!isParticipationOwner(participation, userId)) {
       return { ok: false, error: makeQuestError('NOT_ELIGIBLE', 'Ownership mismatch') };
     }
     return { ok: true, data: participation };
@@ -240,21 +253,40 @@ async function safeLoadParticipation(
   }
 }
 
-function buildMockStepProgress(
-  participationId: string,
-  stepId: string,
-  status: StepStatus
-): QuestStepProgressRow {
-  const now = new Date().toISOString();
-  return {
-    id: 'dev-step-' + Math.random().toString(36).slice(2, 8),
-    participation_id: participationId,
-    quest_step_id: stepId,
-    status,
-    completed_at: status === 'completed' ? now : null,
-    progress_value: null,
-    notes: null,
-    created_at: now,
-    updated_at: now,
-  };
+function unavailableError(action: string) {
+  return makeQuestError('SERVICE_UNAVAILABLE', `Supabase is not configured; ${action}`);
+}
+
+async function loadTrustedObjective(questId: string, stepId: string): Promise<QuestObjectiveRow | null> {
+  try {
+    const quest = await fetchQuestById(questId);
+    return quest?.quest_objectives.find((candidate) => candidate.id === stepId) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function isParticipationOwner(
+  participation: Pick<QuestParticipationRowExtended, 'user_id'>,
+  userId: string,
+): boolean {
+  return participation.user_id === userId;
+}
+
+/**
+ * Client metadata may be used for display, but security-sensitive rules must
+ * match the Quest row fetched from Supabase before a write is attempted.
+ */
+export function isClientObjectiveCompatible(
+  clientObjective: QuestObjectiveRow,
+  trustedObjective: QuestObjectiveRow,
+): boolean {
+  return clientObjective.id === trustedObjective.id
+    && clientObjective.quest_id === trustedObjective.quest_id
+    && clientObjective.proof_type === trustedObjective.proof_type
+    && clientObjective.location_requirement_type === trustedObjective.location_requirement_type
+    && clientObjective.completion_rule === trustedObjective.completion_rule
+    && clientObjective.is_required === trustedObjective.is_required
+    && clientObjective.is_optional === trustedObjective.is_optional
+    && clientObjective.completion_mode === trustedObjective.completion_mode;
 }

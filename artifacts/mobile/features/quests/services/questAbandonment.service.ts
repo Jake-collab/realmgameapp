@@ -38,8 +38,14 @@ export async function abandonQuest(input: AbandonQuestInput): Promise<AbandonQue
   const { participationId, userId } = input;
 
   if (!isSupabaseConfigured()) {
-    // Dev mode: simulate abandonment
-    return { success: true, participation: null };
+    return {
+      success: false,
+      participation: null,
+      error: makeQuestError(
+        'SERVICE_UNAVAILABLE',
+        'Supabase is not configured; abandonment cannot be persisted.',
+      ),
+    };
   }
 
   // ── Load participation ──────────────────────────────────────────────────────
@@ -122,7 +128,14 @@ export async function expireParticipation(
   const { participationId, userId, questId } = input;
 
   if (!isSupabaseConfigured()) {
-    return { success: true, participation: null };
+    return {
+      success: false,
+      participation: null,
+      error: makeQuestError(
+        'SERVICE_UNAVAILABLE',
+        'Supabase is not configured; expiration cannot be persisted.',
+      ),
+    };
   }
 
   let participation: QuestParticipationRowExtended | null;

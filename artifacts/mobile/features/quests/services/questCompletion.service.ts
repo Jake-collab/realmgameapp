@@ -12,14 +12,13 @@
  * - Completion + point insert must be atomic (transaction or RPC).
  * - Users cannot call this directly — it must be invoked by trusted server logic.
  * - Mobile clients call this via a Supabase RPC (complete_quest) in production.
- *   For Build 1 (no live DB), this service provides the client-side logic layer
- *   that an Edge Function will mirror.
+ *   Without a live DB, this service reports the operation as unavailable and
+ *   never fabricates completion, points, or a local persisted record.
  *
  * Trust boundary: In production this logic runs server-side in an Edge Function.
  * The client-side implementation here is used for:
- *   a) Offline-aware state management
- *   b) Documentation of the completion contract
- *   c) Integration testing with a local Supabase instance
+ *   a) Documentation of the completion contract
+ *   b) Integration testing with a local Supabase instance
  */
 
 import { requireSupabase, isSupabaseConfigured } from '@/lib/supabase/client';
@@ -44,7 +43,6 @@ export interface CompleteQuestInput {
   /** Only pass for testing/admin — normally loaded from DB snapshot */
   awardedPointsOverride?: never;
 }
-
 // ─── Main operation ────────────────────────────────────────────────────────────
 
 /**
@@ -53,13 +51,17 @@ export interface CompleteQuestInput {
  * Production path: call the `complete_quest` Supabase RPC which mirrors this logic
  * server-side with full transaction support.
  *
- * Development path (no live DB): validates preconditions and returns a mock result.
+ * Without a live DB, completion is explicitly unavailable; no points or events
+ * are generated locally.
  */
 export async function completeQuest(input: CompleteQuestInput): Promise<QuestCompletionResult> {
   const { participationId, userId } = input;
 
   if (!isSupabaseConfigured()) {
-    return buildDevModeResult(participationId);
+    return failure(participationId, makeQuestError(
+      'SERVICE_UNAVAILABLE',
+      'Supabase is not configured; complete_quest cannot be verified or persisted.',
+    ));
   }
 
   // ── Step 1: Load participation ────────────────────────────────────────────────
@@ -116,7 +118,6 @@ export async function completeQuest(input: CompleteQuestInput): Promise<QuestCom
 
   // ── Step 8: Atomic completion + points insert ─────────────────────────────────
   // In production this is handled by the complete_quest Edge Function/RPC.
-  // For client-side, we call the RPC if available, otherwise simulate for dev.
   const client = requireSupabase();
 
   const completedAt = new Date().toISOString();
@@ -136,19 +137,6 @@ export async function completeQuest(input: CompleteQuestInput): Promise<QuestCom
       participationId,
       awardedPoints: result.awarded_points,
       completedAt: result.completed_at,
-      wasAlreadyCompleted: false,
-    };
-  }
-
-  // RPC not available (dev/schema not deployed): simulate for testing
-  if (__DEV__) {
-    console.warn('[QuestCompletion] complete_quest RPC not available — dev simulation mode');
-    onQuestCompleted(userId, participation.quest_id, participationId, pointsToAward);
-    return {
-      success: true,
-      participationId,
-      awardedPoints: pointsToAward,
-      completedAt,
       wasAlreadyCompleted: false,
     };
   }
@@ -265,12 +253,3 @@ function failure(participationId: string, error: ReturnType<typeof makeQuestErro
   };
 }
 
-function buildDevModeResult(participationId: string): QuestCompletionResult {
-  return {
-    success: true,
-    participationId,
-    awardedPoints: 100,
-    completedAt: new Date().toISOString(),
-    wasAlreadyCompleted: false,
-  };
-}
