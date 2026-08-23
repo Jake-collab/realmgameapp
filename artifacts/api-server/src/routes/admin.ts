@@ -112,22 +112,27 @@ router.get("/admin/session", async (req, res) => {
 
 router.get("/admin/notifications", requireAdmin("admin.read"), (_req, res) => {
   const items = notificationStore.all();
+  const delivery = notificationStore.deliveryRecords();
   res.json({
     metrics: {
       notificationsCreatedToday: items.filter(item => item.createdAt.slice(0, 10) === new Date().toISOString().slice(0, 10)).length,
-      pushAttempts: 0,
-      successfulPushes: 0,
-      failedSends: 0,
-      invalidTokens: 0,
+      pushAttempts: delivery.filter(item => item.channel === "push").reduce((sum, item) => sum + item.attemptCount, 0),
+      successfulPushes: delivery.filter(item => item.channel === "push" && ["sent", "delivered"].includes(item.status)).length,
+      failedSends: delivery.filter(item => item.status === "failed").length,
+      invalidTokens: delivery.filter(item => item.failureCategory === "invalid_token").length,
       pendingScheduled: 0,
       queueBacklog: 0,
       averageDeliveryLatencyMs: null,
     },
     provider: { configured: Boolean(process.env.EXPO_ACCESS_TOKEN), reachable: false, reason: "Provider health checks require configured server credentials." },
-    delivery: [],
-    scheduled: [],
+    delivery: delivery.slice(0, 100),
     persistence: "local_restart_safe",
   });
+});
+
+router.post("/admin/notifications/run-due", requireAdmin("admin.diagnostics.read"), (_req, res) => {
+  const results = notificationStore.runDue();
+  res.json({ processed: results.length, results: results.map(result => ({ jobId: result.job.id, status: result.job.status, notificationId: result.notification?.id ?? null })) });
 });
 
 router.get("/admin/notifications/diagnostics", requireAdmin("admin.diagnostics.read"), (_req, res) => {

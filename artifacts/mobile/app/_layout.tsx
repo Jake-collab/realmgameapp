@@ -37,6 +37,7 @@ import {
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { openNotificationTarget } from '@/features/notifications/deepLinks';
 
 // Prevent the native splash from auto-hiding.
 // We will hide it manually once auth state is resolved.
@@ -115,6 +116,25 @@ function NavigationGuard() {
 // ─── Root Stack ───────────────────────────────────────────────────────────────
 
 function RootLayoutNav() {
+  const router = useRouter();
+
+  useEffect(() => {
+    let removeListener: (() => void) | undefined;
+    try {
+      // Optional native module: web and disconnected builds continue normally.
+      const notifications = require('expo-notifications') as {
+        addNotificationResponseReceivedListener?: (listener: (response: { notification?: { request?: { content?: { data?: { deepLink?: string; deep_link?: string } } } } }) => void) => { remove: () => void };
+        getLastNotificationResponseAsync?: () => Promise<{ notification?: { request?: { content?: { data?: { deepLink?: string; deep_link?: string } } } } } | null>;
+      };
+      const getLink = (response: { notification?: { request?: { content?: { data?: { deepLink?: string; deep_link?: string } } } } } | null) => response?.notification?.request?.content?.data?.deepLink ?? response?.notification?.request?.content?.data?.deep_link ?? null;
+      removeListener = notifications.addNotificationResponseReceivedListener?.((response) => openNotificationTarget(router, getLink(response))).remove;
+      void notifications.getLastNotificationResponseAsync?.().then(response => { const link = getLink(response); if (link) openNotificationTarget(router, link); });
+    } catch {
+      // expo-notifications is optional until a native build enables push.
+    }
+    return () => removeListener?.();
+  }, [router]);
+
   return (
     <>
       <NavigationGuard />

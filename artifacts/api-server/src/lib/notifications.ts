@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 
 export type NotificationCategory = "quest" | "hunt" | "social" | "progress" | "moderation" | "account" | "system";
 export type NotificationStatus = "scheduled" | "queued" | "sending" | "sent" | "delivered" | "failed" | "cancelled" | "suppressed";
@@ -77,6 +79,29 @@ export interface NotificationRecord {
   readAt: string | null;
   archivedAt: string | null;
   metadata: Record<string, string | number>;
+}
+
+export interface NotificationDeliveryRecord {
+  id: string;
+  notificationId: string;
+  channel: "in_app" | "push";
+  deviceId: string | null;
+  status: NotificationStatus;
+  attemptCount: number;
+  providerMessageId: string | null;
+  failureCategory: string | null;
+  lastAttemptAt: string | null;
+  createdAt: string;
+}
+
+export interface ScheduledNotification {
+  id: string;
+  userId: string;
+  event: NotificationEvent;
+  scheduledFor: string;
+  status: "scheduled" | "queued" | "sent" | "cancelled" | "suppressed" | "failed";
+  attempts: number;
+  lastError: string | null;
 }
 
 export interface PushDevice {
@@ -160,28 +185,85 @@ export class NotificationStore {
   private idempotency = new Set<string>();
   private devices = new Map<string, PushDevice>();
   private preferences = new Map<string, NotificationPreferences>();
+  private deliveries = new Map<string, NotificationDeliveryRecord>();
+  private scheduled = new Map<string, ScheduledNotification>();
+  private readonly statePath = process.env.NOTIFICATION_LOCAL_STATE_PATH ?? path.join(process.cwd(), ".local", "notifications-state.json");
+  private readonly localPersistence = process.env.NODE_ENV !== "production" || Boolean(process.env.NOTIFICATION_LOCAL_STATE_PATH);
+
+  constructor() {
+    if (!this.localPersistence) return;
+    try {
+      const raw = JSON.parse(fs.readFileSync(this.statePath, "utf8")) as {
+        notifications?: NotificationRecord[]; idempotency?: string[]; preferences?: Array<[string, NotificationPreferences]>;
+        deliveries?: NotificationDeliveryRecord[]; scheduled?: ScheduledNotification[];
+      };
+      raw.notifications?.forEach(item => this.notifications.set(item.id, item));
+      raw.idempotency?.forEach(item => this.idempotency.add(item));
+      raw.preferences?.forEach(([userId, preferences]) => this.preferences.set(userId, preferences));
+      raw.deliveries?.forEach(item => this.deliveries.set(item.id, item));
+      raw.scheduled?.forEach(item => this.scheduled.set(item.id, item));
+    } catch { /* first run or an incomplete local file */ }
+  }
+  private persist() {
+    if (!this.localPersistence) return;
+    try {
+      fs.mkdirSync(path.dirname(this.statePath), { recursive: true });
+      const temporary = `${this.statePath}.${process.pid}.tmp`;
+      fs.writeFileSync(temporary, JSON.stringify({
+        notifications: this.all().slice(-2000), idempotency: [...this.idempotency].slice(-5000),
+        preferences: [...this.preferences.entries()], deliveries: [...this.deliveries.values()].slice(-5000),
+        scheduled: [...this.scheduled.values()].slice(-2000),
+      }, null, 2), { mode: 0o600 });
+      fs.renameSync(temporary, this.statePath);
+    } catch { /* local diagnostics must not bring down the API */ }
+  }
 
   process(event: NotificationEvent): NotificationRecord | null {
     if (this.idempotency.has(event.idempotencyKey)) return null;
     this.idempotency.add(event.idempotencyKey);
     const record = renderNotification({ ...event, category: event.category ?? categoryFor(event.type) });
     this.notifications.set(record.id, record);
+    this.deliveries.set(`${record.id}:in_app`, { id: randomUUID(), notificationId: record.id, channel: "in_app", deviceId: null, status: "delivered", attemptCount: 1, providerMessageId: null, failureCategory: null, lastAttemptAt: record.createdAt, createdAt: record.createdAt });
+    const preferences = this.getPreferences(event.userId);
+    const categoryEnabled = record.category === "quest" ? preferences.questEnabled : record.category === "hunt" ? preferences.huntEnabled : record.category === "social" ? preferences.socialEnabled : record.category === "progress" ? preferences.progressEnabled : true;
+    for (const device of this.devicesFor(event.userId)) {
+      const suppressed = !preferences.pushEnabled || !categoryEnabled || (!event.urgent && isInQuietHours(new Date(record.createdAt), preferences));
+      this.deliveries.set(`${record.id}:${device.id}`, { id: randomUUID(), notificationId: record.id, channel: "push", deviceId: device.id, status: suppressed ? "suppressed" : "queued", attemptCount: 0, providerMessageId: null, failureCategory: suppressed ? "preference_or_quiet_hours" : null, lastAttemptAt: null, createdAt: record.createdAt });
+    }
+    this.persist();
     return record;
   }
   list(userId: string) { return [...this.notifications.values()].filter(n => n.userId === userId && !n.archivedAt).sort((a, b) => b.createdAt.localeCompare(a.createdAt)); }
   all() { return [...this.notifications.values()]; }
   unread(userId: string) { return this.list(userId).filter(n => !n.readAt).length; }
-  markRead(userId: string, id: string) { const n = this.notifications.get(id); if (n?.userId === userId) n.readAt = new Date().toISOString(); return n ?? null; }
-  markAllRead(userId: string) { this.list(userId).filter(n => !n.readAt).forEach(n => { n.readAt = new Date().toISOString(); }); }
+  markRead(userId: string, id: string) { const n = this.notifications.get(id); if (n?.userId === userId) { n.readAt = new Date().toISOString(); this.persist(); } return n ?? null; }
+  markAllRead(userId: string) { this.list(userId).filter(n => !n.readAt).forEach(n => { n.readAt = new Date().toISOString(); }); this.persist(); }
   registerDevice(input: Omit<PushDevice, "id" | "enabled" | "invalidatedAt" | "lastUsedAt">) {
     const existing = [...this.devices.values()].find(d => d.userId === input.userId && d.installationId === input.installationId);
     const device = { ...(existing ?? { id: randomUUID(), enabled: true, invalidatedAt: null, lastUsedAt: "" }), ...input, enabled: true, invalidatedAt: null, lastUsedAt: new Date().toISOString() };
-    this.devices.set(device.id, device); return device;
+    this.devices.set(device.id, device); this.persist(); return device;
   }
-  unregisterDevice(userId: string, installationId: string) { for (const device of this.devices.values()) if (device.userId === userId && device.installationId === installationId) device.enabled = false; }
+  unregisterDevice(userId: string, installationId: string) { for (const device of this.devices.values()) if (device.userId === userId && device.installationId === installationId) device.enabled = false; this.persist(); }
   getPreferences(userId: string): NotificationPreferences { return this.preferences.get(userId) ?? { pushEnabled: true, questEnabled: true, huntEnabled: true, progressEnabled: true, socialEnabled: true, quietHoursEnabled: false, quietHoursStart: "22:00", quietHoursEnd: "07:00", timezone: "UTC", showDetails: true }; }
-  setPreferences(userId: string, patch: Partial<NotificationPreferences>) { const value = { ...this.getPreferences(userId), ...patch }; this.preferences.set(userId, value); return value; }
+  setPreferences(userId: string, patch: Partial<NotificationPreferences>) { const value = { ...this.getPreferences(userId), ...patch }; this.preferences.set(userId, value); this.persist(); return value; }
   devicesFor(userId: string) { return [...this.devices.values()].filter(d => d.userId === userId && d.enabled); }
+  deliveryRecords() { return [...this.deliveries.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)); }
+  schedule(input: Omit<ScheduledNotification, "id" | "status" | "attempts" | "lastError">) {
+    const existing = [...this.scheduled.values()].find(item => item.event.idempotencyKey === input.event.idempotencyKey);
+    if (existing) return existing;
+    const job: ScheduledNotification = { ...input, id: randomUUID(), status: "scheduled", attempts: 0, lastError: null };
+    this.scheduled.set(job.id, job); this.persist(); return job;
+  }
+  due(now = new Date()) { return [...this.scheduled.values()].filter(job => job.status === "scheduled" && new Date(job.scheduledFor) <= now); }
+  runDue(now = new Date()) {
+    const results = this.due(now).map(job => {
+      job.status = "queued"; job.attempts += 1;
+      const result = this.process(job.event);
+      job.status = result ? "sent" : "sent";
+      return { job, notification: result };
+    });
+    this.persist(); return results;
+  }
 }
 
 export const notificationStore = new NotificationStore();
