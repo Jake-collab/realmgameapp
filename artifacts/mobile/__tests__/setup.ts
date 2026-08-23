@@ -5,16 +5,19 @@
  */
 
 // ─── AsyncStorage ─────────────────────────────────────────────────────────────
-jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(() => Promise.resolve(null)),
-  setItem: jest.fn(() => Promise.resolve()),
-  removeItem: jest.fn(() => Promise.resolve()),
-  clear: jest.fn(() => Promise.resolve()),
-  getAllKeys: jest.fn(() => Promise.resolve([])),
+jest.mock('@react-native-async-storage/async-storage', () => {
+  const values = new Map<string, string>();
+  return {
+  getItem: jest.fn((key: string) => Promise.resolve(values.get(key) ?? null)),
+  setItem: jest.fn((key: string, value: string) => { values.set(key, value); return Promise.resolve(); }),
+  removeItem: jest.fn((key: string) => { values.delete(key); return Promise.resolve(); }),
+  clear: jest.fn(() => { values.clear(); return Promise.resolve(); }),
+  getAllKeys: jest.fn(() => Promise.resolve([...values.keys()])),
   multiGet: jest.fn(() => Promise.resolve([])),
-  multiSet: jest.fn(() => Promise.resolve()),
-  multiRemove: jest.fn(() => Promise.resolve()),
-}));
+  multiSet: jest.fn((entries: Array<[string, string]>) => { entries.forEach(([key, value]) => values.set(key, value)); return Promise.resolve(); }),
+  multiRemove: jest.fn((keys: string[]) => { keys.forEach(key => values.delete(key)); return Promise.resolve(); }),
+  };
+});
 
 // ─── expo-splash-screen ───────────────────────────────────────────────────────
 jest.mock('expo-splash-screen', () => ({

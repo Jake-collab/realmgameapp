@@ -23,6 +23,7 @@ import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useAppStore } from '@/lib/store';
+import { getPendingQueue } from '@/features/offline/queue/mutationQueue';
 import { useProgressOverview } from '@/features/progression/hooks/useProgressOverview';
 import { useReceivedFriendRequests } from '@/features/social/hooks/useReceivedFriendRequests';
 import { useFriends } from '@/features/social/hooks/useFriends';
@@ -77,6 +78,15 @@ export default function QuestProfileScreen() {
   const colors   = useColors();
   const { user, signOut } = useAuth();
   const unreadCount = useAppStore((s) => s.unreadCount);
+  const handleSignOut = async () => {
+    if (!user?.id) { await signOut(); return; }
+    const pending = await getPendingQueue(user.id);
+    if (!pending.length) { await signOut(); return; }
+    Alert.alert('Unsynced changes', 'You have changes on this device that haven’t synced yet.', [
+      { text: 'Stay Signed In', style: 'cancel' },
+      { text: 'Sign Out Anyway', style: 'destructive', onPress: () => { void signOut(); } },
+    ]);
+  };
   const overview = useProgressOverview();
   const received = useReceivedFriendRequests();
   const friends  = useFriends();
@@ -203,10 +213,7 @@ export default function QuestProfileScreen() {
       <ProfileLink
         icon="log-out"
         label="Sign Out"
-        onPress={() => Alert.alert('Sign out?', 'You can sign back in anytime.', [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Sign Out', style: 'destructive', onPress: () => { void signOut(); } },
-        ])}
+        onPress={() => { void handleSignOut(); }}
         color={colors.destructive}
       />
 

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import * as service from './notification.service';
@@ -8,7 +9,7 @@ export function useNotifications() {
   const { user } = useAuth(); const id = user?.id ?? ''; const set = useAppStore(s => s.setUnreadCount);
   const query = useQuery({ queryKey: notificationKeys.list(id), queryFn: () => service.getMyNotifications(id), enabled: Boolean(id), staleTime: 30_000 });
   const count = useQuery({ queryKey: notificationKeys.count(id), queryFn: () => service.getUnreadCount(id), enabled: Boolean(id), staleTime: 30_000 });
-  if (count.data !== undefined) set(count.data);
+  useEffect(() => { if (count.data !== undefined) set(count.data); }, [count.data, set]);
   return { ...query, unreadCount: count.data ?? 0 };
 }
 export function useMarkNotificationRead() {

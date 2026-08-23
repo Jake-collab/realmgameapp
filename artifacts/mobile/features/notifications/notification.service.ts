@@ -1,5 +1,6 @@
 import { requireSupabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import type { AppNotification, NotificationPreferences } from './notification.types';
+import { enqueueOfflineMutation } from '@/features/offline/queue/mutationQueue';
 
 export function isInQuietHours(now: Date, preferences: Pick<NotificationPreferences, 'quietHoursEnabled' | 'quietHoursStart' | 'quietHoursEnd' | 'timezone'>) {
   if (!preferences.quietHoursEnabled) return false;
@@ -24,7 +25,10 @@ export async function getUnreadCount(userId: string) {
   return Number(data ?? 0);
 }
 export async function markAsRead(userId: string, notificationId: string) {
-  if (!isSupabaseConfigured()) return;
+  if (!isSupabaseConfigured()) {
+    await enqueueOfflineMutation({ userId, mutationType: 'notification_read', entityType: 'notification', entityId: notificationId, payload: { notificationId } });
+    return;
+  }
   const { error } = await requireSupabase().rpc('mark_notification_read', { p_notification_id: notificationId });
   if (error) throw error;
 }
@@ -40,7 +44,10 @@ export async function getNotificationPreferences(userId: string): Promise<Notifi
   return data as NotificationPreferences | null;
 }
 export async function updateNotificationPreferences(userId: string, patch: Partial<NotificationPreferences>) {
-  if (!isSupabaseConfigured()) return null;
+  if (!isSupabaseConfigured()) {
+    await enqueueOfflineMutation({ userId, mutationType: 'profile_preference_save', entityType: 'notification_preferences', entityId: userId, payload: patch as Record<string, unknown> });
+    return patch;
+  }
   const { data, error } = await requireSupabase().rpc('update_notification_preferences', { p_preferences: patch });
   if (error) throw error;
   return data;

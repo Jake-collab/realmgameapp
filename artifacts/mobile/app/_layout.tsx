@@ -38,6 +38,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { openNotificationTarget } from '@/features/notifications/deepLinks';
+import { useOfflineLifecycle } from '@/features/offline/hooks/useOfflineLifecycle';
 
 // Prevent the native splash from auto-hiding.
 // We will hide it manually once auth state is resolved.
@@ -117,6 +118,7 @@ function NavigationGuard() {
 
 function RootLayoutNav() {
   const router = useRouter();
+  useOfflineLifecycle();
 
   useEffect(() => {
     let removeListener: (() => void) | undefined;

@@ -27,7 +27,7 @@ export async function syncOfflineQueue(userId: string, executor: MutationExecuto
       const result = await executor(item);
       await updateQueueItem(userId, item.id, result.status === 'completed'
         ? { status: 'completed', errorCode: null, errorMessage: null }
-        : { status: result.status, errorCode: result.errorCode ?? 'SYNC_FAILED', errorMessage: result.message ?? null });
+        : { status: result.status === 'retryable' ? 'failed_retryable' : 'needs_attention', errorCode: result.errorCode ?? 'SYNC_FAILED', errorMessage: result.message ?? null });
       results.push({ item, result });
       const workingItem = working.find(candidate => candidate.id === item.id);
       if (workingItem) workingItem.status = result.status === 'completed' ? 'completed' : result.status === 'retryable' ? 'failed_retryable' : 'needs_attention';

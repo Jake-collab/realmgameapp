@@ -8,7 +8,10 @@ import type { ConnectivityState, OfflineQueueItem } from '../types/offline.types
 
 export function useConnectivity() {
   const [state, setState] = useState<ConnectivityState>(connectivityService.getState());
-  useEffect(() => connectivityService.subscribe(setState), []);
+  useEffect(() => {
+    const unsubscribe = connectivityService.subscribe(setState);
+    return () => { unsubscribe(); };
+  }, []);
   return { state, isOnline: state === 'online', isOffline: state === 'offline', isRecovering: state === 'recovering' };
 }
 

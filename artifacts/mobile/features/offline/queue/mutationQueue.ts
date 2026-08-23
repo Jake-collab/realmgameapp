@@ -3,6 +3,16 @@ import type { ConflictStrategy, OfflineMutationType, OfflineQueueItem, QueueStat
 
 const SAFE_MUTATIONS = new Set<OfflineMutationType>(['notification_read', 'notification_archive', 'creator_draft_save', 'profile_preference_save', 'proof_submission_intent', 'proof_media_upload']);
 const MAX_ATTEMPTS = 5;
+const queueLocks = new Map<string, Promise<unknown>>();
+
+async function withQueueLock<T>(userId: string, operation: () => Promise<T>): Promise<T> {
+  const previous = queueLocks.get(userId) ?? Promise.resolve();
+  let release!: () => void;
+  const current = new Promise<void>(resolve => { release = resolve; });
+  queueLocks.set(userId, current);
+  await previous;
+  try { return await operation(); } finally { release(); if (queueLocks.get(userId) === current) queueLocks.delete(userId); }
+}
 
 export function canQueueOffline(type: string): type is OfflineMutationType {
   return SAFE_MUTATIONS.has(type as OfflineMutationType);
@@ -16,18 +26,20 @@ export async function enqueueOfflineMutation<TPayload extends Record<string, unk
   userId: string; mutationType: OfflineMutationType; entityType: string; entityId: string; payload: TPayload;
   dependencyIds?: string[]; localAssetRefs?: string[]; conflictStrategy?: ConflictStrategy; localVersion?: string | number;
 }) {
-  const items = await offlineStorage.loadQueue(input.userId);
-  const idempotencyKey = makeIdempotencyKey(input.mutationType, input.entityId, input.localVersion);
-  const existing = items.find(item => item.idempotencyKey === idempotencyKey && !['completed', 'cancelled'].includes(item.status));
-  if (existing) return existing;
-  const item: OfflineQueueItem<TPayload> = {
-    id: `offline_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, userId: input.userId, mutationType: input.mutationType,
-    entityType: input.entityType, entityId: input.entityId, payload: input.payload, idempotencyKey,
-    createdAt: new Date().toISOString(), lastAttemptedAt: null, attemptCount: 0, status: 'pending',
-    dependencyIds: input.dependencyIds ?? [], localAssetRefs: input.localAssetRefs ?? [], conflictStrategy: input.conflictStrategy ?? 'server_wins', errorCode: null, errorMessage: null,
-  };
-  await offlineStorage.saveQueue(input.userId, [...items, item]);
-  return item;
+  return withQueueLock(input.userId, async () => {
+    const items = await offlineStorage.loadQueue(input.userId);
+    const idempotencyKey = makeIdempotencyKey(input.mutationType, input.entityId, input.localVersion);
+    const existing = items.find(item => item.idempotencyKey === idempotencyKey && !['completed', 'cancelled'].includes(item.status));
+    if (existing) return existing;
+    const item: OfflineQueueItem<TPayload> = {
+      id: `offline_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, userId: input.userId, mutationType: input.mutationType,
+      entityType: input.entityType, entityId: input.entityId, payload: input.payload, idempotencyKey,
+      createdAt: new Date().toISOString(), lastAttemptedAt: null, attemptCount: 0, status: 'pending',
+      dependencyIds: input.dependencyIds ?? [], localAssetRefs: input.localAssetRefs ?? [], conflictStrategy: input.conflictStrategy ?? 'server_wins', errorCode: null, errorMessage: null,
+    };
+    await offlineStorage.saveQueue(input.userId, [...items, item]);
+    return item;
+  });
 }
 
 export async function updateQueueItem(userId: string, id: string, patch: Partial<OfflineQueueItem>) {

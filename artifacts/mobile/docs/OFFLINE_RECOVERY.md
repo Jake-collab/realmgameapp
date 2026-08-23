@@ -1,0 +1,3 @@
+# Offline Recovery
+
+Queue and metadata survive app termination and restart. Foreground recovery resumes safe work, auth expiration pauses it, account mismatch prevents processing, and finalized entities resolve as no longer needed while preserving local evidence for recovery.
