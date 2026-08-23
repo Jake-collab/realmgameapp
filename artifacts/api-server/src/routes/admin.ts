@@ -14,8 +14,11 @@ import {
 import { getRolePermissions, requireAdmin, resolveAdminPrincipal } from "../lib/admin-auth";
 import {
   createPromptVersion,
+  changePromptState,
   generateQuest,
+  getGenerationPlan,
   listPromptVersions,
+  listGenerationHistory,
   questGenerationTypes,
   validatePromptVariables,
   aiConfiguration,
@@ -193,6 +196,22 @@ router.post("/admin/ai/prompts/:type/versions", requireAdmin("ai.prompts.edit"),
   });
 });
 
+router.post("/admin/ai/prompts/:type/versions/:version/:action", requireAdmin("ai.prompts.edit"), (req, res) => {
+  const type = req.params.type as QuestGenerationType;
+  const version = Number(req.params.version);
+  const action = req.params.action as "activate" | "deactivate" | "restore";
+  if (!questGenerationTypes.includes(type) || !Number.isInteger(version) || !["activate", "deactivate", "restore"].includes(action)) {
+    res.status(400).json({ error: "Unknown prompt lifecycle operation." });
+    return;
+  }
+  const updated = changePromptState(type, version, action, req.adminPrincipal?.userId ?? "staff");
+  if (!updated) {
+    res.status(404).json({ error: "Prompt version not found." });
+    return;
+  }
+  res.json({ prompt: updated, action });
+});
+
 router.post("/admin/ai/prompts/:type/preview", requireAdmin("ai.prompts.read"), (req, res) => {
   const input = z.object({ template: z.string(), variables: z.record(z.string(), z.string()) }).safeParse(req.body);
   if (!input.success) {
@@ -213,30 +232,33 @@ router.post("/admin/ai/generate", requireAdmin("ai.generate"), async (req, res) 
     res.status(400).json({ error: "Generation type and valid variables are required." });
     return;
   }
+  const plan = getGenerationPlan(input.data.type, input.data.quantity, input.data.variables);
+  const requestedBy = req.adminPrincipal?.userId ?? "staff";
   const results = await Promise.all(
-    Array.from({ length: input.data.quantity }, () => generateQuest(input.data.type, input.data.variables)),
+    Array.from({ length: input.data.quantity }, () => generateQuest(input.data.type, input.data.variables, requestedBy)),
   );
   res.json({
     mode: input.data.testOnly ? "TEST_GENERATION — NOT SAVED" : "DRAFT_CANDIDATES — REVIEW REQUIRED",
     results,
+    plan,
     saved: false,
   });
 });
 
 router.get("/admin/ai/history", requireAdmin("ai.read"), (_req, res) => {
-  res.json({ items: [], note: "Generation history will populate after provider-backed requests are enabled." });
+  res.json({ items: listGenerationHistory(), persistence: "local-development-only" });
 });
 
 router.get("/admin/ai/settings", requireAdmin("ai.settings.read"), (_req, res) => {
   res.json({
     provider: aiConfiguration(),
     settings: {
-      generationEnabled: Boolean(process.env.AI_API_KEY),
+       generationEnabled: aiConfiguration().configured,
       automatedGenerationEnabled: false,
       outputTokenLimit: Number(process.env.AI_MAX_OUTPUT_TOKENS ?? 2000),
       temperature: Number(process.env.AI_TEMPERATURE ?? 0.4),
       requestTimeoutMs: Number(process.env.AI_REQUEST_TIMEOUT_MS ?? 15000),
-      maxRetries: 0,
+       maxRetries: Math.min(3, Math.max(0, Number(process.env.AI_MAX_RETRIES ?? 1))),
       dailyRequestLimit: 100,
       monthlyRequestLimit: 1000,
     },
