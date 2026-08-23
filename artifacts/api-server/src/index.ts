@@ -1,7 +1,10 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { validateModerationConfiguration } from "./lib/moderation";
 
 const rawPort = process.env["PORT"];
+
+validateModerationConfiguration();
 
 if (!rawPort) {
   throw new Error(

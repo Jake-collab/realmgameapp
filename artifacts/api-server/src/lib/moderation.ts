@@ -38,6 +38,20 @@ export interface ModerationProvider {
 
 export const MODERATION_POLICY_VERSION = "worlds-moderation-1";
 
+export function validateModerationConfiguration() {
+  const automationEnabled = process.env.MODERATION_AUTOMATION_ENABLED === "true";
+  if (process.env.NODE_ENV === "production" && process.env.MODERATION_STUB_DECISION) {
+    throw new Error("MODERATION_STUB_DECISION is not allowed in production.");
+  }
+  if (process.env.NODE_ENV === "production" && automationEnabled && !process.env.MODERATION_API_KEY) {
+    throw new Error("Moderation automation is enabled but MODERATION_API_KEY is missing.");
+  }
+  const mode = process.env.MODERATION_AUTO_APPROVAL_MODE ?? "manual_only";
+  if (!["manual_only", "low_risk", "mixed"].includes(mode)) {
+    throw new Error(`Unsupported MODERATION_AUTO_APPROVAL_MODE: "${mode}".`);
+  }
+}
+
 function contentHash(value: string) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -64,17 +78,25 @@ function decisionFromCategories(categories: Array<{ category: ModerationCategory
 
 function normalizeProviderPayload(payload: unknown, hash: string): ModerationResult {
   const record = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
+  const firstResult = Array.isArray(record.results) && record.results[0] && typeof record.results[0] === "object"
+    ? record.results[0] as Record<string, unknown>
+    : undefined;
   const rawCategories = Array.isArray(record.categories)
     ? record.categories
     : Array.isArray(record.results)
       ? Object.entries(
-          record.results[0] && typeof record.results[0] === "object"
-            ? ((record.results[0] as Record<string, unknown>).category_scores ?? {})
+          firstResult
+            ? (firstResult.category_scores ?? {})
             : {},
         ).map(([category, score]) => ({ category, score }))
       : [];
+  let unmappedCategory = false;
   const categories = rawCategories.flatMap((item) => {
     if (typeof item === "string" && moderationCategories.includes(item as ModerationCategory)) return [{ category: item as ModerationCategory, matched: true }];
+    if (typeof item === "string") {
+      unmappedCategory = true;
+      return [];
+    }
     if (!item || typeof item !== "object") return [];
     const value = item as Record<string, unknown>;
     const rawCategory = String(value.category ?? "");
@@ -87,12 +109,19 @@ function normalizeProviderPayload(payload: unknown, hash: string): ModerationRes
       illicit: "illegal_activity",
       "illicit/violent": "illegal_activity",
     };
-    const category = categoryAliases[rawCategory] ?? rawCategory;
+    const category = categoryAliases[rawCategory]
+      ?? (rawCategory.startsWith("sexual") ? "sexual_content" : undefined)
+      ?? (rawCategory.startsWith("violence") ? "graphic_violence" : undefined)
+      ?? (rawCategory.startsWith("self-harm") ? "self_harm" : undefined)
+      ?? (rawCategory.startsWith("hate") || rawCategory.startsWith("harassment") ? "hate_or_harassment" : undefined)
+      ?? rawCategory;
+    if (!moderationCategories.includes(category as ModerationCategory)) unmappedCategory = true;
     return moderationCategories.includes(category as ModerationCategory)
       ? [{ category: category as ModerationCategory, score: typeof value.score === "number" ? value.score : undefined, matched: Boolean(value.matched ?? (typeof value.score === "number" ? value.score >= 0.5 : true)) }]
       : [];
   });
-  if (!Array.isArray(record.categories) && !Array.isArray(record.results)) return unavailableResult(hash);
+  if ((!Array.isArray(record.categories) && !Array.isArray(record.results)) || unmappedCategory) return unavailableResult(hash);
+  if (firstResult?.flagged === true && categories.length === 0) categories.push({ category: "other", matched: true });
   const decision = decisionFromCategories(categories);
   return {
     decision,
@@ -168,7 +197,7 @@ export function applyModerationPolicy(result: ModerationResult, context: Moderat
   const highRisk = result.decision === "blocked" || result.decision === "manual_review" || result.decision === "warning" || reported || options?.priorSevereAbuse;
   if (result.decision === "blocked") return { action: context === "private_proof" ? "quarantine" : "reject", result: { ...result, reviewRequired: true }, reason: "Blocked safety category requires review before use.", publicSafe: false };
   if (highRisk || !options?.accountInGoodStanding) return { action: "manual_review", result: { ...result, reviewRequired: true }, reason: "Content requires human moderation.", publicSafe: false };
-  const autoApprove = process.env.MODERATION_AUTO_APPROVAL_MODE === "low_risk" && context !== "private_proof";
+  const autoApprove = ["low_risk", "mixed"].includes(process.env.MODERATION_AUTO_APPROVAL_MODE ?? "") && context !== "private_proof";
   return { action: autoApprove ? "allow" : "manual_review", result, reason: autoApprove ? "Low-risk content passed the configured policy." : "Manual-only moderation mode is active.", publicSafe: autoApprove };
 }
 
