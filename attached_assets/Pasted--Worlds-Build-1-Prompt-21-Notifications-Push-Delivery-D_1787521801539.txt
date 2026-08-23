@@ -1,0 +1,2397 @@
+# Worlds — Build 1, Prompt 21
+
+## Notifications, Push Delivery, Deep Links, Reminders, and Engagement Infrastructure
+
+Continue from the existing **Worlds** project.
+
+Treat Prompts 1–20, the current codebase, database schema, and all project documentation as authoritative.
+
+Do not rebuild working systems unnecessarily.
+
+The application is:
+
+**Worlds**
+
+It currently contains two game modes only:
+
+* **Quest**
+* **Hunt**
+
+Do not implement:
+
+* Game Zones
+* Outbreak
+
+This prompt implements the production-ready notification and engagement infrastructure shared by Quest and Hunt.
+
+---
+
+# 1. Objective
+
+Implement the complete notification system required for the existing Worlds gameplay.
+
+This includes:
+
+1. In-app notifications
+2. Push notification infrastructure
+3. Device push-token registration
+4. Notification permission UX
+5. Notification preferences
+6. Notification event generation
+7. Scheduled notifications
+8. Deep linking
+9. Quest reminders
+10. Daily Quest notifications
+11. Monthly Quest Drop notifications
+12. Geo-Quest notifications
+13. Quest proof-result notifications
+14. Quest point-award notifications
+15. Hunt notifications
+16. Custom Hunt invitations
+17. Custom Hunt lifecycle notifications
+18. Hunt collection notifications
+19. Progress/achievement notifications
+20. Friend/social notifications already supported by the project
+21. Moderation notifications
+22. Security/account notifications
+23. Admin notification controls
+24. Delivery tracking
+25. Retry behavior
+26. Idempotency
+27. Quiet hours
+28. Time-zone handling
+29. Notification batching
+30. Rate limiting
+31. Notification diagnostics
+32. Privacy/security
+33. Tests
+
+Do not redesign the consumer application.
+
+---
+
+# 2. Core Architecture
+
+Notifications must use one canonical notification pipeline.
+
+Use architecture conceptually equivalent to:
+
+```text
+Domain Event
+    ↓
+Notification Policy
+    ↓
+Notification Record
+    ↓
+Delivery Queue
+    ↓
+In-App Delivery
+    +
+Push Delivery
+    ↓
+Delivery Status
+```
+
+Do not scatter direct push-provider calls throughout Quest/Hunt code.
+
+Gameplay services should emit trusted events.
+
+The notification layer determines delivery.
+
+---
+
+# 3. Notification Is Not the Source of Truth
+
+Never use notification delivery as authoritative gameplay state.
+
+Example:
+
+If a Quest proof is approved:
+
+1. Trusted completion transaction occurs.
+2. Points are awarded.
+3. Domain event is created.
+4. Notification is generated.
+
+Do NOT:
+
+1. Send notification.
+2. Assume notification means completion succeeded.
+
+The database remains authoritative.
+
+---
+
+# 4. Notification Provider Abstraction
+
+Create a push provider abstraction.
+
+Example:
+
+```ts
+interface PushNotificationProvider {
+  send(...)
+  sendBatch(...)
+  validateToken(...)
+  healthCheck(...)
+}
+```
+
+Support the current Expo/React Native architecture.
+
+If Expo Push Notifications is appropriate for the existing project, integrate it behind the abstraction.
+
+Do not tightly couple all domain code to Expo.
+
+Future native APNs/FCM migration should be possible.
+
+---
+
+# 5. Server-Side Delivery
+
+Push notifications must be initiated by trusted backend infrastructure.
+
+Do not allow clients to send arbitrary push notifications to other users.
+
+Architecture:
+
+```text
+Trusted Event
+   ↓
+Notification Worker
+   ↓
+Push Provider
+   ↓
+Registered Device
+```
+
+Client may register its own push token.
+
+Client may not select arbitrary recipients and message payloads.
+
+---
+
+# 6. Push Token Registration
+
+Create/verify a device registration model.
+
+Store:
+
+* User ID
+* Device installation ID
+* Push token
+* Platform
+* App version
+* Device metadata only where operationally necessary
+* Created at
+* Updated at
+* Last used at
+* Enabled
+* Invalidated at
+
+One user may have multiple devices.
+
+One device token must not remain incorrectly attached to an old account after logout/account switching.
+
+---
+
+# 7. Token Lifecycle
+
+Implement:
+
+## Login
+
+Register/associate current installation.
+
+## Token refresh
+
+Update token.
+
+## Logout
+
+Detach or disable association safely.
+
+## Invalid token
+
+Disable after provider reports permanent invalidation.
+
+## Reinstall
+
+Allow new installation/token.
+
+Do not continuously create duplicate device rows.
+
+---
+
+# 8. Push Permission UX
+
+Do not request notification permission immediately on first app launch without context.
+
+Use a contextual permission flow.
+
+Recommended timing:
+
+* After onboarding
+* Or after the user has seen why Worlds notifications are useful
+
+Explain briefly:
+
+**Stay updated on Daily Quests, Hunt invitations, proof results, and game progress.**
+
+Buttons:
+
+* Enable Notifications
+* Not Now
+
+Then trigger OS permission only after Enable Notifications.
+
+Do not repeatedly nag users who decline.
+
+---
+
+# 9. Permission State
+
+Track local/device permission state.
+
+Possible:
+
+* Not Asked
+* Granted
+* Denied
+* Provisional where supported
+
+If denied:
+
+Settings screen should explain that OS notifications are disabled and provide an **Open Settings** action where supported.
+
+Do not pretend app-level toggle can override OS permission.
+
+---
+
+# 10. In-App Notifications
+
+Create or finalize the in-app notification center.
+
+Notifications should exist independently of push delivery.
+
+A user who disables push can still receive relevant in-app notifications.
+
+Store:
+
+* Notification ID
+* User ID
+* Type
+* Title
+* Body
+* Target/deep link
+* Created at
+* Read at
+* Archived/dismissed state where appropriate
+* Domain event reference
+* Metadata
+
+Do not store sensitive internal moderation information.
+
+---
+
+# 11. Notification Center UI
+
+Use the existing Profile/shared account area rather than adding another bottom navigation tab.
+
+Add a notification bell in an appropriate shared top-level location if not already present.
+
+Notification Center should be simple:
+
+**Notifications**
+
+Grouped approximately by:
+
+* Today
+* Earlier
+
+Each row:
+
+* Icon/type indicator
+* Short title
+* Short body
+* Timestamp
+* Unread state
+
+Tap opens the relevant destination.
+
+Do not create a complicated social-feed UI.
+
+---
+
+# 12. Unread Badge
+
+Display unread count/badge where appropriate.
+
+Requirements:
+
+* Server-derived unread state
+* Updates after notification read
+* Caps visual count if huge, such as `99+`
+* Does not require opening every notification individually
+
+Support:
+
+**Mark All as Read**
+
+---
+
+# 13. Deep-Link Architecture
+
+Every actionable notification should use a typed internal destination.
+
+Do not store arbitrary executable URLs.
+
+Create safe routes such as:
+
+```text
+worlds://quest/{questId}
+worlds://hunt/{huntId}
+worlds://custom-hunt/{huntId}
+worlds://submission/{submissionId}
+worlds://progress
+worlds://profile
+worlds://notifications
+```
+
+Adapt to existing Expo Router architecture.
+
+Validate target IDs before navigation.
+
+---
+
+# 14. Push Tap Behavior
+
+When user taps push:
+
+1. Open Worlds.
+2. Resolve authenticated state.
+3. Resolve notification target.
+4. Verify user can access target.
+5. Navigate to correct screen.
+
+If target no longer exists:
+
+Show safe fallback rather than broken route.
+
+Example:
+
+**This activity is no longer available.**
+
+---
+
+# 15. Logged-Out Deep Links
+
+If push is tapped while logged out:
+
+1. Preserve safe intended destination locally.
+2. Show login.
+3. After successful authentication, revalidate destination.
+4. Navigate if authorized.
+
+Do not bypass authentication.
+
+---
+
+# 16. Quest Notification Types
+
+Implement appropriate Quest events:
+
+* Daily Quest Available
+* Daily Quest Reminder
+* Monthly Quest Drop Available
+* Monthly Quest Drop Reminder where appropriate
+* Geo-Quest Nearby/Available only under privacy-safe rules
+* Quest Started
+* Active Quest Reminder
+* Quest Expiring
+* Proof Submitted
+* Proof Approved
+* Proof Needs Resubmission
+* Proof Rejected
+* Quest Completed
+* Points Awarded
+* Quarantined Points/Under Review where necessary
+* Quest changed/cancelled if active users are affected
+
+Avoid sending redundant notifications for the same underlying event.
+
+---
+
+# 17. Daily Quest Notification
+
+When a user's stable Daily Quest assignment becomes available:
+
+Potential notification:
+
+**Your Daily Quest is ready**
+
+Body should be generated from safe stored content, not a live AI request.
+
+Tap:
+
+→ Daily Quest detail.
+
+Do not call the AI API during notification delivery.
+
+---
+
+# 18. Daily Quest Timing
+
+Daily notification timing must respect:
+
+* User timezone
+* Notification preference
+* Quiet hours
+* Assignment availability
+
+Provide a configurable default time.
+
+Allow users to select a preferred Daily Quest reminder time if appropriate.
+
+Do not assume every user is in server timezone.
+
+---
+
+# 19. Daily Quest Reroll
+
+Do not send another push every time user rerolls unless specifically useful.
+
+The app updates assignment normally.
+
+Do not spam:
+
+* Original Daily notification
+* Reroll 1 notification
+* Reroll 2 notification
+
+Rerolls are user-initiated.
+
+---
+
+# 20. Daily Quest Streak/Progress Notifications
+
+If the current progression system includes streaks, support tasteful reminders.
+
+Example:
+
+**Your Daily Quest is still waiting**
+
+Do not create manipulative repeated notifications.
+
+At most use configurable reminder behavior.
+
+Users must be able to disable reminder notifications.
+
+---
+
+# 21. Monthly Quest Drop Notification
+
+When a Monthly Quest Drop becomes active:
+
+**The new Monthly Quest Drop is live**
+
+Tap:
+
+→ Quest tab → Monthly Quest Drop section.
+
+Do not deep-link to a nonexistent separate Monthly bottom tab.
+
+The approved Quest navigation remains:
+
+* Home
+* Quests
+* Map
+* Progress
+* Profile
+
+---
+
+# 22. Monthly Drop Timing
+
+Monthly notification should be generated from authoritative activation.
+
+Do not rely solely on a client checking that the date became the first of the month.
+
+Server/job should activate the set.
+
+Activation emits event.
+
+Event creates notifications.
+
+---
+
+# 23. Monthly Quest Completion Notifications
+
+Avoid notifying after every tiny action if the UI already confirms it.
+
+Use notifications for meaningful asynchronous events.
+
+Examples:
+
+* Proof later approved
+* Major milestone
+* Monthly set completed
+
+Do not push when user is actively seeing an immediate local success unless notification provides value.
+
+---
+
+# 24. Geo-Quest Notifications
+
+Geo-Quest notifications require privacy-safe handling.
+
+Do NOT continuously track background location merely to send Geo-Quest alerts.
+
+Possible triggers:
+
+* User opens Map and location is available
+* User explicitly opts into future location functionality where supported
+* General area preference
+* User-selected location/region
+
+For Build 1:
+
+Do not add continuous background location tracking.
+
+Geo-Quest discovery should primarily happen through Mapbox map gameplay.
+
+---
+
+# 25. Geo-Quest Nearby Push
+
+Do not implement background "you are standing next to a Quest" push unless background-location permission and privacy architecture are intentionally added later.
+
+For Build 1, use:
+
+* Map discovery
+* In-app indicators
+* Optional general-area notifications if based on non-continuous data
+
+Do not collect new location history for notifications.
+
+---
+
+# 26. Quest Start Confirmation
+
+When player presses:
+
+**Start Quest**
+
+the app should immediately update UI.
+
+A push notification is generally unnecessary.
+
+Create in-app notification only if current product behavior benefits.
+
+Do not send noisy confirmation pushes for synchronous actions.
+
+---
+
+# 27. Active Quest Reminder
+
+Support optional reminder for In Action Quests.
+
+Examples:
+
+* Quest has been active for configured period
+* Quest expires soon
+* User explicitly chooses Remind Me
+
+Reminder deep-links to Quest detail.
+
+Do not repeatedly remind indefinitely.
+
+---
+
+# 28. Quest Expiration
+
+If Quests can expire:
+
+Potential reminders:
+
+* Expiring Soon
+* Expired
+
+Do not send expiration reminder if Quest already completed/abandoned.
+
+Always check authoritative state immediately before enqueue/send.
+
+---
+
+# 29. Proof Submitted
+
+Proof submission itself is synchronous.
+
+The UI should immediately show:
+
+**Submitted / Under Review**
+
+Push notification is generally unnecessary.
+
+In-app history may contain the event if current architecture does so.
+
+Avoid redundant push.
+
+---
+
+# 30. Proof Approved
+
+When asynchronous review approves proof:
+
+Send:
+
+**Quest approved**
+
+Include:
+
+* Quest title
+* Points awarded if appropriate
+
+Tap:
+
+→ Quest result or Progress.
+
+Use actual committed point award.
+
+Never construct point amount from client request.
+
+---
+
+# 31. Proof Needs Resubmission
+
+Send:
+
+**Your Quest proof needs an update**
+
+Body:
+
+Use safe user-facing moderator reason.
+
+Tap:
+
+→ Quest proof/resubmission flow.
+
+Do not expose:
+
+* Internal moderator notes
+* Moderation provider scores
+* Anti-cheat signals
+
+---
+
+# 32. Proof Rejected
+
+Send concise user-facing result.
+
+Do not accuse cheating unless an authorized enforcement decision explicitly established it.
+
+Use existing safe reason fields.
+
+---
+
+# 33. Quarantined Points
+
+If points are placed under integrity review:
+
+Potential notification:
+
+**Your Quest points are under review**
+
+Do not expose risk score.
+
+Do not say:
+
+* VPN detected
+* Mock GPS detected
+* Speed threshold exceeded
+
+unless platform policy specifically makes that user-facing.
+
+---
+
+# 34. Quarantine Resolution
+
+If released:
+
+**Your points are now available**
+
+If reversed:
+
+Use the authorized user-facing enforcement reason.
+
+Tap:
+
+→ relevant Progress/activity detail.
+
+---
+
+# 35. Hunt Notification Types
+
+Implement:
+
+* Custom Hunt Invitation
+* Invitation Accepted where host needs it
+* Custom Hunt Starting Soon
+* Custom Hunt Started
+* Hunt Updated
+* Hunt Paused
+* Hunt Resumed
+* Hunt Cancelled
+* Hunt Ending Soon
+* Hunt Completed
+* Drop/stop collection milestones where useful
+* Riddle state only where asynchronous
+* Custom Hunt result/scoreboard available
+
+Do not create noisy notifications for every map movement.
+
+---
+
+# 36. Custom Hunt Invitation
+
+When invited:
+
+**You've been invited to a Hunt**
+
+Include:
+
+* Hunt name
+* Host display name if allowed
+
+Tap:
+
+→ Custom Hunt invitation/lobby.
+
+Actions may include:
+
+* View Hunt
+
+Do not accept invitations automatically from notification tap.
+
+---
+
+# 37. Invitation Idempotency
+
+One invitation should produce one primary invitation notification.
+
+If invitation record already exists:
+
+Do not create duplicate push from retries.
+
+Use invitation ID as event/idempotency reference.
+
+---
+
+# 38. Host Invitation Feedback
+
+When player accepts/declines:
+
+Notify host only if product settings call for it.
+
+Prefer aggregation for many responses.
+
+Example:
+
+**3 players joined your Hunt**
+
+rather than 3–20 individual pushes when invitations are large.
+
+---
+
+# 39. Hunt Starting Soon
+
+For scheduled Custom Hunts:
+
+Allow reminders such as:
+
+* 1 hour before
+* 10 minutes before
+
+Use configurable values.
+
+Respect:
+
+* Quiet hours where appropriate
+* Hunt status
+* User participation status
+
+Do not send if Hunt was cancelled.
+
+---
+
+# 40. Hunt Started
+
+When authoritative Hunt status becomes Active:
+
+**Your Hunt has started**
+
+Tap:
+
+→ Hunt Map.
+
+Do not activate Hunt from notification worker.
+
+The Hunt lifecycle transition occurs first.
+
+---
+
+# 41. Hunt Pause
+
+If host/admin pauses an active Hunt:
+
+Notify active participants.
+
+**This Hunt has been paused**
+
+Tap:
+
+→ Hunt detail/status.
+
+Do not leave map UI appearing active after server pause.
+
+Ensure relevant query invalidation already occurs.
+
+---
+
+# 42. Hunt Resume
+
+When resumed:
+
+Notify affected active participants where useful.
+
+Do not notify users who left/declined.
+
+---
+
+# 43. Hunt Cancellation
+
+Cancellation notification should clearly communicate:
+
+* Hunt cancelled
+* No further gameplay required
+
+Do not delete history.
+
+Tap:
+
+→ Hunt summary if retained.
+
+---
+
+# 44. Hunt Changes
+
+For versioned Hunt changes:
+
+Only notify participants when changes materially affect active gameplay.
+
+Examples:
+
+* Start time changed
+* Hunt paused
+* Hunt cancelled
+* Active clue corrected
+
+Do not push every cosmetic title/description edit.
+
+---
+
+# 45. Hunt Collection
+
+Collecting a drop is synchronous.
+
+Do not send a push for every successful collection while the user is actively in Hunt.
+
+Use immediate UI feedback.
+
+Potential in-app milestone:
+
+**5 / 10 found**
+
+Do not create notification spam.
+
+---
+
+# 46. Hunt Completion
+
+When Hunt is completed:
+
+Show immediate UI result.
+
+Use in-app notification/history if desired.
+
+Push is useful only if completion/result is finalized asynchronously.
+
+If scoreboard is calculated later:
+
+**Hunt results are ready**
+
+Tap:
+
+→ Hunt Progress/scoreboard.
+
+---
+
+# 47. Riddle Notifications
+
+Do not notify for:
+
+* Wrong guess
+* Every attempt
+* Ordinary clue interaction
+
+If a host/admin updates a broken riddle in an active Hunt, affected participants may receive an update.
+
+Do not leak answers in notification payload.
+
+---
+
+# 48. Progress Notifications
+
+Support meaningful progress events:
+
+* Achievement unlocked
+* Level/tier increased
+* Major Quest milestone
+* Major Hunt milestone
+
+Do not push every point increase.
+
+In-app celebration can handle immediate gameplay.
+
+---
+
+# 49. Achievement Notification
+
+When achievement is committed:
+
+**Achievement unlocked**
+
+Include achievement name.
+
+Tap:
+
+→ Progress.
+
+Ensure achievement transaction is idempotent before notification event.
+
+---
+
+# 50. Leaderboard Notifications
+
+Avoid excessive leaderboard notifications.
+
+Possible opt-in events:
+
+* Entered Top 10
+* Reached #1
+* End-of-period result
+
+Do not notify every rank movement.
+
+Do not use quarantined points.
+
+---
+
+# 51. Friend/Social Notifications
+
+If social/friends system exists from previous prompts, support:
+
+* Friend request
+* Friend request accepted
+* Relevant Hunt invitation
+
+Do not invent:
+
+* DMs
+* Chat
+* Social feed
+
+if not part of Build 1.
+
+---
+
+# 52. Moderation Notifications
+
+Use Prompt 20 user-facing decisions.
+
+Examples:
+
+* Public Hunt approved
+* Public Hunt needs changes
+* Image needs replacement
+* Content removed
+* Report acknowledgment where appropriate
+* Proof under review
+* Enforcement outcome
+
+Never expose:
+
+* Provider score
+* Internal category confidence
+* Reporter identity
+* Moderator private notes
+* Anti-cheat thresholds
+
+---
+
+# 53. AI Quest Notifications
+
+AI generation is an Admin authoring process.
+
+Do not tell consumers:
+
+**AI generated a Quest**
+
+unless future product policy requires it.
+
+Approved Quest notifications behave like normal Quest notifications.
+
+---
+
+# 54. Account/Security Notifications
+
+Support important events such as:
+
+* Email changed
+* Password changed/reset where relevant
+* New sign-in where architecture supports reliable detection
+* Account restriction
+* Account restored
+
+Security notifications may ignore ordinary marketing/engagement preferences where legally/operationally appropriate.
+
+Document distinction.
+
+---
+
+# 55. Notification Categories
+
+Create canonical categories:
+
+```text
+quest
+hunt
+social
+progress
+moderation
+account
+system
+```
+
+And subtypes.
+
+Do not use arbitrary strings scattered throughout code.
+
+---
+
+# 56. Notification Preferences
+
+Add to Profile → Settings → Notifications.
+
+Keep UI simple.
+
+Suggested toggles:
+
+**Push Notifications**
+
+Master toggle where OS permission permits.
+
+Then:
+
+**Quests**
+
+* Daily Quest
+* Quest Reminders
+* Monthly Drops
+* Quest Results
+
+**Hunts**
+
+* Invitations
+* Hunt Reminders
+* Hunt Updates
+
+**Progress**
+
+* Achievements
+* Leaderboard Milestones
+
+**Social**
+
+* Friend Activity
+
+**Other**
+
+* Product Updates if applicable
+
+Account/security notifications should be treated separately.
+
+Do not create dozens of micro-toggles.
+
+---
+
+# 57. In-App vs Push Preferences
+
+Preferences should distinguish where necessary:
+
+* In-app notification record
+* Push delivery
+
+Core transactional history may still appear in-app even when push disabled.
+
+Example:
+
+Proof approval should remain visible in app.
+
+Do not erase important account history merely because push is off.
+
+---
+
+# 58. Quiet Hours
+
+Allow optional quiet hours.
+
+Settings:
+
+* Enabled
+* Start time
+* End time
+
+Use user's timezone.
+
+During quiet hours:
+
+* Delay non-urgent engagement notifications
+* Deliver later
+
+Do not necessarily delay critical account/security notifications.
+
+Document policy.
+
+---
+
+# 59. Quiet Hours Across Midnight
+
+Correctly handle:
+
+```text
+10:00 PM → 7:00 AM
+```
+
+Do not assume start < end on same calendar day.
+
+Add tests.
+
+---
+
+# 60. Time Zone
+
+Store user notification timezone separately or derive/update safely.
+
+Use IANA timezone identifiers.
+
+Examples:
+
+```text
+America/New_York
+America/Chicago
+Europe/London
+```
+
+Do not store only UTC offset because DST changes.
+
+---
+
+# 61. Time-Zone Changes
+
+If user travels or device timezone changes:
+
+Update preference with user/device consent/normal app behavior.
+
+Do not reinterpret already-sent notifications.
+
+Future scheduled notifications should use updated timezone.
+
+---
+
+# 62. Daily Reminder Time
+
+Allow configurable Daily Quest reminder time if product settings support it.
+
+Example default:
+
+**9:00 AM local time**
+
+But do not hardcode if existing project settings specify otherwise.
+
+Admin may define platform default.
+
+User override wins.
+
+---
+
+# 63. Notification Scheduling
+
+Use server-side scheduling.
+
+Do not rely on the app remaining open.
+
+Scheduled notification record should contain:
+
+* Notification type
+* User
+* Domain entity
+* Scheduled time
+* Timezone
+* Status
+* Idempotency key
+
+Worker processes due notifications.
+
+---
+
+# 64. Scheduled Notification Revalidation
+
+Immediately before delivery:
+
+Revalidate domain state.
+
+Examples:
+
+Daily reminder:
+
+* Is Daily Quest still incomplete?
+
+Quest expiration:
+
+* Is Quest still active?
+
+Hunt starting soon:
+
+* Is Hunt still scheduled?
+* Is user still participant?
+
+Do not send stale reminders.
+
+---
+
+# 65. Notification Job Status
+
+Statuses:
+
+* Scheduled
+* Queued
+* Sending
+* Sent
+* Delivered if provider supports it
+* Failed
+* Cancelled
+* Suppressed
+
+Do not treat provider acceptance as guaranteed device display.
+
+---
+
+# 66. Delivery Receipts
+
+If provider supports receipts:
+
+Process them.
+
+Track:
+
+* Accepted
+* Delivered/receipt success where available
+* Invalid token
+* Temporary failure
+* Permanent failure
+
+Disable permanently invalid tokens.
+
+Do not retry them indefinitely.
+
+---
+
+# 67. Retry Strategy
+
+Temporary provider errors:
+
+* Retry with capped exponential backoff.
+
+Permanent errors:
+
+* Do not retry.
+
+Use max retry count.
+
+Do not create duplicate in-app notification records during push retry.
+
+---
+
+# 68. Idempotency
+
+Every logical notification event needs stable idempotency.
+
+Examples:
+
+```text
+daily_assignment:{assignmentId}
+proof_approved:{submissionId}
+hunt_invitation:{invitationId}
+hunt_started:{huntOccurrenceId}:{userId}
+achievement:{achievementAwardId}
+```
+
+Repeated backend events must not create duplicate notification spam.
+
+---
+
+# 69. Event Outbox
+
+Use the existing transactional outbox/job architecture where available.
+
+Preferred:
+
+```text
+Gameplay transaction
+    ↓
+Domain event/outbox written in same trusted transaction
+    ↓
+Worker
+    ↓
+Notification
+```
+
+This prevents gameplay success with lost notification event.
+
+Do not call push provider inside critical point-award transaction.
+
+---
+
+# 70. Notification Fan-Out
+
+Large events such as Monthly Drop release may target many users.
+
+Do not insert/send everything in one blocking request.
+
+Use batched fan-out jobs.
+
+Track progress.
+
+Make retry idempotent.
+
+---
+
+# 71. Fan-Out Segmentation
+
+Filter recipients by:
+
+* Active account
+* Notification preferences
+* Eligibility
+* Game participation
+* Interest where appropriate
+
+Do not send a Custom Hunt update to every Worlds user.
+
+---
+
+# 72. Monthly Drop Fan-Out
+
+Monthly Drop activation may create notifications for eligible Quest users.
+
+Batch recipient generation.
+
+Do not send to:
+
+* Deleted accounts
+* Disabled notification channels
+* Ineligible accounts
+
+Respect user preference.
+
+---
+
+# 73. Rate Limiting
+
+Prevent notification spam.
+
+Implement per-user limits for non-critical push.
+
+Examples:
+
+* Max engagement pushes/day
+* Duplicate subtype cooldown
+* Reminder cooldown
+
+Do not suppress critical security/account messages through ordinary engagement rate limits.
+
+---
+
+# 74. Notification Deduplication Window
+
+Even different event IDs may produce redundant content.
+
+Example:
+
+Quest Approved + Points Awarded could create two pushes seconds apart.
+
+Policy should allow combining:
+
+**Quest approved — you earned 300 points**
+
+rather than two separate pushes.
+
+Do not over-notify.
+
+---
+
+# 75. Notification Batching
+
+Where appropriate, combine events.
+
+Examples:
+
+**3 new Hunt invitations**
+
+**You unlocked 2 achievements**
+
+Do not batch urgent Hunt cancellation with unrelated achievement.
+
+---
+
+# 76. Foreground Behavior
+
+If Worlds is open and user is actively viewing the affected screen:
+
+Prefer:
+
+* UI state update
+* Toast/banner if helpful
+
+rather than displaying redundant OS push banner.
+
+Push provider configuration should respect foreground behavior.
+
+Do not suppress authoritative in-app notification record solely because app is open.
+
+---
+
+# 77. Local Toasts
+
+Use lightweight in-app feedback for synchronous actions:
+
+* Quest started
+* Drop collected
+* Riddle incorrect
+* Proof uploaded
+
+These are not server push notifications.
+
+Do not pollute Notification Center with every toast.
+
+---
+
+# 78. Notification Copy
+
+Centralize user-facing notification copy.
+
+Do not create inconsistent strings across functions.
+
+Use templates.
+
+Example:
+
+```text
+DAILY_QUEST_READY
+HUNT_INVITATION
+PROOF_APPROVED
+HUNT_STARTING_SOON
+ACHIEVEMENT_UNLOCKED
+```
+
+Templates receive safe variables.
+
+---
+
+# 79. Copy Length
+
+Push titles/bodies should remain concise.
+
+Avoid putting:
+
+* Full Quest instructions
+* Riddle answers
+* Private proof text
+* Sensitive moderation details
+* Exact private coordinates
+
+Push notifications can appear on a locked phone screen.
+
+Apply privacy-aware copy.
+
+---
+
+# 80. Notification Privacy Mode
+
+Support privacy-safe notification text where needed.
+
+Potential setting:
+
+**Show notification details**
+
+When disabled:
+
+Instead of:
+
+**Your Tampa Riverwalk Photography Quest was approved for 300 points**
+
+show:
+
+**You have an update in Worlds**
+
+Do not overcomplicate if current architecture has no privacy setting; design schema so it can be added.
+
+---
+
+# 81. Hunt Secret Protection
+
+Never include in push payload:
+
+* Riddle answer
+* Hidden stop coordinates
+* Secret clue solution
+* Unreleased drop information
+* Private lobby code where avoidable
+
+Push payloads are not trusted secret storage.
+
+---
+
+# 82. Deep-Link Authorization
+
+Before rendering destination after push tap:
+
+Server/client must verify normal access rules.
+
+Example:
+
+A removed participant tapping an old private Hunt push must not regain access.
+
+Deep link does not grant authorization.
+
+---
+
+# 83. Deleted/Unavailable Target
+
+If target is deleted/unavailable:
+
+Route to safe fallback:
+
+* Notifications
+* Progress
+* My Hunts
+
+Show:
+
+**This activity is no longer available.**
+
+Do not crash.
+
+---
+
+# 84. Notification Read State
+
+Opening notification target from Notification Center:
+
+Mark corresponding notification read.
+
+Opening target independently does not necessarily mark all related notifications read unless intentional.
+
+Provide:
+
+* Mark Read
+* Mark All Read
+
+---
+
+# 85. Notification Retention
+
+Define retention.
+
+Keep useful notification history for a reasonable period.
+
+Old notifications may be:
+
+* Archived
+* Deleted after retention
+
+Do not retain unnecessary push delivery telemetry indefinitely.
+
+Document policy.
+
+---
+
+# 86. Admin Notification Panel
+
+Add:
+
+`/admin/notifications`
+
+Sections:
+
+* Overview
+* Templates
+* Delivery
+* Scheduled
+* Failed
+* Settings
+* Diagnostics
+
+Do not build a consumer marketing campaign suite.
+
+This is operational notification administration.
+
+---
+
+# 87. Admin Notification Overview
+
+Show:
+
+* Notifications created today
+* Push attempts
+* Success rate
+* Failed sends
+* Invalid tokens
+* Pending scheduled notifications
+* Queue backlog
+* Average delivery latency
+
+Do not invent statistics.
+
+---
+
+# 88. Admin Templates
+
+Allow safe editing of selected user-facing copy where appropriate.
+
+Examples:
+
+* Daily Quest Ready
+* Monthly Drop Live
+* Hunt Invitation
+* Hunt Starting Soon
+
+Do not allow template editor to insert arbitrary code.
+
+Use approved variables.
+
+Validate variables.
+
+Version significant template changes.
+
+---
+
+# 89. Admin Notification Settings
+
+Allow:
+
+* Push delivery enabled
+* Daily default reminder time
+* Hunt reminder offsets
+* Quiet-hours default
+* Non-critical rate limit
+* Retry count
+* Batch size
+* Fan-out concurrency
+
+Do not expose push-provider secrets.
+
+---
+
+# 90. Admin Manual Test
+
+Allow authorized Admin to send a **test notification to themselves**.
+
+Do not initially build arbitrary mass-message capability.
+
+Test UI:
+
+* Select template
+* Preview
+* Send to My Device
+
+Clearly label as test.
+
+---
+
+# 91. Admin Delivery Search
+
+Search delivery by:
+
+* Notification ID
+* User ID where permitted
+* Type
+* Status
+* Date range
+
+Display:
+
+* Created
+* Queued
+* Sent
+* Provider status
+* Failure category
+
+Do not display sensitive push tokens unnecessarily.
+
+Mask tokens.
+
+---
+
+# 92. Notification Diagnostics
+
+Create:
+
+`/admin/notifications/diagnostics`
+
+Show:
+
+* Provider configured
+* Provider reachable
+* Queue health
+* Oldest queued job
+* Scheduled-job health
+* Invalid token count
+* Last successful send
+* Last failed send
+* Receipt-processing health
+* Fan-out health
+
+Never expose provider credentials.
+
+---
+
+# 93. Database Architecture
+
+Audit existing tables first.
+
+Add/extend only as necessary.
+
+Potential entities:
+
+```text
+notifications
+notification_preferences
+push_devices
+notification_deliveries
+scheduled_notifications
+notification_templates
+notification_template_versions
+notification_events
+notification_batches
+```
+
+Do not duplicate existing outbox/job infrastructure.
+
+---
+
+# 94. Notification Record
+
+Canonical notification should include:
+
+```text
+id
+user_id
+type
+category
+title
+body
+target_type
+target_id
+deep_link
+domain_event_id
+created_at
+read_at
+archived_at
+metadata
+```
+
+Keep metadata minimal.
+
+Do not store secrets.
+
+---
+
+# 95. Delivery Record
+
+Separate notification content from channel delivery.
+
+Fields may include:
+
+```text
+notification_id
+channel
+device_id
+status
+attempt_count
+provider_message_id
+last_attempt_at
+failure_category
+created_at
+```
+
+This allows one in-app notification with multiple device deliveries.
+
+---
+
+# 96. RLS
+
+Ordinary user:
+
+* Read own notifications
+* Update own read/archive state
+* Read/update own preferences
+* Register own device through trusted operation
+
+Cannot:
+
+* Create arbitrary notification for another user
+* Read another user's notifications
+* Read raw delivery diagnostics
+* Read another user's push token
+
+Admin:
+
+Permission-scoped operational access.
+
+Push tokens must be protected.
+
+---
+
+# 97. Trusted Functions
+
+Implement secure operations such as:
+
+```text
+register_push_device
+unregister_push_device
+mark_notification_read
+mark_all_notifications_read
+update_notification_preferences
+process_notification_event
+enqueue_notification_delivery
+process_scheduled_notifications
+process_push_receipts
+retry_failed_notification
+```
+
+or equivalent.
+
+Verify auth/permission appropriately.
+
+---
+
+# 98. Notification Event Producers
+
+Audit every existing domain workflow and emit events where necessary.
+
+Quest:
+
+* Assignment
+* Proof decision
+* Completion
+* Point quarantine/release
+* Monthly activation
+
+Hunt:
+
+* Invitation
+* Start
+* Pause
+* Resume
+* Cancel
+* Significant update
+* Result
+
+Progress:
+
+* Achievement
+* Meaningful leaderboard milestone
+
+Moderation:
+
+* User-facing decision
+
+Account:
+
+* Security event
+
+Do not duplicate event creation if current services already emit outbox events.
+
+---
+
+# 99. Notification Preferences Hook
+
+Create shared consumer hooks/services:
+
+```text
+useNotifications()
+useUnreadNotificationCount()
+useNotificationPreferences()
+usePushPermission()
+```
+
+Use project architecture.
+
+Do not query protected delivery tables from consumer client.
+
+---
+
+# 100. Quest UI Integration
+
+Do not redesign Quest navigation.
+
+Keep:
+
+**Quest mode**
+
+* Home
+* Quests
+* Map
+* Progress
+* Profile
+
+Integrate notifications unobtrusively.
+
+Notification deep links should correctly open:
+
+* Daily Quest
+* Monthly Quest
+* Geo-Quest
+* In Action Quest
+* Proof state
+* Progress
+
+---
+
+# 101. Hunt UI Integration
+
+Do not redesign Hunt navigation.
+
+Keep:
+
+**Hunt mode**
+
+* Map
+* My Hunts
+* Progress
+* Profile
+
+The Map remains the primary Hunt discovery/gameplay surface.
+
+Notification deep links should correctly open:
+
+* Hunt
+* Custom Hunt lobby
+* Active Hunt map
+* Hunt result
+
+Do not create a Discover tab.
+
+---
+
+# 102. Shared Game Toggle
+
+Do not alter the approved top game switch.
+
+Quest ↔ Hunt remains the top-level game mode switch.
+
+Notifications may deep-link across modes.
+
+Example:
+
+If user currently has Quest selected and taps Hunt invitation:
+
+1. Resolve Hunt destination.
+2. Switch app context to Hunt.
+3. Open Hunt lobby.
+
+Profile remains shared.
+
+---
+
+# 103. Notification Bell
+
+Because Profile is shared, notification access should also feel shared across game modes.
+
+If using top-right bell:
+
+* Same bell in Quest/Hunt shared shell where appropriate
+* Badge uses total unread relevant notifications
+
+Do not create separate Quest and Hunt inboxes.
+
+---
+
+# 104. Offline Behavior
+
+When offline:
+
+* Existing downloaded in-app notifications may display.
+* Read-state changes may optimistically queue if current sync architecture supports it.
+* Push tap opens app but destination may show offline state.
+* Do not falsely mark server action complete.
+
+When reconnecting:
+
+* Sync unread/read state.
+* Refresh destination.
+
+---
+
+# 105. Authentication Changes
+
+On logout:
+
+* Remove private notification data from local cache.
+* Detach device token association.
+* Clear pending protected deep link if inappropriate.
+
+On account switch:
+
+* Do not display previous user's notifications.
+
+---
+
+# 106. Account Deletion
+
+When account is deleted:
+
+* Disable push devices
+* Cancel scheduled engagement notifications
+* Stop future fan-out
+* Apply notification data retention policy
+
+Do not continue sending Daily Quest reminders.
+
+---
+
+# 107. Notification Security
+
+Verify:
+
+* User cannot forge notification to another user.
+* User cannot modify another user's preferences.
+* Push token cannot be enumerated.
+* Deep link cannot bypass RLS.
+* Admin test send limited to self unless explicitly authorized otherwise.
+* Notification metadata contains no secret Hunt information.
+* Moderation internals never enter push copy.
+* Anti-cheat signals never enter ordinary notification payload.
+* Provider secrets never reach client.
+
+---
+
+# 108. Automated Tests — Devices
+
+Test:
+
+* Register token
+* Token refresh
+* Multiple devices
+* Logout detach
+* Account switching
+* Invalid token cleanup
+* Duplicate token handling
+* User cannot register token for another user
+
+---
+
+# 109. Automated Tests — Preferences
+
+Test:
+
+* Push master preference
+* Quest category toggle
+* Hunt category toggle
+* Achievement toggle
+* Quiet hours
+* Timezone
+* OS permission denied
+* Security notification policy
+* Preference changes apply before future delivery
+
+---
+
+# 110. Automated Tests — Quest
+
+Test:
+
+* Daily assignment creates one notification
+* Retry does not duplicate
+* Daily reminder suppressed after completion
+* Monthly activation fan-out
+* Proof approval includes committed points
+* Proof rejection uses user-facing reason only
+* Quarantine hides anti-cheat details
+* Geo notification does not require background tracking
+
+---
+
+# 111. Automated Tests — Hunt
+
+Test:
+
+* Invitation notification
+* Duplicate invitation doesn't duplicate push
+* Starting-soon reminder
+* Reminder cancelled after Hunt cancellation
+* Hunt start notification
+* Pause/resume
+* Hunt update
+* Result ready
+* Secret clue/riddle data absent from push payload
+* Unauthorized deep link rejected
+
+---
+
+# 112. Automated Tests — Scheduling
+
+Test:
+
+* User timezone
+* DST
+* Quiet hours crossing midnight
+* Reminder revalidation
+* Cancelled entity suppression
+* Completed Quest suppression
+* User preference suppression
+* Rate limiting
+* Retry behavior
+
+---
+
+# 113. Automated Tests — Delivery
+
+Test:
+
+* Provider success
+* Temporary failure
+* Permanent invalid token
+* Receipt handling
+* Retry cap
+* Multiple devices
+* In-app notification remains even if push fails
+* Duplicate event idempotency
+* Fan-out partial retry
+
+---
+
+# 114. Automated Tests — Deep Links
+
+Test:
+
+* App closed
+* App foreground
+* Logged out
+* Quest mode → Hunt notification
+* Hunt mode → Quest notification
+* Deleted target
+* Private Hunt authorization
+* Invalid target ID
+* Old notification
+
+No deep link may bypass authentication/authorization.
+
+---
+
+# 115. Automated Tests — Privacy/Security
+
+Test:
+
+* Push payload contains no hidden coordinates
+* No riddle answers
+* No private proof
+* No reporter identity
+* No anti-cheat risk score
+* No moderation provider confidence
+* No push token exposure
+* User cannot read another user's notification
+* Old user cache cleared on logout
+
+---
+
+# 116. Documentation
+
+Create/update:
+
+* `/docs/NOTIFICATION_ARCHITECTURE.md`
+* `/docs/PUSH_NOTIFICATIONS.md`
+* `/docs/NOTIFICATION_EVENTS.md`
+* `/docs/NOTIFICATION_PREFERENCES.md`
+* `/docs/NOTIFICATION_SCHEDULING.md`
+* `/docs/NOTIFICATION_DEEP_LINKS.md`
+* `/docs/QUEST_NOTIFICATIONS.md`
+* `/docs/HUNT_NOTIFICATIONS.md`
+* `/docs/NOTIFICATION_DELIVERY.md`
+* `/docs/NOTIFICATION_JOBS.md`
+* `/docs/NOTIFICATION_PRIVACY.md`
+* `/docs/NOTIFICATION_SECURITY.md`
+* `/docs/NOTIFICATION_DIAGNOSTICS.md`
+* `/docs/NOTIFICATION_TESTING.md`
+
+Update existing:
+
+* Project Constitution
+* Quest documentation
+* Hunt documentation
+* Custom Hunt documentation
+* Progress documentation
+* Moderation documentation
+* Admin documentation
+* `replit.md`
+
+only where necessary.
+
+---
+
+# 117. Out of Scope
+
+Do NOT implement:
+
+* Game Zones
+* Outbreak
+* Stripe
+* Paid Hunts
+* Creator payouts
+* Subscriptions
+* Direct messaging
+* Hunt chat
+* Marketing campaign builder
+* SMS
+* WhatsApp
+* Email marketing
+* Background continuous location tracking
+* AI-generated push messages at runtime
+* New bottom navigation tabs
+* New game modes
+
+Do not redesign approved UI/UX.
+
+---
+
+# 118. Final Audit
+
+Before stopping, audit the entire implementation.
+
+Confirm:
+
+* One canonical notification architecture exists.
+* Push provider is abstracted.
+* Push provider credentials remain server-side.
+* Device registration works.
+* Multiple devices work.
+* Logout/account switching is safe.
+* Permission UX works.
+* In-app Notification Center works.
+* Unread badges work.
+* Notification preferences work.
+* Quiet hours work.
+* IANA timezone is used.
+* Scheduled notifications work.
+* Scheduled reminders revalidate gameplay state before sending.
+* Daily Quest notification works.
+* Monthly Quest Drop notification works.
+* Geo-Quest system does not introduce continuous background location tracking.
+* Quest proof results notify correctly.
+* Actual committed points are used in notifications.
+* Hunt invitations work.
+* Custom Hunt lifecycle notifications work.
+* Hunt cancellation suppresses future reminders.
+* Progress/achievement notifications work.
+* Moderation notifications contain only user-facing information.
+* Anti-cheat internals never enter push payload.
+* Deep links work.
+* Deep links can switch Quest/Hunt context.
+* Deep links do not bypass authorization.
+* Push payloads do not contain secret Hunt data.
+* Idempotency prevents duplicates.
+* Notification fan-out is batched.
+* Retry behavior works.
+* Invalid tokens are disabled.
+* Provider failure does not remove in-app notifications.
+* Rate limits prevent spam.
+* Notification batching/deduplication avoids redundant pushes.
+* Notification Center is shared between Quest and Hunt.
+* Quest navigation remains Home / Quests / Map / Progress / Profile.
+* Hunt navigation remains Map / My Hunts / Progress / Profile.
+* Top Quest/Hunt game switch remains intact.
+* No Discover tab was introduced.
+* No Game Zones or Outbreak code was introduced.
+* Tests pass or blocked integration tests are documented.
+* App compiles.
+
+Fix all in-scope failures discovered by this audit before stopping.
+
+---
+
+# Deliverables
+
+When finished, provide:
+
+1. Notification architecture implemented
+2. Push provider integration
+3. Device registration/token lifecycle
+4. Permission flow
+5. Notification Center
+6. Unread badge
+7. Deep-link system
+8. Quest notification events
+9. Daily Quest notification/reminders
+10. Monthly Drop notifications
+11. Geo-Quest notification privacy behavior
+12. Proof decision notifications
+13. Point/quarantine notifications
+14. Hunt invitation notifications
+15. Custom Hunt lifecycle notifications
+16. Hunt reminder scheduling
+17. Progress/achievement notifications
+18. Moderation/account notifications
+19. Notification preferences
+20. Quiet hours
+21. Time-zone handling
+22. Scheduling infrastructure
+23. Revalidation before delivery
+24. Delivery receipts
+25. Retry behavior
+26. Idempotency
+27. Event/outbox integration
+28. Fan-out architecture
+29. Rate limiting
+30. Notification batching/deduplication
+31. Admin Notification Panel
+32. Template management
+33. Notification diagnostics
+34. Database/RLS/backend changes
+35. Consumer integration
+36. Quest/Hunt cross-mode deep linking
+37. Security/privacy audit
+38. Automated tests/results
+39. Documentation
+40. Assumptions
+41. Known limitations
+42. Exact remaining work for Prompt 22
+
+Do not begin Prompt 22.
+
+Do not redesign the approved consumer UI.
+
+Create checkpoint:
+
+**Build 1 — Prompt 21 — Notification, Push Delivery, Deep-Link and Engagement Infrastructure**
