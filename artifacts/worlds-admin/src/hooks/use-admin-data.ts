@@ -35,9 +35,11 @@ export function useModerationData(enabled = true) {
   const reports = useQuery({ queryKey: ['/admin/reports'], enabled, queryFn: () => moderationFetch<{ items: ModerationReport[] }>('/api/admin/reports') });
   const snapshots = useQuery({ queryKey: ['/admin/integrity/snapshots'], enabled, queryFn: () => moderationFetch<{ items: Array<{ id: string; riskBand: string; score: number; entityType: string; entityId: string; createdAt: string }> }>('/api/admin/integrity/snapshots') });
   const diagnostics = useQuery({ queryKey: ['/admin/moderation/diagnostics'], enabled, queryFn: () => moderationFetch<{ state?: { counts: Record<string, number>; persistence: string; policyVersion: string }; provider?: Record<string, unknown> }>('/api/admin/moderation/diagnostics') });
+  const settings = useQuery({ queryKey: ['/admin/moderation/settings'], enabled, queryFn: () => moderationFetch<{ settings: { automationEnabled: boolean; autoApprovalMode: 'manual_only' | 'low_risk' | 'mixed'; quarantineThreshold: number; reviewThreshold: number; persistence: string; policyVersion: string } }>('/api/admin/moderation/settings') });
   const claim = useMutation({ mutationFn: (id: string) => moderationFetch(`/api/admin/moderation/cases/${id}/claim`, { method: 'POST', body: '{}' }), onSuccess: () => void client.invalidateQueries({ queryKey: ['/admin/moderation/cases'] }) });
   const resolve = useMutation({ mutationFn: (input: { id: string; decision: string; reason: string; expectedUpdatedAt?: string }) => moderationFetch(`/api/admin/moderation/cases/${input.id}/resolve`, { method: 'POST', body: JSON.stringify({ decision: input.decision, reason: input.reason, expectedUpdatedAt: input.expectedUpdatedAt }) }), onSuccess: () => { void client.invalidateQueries({ queryKey: ['/admin/moderation/cases'] }); void client.invalidateQueries({ queryKey: ['/admin/moderation/diagnostics'] }); } });
-  return { cases, reports, snapshots, diagnostics, claim, resolve };
+  const updateSettings = useMutation({ mutationFn: (input: Record<string, unknown>) => moderationFetch('/api/admin/moderation/settings', { method: 'PUT', body: JSON.stringify(input) }), onSuccess: () => { void client.invalidateQueries({ queryKey: ['/admin/moderation/settings'] }); void client.invalidateQueries({ queryKey: ['/admin/moderation/diagnostics'] }); } });
+  return { cases, reports, snapshots, diagnostics, settings, claim, resolve, updateSettings };
 }
 
 export function useAdminData() {

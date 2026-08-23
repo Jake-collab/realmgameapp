@@ -71,7 +71,7 @@ function Router() {
           <Route path="/interests"><OperationsPage data={data} /></Route>
           <Route path="/achievements"><OperationsPage data={data} /></Route>
           <Route path="/notifications"><OperationsPage data={data} /></Route>
-          <Route path="/settings"><SettingsPage /></Route>
+          <Route path="/settings"><SettingsPage data={data} /></Route>
           <Route path="/audit"><AuditPage data={data} /></Route>
           <Route path="/diagnostics"><DiagnosticsPage data={data} /></Route>
           <Route component={NotFound} />

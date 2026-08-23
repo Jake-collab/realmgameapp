@@ -384,14 +384,27 @@ function CircleIcon() {
   return <div style={{ width: 28, height: 28, border: '1px dashed hsl(var(--accent))', borderRadius: '50%', margin: '0 auto 11px' }} />;
 }
 
-export function SettingsPage() {
+export function SettingsPage({ data }: { data: AdminData }) {
   const [saved, setSaved] = useState(false);
   const [strictReview, setStrictReview] = useState(true);
   const [auditRetention, setAuditRetention] = useState('365');
+  const moderationSettings = data.moderation.settings.data?.settings;
+  const [automationEnabled, setAutomationEnabled] = useState(false);
+  const [approvalMode, setApprovalMode] = useState<'manual_only' | 'low_risk' | 'mixed'>('manual_only');
+  useEffect(() => {
+    if (moderationSettings) {
+      setAutomationEnabled(moderationSettings.automationEnabled);
+      setApprovalMode(moderationSettings.autoApprovalMode);
+    }
+  }, [moderationSettings]);
+  const saveModerationSettings = () => {
+    data.moderation.updateSettings.mutate({ automationEnabled, autoApprovalMode: approvalMode });
+    setSaved(true);
+  };
   return (
     <div className="page-wrap">
       <PageHeader eyebrow="Platform / controls" title="Typed platform settings" description="Configuration surfaces for staff operations. Changes are explicit and never hidden behind defaults." />
-      <div className="notice" style={{ marginTop: 26 }}><LockKeyhole /><span>These controls are presented as typed platform settings. Supabase-backed persistence is not available in this artifact yet, so changes are held in this session only.</span></div>
+      <div className="notice" style={{ marginTop: 26 }}><LockKeyhole /><span>Changes are server-controlled. Until Supabase is connected, the API reports local-development-only persistence and never presents it as production data.</span></div>
       <section className="panel" style={{ marginTop: 18, maxWidth: 900 }}>
         <div className="panel-header"><div><div className="panel-title">Review posture</div><div className="panel-kicker">Controls that affect staff-facing review behavior</div></div><span className="tag blue">Session preview</span></div>
         <div className="form-grid">
@@ -399,6 +412,14 @@ export function SettingsPage() {
           <div className="field"><label htmlFor="strict-review">Strict proof review</label><select id="strict-review" value={strictReview ? 'on' : 'off'} onChange={(event) => { setStrictReview(event.target.value === 'on'); setSaved(false); }} data-testid="select-strict-review"><option value="on">Enabled</option><option value="off">Disabled</option></select></div>
         </div>
         <div className="form-footer"><button className="btn btn-primary" onClick={() => setSaved(true)} data-testid="button-save-settings">{saved ? <><Check /> Saved for session</> : 'Save settings'}</button></div>
+      </section>
+      <section className="panel" style={{ marginTop: 18, maxWidth: 900 }}>
+        <div className="panel-header"><div><div className="panel-title">Moderation automation</div><div className="panel-kicker">Provider output never replaces trusted human review</div></div><StatusBadge status={moderationSettings?.persistence ?? (data.moderation.settings.isLoading ? 'checking' : 'unavailable')} /></div>
+        {data.moderation.settings.isError ? <UnavailableState message="Moderation settings are unavailable until an approved staff session and server persistence are available." /> : <div className="form-grid">
+          <div className="field"><label htmlFor="moderation-automation">Automation</label><select id="moderation-automation" value={automationEnabled ? 'on' : 'off'} onChange={(event) => { setAutomationEnabled(event.target.value === 'on'); setSaved(false); }}><option value="off">Disabled — manual review</option><option value="on">Enabled — configured provider only</option></select></div>
+          <div className="field"><label htmlFor="moderation-approval-mode">Approval posture</label><select id="moderation-approval-mode" value={approvalMode} onChange={(event) => { setApprovalMode(event.target.value as typeof approvalMode); setSaved(false); }}><option value="manual_only">Manual only</option><option value="low_risk">Low-risk public content</option><option value="mixed">Mixed policy</option></select></div>
+        </div>}
+        <div className="form-footer"><button className="btn btn-primary" onClick={saveModerationSettings} disabled={data.moderation.updateSettings.isPending || !moderationSettings} data-testid="button-save-moderation-settings">{data.moderation.updateSettings.isPending ? 'Saving…' : 'Save moderation settings'}</button></div>
       </section>
     </div>
   );
