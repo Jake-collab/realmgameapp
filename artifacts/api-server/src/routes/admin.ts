@@ -32,6 +32,23 @@ import {
   moderateText,
 } from "../lib/moderation";
 import { calculateIntegrityRisk, triageReport } from "../lib/integrity";
+import {
+  claimModerationCase,
+  createIntegritySnapshot,
+  createModerationRequest,
+  createReport,
+  getModerationCase,
+  getModerationSettings,
+  getModerationStateDiagnostics,
+  listAuditEvents,
+  listIntegritySnapshots,
+  listModerationCases,
+  listReports,
+  quarantineReward,
+  resolveModerationCase,
+  resolveReward,
+  updateModerationSettings,
+} from "../lib/moderation-state";
 
 const router: IRouter = Router();
 
@@ -279,7 +296,7 @@ router.get("/admin/ai/settings", requireAdmin("ai.settings.read"), (_req, res) =
 });
 
 router.get("/admin/moderation/diagnostics", requireAdmin("moderation.read"), async (_req, res) => {
-  res.json(await moderationDiagnostics());
+  res.json({ ...(await moderationDiagnostics()), state: getModerationStateDiagnostics() });
 });
 
 router.post("/admin/moderation/scan/text", requireAdmin("moderation.manage"), async (req, res) => {
@@ -288,12 +305,15 @@ router.post("/admin/moderation/scan/text", requireAdmin("moderation.manage"), as
     context: z.enum(["public_text", "ai_quest", "profile", "private_proof"]),
     accountInGoodStanding: z.boolean().default(true),
     reported: z.boolean().default(false),
+    entityType: z.string().trim().min(1).max(40).default("text"),
+    entityId: z.string().trim().min(1).max(100).default("local"),
   }).safeParse(req.body);
   if (!input.success) {
     res.status(400).json({ error: "Text and a supported moderation context are required." });
     return;
   }
-  res.json(await moderateText(input.data.text, input.data.context, input.data));
+  const outcome = await moderateText(input.data.text, input.data.context, input.data);
+  res.json({ ...outcome, persistence: createModerationRequest({ entityType: input.data.entityType, entityId: input.data.entityId, context: input.data.context, contentHash: outcome.result.contentHash, result: outcome.result, outcome }) });
 });
 
 router.post("/admin/moderation/scan/image", requireAdmin("moderation.manage"), async (req, res) => {
@@ -303,12 +323,15 @@ router.post("/admin/moderation/scan/image", requireAdmin("moderation.manage"), a
     context: z.enum(["public_media", "private_proof", "profile"]),
     accountInGoodStanding: z.boolean().default(true),
     reported: z.boolean().default(false),
+    entityType: z.string().trim().min(1).max(40).default("media"),
+    entityId: z.string().trim().min(1).max(100).default("local"),
   }).refine((value) => value.contentHash || value.mediaUrl, "A content hash or server-accessible media URL is required.").safeParse(req.body);
   if (!input.success) {
     res.status(400).json({ error: "A content hash or server-accessible media URL and context are required." });
     return;
   }
-  res.json(await moderateImage(input.data, input.data));
+  const outcome = await moderateImage(input.data, input.data);
+  res.json({ ...outcome, persistence: createModerationRequest({ entityType: input.data.entityType, entityId: input.data.entityId, context: input.data.context, contentHash: outcome.result.contentHash, result: outcome.result, outcome }) });
 });
 
 router.post("/admin/integrity/evaluate", requireAdmin("integrity.manage"), (req, res) => {
@@ -324,12 +347,16 @@ router.post("/admin/integrity/evaluate", requireAdmin("integrity.manage"), (req,
     repeatedRiddleGuesses: z.number().int().nonnegative().optional(),
     impossibleTimeSequence: z.boolean().optional(),
     serverTimestampAnomaly: z.boolean().optional(),
+    userId: z.string().optional(),
+    entityType: z.string().trim().min(1).max(40).default("proof"),
+    entityId: z.string().trim().min(1).max(100).default("local"),
   }).safeParse(req.body);
   if (!input.success) {
     res.status(400).json({ error: "Integrity signals are invalid." });
     return;
   }
-  res.json(calculateIntegrityRisk(input.data));
+  const { userId, entityType, entityId, ...signals } = input.data;
+  res.json(createIntegritySnapshot({ userId, entityType, entityId, signals }));
 });
 
 router.post("/admin/reports/triage", requireAdmin("moderation.manage"), (req, res) => {
@@ -346,6 +373,70 @@ router.post("/admin/reports/triage", requireAdmin("moderation.manage"), (req, re
     return;
   }
   res.json(triageReport(input.data));
+});
+
+router.get("/admin/moderation/cases", requireAdmin("moderation.read"), (req, res) => {
+  const query = z.object({ status: z.enum(["open", "claimed", "resolved", "escalated"]).optional(), entityType: z.string().optional(), priority: z.string().optional() }).parse(req.query);
+  res.json({ items: listModerationCases(query), persistence: getModerationStateDiagnostics().persistence });
+});
+
+router.get("/admin/moderation/cases/:id", requireAdmin("moderation.read"), (req, res) => {
+  const caseId = String(req.params.id);
+  const item = getModerationCase(caseId);
+  if (!item) { res.status(404).json({ error: "Moderation case not found." }); return; }
+  res.json({ case: item });
+});
+
+router.post("/admin/moderation/cases/:id/claim", requireAdmin("moderation.manage"), (req, res) => {
+  const result = claimModerationCase(String(req.params.id), req.adminPrincipal!.userId);
+  if (!result.ok) { res.status(result.code === "not_found" ? 404 : 409).json({ error: result.code === "claimed_by_other" ? "This case is already claimed by another moderator." : "This case cannot be claimed." }); return; }
+  res.json(result);
+});
+
+router.post("/admin/moderation/cases/:id/resolve", requireAdmin("moderation.manage"), (req, res) => {
+  const input = z.object({ decision: z.enum(["no_action", "warning", "content_removed", "account_restricted", "account_suspended", "quarantine", "release", "reverse"]), reason: z.string().trim().min(1).max(2000), expectedUpdatedAt: z.string().optional() }).safeParse(req.body);
+  if (!input.success) { res.status(400).json({ error: "A decision and reason are required." }); return; }
+  const result = resolveModerationCase(String(req.params.id), { ...input.data, actorId: req.adminPrincipal!.userId });
+  if (!result.ok) { res.status(result.code === "not_found" ? 404 : 409).json({ error: result.code === "stale_case" ? "This case was updated by another moderator. Refresh before taking action." : "This case cannot be resolved." }); return; }
+  res.json(result);
+});
+
+router.get("/admin/reports", requireAdmin("moderation.read"), (req, res) => {
+  const query = z.object({ status: z.string().optional(), priority: z.string().optional() }).parse(req.query);
+  res.json({ items: listReports(query) });
+});
+
+router.get("/admin/integrity/snapshots", requireAdmin("integrity.read"), (_req, res) => {
+  res.json({ items: listIntegritySnapshots() });
+});
+
+router.post("/admin/rewards/quarantine", requireAdmin("integrity.manage"), (req, res) => {
+  const input = z.object({ rewardId: z.string().min(1), userId: z.string().min(1), entityType: z.string().min(1), entityId: z.string().min(1), amount: z.number().int().positive(), reason: z.string().trim().min(1).max(1000), snapshotId: z.string().optional() }).safeParse(req.body);
+  if (!input.success) { res.status(400).json({ error: "Reward quarantine inputs are invalid." }); return; }
+  res.json(quarantineReward({ ...input.data, actorId: req.adminPrincipal!.userId }));
+});
+
+router.post("/admin/rewards/:id/:action", requireAdmin("integrity.manage"), (req, res) => {
+  if (req.params.action !== "release" && req.params.action !== "reverse") { res.status(400).json({ error: "Unsupported reward action." }); return; }
+  const input = z.object({ reason: z.string().trim().min(1).max(1000) }).safeParse(req.body);
+  if (!input.success) { res.status(400).json({ error: "A reason is required." }); return; }
+  const result = resolveReward({ actorId: req.adminPrincipal!.userId, rewardId: String(req.params.id), action: String(req.params.action) as "release" | "reverse", reason: input.data.reason });
+  if (!result.ok) { res.status(result.code === "not_found" ? 404 : 409).json({ error: result.code === "already_resolved" ? "This reward quarantine is already resolved." : "Reward not found." }); return; }
+  res.json(result);
+});
+
+router.get("/admin/moderation/settings", requireAdmin("moderation.read"), (_req, res) => {
+  res.json({ settings: getModerationSettings() });
+});
+
+router.put("/admin/moderation/settings", requireAdmin("ai.settings.edit"), (req, res) => {
+  const input = z.object({ automationEnabled: z.boolean().optional(), autoApprovalMode: z.enum(["manual_only", "low_risk", "mixed"]).optional(), quarantineThreshold: z.number().int().min(0).max(100).optional(), reviewThreshold: z.number().int().min(0).max(100).optional() }).safeParse(req.body);
+  if (!input.success) { res.status(400).json({ error: "Moderation settings are invalid." }); return; }
+  res.json({ settings: updateModerationSettings(input.data, req.adminPrincipal!.userId) });
+});
+
+router.get("/admin/moderation/audit", requireAdmin("admin.audit.read"), (_req, res) => {
+  res.json({ items: listAuditEvents() });
 });
 
 export default router;

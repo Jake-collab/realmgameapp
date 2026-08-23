@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { AlertTriangle, ArrowUpRight, Check, ChevronRight, Database, FileText, LockKeyhole, Search, SlidersHorizontal, UsersRound } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Check, ChevronRight, Database, FileText, Flag, LockKeyhole, Search, ShieldCheck, SlidersHorizontal, UsersRound } from 'lucide-react';
 import { useAdminData } from '@/hooks/use-admin-data';
 import { DiagnosticsList, ErrorState, MetricGrid, PageHeader, QueueList, RefreshButton, StatusBadge, UnavailableState } from '@/components/admin-ui';
 
@@ -310,6 +310,7 @@ const operationConfig: Record<string, { eyebrow: string; title: string; descript
 
 export function OperationsPage({ data }: { data: AdminData }) {
   const [location] = useLocation();
+  if (location.startsWith('/moderation/')) return <ModerationOperationsPage data={data} location={location} />;
   const config = operationConfig[location] || operationConfig['/hunts'];
   const isQuestLane = location.startsWith('/quests/');
   const queues = data.reviewQueues.data?.queues;
@@ -330,6 +331,43 @@ export function OperationsPage({ data }: { data: AdminData }) {
       <div className="notice" style={{ marginTop: 18 }}><AlertTriangle /><span>This lane is intentionally truthful about its connection state. No local placeholder records are presented as real platform data.</span></div>
     </div>
   );
+}
+
+function ModerationOperationsPage({ data, location }: { data: AdminData; location: string }) {
+  const moderation = data.moderation;
+  const isReports = location === '/moderation/reports';
+  const isAntiCheat = location === '/moderation/anti-cheat';
+  const title = isReports ? 'Reports queue' : isAntiCheat ? 'Anti-cheat review' : 'Media moderation';
+  const eyebrow = isReports ? 'Review / safety' : isAntiCheat ? 'Review / integrity' : 'Review / safety';
+  const cases = moderation.cases.data?.items ?? [];
+  const filteredCases = isAntiCheat ? [] : cases.filter((item) => !isReports || item.sourceReportIds.length > 0);
+  const snapshots = moderation.snapshots.data?.items ?? [];
+  return (
+    <div className="page-wrap">
+      <PageHeader eyebrow={eyebrow} title={title} description={isReports ? 'Triage normalized community reports, merge duplicates, and route urgent public-safety cases.' : isAntiCheat ? 'Review privacy-safe integrity snapshots without turning contextual signals into automatic guilt.' : 'Review media safety outcomes with a human decision required for enforcement.'} actions={<RefreshButton onClick={() => { void moderation.cases.refetch(); void moderation.reports.refetch(); void moderation.snapshots.refetch(); void moderation.diagnostics.refetch(); }} loading={moderation.cases.isFetching} />} />
+      {moderation.diagnostics.data?.state && <div className="metrics-grid" style={{ marginTop: 26 }}>
+        {Object.entries(moderation.diagnostics.data.state.counts).map(([label, value]) => <div className="metric-card" key={label}><div className="metric-label">{label.replace(/[A-Z]/g, (letter) => ` ${letter}`).replace(/^./, (letter) => letter.toUpperCase())}</div><div className="metric-value">{value}</div><div className="metric-detail">Policy {moderation.diagnostics.data?.state?.policyVersion}</div></div>)}
+      </div>}
+      {isAntiCheat ? <section className="panel" style={{ marginTop: 22 }}>
+        <div className="panel-header"><div><div className="panel-title">Integrity snapshots</div><div className="panel-kicker">Scores are contextual signals · no raw location shown</div></div><StatusBadge status={moderation.diagnostics.data?.state?.persistence ?? 'unavailable'} /></div>
+        {moderation.snapshots.isLoading ? <TableSkeleton columns={4} /> : !snapshots.length ? <UnavailableState message="No integrity snapshots have been recorded yet." /> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Risk band</th><th>Score</th><th>Entity</th><th>Captured</th></tr></thead><tbody>{snapshots.slice(0, 25).map((item) => <tr key={item.id}><td><StatusBadge status={item.riskBand} /></td><td className="mono">{item.score}</td><td>{item.entityType} · <span className="mono">{item.entityId}</span></td><td>{fmtDateTime(item.createdAt)}</td></tr>)}</tbody></table></div>}
+      </section> : <div className="content-grid" style={{ marginTop: 22 }}>
+        <section className="panel">
+          <div className="panel-header"><div><div className="panel-title">{isReports ? 'Report intake' : 'Moderation cases'}</div><div className="panel-kicker">Human review lane · {moderation.cases.data?.persistence ?? 'connected state'}</div></div><StatusBadge status={moderation.cases.isError ? 'failed' : 'live'} /></div>
+          {moderation.cases.isLoading ? <TableSkeleton columns={4} /> : moderation.cases.isError ? <ErrorState onRetry={() => void moderation.cases.refetch()} /> : !filteredCases.length ? <UnavailableState message={isReports ? 'No report-linked cases have been recorded.' : 'No media cases are waiting for review.'} onRetry={() => void moderation.cases.refetch()} /> : <div>{filteredCases.map((item) => <CaseRow item={item} key={item.id} onClaim={() => moderation.claim.mutate(item.id)} onResolve={(decision) => { const reason = window.prompt('Decision reason (required)'); if (reason) moderation.resolve.mutate({ id: item.id, decision, reason, expectedUpdatedAt: item.updatedAt }); }} />)}</div>}
+        </section>
+        <section className="panel">
+          <div className="panel-header"><div><div className="panel-title">{isReports ? 'Normalized reports' : 'Review guidance'}</div><div className="panel-kicker">{isReports ? 'Duplicate-aware intake' : 'Conservative by design'}</div></div></div>
+          {isReports ? <div>{(moderation.reports.data?.items ?? []).slice(0, 12).map((report) => <div className="queue-row" key={report.id}><div className={`queue-mark ${report.priority}`}><Flag style={{ width: 15 }} /></div><div className="queue-copy"><div className="queue-title">{report.reason.replace(/_/g, ' ')}</div><div className="queue-meta">{report.entityType} · {report.relatedReportIds.length} related · {fmtDateTime(report.createdAt)}</div></div><StatusBadge status={report.status} /></div>)}</div> : <div className="empty-state"><ShieldCheck /><strong>Safety and validity stay separate</strong><p>Automated signals can prioritize and quarantine. Only a trusted moderator can remove content, restrict an account, or reverse a reward.</p></div>}
+        </section>
+      </div>}
+      <div className="notice" style={{ marginTop: 18 }}><AlertTriangle /><span>Internal scores, provider responses, reporter identity, exact locations, and private proof media are never shown in this console view.</span></div>
+    </div>
+  );
+}
+
+function CaseRow({ item, onClaim, onResolve }: { item: import('@/hooks/use-admin-data').ModerationCase; onClaim: () => void; onResolve: (decision: string) => void }) {
+  return <div className="queue-row" style={{ alignItems: 'flex-start' }} data-testid={`moderation-case-${item.id}`}><div className={`queue-mark ${item.priority}`}><ShieldCheck style={{ width: 15 }} /></div><div className="queue-copy"><div className="queue-title">{item.entityType} · {item.entityId}</div><div className="queue-meta">{item.context} · opened {fmtDateTime(item.createdAt)}{item.assignedModeratorId ? ` · claimed` : ''}</div><div style={{ display: 'flex', gap: 7, marginTop: 9, flexWrap: 'wrap' }}><StatusBadge status={item.priority} /><StatusBadge status={item.status} />{item.outcome?.action && <StatusBadge status={item.outcome.action} />}</div></div><div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>{!item.assignedModeratorId && item.status !== 'resolved' && <button className="btn btn-quiet" onClick={onClaim}>Claim</button>}{item.status !== 'resolved' && <button className="btn btn-primary" onClick={() => onResolve('no_action')}>Resolve</button>}</div></div>;
 }
 
 function QuestLanePreview({ data, location, helper }: { data: AdminData; location: string; helper: string }) {
