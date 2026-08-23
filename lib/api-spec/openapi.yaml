@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: admin
+    description: Staff-only Worlds operations
 paths:
   /healthz:
     get:
@@ -24,7 +26,150 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /admin/session:
+    get:
+      operationId: getAdminSession
+      tags: [admin]
+      summary: Resolve the current staff session
+      responses:
+        "200":
+          description: Staff access state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminSession"
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [admin]
+      summary: Get operational dashboard summaries
+      responses:
+        "200":
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      tags: [admin]
+      summary: List users for staff review
+      parameters:
+        - $ref: "#/components/parameters/Search"
+        - $ref: "#/components/parameters/Status"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Paginated user summaries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUserPage"
+  /admin/quests:
+    get:
+      operationId: listAdminQuests
+      tags: [admin]
+      summary: List quests for staff review
+      parameters:
+        - $ref: "#/components/parameters/Search"
+        - $ref: "#/components/parameters/QuestStatus"
+        - $ref: "#/components/parameters/QuestType"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Paginated quest summaries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminQuestPage"
+  /admin/review-queues:
+    get:
+      operationId: getAdminReviewQueues
+      tags: [admin]
+      summary: Get moderation queue counts and recent cases
+      responses:
+        "200":
+          description: Review queue summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminReviewQueues"
+  /admin/audit:
+    get:
+      operationId: listAdminAuditLogs
+      tags: [admin]
+      summary: List append-only staff audit events
+      parameters:
+        - $ref: "#/components/parameters/Search"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Paginated audit events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminAuditPage"
+  /admin/diagnostics:
+    get:
+      operationId: getAdminDiagnostics
+      tags: [admin]
+      summary: Get safe platform diagnostics
+      responses:
+        "200":
+          description: Diagnostics without secrets
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDiagnostics"
 components:
+  parameters:
+    Search:
+      name: search
+      in: query
+      schema:
+        type: string
+      required: false
+    Status:
+      name: status
+      in: query
+      schema:
+        type: string
+      required: false
+    QuestStatus:
+      name: status
+      in: query
+      schema:
+        type: string
+        enum: [draft, pending_review, approved, scheduled, published, paused, expired, archived, rejected]
+      required: false
+    QuestType:
+      name: type
+      in: query
+      schema:
+        type: string
+        enum: [daily, monthly, geo]
+      required: false
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      required: false
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 25
+      required: false
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +178,151 @@ components:
           type: string
       required:
         - status
+    AdminSession:
+      type: object
+      required: [authenticated, authorized, role, permissions]
+      properties:
+        authenticated: { type: boolean }
+        authorized: { type: boolean }
+        role:
+          type: string
+          enum: [user, creator, moderator, admin, super_admin]
+        displayName: { type: ["string", "null"] }
+        username: { type: ["string", "null"] }
+        permissions:
+          type: array
+          items: { type: string }
+        reason:
+          type: ["string", "null"]
+    AdminMetric:
+      type: object
+      required: [label, value, status]
+      properties:
+        label: { type: string }
+        value: { type: [integer, "null"] }
+        status:
+          type: string
+          enum: [available, unavailable]
+        detail: { type: ["string", "null"] }
+    AdminDashboard:
+      type: object
+      required: [metrics, actionQueue, generatedAt]
+      properties:
+        metrics:
+          type: array
+          items: { $ref: "#/components/schemas/AdminMetric" }
+        actionQueue:
+          type: array
+          items: { $ref: "#/components/schemas/AdminQueueItem" }
+        generatedAt: { type: string, format: date-time }
+    AdminQueueItem:
+      type: object
+      required: [id, category, title, priority, href]
+      properties:
+        id: { type: string }
+        category: { type: string }
+        title: { type: string }
+        priority:
+          type: string
+          enum: [critical, high, normal]
+        href: { type: string }
+        age: { type: ["string", "null"] }
+    AdminUser:
+      type: object
+      required: [id, displayName, username, role, accountStatus, createdAt]
+      properties:
+        id: { type: string }
+        displayName: { type: string }
+        username: { type: string }
+        publicUserRef: { type: ["string", "null"] }
+        role: { type: string }
+        accountStatus: { type: string }
+        createdAt: { type: string, format: date-time }
+        lastActiveAt: { type: ["string", "null"], format: date-time }
+        questCompletions: { type: ["integer", "null"] }
+        huntCompletions: { type: ["integer", "null"] }
+        totalPoints: { type: ["integer", "null"] }
+        openCases: { type: ["integer", "null"] }
+    AdminUserPage:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AdminUser" }
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+    AdminQuest:
+      type: object
+      required: [id, title, type, status, points, source, updatedAt]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        type: { type: string }
+        status: { type: string }
+        difficulty: { type: ["string", "null"] }
+        points: { type: ["integer", "null"] }
+        source: { type: string }
+        completionCount: { type: ["integer", "null"] }
+        reviewCount: { type: ["integer", "null"] }
+        updatedAt: { type: string, format: date-time }
+    AdminQuestPage:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AdminQuest" }
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+    AdminReviewQueues:
+      type: object
+      required: [queues]
+      properties:
+        queues:
+          type: array
+          items: { $ref: "#/components/schemas/AdminQueueItem" }
+    AdminAuditEvent:
+      type: object
+      required: [id, timestamp, action, entityType, result]
+      properties:
+        id: { type: string }
+        timestamp: { type: string, format: date-time }
+        actor: { type: ["string", "null"] }
+        actorRole: { type: ["string", "null"] }
+        action: { type: string }
+        entityType: { type: string }
+        entity: { type: ["string", "null"] }
+        result: { type: string }
+        reason: { type: ["string", "null"] }
+    AdminAuditPage:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AdminAuditEvent" }
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+    AdminDiagnostic:
+      type: object
+      required: [name, status, summary]
+      properties:
+        name: { type: string }
+        status:
+          type: string
+          enum: [configured, missing, healthy, degraded, failed, unavailable]
+        summary: { type: string }
+        checkedAt: { type: ["string", "null"], format: date-time }
+    AdminDiagnostics:
+      type: object
+      required: [checks, generatedAt]
+      properties:
+        checks:
+          type: array
+          items: { $ref: "#/components/schemas/AdminDiagnostic" }
+        generatedAt: { type: string, format: date-time }
 

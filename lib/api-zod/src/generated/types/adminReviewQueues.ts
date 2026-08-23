@@ -5,7 +5,8 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminQueueItem } from './adminQueueItem';
 
-export interface HealthStatus {
-  status: string;
+export interface AdminReviewQueues {
+  queues: AdminQueueItem[];
 }
