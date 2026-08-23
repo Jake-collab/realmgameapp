@@ -154,6 +154,17 @@ export function AIPage({ data }: { data: AdminData }) {
   });
 
   useEffect(() => {
+    const requiredPermission = location === '/ai/generate'
+      ? 'ai.generate'
+      : location === '/ai/settings'
+        ? 'ai.settings.read'
+        : location === '/ai/prompts'
+          ? 'ai.prompts.read'
+          : 'ai.read';
+    if (!data.session.data?.authorized || !data.session.data.permissions.includes(requiredPermission)) {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
     void aiFetch(location === '/ai' ? '/overview' : location === '/ai/prompts' ? '/prompts' : location === '/ai/settings' ? '/settings' : '/history')
       .then((value) => { if (!cancelled) setResult(value); })

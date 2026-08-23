@@ -102,7 +102,7 @@ export function getActivePrompt(type: QuestGenerationType) {
 
 export function aiConfiguration() {
   return {
-    configured: Boolean(process.env.AI_API_KEY),
+    configured: Boolean(process.env.AI_API_KEY && process.env.AI_MODEL),
     provider: process.env.AI_PROVIDER ?? null,
     model: process.env.AI_MODEL ?? null,
   };

@@ -78,14 +78,14 @@ function bearerToken(req: Request): string | null {
   return token || null;
 }
 
-async function supabaseRequest<T>(url: string, serviceKey: string, token: string): Promise<T | null> {
+async function supabaseRequest<T>(url: string, apiKey: string, bearerToken: string): Promise<T | null> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
   try {
     const response = await fetch(url, {
       headers: {
-        apikey: serviceKey,
-        Authorization: `Bearer ${token}`,
+        apikey: apiKey,
+        Authorization: `Bearer ${bearerToken}`,
       },
       signal: controller.signal,
     });
@@ -137,7 +137,7 @@ export async function resolveAdminPrincipal(req: Request): Promise<
   const profiles = await supabaseRequest<ProfileRecord[]>(
     `${config.url}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=id,display_name,username,role,account_status`,
     config.serviceKey,
-    token,
+    config.serviceKey,
   );
   const profile = profiles?.[0];
   if (!profile || profile.account_status !== "active") {
