@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 
 export const moderationCategories = [
   "sexual_content", "nudity", "graphic_violence", "self_harm", "threats",
@@ -64,16 +64,35 @@ function decisionFromCategories(categories: Array<{ category: ModerationCategory
 
 function normalizeProviderPayload(payload: unknown, hash: string): ModerationResult {
   const record = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
-  const rawCategories = Array.isArray(record.categories) ? record.categories : [];
+  const rawCategories = Array.isArray(record.categories)
+    ? record.categories
+    : Array.isArray(record.results)
+      ? Object.entries(
+          record.results[0] && typeof record.results[0] === "object"
+            ? ((record.results[0] as Record<string, unknown>).category_scores ?? {})
+            : {},
+        ).map(([category, score]) => ({ category, score }))
+      : [];
   const categories = rawCategories.flatMap((item) => {
     if (typeof item === "string" && moderationCategories.includes(item as ModerationCategory)) return [{ category: item as ModerationCategory, matched: true }];
     if (!item || typeof item !== "object") return [];
     const value = item as Record<string, unknown>;
-    const category = String(value.category ?? "");
+    const rawCategory = String(value.category ?? "");
+    const categoryAliases: Record<string, ModerationCategory> = {
+      sexual: "sexual_content",
+      violence: "graphic_violence",
+      "self-harm": "self_harm",
+      hate: "hate_or_harassment",
+      harassment: "hate_or_harassment",
+      illicit: "illegal_activity",
+      "illicit/violent": "illegal_activity",
+    };
+    const category = categoryAliases[rawCategory] ?? rawCategory;
     return moderationCategories.includes(category as ModerationCategory)
-      ? [{ category: category as ModerationCategory, score: typeof value.score === "number" ? value.score : undefined, matched: Boolean(value.matched ?? true) }]
+      ? [{ category: category as ModerationCategory, score: typeof value.score === "number" ? value.score : undefined, matched: Boolean(value.matched ?? (typeof value.score === "number" ? value.score >= 0.5 : true)) }]
       : [];
   });
+  if (!Array.isArray(record.categories) && !Array.isArray(record.results)) return unavailableResult(hash);
   const decision = decisionFromCategories(categories);
   return {
     decision,
@@ -160,7 +179,7 @@ export async function moderateText(text: string, context: ModerationContext, opt
 }
 
 export async function moderateImage(input: { contentHash?: string; mediaUrl?: string; context: ModerationContext }, options?: { accountInGoodStanding?: boolean; priorSevereAbuse?: boolean; reported?: boolean }) {
-  const hash = input.contentHash ?? contentHash(input.mediaUrl ?? randomUUID());
+  const hash = input.contentHash ?? contentHash(input.mediaUrl ?? "missing-media-input");
   const result = await getModerationProvider().moderateImage({ ...input, contentHash: hash });
   return applyModerationPolicy(result, input.context, options);
 }
