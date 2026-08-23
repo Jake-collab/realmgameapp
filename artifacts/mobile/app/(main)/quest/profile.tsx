@@ -175,6 +175,13 @@ export default function QuestProfileScreen() {
         color={colors.primary}
       />
       <ProfileLink
+        icon="refresh-cw"
+        label="Offline & Sync"
+        sublabel="Connection and saved changes"
+        onPress={() => router.push('/offline-sync')}
+        color={colors.primary}
+      />
+      <ProfileLink
         icon="settings"
         label="Settings"
         sublabel="Notifications, account"
