@@ -75,6 +75,7 @@ export interface UserSearchResult extends PublicIdentity {
 export interface PublicProfile extends PublicIdentity {
   /** null when show_bio = false in target's privacy settings */
   bio?: string | null;
+  showBio?: boolean;
   createdAt?: string;
   relationshipState: SocialRelationshipState;
   /** Whether the viewer may send a friend request */
@@ -99,7 +100,7 @@ export type PublicProfileResult =
   | { unavailable: true; reason: 'not_found' | 'private' | 'unavailable'; relationshipState?: SocialRelationshipState; username?: string }
   | PublicProfile;
 
-export function isPublicProfileUnavailable(r: PublicProfileResult): r is { unavailable: true; reason: string } {
+export function isPublicProfileUnavailable(r: PublicProfileResult): r is Extract<PublicProfileResult, { unavailable: true }> {
   return 'unavailable' in r && r.unavailable === true;
 }
 export function isPublicProfileSelf(r: PublicProfileResult): r is { isSelf: true; username: string } {

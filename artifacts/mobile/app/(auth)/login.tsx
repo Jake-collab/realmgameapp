@@ -128,7 +128,6 @@ export default function LoginScreen() {
         {showDevNotice && (
           <View
             style={[styles.devNotice, { backgroundColor: colors.muted, borderRadius: radius.md }]}
-            accessibilityRole="status"
           >
             <Feather name="info" size={15} color={colors.mutedForeground} />
             <Text style={[styles.devNoticeText, { color: colors.mutedForeground }]}>
@@ -224,7 +223,7 @@ export default function LoginScreen() {
 
         {/* Social placeholders (not yet functional) */}
         <View style={styles.socialButtons}>
-          <SocialButton icon="apple" label="Continue with Apple" disabled />
+          <SocialButton icon="smartphone" label="Continue with Apple" disabled />
           <SocialButton icon="github" label="Continue with Google" disabled />
         </View>
 

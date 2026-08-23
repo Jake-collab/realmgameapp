@@ -15,6 +15,7 @@ import type {
   QuestAvailabilityState,
   EligibilityReasonCode,
 } from '../types/quest.types';
+export type { QuestAvailabilityState } from '../types/quest.types';
 import type { ParticipationStatus, ProofSubmissionStatus } from '@/lib/supabase/database.types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────

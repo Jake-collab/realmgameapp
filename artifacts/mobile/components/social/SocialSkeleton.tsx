@@ -2,11 +2,11 @@
  * SocialSkeleton — loading placeholders for social screens.
  */
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, type DimensionValue } from 'react-native';
 import { useColors } from '@/hooks/useColors';
 import { radius, spacing } from '@/constants/spacing';
 
-function SkeletonBox({ w, h, r }: { w?: number | string; h: number; r?: number }) {
+function SkeletonBox({ w, h, r }: { w?: DimensionValue; h: number; r?: number }) {
   const colors = useColors();
   return (
     <View

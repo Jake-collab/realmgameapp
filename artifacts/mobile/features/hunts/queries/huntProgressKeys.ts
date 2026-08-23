@@ -76,7 +76,7 @@ export function getHuntProofDecisionInvalidationKeys(
   period: LeaderboardPeriod,
   participationId?: string,
 ) {
-  const keys = [
+  const keys: Array<readonly unknown[]> = [
     huntProgressKeys.inAction(userId),
     huntProgressKeys.completed(userId),
     huntProgressKeys.pointHistory(userId),

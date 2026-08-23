@@ -34,6 +34,7 @@ import {
   isPublicProfile, isPublicProfileSelf, isPublicProfileUnavailable,
   resolvePrimaryAction,
   type SocialRelationshipState,
+  type PublicProfile,
 } from '@/features/social/types/social.types';
 import { SOCIAL_PURPLE } from '@/features/social/constants/social.constants';
 import { PublicProfileHeader } from '@/components/social/PublicProfileHeader';
@@ -114,7 +115,7 @@ export default function PublicProfileScreen() {
   }
 
   // ── Full profile ─────────────────────────────────────────────
-  const profile = result;
+  const profile = result as PublicProfile;
   const relState   = profile.relationshipState;
   const pendingId  = relationQuery.data?.pendingRequestId;
 

@@ -18,7 +18,7 @@ import QuestTypeBadge from './QuestTypeBadge';
 import DifficultyBadge from './DifficultyBadge';
 import { resolveQuestAction } from '@/features/quests/utils/questActionResolver';
 import type { InActionItem } from '@/features/quests/types/questProgress.types';
-import type { QuestAvailabilityState } from '@/features/quests/utils/questActionResolver';
+import type { QuestAvailabilityState } from '@/features/quests/types/quest.types';
 
 interface Props {
   item: InActionItem;

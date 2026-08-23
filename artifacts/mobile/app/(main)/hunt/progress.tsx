@@ -83,10 +83,10 @@ function LeaderboardsSection() {
   const rank        = useMyHuntRank(period);
 
   const allEntries = useMemo(
-    () => leaderboard.data?.pages.flatMap(p => p.entries) ?? [],
+    () => leaderboard.data?.entries ?? [],
     [leaderboard.data],
   );
-  const hasMore = leaderboard.data?.pages.at(-1)?.hasMore ?? false;
+  const hasMore = leaderboard.data?.hasMore ?? false;
 
   function handleLoadMore() {
     if (leaderboard.hasNextPage && !leaderboard.isFetchingNextPage) {
@@ -221,7 +221,7 @@ function InActionSection() {
         title="No Hunts In Action"
         body="You don't have a Hunt in action. Browse available Hunts to get started."
         actionLabel="Browse Hunts"
-        onAction={() => router.push('/hunt/hunts')}
+        onAction={() => router.push('/(main)/hunt')}
       />
     );
   }
@@ -300,13 +300,13 @@ function CompletedSection() {
   const otherActivity = useHuntOtherActivity();
 
   const allItems = useMemo(
-    () => completed.data?.pages.flatMap(p => p.items) ?? [],
+    () => completed.data?.items ?? [],
     [completed.data],
   );
-  const hasMore = completed.data?.pages.at(-1)?.hasMore ?? false;
+  const hasMore = completed.data?.hasMore ?? false;
 
   const otherItems = useMemo(
-    () => otherActivity.data?.pages.flatMap(p => p.items) ?? [],
+    () => otherActivity.data?.items ?? [],
     [otherActivity.data],
   );
 
@@ -389,7 +389,7 @@ function CompletedSection() {
           actionLabel={isActiveFilter ? 'Clear Filter' : 'Browse Hunts'}
           onAction={isActiveFilter
             ? () => { setFilter(DEFAULT_HUNT_COMPLETED_FILTER); }
-            : () => router.push('/hunt/hunts')
+            : () => router.push('/(main)/hunt')
           }
         />
       }

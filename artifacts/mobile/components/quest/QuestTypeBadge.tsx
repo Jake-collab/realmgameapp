@@ -16,9 +16,10 @@ import type { QuestType } from '@/lib/supabase/database.types';
 interface Props {
   questType: QuestType;
   size?: 'sm' | 'md';
+  compact?: boolean;
 }
 
-export default function QuestTypeBadge({ questType, size = 'md' }: Props) {
+export default function QuestTypeBadge({ questType, size = 'md', compact = false }: Props) {
   const colors = useColors();
 
   const config = {
@@ -43,7 +44,7 @@ export default function QuestTypeBadge({ questType, size = 'md' }: Props) {
     icon: 'compass' as const,
   };
 
-  const isSm = size === 'sm';
+  const isSm = compact || size === 'sm';
 
   return (
     <View

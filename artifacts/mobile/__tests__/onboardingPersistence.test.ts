@@ -66,7 +66,7 @@ describe('interests step persistence', () => {
     // setMyInterests is only called when selected.size > 0
     const selectedIds: string[] = [];
     if (selectedIds.length > 0) {
-      await mockSetMyInterests('user-123', selectedIds);
+      await mockSetMyInterests();
     }
     expect(mockSetMyInterests).not.toHaveBeenCalled();
   });

@@ -589,6 +589,36 @@ export type HuntInsert = Pick<HuntRow,
 export interface Database {
   public: {
     Tables: {
+      game_sessions: {
+        Row: {
+          id: string;
+          user_id: string;
+          mode: GameMode;
+          started_at: string;
+          completed_at: string | null;
+          score: number;
+          status: string;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          mode: GameMode;
+          started_at?: string;
+          completed_at?: string | null;
+          score?: number;
+          status?: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: Partial<{
+          completed_at: string | null;
+          score: number;
+          status: string;
+          metadata: Json;
+        }>;
+      };
       profiles: {
         Row: ProfileRow;
         Insert: ProfileInsert;
@@ -774,3 +804,17 @@ export interface Database {
     };
   };
 }
+
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
+export type Tables<T extends keyof Database['public']['Tables']> =
+  Database['public']['Tables'][T]['Row'];
+
+export type Enums<T extends keyof Database['public']['Enums']> =
+  Database['public']['Enums'][T];

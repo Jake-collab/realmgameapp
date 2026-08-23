@@ -33,11 +33,11 @@ export default function QuestPointHistoryScreen() {
   const history = useQuestPointHistory();
 
   const allItems = useMemo(
-    () => history.data?.pages.flatMap(p => p.items) ?? [],
+    () => history.data?.items ?? [],
     [history.data]
   );
 
-  const hasMore = history.data?.pages.at(-1)?.hasMore ?? false;
+  const hasMore = history.data?.hasMore ?? false;
   const totalPoints = useMemo(
     () => allItems.reduce((sum, t) => sum + t.amount, 0),
     [allItems]

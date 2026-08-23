@@ -317,6 +317,7 @@ export const DEV_HUNT_FIXTURES: HuntSummary[] = [
 // ─── Active hunt fixture ──────────────────────────────────────────────────────
 
 export const DEV_ACTIVE_HUNT: ActiveHunt = {
+  isOrdered: true,
   huntId:              HUNT_C_ID,
   huntTitle:           '[DEV] Harbor Expedition',
   occurrenceId:        '20000000-aaaa-aaaa-aaaa-000000000003',

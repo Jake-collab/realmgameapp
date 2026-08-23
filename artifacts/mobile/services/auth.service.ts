@@ -19,7 +19,7 @@ import type {
   AuthUser,
   SignInCredentials,
 } from '@/types/auth.types';
-import type { Session } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -60,7 +60,7 @@ function mapError(error: { message: string; code?: string } | null): AuthError |
   return { code: error.code ?? 'unknown', message: error.message };
 }
 
-function mapUser(sbUser: NonNullable<ReturnType<typeof requireSupabase>['auth']['getUser']> extends Promise<{ data: { user: infer U } }> ? U : never): AuthUser | null {
+function mapUser(sbUser: User | null): AuthUser | null {
   if (!sbUser) return null;
   return {
     id: sbUser.id,

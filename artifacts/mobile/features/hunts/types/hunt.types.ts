@@ -41,7 +41,8 @@ export type HuntContentStatus = HuntStatus;
 export type ParticipantRole   = 'creator' | 'player' | 'co_host';
 export type ParticipantStatus =
   | 'invited' | 'accepted' | 'ready' | 'active' | 'paused'
-  | 'completed' | 'declined' | 'removed' | 'left' | 'expired';
+  | 'completed' | 'declined' | 'removed' | 'left' | 'withdrawn'
+  | 'cancelled' | 'expired';
 export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'revoked' | 'expired';
 export type Difficulty       = 'very_easy' | 'easy' | 'medium' | 'hard' | 'epic';
 
@@ -110,6 +111,7 @@ export type StopCompletionMethod =
  *   needs_resubmission → under_review
  */
 export type StopProgressStatus =
+  | 'not_started'
   | 'locked'
   | 'available'
   | 'in_progress'

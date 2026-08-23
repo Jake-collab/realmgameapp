@@ -14,6 +14,7 @@ import type { Difficulty } from '@/lib/supabase/database.types';
 interface Props {
   difficulty: Difficulty;
   size?: 'sm' | 'md';
+  compact?: boolean;
   /** When true, show dots instead of text label */
   dotsOnly?: boolean;
 }
@@ -45,7 +46,7 @@ function getDifficultyColor(difficulty: Difficulty, colors: ReturnType<typeof im
   }
 }
 
-export default function DifficultyBadge({ difficulty, size = 'md', dotsOnly = false }: Props) {
+export default function DifficultyBadge({ difficulty, size = 'md', compact = false, dotsOnly = false }: Props) {
   const colors = useColors();
   const color = getDifficultyColor(difficulty, colors);
   const dots = DIFFICULTY_DOTS[difficulty] ?? 1;
@@ -67,7 +68,7 @@ export default function DifficultyBadge({ difficulty, size = 'md', dotsOnly = fa
     );
   }
 
-  const isSm = size === 'sm';
+  const isSm = compact || size === 'sm';
 
   return (
     <View

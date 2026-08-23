@@ -13,7 +13,7 @@ export default function NotFoundScreen() {
           This screen doesn&apos;t exist.
         </Text>
 
-        <Link href="/" style={styles.link}>
+        <Link href="/(main)/quest" style={styles.link}>
           <Text style={[styles.linkText, { color: colors.primary }]}>
             Go to home screen!
           </Text>

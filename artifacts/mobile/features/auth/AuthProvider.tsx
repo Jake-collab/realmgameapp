@@ -98,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const { setHasOnboarded, setActiveMode, clearUnread, clearToasts } = useAppStore.getState();
 
-  const resolveStartupStateRef = useRef<() => Promise<void>>();
+  const resolveStartupStateRef = useRef<(() => Promise<void>) | undefined>(undefined);
 
   // ── Core startup function ─────────────────────────────────────────────────
 

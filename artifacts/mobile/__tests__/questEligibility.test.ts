@@ -78,6 +78,8 @@ function makeParticipation(overrides: Partial<QuestParticipationRow> = {}): Ques
     abandoned_at: null,
     expires_at: null,
     awarded_points: null,
+    reward_snapshot_points: null,
+    occurrence_key: null,
     completion_version: 1,
     created_at: now,
     updated_at: now,

@@ -180,6 +180,7 @@ export async function completeHuntStop(
 
 export function getStopStatusLabel(status: StopProgressStatus): string {
   const labels: Record<StopProgressStatus, string> = {
+    not_started:         'Not Started',
     locked:              'Locked',
     available:           'Ready',
     in_progress:         'In Progress',

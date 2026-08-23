@@ -56,8 +56,7 @@ export default function HuntOtherActivityScreen() {
   const allActivity = useHuntOtherActivity();
   const stops       = useHuntStopHistory(participationId ?? null);
 
-  const item = allActivity.data?.pages
-    .flatMap(p => p.items)
+  const item = allActivity.data?.items
     .find(i => i.participationId === participationId);
 
   const isLoading = (allActivity.isLoading && !item) || stops.isLoading;

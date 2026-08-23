@@ -35,10 +35,10 @@ export default function HuntPointHistoryScreen() {
   const history = useHuntPointHistory();
 
   const allItems = useMemo(
-    () => history.data?.pages.flatMap(p => p.items) ?? [],
+    () => history.data?.items ?? [],
     [history.data],
   );
-  const hasMore = history.data?.pages.at(-1)?.hasMore ?? false;
+  const hasMore = history.data?.hasMore ?? false;
 
   // Total net points
   const netPoints = allItems.reduce((sum, t) => sum + t.amount, 0);
@@ -131,7 +131,7 @@ export default function HuntPointHistoryScreen() {
               title="No Hunt Points Yet"
               body="Complete a Hunt to earn points. They will appear here."
               actionLabel="Browse Hunts"
-              onAction={() => router.push('/hunt/hunts')}
+              onAction={() => router.push('/(main)/hunt')}
             />
           }
           ListFooterComponent={
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   loadPad: { padding: spacing[5] },
   listContent: {
     paddingHorizontal: spacing[5], paddingTop: spacing[4],
-    paddingBottom: spacing[12], gap: spacing[0],
+    paddingBottom: spacing[12], gap: 0,
   },
   summaryCard: {
     borderRadius: radius.xl, borderWidth: 1,

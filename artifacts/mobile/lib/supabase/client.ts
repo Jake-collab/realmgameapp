@@ -33,10 +33,13 @@ export function isSupabaseConfigured(): boolean {
 
 // ─── Client ──────────────────────────────────────────────────────────────────
 
-let _supabase: SupabaseClient<Database> | null = null;
+// Supabase's generated schema is authoritative once connected. Until then,
+// the checked-in schema is intentionally partial, so keep the SDK client at
+// the boundary and preserve domain typing in repositories/services.
+let _supabase: SupabaseClient<any> | null = null;
 
 if (isSupabaseConfigured()) {
-  _supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  _supabase = createClient<any>(SUPABASE_URL, SUPABASE_ANON_KEY, {
     auth: {
       storage: AsyncStorage,
       autoRefreshToken: true,
@@ -69,7 +72,7 @@ export const supabase = _supabase;
  *
  * @throws {Error} When credentials are absent
  */
-export function requireSupabase(): SupabaseClient<Database> {
+export function requireSupabase(): SupabaseClient<any> {
   if (!_supabase) {
     throw new Error(
       'Supabase is not configured. Set EXPO_PUBLIC_SUPABASE_URL and ' +
@@ -78,4 +81,9 @@ export function requireSupabase(): SupabaseClient<Database> {
     );
   }
   return _supabase;
+}
+
+/** Backwards-compatible alias used by older feature repositories. */
+export function getSupabaseClient(): SupabaseClient<any> {
+  return requireSupabase();
 }

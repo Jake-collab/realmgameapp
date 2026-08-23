@@ -80,11 +80,11 @@ function LeaderboardsSection() {
   const rank = useMyQuestRank(period);
 
   const allEntries = useMemo(
-    () => leaderboard.data?.pages.flatMap(p => p.entries) ?? [],
+    () => leaderboard.data?.entries ?? [],
     [leaderboard.data]
   );
 
-  const hasMore = leaderboard.data?.pages.at(-1)?.hasMore ?? false;
+  const hasMore = leaderboard.data?.hasMore ?? false;
 
   function handleLoadMore() {
     if (leaderboard.hasNextPage && !leaderboard.isFetchingNextPage) {
@@ -330,12 +330,12 @@ function CompletedSection() {
   const otherActivity = useProgressOtherActivity();
 
   const allItems = useMemo(
-    () => completed.data?.pages.flatMap(p => p.items) ?? [],
+    () => completed.data?.items ?? [],
     [completed.data]
   );
-  const hasMore = completed.data?.pages.at(-1)?.hasMore ?? false;
+  const hasMore = completed.data?.hasMore ?? false;
   const otherItems = useMemo(
-    () => otherActivity.data?.pages.flatMap(p => p.items) ?? [],
+    () => otherActivity.data?.items ?? [],
     [otherActivity.data]
   );
 

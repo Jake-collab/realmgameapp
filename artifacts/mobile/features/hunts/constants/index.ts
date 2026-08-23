@@ -93,6 +93,8 @@ export const PARTICIPANT_ALLOWED_TRANSITIONS: Record<ParticipantStatus, Particip
   ready:      ['active', 'left', 'removed', 'expired'],
   active:     ['paused', 'completed', 'left', 'removed', 'expired'],
   paused:     ['active', 'left', 'removed', 'expired'],
+  withdrawn:  [],
+  cancelled:  [],
   // Terminal states
   completed:  [],
   declined:   [],
@@ -124,6 +126,7 @@ export const WITHDRAWABLE_STATUSES: ReadonlySet<ParticipantStatus> = new Set([
 
 // ─── Stop progress status machine ─────────────────────────────────────────────
 export const STOP_ALLOWED_TRANSITIONS: Record<StopProgressStatus, StopProgressStatus[]> = {
+  not_started:         ['available', 'locked'],
   locked:              ['available'],
   available:           ['in_progress', 'awaiting_proof', 'completed', 'skipped'],
   in_progress:         ['awaiting_proof', 'completed', 'available'],
