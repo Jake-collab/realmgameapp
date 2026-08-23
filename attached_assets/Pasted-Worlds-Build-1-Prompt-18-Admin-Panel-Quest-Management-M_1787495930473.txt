@@ -1,0 +1,3023 @@
+Worlds — Build 1, Prompt 18
+
+Admin Panel, Quest Management, Moderation, Submissions, Safety, and Platform Operations
+
+Continue from the existing Worlds project.
+
+Treat all existing project documentation and completed Prompts 1–17 as authoritative.
+
+Important documents include, but are not limited to:
+
+* /docs/PROJECT_CONSTITUTION.md
+* /docs/DATABASE_ARCHITECTURE.md
+* /docs/ROW_LEVEL_SECURITY.md
+* /docs/AUTHENTICATION.md
+* /docs/PROFILE_AND_SETTINGS.md
+* /docs/NOTIFICATIONS.md
+* /docs/QUEST_DOMAIN.md
+* /docs/QUEST_STATE_MACHINE.md
+* /docs/QUEST_SCHEDULING.md
+* /docs/QUEST_PROOF_SYSTEM.md
+* /docs/QUEST_POINT_AWARDS.md
+* /docs/QUEST_SECURITY.md
+* /docs/QUEST_UI.md
+* /docs/QUEST_PROGRESS.md
+* /docs/QUEST_LEADERBOARDS.md
+* /docs/QUEST_MAP.md
+* /docs/GEO_QUEST_VALIDATION.md
+* /docs/HUNT_DOMAIN.md
+* /docs/HUNT_STATE_MACHINE.md
+* /docs/HUNT_SECURITY.md
+* /docs/HUNT_CREATOR.md
+* /docs/HUNT_CREATION_FLOW.md
+* /docs/HUNT_CREATOR_MODERATION.md
+* /docs/HUNT_VERSIONING.md
+* /docs/HUNT_PROGRESS.md
+* /docs/HUNT_LEADERBOARDS.md
+* /docs/ACHIEVEMENTS.md
+* /docs/PROGRESSION.md
+* /docs/SOCIAL_ARCHITECTURE.md
+* /docs/SOCIAL_PRIVACY.md
+* /docs/BLOCKING.md
+* all Mapbox/geospatial documentation
+* all documentation created during Prompts 1–17
+* replit.md
+
+The application is named:
+
+Worlds
+
+Prompts 1–17 created the consumer-facing application, Quest and Hunt gameplay, progression, social systems, creator Hunt creation, moderation readiness, mapping, proof, points, privacy, and security architecture.
+
+This prompt must implement the full internal Worlds Admin Panel foundation and operational workflows.
+
+This is a staff application.
+
+Ordinary users must never gain access through client manipulation.
+
+Do not duplicate consumer-facing systems.
+
+Do not implement Stripe, payments, creator payouts, paid Hunts, or subscriptions.
+
+Do not connect the external AI API yet.
+
+The next prompt will implement the customizable AI generation system for:
+
+* Daily Quests
+* Monthly Quest Drops
+* Geo-Quests
+
+including admin-editable system prompts and generation instructions.
+
+However, this prompt must build the admin Quest editor and all database/UI surfaces the AI system will later populate.
+
+⸻
+
+Primary Objective
+
+Build a secure internal Admin Panel supporting:
+
+1. Dashboard
+2. User management
+3. Quest management
+4. Daily Quest configuration
+5. Monthly Quest set management
+6. Geo-Quest management
+7. Quest point configuration
+8. Quest proof configuration
+9. Quest submissions review
+10. Hunt moderation
+11. Custom Hunt review
+12. User-uploaded media moderation
+13. Reports
+14. Anti-cheat review
+15. Location-validation review
+16. Point adjustments and reversals
+17. Achievement administration
+18. Interest Bubble management
+19. Notification administration
+20. Platform settings
+21. Safety configuration
+22. Feature flags
+23. Operational jobs
+24. Leaderboard health
+25. Audit logs
+26. Admin role permissions
+27. Admin diagnostics
+28. Search and filtering
+29. Bulk actions where safe
+30. Production-ready security boundaries
+
+The Admin Panel should feel:
+
+* Clear
+* Operational
+* Fast
+* Professional
+* Data-dense only when appropriate
+* Easy to navigate
+* Separate visually from the consumer game
+* Safe against accidental destructive actions
+
+Do not style the Admin Panel like gameplay.
+
+⸻
+
+1. Admin Application Boundary
+
+Create or finalize a dedicated admin route group.
+
+Suggested structure:
+
+/admin
+/admin/dashboard
+/admin/users
+/admin/users/[userId]
+/admin/quests
+/admin/quests/new
+/admin/quests/[questId]
+/admin/quests/daily
+/admin/quests/monthly
+/admin/quests/geo
+/admin/quests/submissions
+/admin/hunts
+/admin/hunts/review
+/admin/hunts/[huntId]
+/admin/moderation
+/admin/moderation/media
+/admin/moderation/reports
+/admin/moderation/anti-cheat
+/admin/interests
+/admin/achievements
+/admin/notifications
+/admin/settings
+/admin/audit
+/admin/diagnostics
+
+Adapt to the existing framework.
+
+Do not create public links into /admin.
+
+Admin routes must require:
+
+* Authentication
+* Valid profile
+* Approved staff role
+* Active account
+* Appropriate admin permission
+
+Route protection must exist server-side as well as client-side.
+
+⸻
+
+2. Admin Roles
+
+Support a practical role hierarchy.
+
+Suggested roles:
+
+* moderator
+* admin
+* super_admin
+
+The existing ordinary roles such as user and creator must not receive admin access.
+
+Moderator
+
+May generally:
+
+* Review proof submissions
+* Review Hunt submissions
+* Review media
+* Review reports
+* Resolve routine moderation cases
+
+Admin
+
+May additionally:
+
+* Manage Quests
+* Manage Interest Bubbles
+* Manage platform configuration
+* Adjust points through trusted workflows
+* Manage achievements
+* Manage users within policy
+* Manage operational jobs
+
+Super Admin
+
+May additionally:
+
+* Manage admin roles
+* Manage high-risk configuration
+* Access sensitive diagnostics
+* Perform exceptional overrides
+
+Do not let users elevate themselves.
+
+Do not make role checking purely client-side.
+
+⸻
+
+3. Granular Admin Permissions
+
+Create permission-ready architecture.
+
+Potential permissions:
+
+users.read
+users.restrict
+users.suspend
+quests.read
+quests.create
+quests.edit
+quests.publish
+quests.archive
+quest_submissions.review
+hunts.read
+hunts.review
+hunts.publish
+hunts.pause
+hunts.cancel
+media.review
+reports.review
+anti_cheat.review
+points.adjust
+points.reverse
+achievements.manage
+interests.manage
+notifications.manage
+settings.read
+settings.update
+audit.read
+diagnostics.read
+admins.manage
+
+Do not require every permission to become a separate role immediately.
+
+Use a central permission resolver.
+
+Do not scatter hardcoded role === admin checks throughout components.
+
+⸻
+
+4. Admin Layout
+
+Create a desktop-first responsive Admin shell.
+
+Use:
+
+* Left navigation sidebar on desktop
+* Collapsible navigation where necessary
+* Top bar
+* Global search
+* Notification/operational indicator
+* Admin identity menu
+* Breadcrumbs
+* Page title
+* Contextual page actions
+
+Core navigation:
+
+* Dashboard
+* Users
+* Quests
+* Quest Submissions
+* Hunts
+* Moderation
+* Reports
+* Anti-Cheat
+* Interests
+* Achievements
+* Notifications
+* Settings
+* Audit Logs
+* Diagnostics
+
+Do not expose every low-level table as its own navigation item.
+
+Group related operations logically.
+
+⸻
+
+5. Admin Visual Design
+
+Admin should be visually related to Worlds but clearly operational.
+
+Use:
+
+* White/light neutral surfaces
+* Charcoal text
+* Deep blue navigation
+* Green accent for approved/success
+* Restrained semantic warning/error colors
+* Tables where tables make sense
+* Cards for summaries
+* Drawers/modals for compact review actions
+
+Avoid:
+
+* Gameplay map decoration
+* Animated badges
+* Huge gradients
+* Arcade visuals
+* Excessive rounded cards
+* Consumer gamification
+
+The staff needs speed and clarity.
+
+⸻
+
+6. Dashboard
+
+Implement Admin Dashboard.
+
+Show meaningful cards such as:
+
+Users
+
+* Total active users
+* New users
+* Restricted users
+* Suspended users
+
+Quest
+
+* Published Quests
+* Draft Quests
+* Pending submissions
+* Proof requiring review
+* Current Daily Quest
+* Current Monthly Drop
+* Active Geo-Quests
+
+Hunt
+
+* Published Hunts
+* Custom Hunts pending review
+* Active Hunt occurrences
+* Hunt proof awaiting review
+
+Safety
+
+* Open reports
+* High-priority reports
+* Open anti-cheat flags
+* Media awaiting moderation
+
+System
+
+* Failed jobs
+* Leaderboard refresh health
+* Notification job health
+* Geo validation errors
+* Recent operational errors
+
+Do not invent data.
+
+If metrics are unavailable, show a real empty/unavailable state.
+
+⸻
+
+7. Dashboard Action Queue
+
+Add a compact operational queue.
+
+Prioritize:
+
+1. Critical safety reports
+2. High-risk anti-cheat flags
+3. Proof awaiting review
+4. Custom Hunts awaiting moderation
+5. Media awaiting review
+6. Failed scheduled jobs
+7. Important system errors
+
+Each item should deep-link to the appropriate workflow.
+
+Do not create duplicate moderation records merely for Dashboard display.
+
+⸻
+
+8. Global Admin Search
+
+Implement admin search for appropriate entities:
+
+* Username
+* User ID or public user reference
+* Quest title
+* Quest ID
+* Hunt title
+* Hunt ID
+* Submission ID
+* Report ID
+* Moderation case ID
+
+Do not include secrets.
+
+Search results must respect staff permissions.
+
+Use debouncing and pagination.
+
+Do not download complete datasets into the client.
+
+⸻
+
+9. User Management
+
+Implement /admin/users.
+
+Display:
+
+* Avatar
+* Display name
+* Username
+* Public user reference
+* Role
+* Account status
+* Created date
+* Last active timestamp where safely available
+* Quest completions
+* Hunt completions
+* Total points
+* Open moderation case count
+* Current restrictions
+
+Filters:
+
+* Active
+* Restricted
+* Suspended
+* Deactivated
+* User role
+* Creator
+* Has open reports
+* Has anti-cheat flags
+
+Do not expose authentication secrets.
+
+⸻
+
+10. Admin User Detail
+
+Create a comprehensive User Detail screen.
+
+Sections:
+
+Account
+
+* Display name
+* Username
+* Account status
+* Role
+* Created date
+* Onboarding status
+
+Progress
+
+* Quest points
+* Hunt points
+* Combined points
+* Quest completions
+* Hunt completions
+* Achievements
+
+Safety
+
+* Open reports
+* Moderation cases
+* Anti-cheat flags
+* Content removals
+
+Financial
+
+Do not create this section in Build 1.
+
+History
+
+* Account status changes
+* Point adjustments
+* Moderation actions
+* Important admin actions
+
+Do not expose:
+
+* Password
+* Refresh tokens
+* Access tokens
+* Raw authentication secrets
+
+⸻
+
+11. Restrict User
+
+Implement trusted restriction workflow.
+
+Admin must:
+
+1. Choose restriction type.
+2. Enter internal reason.
+3. Optionally enter user-facing reason.
+4. Choose duration where applicable.
+5. Confirm.
+6. Apply through trusted backend.
+7. Record audit log.
+8. Notify user if appropriate.
+
+Potential restrictions:
+
+* Social interactions restricted
+* Hunt creation restricted
+* Quest submission restricted
+* Location validation restricted
+* Leaderboard excluded
+* General account restriction
+
+Do not create an unbounded arbitrary permission editor unless needed.
+
+⸻
+
+12. Suspend User
+
+Implement high-risk suspension flow.
+
+Require:
+
+* Sufficient permission
+* Reason
+* Confirmation
+* Optional expiration
+* Audit record
+
+Suspension should affect:
+
+* Gameplay mutations
+* Social actions
+* Hunt creation
+* Public leaderboard visibility
+* Relevant public profile visibility
+
+Do not delete the user.
+
+Do not delete historical records.
+
+⸻
+
+13. Restore User
+
+Allow authorized staff to:
+
+* Remove restriction
+* Restore suspended account
+* Expire temporary restriction
+
+Require audit reason.
+
+Do not silently remove moderation history.
+
+⸻
+
+14. Admin Role Management
+
+Only authorized Super Admins may alter admin roles.
+
+Support:
+
+* Promote user to moderator/admin
+* Remove staff role
+* View permission summary
+
+Require:
+
+* Confirmation
+* Audit reason
+* Current role
+* New role
+
+Do not allow a staff member to grant permissions above their own authority.
+
+Do not allow ordinary Admin users to create Super Admins unless expressly allowed.
+
+⸻
+
+15. Quest Management Overview
+
+Implement /admin/quests.
+
+Primary categories:
+
+* All
+* Daily
+* Monthly
+* Geo
+
+Useful statuses:
+
+* Draft
+* Pending Review
+* Approved
+* Scheduled
+* Published
+* Paused
+* Expired
+* Archived
+* Rejected
+
+Show:
+
+* Title
+* Type
+* Status
+* Difficulty
+* Points
+* Availability
+* Source:
+    * Admin
+    * AI
+    * System
+* Completion count
+* Submission review count
+* Updated date
+
+Actions:
+
+* View
+* Edit
+* Duplicate
+* Publish where authorized
+* Pause
+* Archive
+
+Do not include Hunt content here.
+
+⸻
+
+16. Quest Editor
+
+Implement full admin Quest editor.
+
+Fields include:
+
+* Title
+* Summary
+* Description
+* Quest type
+* Difficulty
+* Estimated duration
+* Points reward
+* Indoor/outdoor
+* Accessibility
+* Safety notes
+* Category
+* Tags/interests
+* Proof type
+* Proof instructions
+* Repeatability
+* Availability
+* Start/end schedule
+* Images
+* Objectives
+* Steps
+* Geo configuration when applicable
+* Administrative priority
+* Source
+* Status
+
+Do not expose raw database JSON as the primary editor.
+
+Use clear grouped sections.
+
+⸻
+
+17. Quest Point Calibration
+
+The Quest editor must use the shared point-calibration system.
+
+Display:
+
+* Difficulty
+* Duration
+* Activity type
+* Travel burden
+* Physical effort
+* Complexity
+* Proof burden
+* Location requirement
+
+Then show:
+
+Suggested point range
+
+Example:
+
+Suggested: 150–250 points
+
+Admin may override.
+
+Require a warning for unusually high or low values.
+
+Do not silently force the recommendation.
+
+Do not allow invalid negative or zero rewards.
+
+The authoritative points reward remains server-side.
+
+⸻
+
+18. Difficulty Mismatch Cleanup
+
+Earlier implementation contained an Extreme difficulty mismatch.
+
+Audit the project.
+
+There must be one canonical difficulty model.
+
+If current approved difficulty values are:
+
+* Very Easy
+* Easy
+* Medium
+* Hard
+* Epic
+
+then remove or migrate incompatible Extreme usage safely.
+
+If the established domain has a different canonical enum, use it consistently.
+
+Requirements:
+
+* Database
+* Generated types
+* Validation
+* Admin editor
+* Mobile UI
+* Point guidelines
+
+must agree.
+
+Do not leave an orphan enum accepted by one layer but unsupported by another.
+
+⸻
+
+19. Daily Quest Administration
+
+Create dedicated Daily Quest management.
+
+Support:
+
+* View current Daily Quest pool
+* Create Daily Quest
+* Edit
+* Activate/deactivate
+* Schedule
+* Tag with Interest Bubbles
+* Set points
+* Configure proof
+* View completion statistics
+
+Important:
+
+Daily Quest selection must remain personalized using the user’s selected Interest Bubbles where configured.
+
+Prepare a field/configuration for:
+
+* Interest tags
+* Priority
+* Global fallback eligibility
+* Repeat rules
+
+Do not implement AI generation yet.
+
+The next prompt will populate this system through the AI API.
+
+⸻
+
+20. Daily Quest Assignment Health
+
+Admin should be able to inspect:
+
+* Number of active Daily Quests
+* Interest coverage
+* Users who would have no matching Quest
+* Fallback pool size
+* Assignment errors
+* Duplicate assignment anomalies
+
+Do not expose private user interest data unnecessarily.
+
+Use aggregate diagnostics.
+
+⸻
+
+21. Daily Quest Rerolls
+
+If the domain retains Daily Quest rerolls:
+
+Support admin setting:
+
+* Maximum rerolls per day
+
+Default should come from platform configuration.
+
+Do not hardcode 2 throughout the application.
+
+Display current value and explanatory text.
+
+If rerolls were removed by later product decisions, do not reintroduce them merely because old code contained them.
+
+Audit current implementation first.
+
+⸻
+
+22. Monthly Quest Management
+
+Create dedicated Monthly Quest Drop management.
+
+This is important and must not be omitted.
+
+The admin must be able to:
+
+* Create Monthly Quest Drop
+* Edit title and overall theme
+* Schedule month
+* Add/remove Quests
+* Reorder Quests
+* Assign points
+* View total Quest count
+* View total point allocation
+* Validate completeness
+* Preview player presentation
+* Publish/schedule
+* Archive previous drops
+
+Use the actual current Monthly domain model.
+
+⸻
+
+23. Monthly Set Validation
+
+Earlier system defined:
+
+* Exactly 100 Quests
+* Exactly 10,000 total points
+
+Audit whether these remain the authoritative rule.
+
+If current project constitution still specifies these values:
+
+* Enforce exactly 100 Quests.
+* Enforce exactly 10,000 total points.
+* Prevent publish if either fails.
+
+If later approved project documentation superseded those numbers, use the newer canonical configuration.
+
+Do not blindly retain stale hardcoded assumptions.
+
+Make these values configurable in admin/platform configuration where appropriate.
+
+⸻
+
+24. Monthly Point Auto-Assistance
+
+Implement the previously missing admin tool for Monthly Quest point balancing.
+
+Admin should be able to:
+
+* See current point total
+* See target total
+* See difference
+* Request a deterministic distribution suggestion
+* Apply suggested adjustments
+* Manually override afterward
+
+Example:
+
+Current total: 9,420
+Target: 10,000
+Remaining: 580
+
+Suggested balancing should consider:
+
+* Quest difficulty
+* Duration
+* Existing reward
+* Allowed point guidelines
+
+Do not require the admin to manually calculate totals.
+
+Do not implement AI for this utility.
+
+Use deterministic logic.
+
+⸻
+
+25. Monthly Publication
+
+Support:
+
+* Scheduled publication
+* First-of-month behavior where configured
+* Immediate admin publish when policy permits
+* Expiration/archive transition
+* Preview before publication
+
+Use server-authoritative time.
+
+Do not rely on an admin browser remaining open.
+
+Do not publish invalid sets.
+
+⸻
+
+26. Geo-Quest Administration
+
+Create dedicated Geo-Quest editor.
+
+Support:
+
+* Title
+* Description
+* Points
+* Difficulty
+* Public location name
+* Public display location
+* Private validation geometry
+* Start validation
+* Completion validation
+* Proof requirements
+* Availability window
+* Safety
+* Accessibility
+* Category/interests
+* Media
+* Preview
+
+Use the shared Mapbox editor.
+
+Do not use raw coordinates as the main UX.
+
+⸻
+
+27. Geo Validation Security
+
+The admin may view/edit private Geo validation geometry only when their permissions allow it.
+
+Requirements:
+
+* Ordinary users never receive it.
+* Moderator access is restricted if unnecessary.
+* Admin changes are audited.
+* Active participation must preserve the validation geometry version used at start.
+* Editing a published active Quest must not silently alter current participant validation.
+
+Use versioning.
+
+⸻
+
+28. Geo-Quest Map Preview
+
+Admin must be able to preview:
+
+* Public player marker
+* Public approximate location
+* Private validation area as an admin-only overlay
+* Search area
+* Radius/polygon
+* Current availability
+
+Clearly distinguish:
+
+PLAYER SEES
+
+from
+
+VALIDATION AREA — ADMIN ONLY
+
+Do not accidentally reuse an admin map component in the consumer build with secret geometry included.
+
+⸻
+
+29. Quest Preview
+
+Every Quest editor should provide:
+
+Preview as Player
+
+Show:
+
+* Quest card
+* Quest Detail
+* Points
+* Proof requirements
+* Safety
+* Accessibility
+* Geo public presentation where relevant
+
+Do not expose:
+
+* Admin notes
+* AI prompt metadata
+* Secret validation geometry
+* Internal moderation fields
+
+Preview must not create participation.
+
+⸻
+
+30. Quest Publication Workflow
+
+Use trusted transitions:
+
+Draft
+→ Approved
+→ Scheduled
+→ Published
+→ Paused
+→ Expired
+→ Archived
+
+or the canonical existing state machine.
+
+Requirements:
+
+* Validate before publish.
+* Verify points.
+* Verify proof configuration.
+* Verify schedule.
+* Verify media.
+* Verify Geo geometry.
+* Verify required fields.
+* Audit transition.
+
+Do not allow direct status editing via arbitrary dropdown.
+
+Use valid actions based on state.
+
+⸻
+
+31. Quest Submissions Queue
+
+Implement /admin/quests/submissions.
+
+Show proof requiring review.
+
+Filters:
+
+* Pending
+* Under Review
+* Needs Resubmission
+* Approved
+* Rejected
+* Quest type
+* Proof type
+* Date
+* Risk level
+* Geo validation state
+
+Each row:
+
+* User safe identity
+* Quest
+* Quest type
+* Submission date
+* Proof type
+* Anti-cheat status
+* Current review state
+
+Support pagination.
+
+⸻
+
+32. Submission Review Detail
+
+Admin review must show only needed information:
+
+* Quest
+* Participant
+* Submission
+* Text proof
+* Image proof
+* General location validation result
+* Accuracy metadata where allowed
+* Prior submissions
+* User-facing review notes
+* Internal review notes
+* Anti-cheat flags
+* Submission timeline
+
+Actions:
+
+* Approve
+* Request Resubmission
+* Reject
+
+Do not manually enter point amount here.
+
+Approval must trigger the existing trusted completion/award workflow.
+
+⸻
+
+33. Proof Approval
+
+When admin approves proof:
+
+1. Verify admin permission.
+2. Verify submission state.
+3. Verify participant and Quest state.
+4. Mark proof approved.
+5. Complete appropriate step/Quest through trusted domain operation.
+6. Award points once.
+7. Emit notification.
+8. Audit action.
+
+Do not directly insert points from the admin client.
+
+Do not allow duplicate approval to duplicate reward.
+
+⸻
+
+34. Request Resubmission
+
+Admin may enter:
+
+User-facing reason
+
+What the user needs to correct.
+
+Internal notes
+
+Staff-only context.
+
+Requirements:
+
+* User-facing reason visible to user.
+* Internal notes never exposed.
+* Submission remains immutable.
+* New proof must create linked resubmission.
+* Notification sent through existing notification system.
+
+Do not overwrite submitted evidence.
+
+⸻
+
+35. Reject Submission
+
+Require:
+
+* User-facing reason where appropriate
+* Internal reason
+* Confirmation
+
+Then:
+
+* Set trusted status
+* Preserve history
+* No points
+* Notify user
+* Audit action
+
+Do not delete proof.
+
+⸻
+
+36. Bulk Submission Review
+
+Support safe bulk actions only where appropriate.
+
+Possible:
+
+* Assign reviewer
+* Mark selected items Under Review
+
+Do not bulk approve proof unless every item has been individually inspected or policy explicitly permits an automated trusted class.
+
+Do not bulk reject heterogeneous submissions with one vague reason.
+
+Safety outweighs speed.
+
+⸻
+
+37. Hunt Administration Overview
+
+Implement /admin/hunts.
+
+Sections/filters:
+
+* Platform Hunts
+* Custom Hunts
+* Pending Review
+* Published
+* Scheduled
+* Paused
+* Cancelled
+* Archived
+* Rejected
+
+Show:
+
+* Hunt title
+* Creator
+* Privacy
+* Status
+* Occurrence
+* Participants
+* Completion count
+* Report count
+* Updated date
+
+Actions depend on permission and state.
+
+⸻
+
+38. Custom Hunt Moderation Queue
+
+Create a dedicated Custom Hunt review queue.
+
+Show:
+
+* Creator
+* Hunt
+* Submission date
+* Version
+* Privacy
+* Stops
+* Location count
+* Proof types
+* Requested points
+* Media moderation state
+* Safety validation result
+* Previous moderation history
+
+Priority indicators:
+
+* Reports related to creator
+* Known safety flags
+* Location anomalies
+* Suspicious configuration
+
+Do not expose arbitrary unverified automated risk labels as facts.
+
+⸻
+
+39. Custom Hunt Review Screen
+
+Review the immutable submitted version.
+
+Sections:
+
+Overview
+
+* Title
+* Description
+* Creator
+* Privacy
+* Schedule
+* Requested points
+
+Structure
+
+* Ordered/unordered
+* Required stops
+* Optional stops
+* Participation mode
+
+Map
+
+* Public display markers
+* Admin-only private validation geometry
+
+Stops
+
+* Instructions
+* Clues
+* Riddle configuration
+* Proof requirements
+* Safety
+* Accessibility
+
+Media
+
+* Cover
+* Clue images
+* Example proof media
+
+Safety
+
+* Creator acknowledgments
+* Structural validation
+* Reports or prior issues if relevant
+
+Actions:
+
+* Approve
+* Request Changes
+* Reject
+
+Do not edit the submitted version silently.
+
+⸻
+
+40. Hunt Point Approval
+
+Admin must review creator-requested point reward.
+
+Show:
+
+* Requested points
+* Platform suggested range
+* Stops
+* Duration
+* Difficulty
+* Proof burden
+* Location burden
+
+Admin may set:
+
+Approved Points
+
+within platform policy.
+
+Store separately from creator requested reward.
+
+Active participant snapshots must use the authoritative approved value.
+
+Do not allow creator values to become authoritative automatically.
+
+⸻
+
+41. Request Changes on Hunt
+
+Allow admin to select affected areas:
+
+* Basic details
+* Location
+* Stop
+* Clue
+* Riddle
+* Proof
+* Safety
+* Accessibility
+* Schedule
+* Points
+* Media
+* Other
+
+Then enter user-safe instructions.
+
+Create a moderation result.
+
+Creator flow from Prompt 17 must receive the structured request.
+
+Do not expose internal moderator notes.
+
+⸻
+
+42. Approve Custom Hunt
+
+Trusted approval must:
+
+1. Verify review permission.
+2. Verify immutable submitted version.
+3. Verify validation passes.
+4. Verify media status.
+5. Verify safety review.
+6. Set authoritative point reward.
+7. Mark approved.
+8. Create publish/schedule readiness.
+9. Audit.
+10. Notify creator.
+
+Do not directly expose an approval mutation to ordinary creators.
+
+⸻
+
+43. Reject Custom Hunt
+
+Require:
+
+* Category
+* User-facing reason
+* Internal notes
+* Confirmation
+
+Preserve:
+
+* Draft history
+* Submitted snapshot
+* Moderation record
+
+Do not delete the Hunt.
+
+⸻
+
+44. Published Hunt Controls
+
+Admins may:
+
+* Pause
+* Resume
+* Cancel occurrence
+* Archive
+* Remove from discovery
+* Disable future joins
+
+Require confirmation and reason.
+
+Safety-critical actions must take effect server-side.
+
+Do not mutate active player rules without version-aware handling.
+
+⸻
+
+45. Media Moderation
+
+Implement central media moderation queue.
+
+Entities may include:
+
+* Avatar
+* Hunt cover
+* Hunt clue image
+* Quest media
+* Proof image
+* Future public creator media
+
+Statuses:
+
+* Pending
+* Approved
+* Rejected
+* Manual Review
+* Quarantined where the schema supports it
+
+Do not connect external automated image moderation yet.
+
+Manual staff review must work first.
+
+⸻
+
+46. Media Moderation Detail
+
+Display:
+
+* Image
+* Owner
+* Purpose
+* Associated entity
+* Upload date
+* Current moderation state
+* Prior moderation action
+* Reports
+
+Actions:
+
+* Approve
+* Reject
+* Quarantine
+* Restore where allowed
+
+Require rejection reason.
+
+Do not reveal private proof images to staff without appropriate proof-review permission.
+
+Separate public-media moderation permission from private-proof review.
+
+⸻
+
+47. Reports Queue
+
+Implement /admin/moderation/reports.
+
+Filters:
+
+* New
+* Triaged
+* Under Review
+* Action Taken
+* Dismissed
+* Appealed
+* Closed
+* Priority
+* Target type
+
+Target types:
+
+* User
+* Quest
+* Hunt
+* Stop
+* Media
+* Proof
+* Custom Hunt
+
+Display:
+
+* Report ID
+* Reporter safe reference
+* Target
+* Reason
+* Date
+* Priority
+* Assigned moderator
+* Status
+
+Do not expose reporter identity to the reported user.
+
+⸻
+
+48. Report Detail
+
+Show:
+
+* Report description
+* Evidence
+* Related reports
+* Target entity
+* Relevant moderation history
+* Current status
+* Assigned staff
+* Internal notes
+* Resolution
+
+Actions:
+
+* Assign
+* Change priority
+* Take moderation action
+* Dismiss
+* Close
+* Escalate
+
+Every action must be audited.
+
+⸻
+
+49. Safety Action From Report
+
+Depending on target and permission, admin may:
+
+* Remove content
+* Pause Hunt
+* Pause Quest
+* Restrict user
+* Suspend user
+* Remove media
+* Request creator changes
+* Close report without action
+
+Do not create hidden direct SQL mutations.
+
+Use the same trusted domain operations as the normal admin surfaces.
+
+⸻
+
+50. Anti-Cheat Queue
+
+Implement dedicated anti-cheat administration.
+
+Earlier project logic defined a graduated risk model.
+
+Audit current implementation and unify it.
+
+Signals may include:
+
+* Mock location
+* Poor GPS accuracy
+* Implausible movement
+* Repeated submissions
+* Duplicate submission
+* VPN signal
+* Location-validation anomalies
+* Excessive failed riddle attempts
+* Future integrity signals
+
+Do not automatically ban from one weak signal.
+
+⸻
+
+51. Anti-Cheat Risk Model
+
+Use one canonical 0–100 risk model if still established by project documents.
+
+Historical examples included:
+
+* Mock location: high weight
+* GPS accuracy > 100m: smaller weight
+* Implausible speed: escalating severity
+* 5+ submissions in short period: elevated risk
+* Duplicate Quest submission: risk
+* VPN: weak signal only
+
+Audit the existing system.
+
+Do not blindly hardcode stale weights if later project documents changed them.
+
+Store configuration centrally.
+
+Admin should be able to inspect:
+
+* Signals
+* Risk score
+* Explanation
+* Evidence timestamps
+* Affected participation
+* Prior flags
+
+Do not expose exact risk thresholds to ordinary users.
+
+⸻
+
+52. Anti-Cheat Actions
+
+Support graduated outcomes:
+
+* No Action
+* Warn
+* Require Manual Review
+* Quarantine Points
+* Restrict Submission
+* Temporary Restriction
+* Suspend
+
+Do not automatically escalate to ban from a VPN signal.
+
+High-risk actions require appropriate permissions.
+
+All actions require audit trail.
+
+⸻
+
+53. Point Quarantine
+
+If the current architecture supports quarantined points:
+
+Admin must be able to see:
+
+* User
+* Amount
+* Source
+* Reason
+* Flag
+* Date
+
+Actions:
+
+* Release
+* Reverse
+* Keep Quarantined pending investigation
+
+Do not alter the append-only ledger destructively.
+
+Use ledger/adjustment transactions.
+
+If profiles.points_quarantined exists as an old mutable source of truth, audit whether it should be derived from ledger state.
+
+Avoid two conflicting point systems.
+
+⸻
+
+54. Location Validation Review
+
+Create admin view for unusual Geo/Hunt validation attempts.
+
+Show:
+
+* Participation
+* Quest/Hunt
+* Validation result
+* Accuracy category
+* Timestamp
+* Generalized location information
+* Risk signals
+* Repeated attempt count
+
+Exact coordinates should be accessible only where operationally necessary and permitted.
+
+Do not show continuous route history.
+
+Do not retain more location data than the existing policy allows.
+
+⸻
+
+55. Riddle Review
+
+Admin may inspect riddle configuration for Custom Hunt moderation.
+
+Allow:
+
+* Clue
+* Accepted answers
+* Normalization rules
+* Attempt configuration
+
+Only authorized moderation staff should see accepted answers.
+
+Do not expose accepted answers to participant-facing APIs.
+
+⸻
+
+56. Interest Bubble Administration
+
+Implement the previously required Interest Bubble management UI.
+
+Admin can:
+
+* Create Interest Bubble
+* Edit
+* Rename
+* Add description
+* Choose icon
+* Set sort order
+* Activate/deactivate
+* Merge duplicate interests where safe
+* View user usage count
+* View Daily Quest coverage
+* View Quest tagging usage
+
+Do not delete interests that have historical relationships without migration.
+
+Prefer deactivation.
+
+⸻
+
+57. Interest Bubble Quest Coverage
+
+Provide operational coverage view.
+
+Show:
+
+* Interest
+* Number of active Daily Quests
+* Number of Monthly Quests
+* Number of Geo-Quests
+* User selection count
+* Coverage status
+
+Flag interests with:
+
+* No Daily Quest candidates
+* Too few candidates
+* Excessive concentration
+
+This prepares the system for Prompt 19’s personalized AI generation.
+
+Do not expose individual user interest selections.
+
+Use aggregates.
+
+⸻
+
+58. Achievement Administration
+
+Implement admin management for Prompt 15 achievements.
+
+Admin can:
+
+* Create definition
+* Edit draft definition
+* Activate/deactivate
+* Retire
+* Configure category
+* Configure icon/art
+* Configure hidden/secret status
+* Define allowed trusted rule type
+* Set progress requirement
+* Preview
+
+Do not expose arbitrary executable code.
+
+Use structured achievement rule types.
+
+⸻
+
+59. Manual Achievement Award
+
+Authorized admin may manually award achievements that are explicitly configured as manual.
+
+Require:
+
+* User
+* Achievement
+* Reason
+* Confirmation
+
+Use trusted idempotent award operation.
+
+Do not manually award automatic achievements unless override permission exists.
+
+Audit every award.
+
+⸻
+
+60. Achievement Revocation
+
+If the product supports revocation:
+
+* Never simply delete the award.
+* Record revoked status or reversal event.
+* Preserve history.
+* Require reason.
+* Audit.
+
+Do not implement revocation if the existing progression policy says achievements are permanent.
+
+Follow canonical project rules.
+
+⸻
+
+61. Administrative Notifications
+
+Implement admin notification composer for legitimate platform messages.
+
+Support:
+
+* One user
+* Selected users through safe targeting
+* All users only with high permission
+* Quest-related audience
+* Hunt participants
+* Creators
+
+Notification types:
+
+* Administrative message
+* Safety message
+* Service message
+* Event notice
+
+Do not implement marketing campaigns or email blasts.
+
+Do not build push delivery yet unless already supported.
+
+This creates in-app notification records through trusted backend.
+
+⸻
+
+62. Notification Preview
+
+Before sending show:
+
+* Audience
+* Estimated recipients
+* Title
+* Body
+* Deep-link destination
+* Expiration
+* Mandatory or optional category
+
+Validate deep link through allowlist.
+
+Do not allow arbitrary URLs.
+
+Do not include private coordinates or secrets.
+
+⸻
+
+63. Platform Settings
+
+Create /admin/settings.
+
+Group settings:
+
+Quest
+
+* Daily assignment configuration
+* Daily reroll limit if active
+* Monthly set requirements
+* Point guidelines
+* Proof limits
+
+Hunt
+
+* Creator draft limits
+* Participant limits
+* Geofence ranges
+* Riddle attempt rate
+* Creation enabled
+* Custom Hunt moderation requirement
+
+Social
+
+* Friend-request limits
+* Request expiration
+* Request cooldowns
+
+Safety
+
+* Anti-cheat thresholds
+* Validation retention
+* Report priorities
+* Moderation defaults
+
+Operational
+
+* Leaderboard refresh frequency
+* Notification job configuration
+* Expiration job frequency
+
+Do not put secrets in the ordinary settings UI.
+
+⸻
+
+64. Configuration Versioning
+
+High-impact settings changes must be auditable.
+
+For important configuration:
+
+* Store value
+* Previous value
+* Actor
+* Date
+* Reason
+* Version
+
+Do not silently overwrite production safety settings.
+
+Use typed configuration.
+
+Do not create arbitrary JSON settings editors for routine use.
+
+⸻
+
+65. Feature Flags
+
+Create or finalize feature flag administration.
+
+Possible flags:
+
+* Quest enabled
+* Hunt enabled
+* Custom Hunt creation enabled
+* Geo-Quest enabled
+* Social enabled
+* Achievements enabled
+* Future AI generation enabled
+* Future push notifications enabled
+* Future payments enabled
+
+Requirements:
+
+* Safe defaults
+* Environment awareness
+* Audit changes
+* Do not expose server-only security switches to ordinary users
+
+Feature flags are not authorization.
+
+⸻
+
+66. Operational Jobs
+
+Implement or finalize scheduled operational job architecture.
+
+This should address previously missing automation such as:
+
+* Leaderboard refresh
+* Daily Quest occurrence generation
+* Monthly Quest publication
+* Invitation expiration
+* Friend-request expiration
+* Hunt occurrence transitions
+* Quest expiration
+* Hunt expiration
+* Notification event processing
+* Exact-location retention cleanup
+* Media cleanup
+* Stale draft cleanup where policy allows
+
+Use Supabase cron/pg_cron, scheduled Edge Functions, or the project’s established scheduler.
+
+Do not rely on admin manually clicking recalculate.
+
+⸻
+
+67. Leaderboard Automatic Refresh
+
+Fix the previous manual-only leaderboard recalculation gap.
+
+Quest and Hunt leaderboard aggregation must refresh automatically.
+
+Requirements:
+
+* Scheduled job
+* Idempotent
+* Health monitoring
+* Last successful run
+* Last failed run
+* Duration
+* Records processed
+* Failure reason
+
+Admin Diagnostics should show job health.
+
+Do not require admin-recalculate-leaderboards to be clicked during normal operations.
+
+Retain manual Recalculate only as an authorized recovery tool.
+
+⸻
+
+68. Daily Quest Operational Job
+
+Implement server-side Daily Quest occurrence assignment/generation logic based on the existing non-AI pool.
+
+The system should:
+
+* Determine active Daily Quest candidates
+* Match user interests where applicable
+* Use deterministic stable assignment
+* Prevent refresh-changing assignments
+* Enforce occurrence uniqueness
+* Use fallback pool
+* Record assignment
+
+AI content generation itself remains Prompt 19.
+
+⸻
+
+69. Monthly Operational Job
+
+Support:
+
+* Scheduled Monthly Quest Drop activation
+* First-of-month behavior where configured
+* Previous drop expiration/archive
+* Health logging
+
+Do not publish invalid Monthly sets.
+
+⸻
+
+70. Active Window Enforcement Audit
+
+Audit all consumer and admin queries for:
+
+* Quest availability
+* Hunt availability
+* Occurrences
+* Stops
+* Custom Hunts
+
+Verify that future or expired content cannot appear as active incorrectly.
+
+Fix inconsistencies found.
+
+Server rules are authoritative.
+
+⸻
+
+71. Audit Logs
+
+Implement /admin/audit.
+
+Display:
+
+* Timestamp
+* Actor
+* Actor role
+* Action
+* Entity type
+* Entity
+* Result
+* Reason
+* Safe metadata
+
+Filters:
+
+* Actor
+* Action
+* Entity type
+* Date
+* High-risk only
+
+Audit actions such as:
+
+* Role changes
+* Suspensions
+* Restrictions
+* Quest publish
+* Hunt approval
+* Hunt rejection
+* Point adjustment
+* Proof decision
+* Moderation decision
+* Setting change
+* Feature flag change
+* Notification broadcast
+
+Audit logs must be append-only.
+
+⸻
+
+72. Audit Detail
+
+Show:
+
+* Actor
+* Action
+* Timestamp
+* Entity
+* Safe before snapshot
+* Safe after snapshot
+* Reason
+* Related case/report
+* Request metadata where permitted
+
+Do not store:
+
+* Passwords
+* Tokens
+* Full private proof
+* Secret riddle answers unnecessarily
+* Full exact-location data unnecessarily
+
+Do not allow ordinary Admins to modify audit history.
+
+⸻
+
+73. Admin Diagnostics
+
+Implement /admin/diagnostics.
+
+Show health of:
+
+* Supabase connection
+* Mapbox configuration
+* Storage
+* Quest occurrence jobs
+* Hunt occurrence jobs
+* Leaderboard jobs
+* Notification jobs
+* RLS test status where automated
+* Edge Functions
+* Failed operations
+* Recent server errors
+
+Do not expose secrets.
+
+Show:
+
+* Configured / Missing
+* Healthy / Degraded / Failed
+* Last checked
+* Safe error summary
+
+⸻
+
+74. Mapbox Diagnostics
+
+Show:
+
+* Mapbox token configured
+* Public map query health
+* Quest viewport function health
+* Hunt viewport function health
+* Geocoding health
+* Recent map query errors
+
+Do not display the token itself.
+
+Do not expose hidden geometry.
+
+⸻
+
+75. Supabase Diagnostics
+
+Show:
+
+* Database reachable
+* Auth reachable
+* Storage reachable
+* Required tables exist
+* Required migrations present
+* Required functions present
+* RLS expected state
+* Critical job health
+
+Do not display service-role key.
+
+Do not automatically weaken RLS during diagnostic testing.
+
+⸻
+
+76. Admin Tables
+
+Create reusable admin table primitives.
+
+Support:
+
+* Search
+* Sort
+* Filters
+* Pagination
+* Column visibility
+* Bulk selection
+* Empty state
+* Error state
+* Loading
+* Row action menu
+
+Do not use tables for everything.
+
+Use dedicated review layouts for proof/media/Hunt moderation.
+
+⸻
+
+77. Admin Confirmations
+
+High-risk actions must require confirmation.
+
+Examples:
+
+* Suspend user
+* Reverse points
+* Reject Hunt
+* Cancel Hunt occurrence
+* Archive Quest
+* Broadcast notification
+* Change role
+* Change critical setting
+
+Confirmation must summarize impact.
+
+Do not use generic:
+
+Are you sure?
+
+Use action-specific wording.
+
+⸻
+
+78. Point Administration
+
+Create trusted Point Adjustment workflow.
+
+Admin may:
+
+* Add adjustment
+* Reverse a specific trusted reward
+* Correct migration/error state
+
+Require:
+
+* User
+* Amount or transaction
+* Reason
+* Internal note
+* Confirmation
+
+Use append-only ledger.
+
+Do not directly edit a mutable user point total.
+
+⸻
+
+79. Point Adjustment Constraints
+
+Add safeguards:
+
+* Reason required
+* Maximum routine adjustment range
+* Elevated permission for unusually large adjustment
+* Duplicate request prevention
+* Idempotency key
+* Audit log
+
+Do not allow arbitrary anonymous point edits.
+
+⸻
+
+80. Point Reversal
+
+For Quest/Hunt reward reversal:
+
+1. Locate ledger transaction.
+2. Verify reversible.
+3. Enter reason.
+4. Create offsetting entry.
+5. Update derived totals.
+6. Update leaderboards.
+7. Mark related completion adjustment state.
+8. Notify user if policy requires.
+9. Audit.
+
+Never delete original transaction.
+
+⸻
+
+81. Admin Security Boundary
+
+Admin screens are not authorization.
+
+All mutations must verify permissions server-side.
+
+Do not trust:
+
+* Hidden buttons
+* Client role state
+* Route guards alone
+* UI disabled state
+
+Every trusted admin operation must validate:
+
+* Authenticated user
+* Active admin account
+* Role
+* Permission
+* Entity state
+* Allowed transition
+
+⸻
+
+82. Admin Session Security
+
+For high-risk actions, prepare reauthentication or step-up readiness.
+
+At minimum:
+
+* Detect expired session
+* Force fresh auth when required
+* Do not perform high-risk actions with invalid session
+
+Do not store staff secrets locally.
+
+Do not expose service-role keys.
+
+⸻
+
+83. Admin Error Handling
+
+Normalize operational errors.
+
+Examples:
+
+* Permission denied
+* Entity changed
+* Submission already reviewed
+* Hunt version changed
+* Quest already published
+* User already suspended
+* Duplicate point adjustment
+* Job already running
+* Network unavailable
+* Invalid configuration
+
+Do not expose raw SQL/RLS errors.
+
+Provide enough context for staff to recover.
+
+⸻
+
+84. Concurrent Review Safety
+
+Support safe simultaneous staff use.
+
+Examples:
+
+* Two moderators open same submission
+* Two admins edit same Quest
+* Moderator reviews outdated Hunt version
+
+Use:
+
+* Version numbers
+* updated_at
+* Optimistic concurrency
+* Review claiming where useful
+
+If record changed:
+
+This record changed since you opened it. Refresh before taking action.
+
+Do not silently overwrite another staff action.
+
+⸻
+
+85. Review Assignment
+
+For moderation queues, support:
+
+* Unassigned
+* Assigned to me
+* Assigned moderator
+
+Moderators may claim an item.
+
+Do not permanently lock it forever.
+
+Support release/reassignment with audit.
+
+⸻
+
+86. Admin Notes
+
+Separate:
+
+Internal notes
+
+Staff-only.
+
+User-facing explanation
+
+Visible to user/creator.
+
+Never mix these fields.
+
+Do not accidentally include internal notes in notification payloads.
+
+⸻
+
+87. Admin Notification Events
+
+Admin actions should reuse the existing notification system.
+
+Examples:
+
+* Proof approved
+* Proof rejected
+* Resubmission requested
+* Custom Hunt approved
+* Changes requested
+* Hunt rejected
+* Account restricted
+* Account restored
+* Points adjusted
+* Administrative message
+
+Do not duplicate notification storage.
+
+⸻
+
+88. Data Export Readiness
+
+Prepare safe future export interfaces for:
+
+* Audit logs
+* Reports
+* Operational metrics
+
+Do not build user-data mass export in this prompt unless already required.
+
+Do not allow CSV export of private proof/location by default.
+
+Permissions must apply to export.
+
+⸻
+
+89. Admin Accessibility
+
+Ensure:
+
+* Tables are keyboard navigable.
+* Filters have labels.
+* Status uses text, not color alone.
+* Modal focus is trapped appropriately.
+* Review media supports alt labels.
+* Map editor has accessible fallback.
+* Dangerous actions are clearly labeled.
+* Dynamic text works.
+* Focus returns sensibly after modal close.
+
+Do not sacrifice accessibility because admin is internal.
+
+⸻
+
+90. Mobile Admin Behavior
+
+Admin is desktop-first but must remain usable on smaller screens.
+
+For narrow widths:
+
+* Sidebar collapses
+* Tables may become cards
+* Filters use drawer
+* Review layouts stack
+
+Do not attempt to mirror the consumer bottom-navigation system.
+
+⸻
+
+91. Database / Backend Additions
+
+Add focused migrations/functions where necessary.
+
+Potential additions:
+
+* Admin permissions
+* Role-permission mapping
+* Review assignment
+* Configuration versions
+* Operational job run logs
+* Quest Monthly set validator
+* Monthly point balancing helper
+* Anti-cheat configuration
+* Admin-safe user summary RPC
+* Admin Quest summary RPC
+* Hunt moderation queue RPC
+* Submission review RPC
+* Point adjustment function
+* Audit query RPC
+* Admin diagnostics views
+
+Do not replace existing domain architecture.
+
+⸻
+
+92. Scheduled Job Run Table
+
+Create operational job records if missing.
+
+Fields may include:
+
+* Job name
+* Run ID
+* Started at
+* Finished at
+* Status
+* Records processed
+* Error summary
+* Trigger type
+* Retry count
+
+Statuses:
+
+* Running
+* Success
+* Failed
+* Partial
+
+Do not store secrets in error output.
+
+⸻
+
+93. Cron / Scheduler Configuration
+
+Use the established production-friendly scheduler.
+
+Schedule appropriate jobs such as:
+
+* Leaderboard refresh
+* Daily occurrences
+* Monthly transitions
+* Expiration cleanup
+* Invitation expiration
+* Location-retention cleanup
+
+Make frequency configurable where appropriate.
+
+Do not run jobs every minute unnecessarily.
+
+Do not create duplicate scheduled jobs if they already exist.
+
+⸻
+
+94. Admin React Query Architecture
+
+Create admin-specific query namespaces.
+
+Examples:
+
+adminKeys.dashboard()
+adminKeys.users(filters)
+adminKeys.user(userId)
+adminKeys.quests(filters)
+adminKeys.quest(questId)
+adminKeys.dailyQuestHealth()
+adminKeys.monthlySets(filters)
+adminKeys.questSubmissions(filters)
+adminKeys.questSubmission(id)
+adminKeys.hunts(filters)
+adminKeys.huntReview(id)
+adminKeys.mediaQueue(filters)
+adminKeys.reports(filters)
+adminKeys.antiCheat(filters)
+adminKeys.interests()
+adminKeys.achievements()
+adminKeys.settings()
+adminKeys.audit(filters)
+adminKeys.diagnostics()
+
+Do not combine consumer caches and admin-private data unnecessarily.
+
+⸻
+
+95. Query Invalidation
+
+After admin Quest update:
+
+Invalidate:
+
+* Admin Quest
+* Quest list
+* Consumer Quest data if published state changed
+* Map when Geo content changed
+
+After proof review:
+
+Invalidate:
+
+* Submission queue
+* Participation
+* Quest Progress
+* Points
+* Leaderboards
+* Notifications
+
+After Hunt moderation:
+
+Invalidate:
+
+* Hunt review
+* Creator Hunt state
+* Public Hunt discovery where relevant
+* Creator notifications
+
+After user restriction:
+
+Invalidate:
+
+* User detail
+* Public profile
+* Social eligibility
+* Relevant gameplay permissions
+
+After settings change:
+
+Invalidate only affected systems.
+
+Do not clear the entire application cache for routine actions.
+
+⸻
+
+96. Development Fixtures
+
+Create admin development fixtures for:
+
+Users
+
+* Active
+* Restricted
+* Suspended
+* Creator
+* Moderator
+
+Quest
+
+* Daily Draft
+* Daily Published
+* Monthly incomplete set
+* Monthly valid set
+* Geo Quest
+* Extreme mismatch migration case
+
+Submissions
+
+* Text
+* Image
+* Geo
+* Under Review
+* Needs Resubmission
+* Anti-cheat flag
+
+Hunts
+
+* Pending Custom Hunt
+* Changes Requested
+* Approved
+* Rejected
+* Published
+
+Moderation
+
+* Media pending
+* Safety report
+* Spam report
+* Location anomaly
+* High-risk anti-cheat case
+
+Operations
+
+* Healthy leaderboard job
+* Failed leaderboard job
+* Monthly publication job
+* Location-retention cleanup job
+
+Fixtures must never appear in production.
+
+⸻
+
+97. Automated Tests — Admin Authorization
+
+Test:
+
+* Ordinary user cannot open admin routes.
+* Creator cannot open admin routes.
+* Moderator receives permitted screens only.
+* Moderator cannot edit platform settings.
+* Admin cannot perform Super Admin action if unauthorized.
+* Client role spoof does not grant access.
+* Backend functions verify permission.
+* Suspended staff cannot perform admin actions.
+
+⸻
+
+98. Automated Tests — Quest Admin
+
+Test:
+
+* Create Quest
+* Edit Quest
+* Validate
+* Publish
+* Pause
+* Archive
+* Point recommendation
+* Point override
+* Difficulty enum consistency
+* Daily interest tags
+* Monthly 100/10,000 rule if still canonical
+* Monthly auto-balancer
+* Geo public/private geometry
+* Player preview protection
+* Invalid Geo configuration rejected
+
+⸻
+
+99. Automated Tests — Submission Review
+
+Test:
+
+* Reviewer opens own-authorized submission.
+* Another ordinary user cannot access it.
+* Approve triggers trusted completion.
+* Points awarded once.
+* Resubmission preserves original.
+* Rejection awards zero points.
+* Internal notes remain private.
+* Concurrent second review cannot overwrite first.
+
+⸻
+
+100. Automated Tests — Hunt Moderation
+
+Test:
+
+* Submitted immutable Hunt loads.
+* Riddle answer visible only to authorized moderation.
+* Validation geometry protected.
+* Requested/approved points separate.
+* Approve works.
+* Changes Requested works.
+* Reject works.
+* Creator cannot perform actions.
+* Published discovery updates correctly.
+
+⸻
+
+101. Automated Tests — Anti-Cheat
+
+Test:
+
+* Flags render.
+* VPN signal alone does not auto-ban.
+* High-risk combination escalates appropriately.
+* Point quarantine uses trusted state.
+* Release/reversal is auditable.
+* Ordinary users cannot view risk scores.
+* Threshold configuration requires permission.
+
+⸻
+
+102. Automated Tests — Reports
+
+Test:
+
+* Report assignment
+* Resolution
+* Action taken
+* Reporter identity protected
+* Reported user cannot read case
+* Audit entry created
+* Content action uses trusted domain operation
+
+⸻
+
+103. Automated Tests — Operations
+
+Test:
+
+* Leaderboard job runs automatically.
+* Manual recovery run remains permission-protected.
+* Duplicate job run avoids double processing.
+* Monthly invalid set cannot publish.
+* Daily occurrence assignment stable.
+* Invitation expiration works.
+* Job failures visible in diagnostics.
+
+⸻
+
+104. Automated Tests — Audit
+
+Test:
+
+* High-risk action creates audit record.
+* Audit is append-only.
+* Ordinary admin cannot alter logs.
+* Safe before/after data stored.
+* Secrets excluded.
+* Filters work.
+
+⸻
+
+105. Documentation
+
+Create or update:
+
+* /docs/ADMIN_ARCHITECTURE.md
+* /docs/ADMIN_AUTHORIZATION.md
+* /docs/ADMIN_DASHBOARD.md
+* /docs/ADMIN_USERS.md
+* /docs/ADMIN_QUESTS.md
+* /docs/ADMIN_DAILY_QUESTS.md
+* /docs/ADMIN_MONTHLY_QUESTS.md
+* /docs/ADMIN_GEO_QUESTS.md
+* /docs/ADMIN_QUEST_SUBMISSIONS.md
+* /docs/ADMIN_HUNT_MODERATION.md
+* /docs/ADMIN_MEDIA_MODERATION.md
+* /docs/ADMIN_REPORTS.md
+* /docs/ADMIN_ANTI_CHEAT.md
+* /docs/ADMIN_INTERESTS.md
+* /docs/ADMIN_ACHIEVEMENTS.md
+* /docs/ADMIN_NOTIFICATIONS.md
+* /docs/ADMIN_SETTINGS.md
+* /docs/ADMIN_JOBS.md
+* /docs/ADMIN_AUDIT.md
+* /docs/ADMIN_DIAGNOSTICS.md
+* /docs/ADMIN_SECURITY.md
+* /docs/ADMIN_TESTING.md
+
+Update:
+
+* /docs/PROJECT_CONSTITUTION.md
+* replit.md
+
+only where required.
+
+⸻
+
+106. Out of Scope
+
+Do not implement:
+
+* External AI API calls
+* AI Quest generation
+* AI Hunt generation
+* AI image moderation
+* Stripe
+* Paid Hunts
+* Creator payouts
+* Subscriptions
+* Premium memberships
+* Push-notification provider
+* Full email notification provider
+* Game Zones
+* Outbreak
+* New game types
+* Live user location
+* Hunt chat
+* Direct messages
+
+The next prompt must implement the Admin AI Quest Generation system, including separate customizable prompt templates for:
+
+* Daily Quests
+* Monthly Quest Drops
+* Geo-Quests
+
+and interest-personalized Daily Quest generation based on the Interest Bubbles selected by users during onboarding.
+
+⸻
+
+107. Final Verification
+
+Before finishing, confirm:
+
+* Ordinary users cannot access the Admin Panel.
+* Moderator/Admin/Super Admin permissions work correctly.
+* Admin Dashboard shows real operational data.
+* User restriction and suspension use trusted operations.
+* Quest editor supports Daily, Monthly, and Geo Quests.
+* Quest point calibration is visible and editable.
+* Difficulty values are canonical across database and client.
+* Daily Quest tagging connects to Interest Bubbles.
+* Monthly Quest management is fully implemented and was not omitted.
+* Monthly set count/point validation uses current canonical requirements.
+* Monthly point balancing tool works.
+* Geo Quest admin editor separates public and private geometry.
+* Quest player preview does not expose secrets.
+* Proof review uses trusted completion and awards points once.
+* Custom Hunt moderation uses immutable submitted versions.
+* Creator requested and approved Hunt points remain separate.
+* Riddle accepted answers remain protected.
+* Media moderation works manually.
+* Reports protect reporter identity.
+* Anti-cheat signals are reviewable without automatic overreaction.
+* VPN alone does not auto-ban.
+* Point quarantine/reversal uses append-only financial-style integrity.
+* Interest Bubble administration exists.
+* Achievement administration exists.
+* Admin notifications use the shared notification system.
+* Platform settings are typed and auditable.
+* Feature flags do not act as authorization.
+* Leaderboards automatically refresh without routine manual admin action.
+* Daily/Monthly/expiration jobs are operational.
+* Audit logs are append-only.
+* Diagnostics do not expose secrets.
+* Concurrent moderation actions cannot overwrite each other silently.
+* Internal notes never leak to users.
+* Development fixtures do not appear in production.
+* App compiles.
+* Tests pass or blocked tests are clearly documented.
+* Consumer Quest/Hunt UI and navigation were not redesigned.
+
+Resolve all known in-scope errors before stopping.
+
+⸻
+
+Deliverables
+
+When complete, provide:
+
+1. Admin route structure
+2. Admin shell/navigation
+3. Role and permission model
+4. Dashboard
+5. Global admin search
+6. User list
+7. User Detail
+8. Restriction workflow
+9. Suspension/restoration workflow
+10. Admin role management
+11. Quest management
+12. Quest editor
+13. Point calibration
+14. Difficulty enum cleanup
+15. Daily Quest admin
+16. Daily interest coverage diagnostics
+17. Monthly Quest administration
+18. Monthly validation
+19. Monthly point-balancing helper
+20. Geo-Quest editor
+21. Geo admin map preview
+22. Quest player preview
+23. Quest publication workflow
+24. Quest submissions queue
+25. Submission review
+26. Approve/resubmit/reject workflows
+27. Hunt administration
+28. Custom Hunt moderation queue
+29. Custom Hunt review
+30. Hunt point approval
+31. Changes Requested / approval / rejection flows
+32. Published Hunt operational controls
+33. Media moderation
+34. Reports queue
+35. Report resolution workflow
+36. Anti-cheat queue
+37. Canonical anti-cheat risk architecture
+38. Point quarantine/release/reversal
+39. Location-validation review
+40. Interest Bubble management
+41. Interest coverage reporting
+42. Achievement management
+43. Administrative notification composer
+44. Platform settings
+45. Configuration versioning
+46. Feature flags
+47. Operational job architecture
+48. Automatic leaderboard refresh
+49. Daily Quest operational assignment job
+50. Monthly publication job
+51. Active-window enforcement audit
+52. Audit log UI
+53. Diagnostics UI
+54. Mapbox diagnostics
+55. Supabase diagnostics
+56. Reusable admin table/review components
+57. Concurrent review protection
+58. Review assignments
+59. Internal versus user-facing notes
+60. React Query admin architecture
+61. Database migrations/RPCs/jobs/indexes/RLS changes
+62. Tests and results
+63. Documentation
+64. Assumptions
+65. Known limitations
+66. Exact remaining work for Prompt 19
+
+Do not begin Prompt 19.
+
+Do not redesign the consumer application.
+
+Create checkpoint:
+
+Build 1 — Prompt 18 — Admin Panel and Platform Operations
