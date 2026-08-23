@@ -1,0 +1,2797 @@
+Worlds — Build 1, Prompt 19
+
+Admin AI Quest Generation, Custom Prompt Templates, Personalized Daily Quests, Monthly Drops, and Geo-Quests
+
+Continue from the existing Worlds project.
+
+Treat all completed Prompts 1–18 and existing project documentation as authoritative.
+
+Important documentation includes, but is not limited to:
+
+* /docs/PROJECT_CONSTITUTION.md
+* /docs/DATABASE_ARCHITECTURE.md
+* /docs/ROW_LEVEL_SECURITY.md
+* /docs/ADMIN_ARCHITECTURE.md
+* /docs/ADMIN_AUTHORIZATION.md
+* /docs/ADMIN_QUESTS.md
+* /docs/ADMIN_DAILY_QUESTS.md
+* /docs/ADMIN_MONTHLY_QUESTS.md
+* /docs/ADMIN_GEO_QUESTS.md
+* /docs/ADMIN_INTERESTS.md
+* /docs/ADMIN_SETTINGS.md
+* /docs/ADMIN_JOBS.md
+* /docs/ADMIN_AUDIT.md
+* /docs/ADMIN_SECURITY.md
+* /docs/QUEST_DOMAIN.md
+* /docs/QUEST_STATE_MACHINE.md
+* /docs/QUEST_SCHEDULING.md
+* /docs/QUEST_PROOF_SYSTEM.md
+* /docs/QUEST_POINT_AWARDS.md
+* /docs/QUEST_SECURITY.md
+* /docs/QUEST_MAP.md
+* /docs/GEO_QUEST_VALIDATION.md
+* /docs/POINTS_SYSTEM.md
+* /docs/PROFILE_AND_SETTINGS.md
+* /docs/ONBOARDING.md
+* /docs/NOTIFICATIONS.md
+* all documentation created during Prompts 1–18
+* replit.md
+
+The application is named:
+
+Worlds
+
+Prompt 18 implemented the full Admin Panel foundation, including:
+
+* Quest administration
+* Daily Quest administration
+* Monthly Quest administration
+* Geo-Quest administration
+* Interest Bubble administration
+* Quest publication/review
+* Proof review
+* Safety and anti-cheat operations
+* Platform settings
+* Scheduled jobs
+* Audit logs
+* Diagnostics
+
+This prompt must implement the complete AI-assisted Quest content-generation system.
+
+The AI system must generate only Quest content in this prompt.
+
+Do not generate Hunts.
+
+Do not modify Hunt gameplay.
+
+Do not create an autonomous publishing system.
+
+AI-generated content must always enter the existing Quest draft/review workflow.
+
+⸻
+
+Primary Objective
+
+Implement an Admin AI system supporting:
+
+1. AI provider configuration
+2. Secure server-side AI calls
+3. Separate editable prompt templates for:
+    * Daily Quest generation
+    * Monthly Quest generation
+    * Geo-Quest generation
+4. Prompt versioning
+5. Prompt preview
+6. Prompt test mode
+7. Structured AI output
+8. Schema validation
+9. Safety validation
+10. Point recommendation
+11. Proof recommendation
+12. Interest Bubble integration
+13. User-interest-personalized Daily Quest generation
+14. Daily fallback generation
+15. Monthly batch generation
+16. Monthly 100-Quest / 10,000-point validation if still canonical
+17. Monthly regeneration and replacement
+18. Geo-Quest location-context generation
+19. Geo-Quest Mapbox/location integration
+20. AI output editing before save
+21. AI-generated draft creation
+22. Human review before publication
+23. Cost and token tracking
+24. Rate limits
+25. Retry/error handling
+26. Model configuration
+27. Audit logs
+28. Generation history
+29. Admin permissions
+30. Diagnostics
+31. Scheduled Daily generation readiness
+32. Scheduled Monthly generation readiness
+33. Safe future provider replacement
+
+The system must give the administrator full control over what instructions are sent to the AI API.
+
+Do not hide prompt text in source code.
+
+⸻
+
+1. AI Generation Is an Admin Tool
+
+AI generation belongs inside the Admin Panel.
+
+Add a new admin area such as:
+
+/admin/ai
+/admin/ai/overview
+/admin/ai/prompts
+/admin/ai/prompts/daily
+/admin/ai/prompts/monthly
+/admin/ai/prompts/geo
+/admin/ai/generate
+/admin/ai/history
+/admin/ai/settings
+/admin/ai/diagnostics
+
+Also integrate generation buttons into:
+
+* Admin Daily Quests
+* Admin Monthly Quest Drops
+* Admin Geo-Quests
+
+Do not expose AI-generation tools to ordinary users.
+
+Do not expose internal prompt templates to consumers.
+
+⸻
+
+2. Admin Permission
+
+Create or use permissions such as:
+
+ai.read
+ai.generate
+ai.prompts.read
+ai.prompts.edit
+ai.settings.read
+ai.settings.edit
+
+Recommended:
+
+Moderator
+
+May view generated draft content where it enters review.
+
+Should not edit AI configuration by default.
+
+Admin
+
+May generate Quest drafts and edit approved prompt templates.
+
+Super Admin
+
+May edit model/provider configuration and highly sensitive AI settings.
+
+Do not allow role spoofing from the client.
+
+All AI API calls must verify permission server-side.
+
+⸻
+
+3. Server-Side AI Calls Only
+
+AI API credentials must never be placed in:
+
+* Expo client
+* Consumer app
+* Browser JavaScript bundle
+* Public environment variables
+* Database rows readable by ordinary users
+
+Use server-side infrastructure such as:
+
+* Supabase Edge Function
+* Existing secure backend service
+* Another trusted server route already established by the project
+
+Preferred architecture:
+
+Admin UI
+   ↓
+Trusted generation endpoint
+   ↓
+Prompt assembly
+   ↓
+AI provider API
+   ↓
+Structured validation
+   ↓
+Safety validation
+   ↓
+Draft result
+   ↓
+Admin review/edit
+   ↓
+Quest draft
+
+Do not call the AI provider directly from React components.
+
+⸻
+
+4. Provider Abstraction
+
+Create an abstraction such as:
+
+AIQuestProvider
+
+Potential methods:
+
+generateDailyQuest()
+generateMonthlyQuestBatch()
+generateGeoQuest()
+testPrompt()
+
+Do not tightly couple the entire system to one vendor.
+
+Provider abstraction should support future replacement.
+
+Possible configuration:
+
+* Provider
+* Model identifier
+* Max output tokens
+* Temperature or creativity setting
+* Timeout
+* Retry configuration
+
+Do not expose secrets through this configuration interface.
+
+⸻
+
+5. AI Environment Configuration
+
+Use secret server-side environment variables.
+
+For example:
+
+AI_PROVIDER=
+AI_API_KEY=
+AI_MODEL=
+
+Use naming consistent with the project.
+
+Requirements:
+
+* Validate missing configuration.
+* Never log API keys.
+* Never return secrets to Admin UI.
+* Admin Diagnostics should show:
+    * Configured
+    * Missing
+    * Healthy
+    * Failed
+* Do not display the secret itself.
+
+Do not hardcode model names throughout the codebase.
+
+⸻
+
+6. AI Settings
+
+Create /admin/ai/settings.
+
+Allow authorized Admins to manage safe configuration such as:
+
+* Active provider
+* Active model
+* Daily generation model
+* Monthly generation model
+* Geo generation model
+* Output token limit
+* Temperature
+* Request timeout
+* Max retries
+* Generation enabled
+* Automated generation enabled
+* Cost-limit settings
+* Daily request limit
+* Monthly request limit
+
+Do not place the API secret into an editable database field unless the project’s secret-management infrastructure explicitly supports that securely.
+
+Prefer deployment secrets.
+
+⸻
+
+7. Three Separate Prompt Systems
+
+Create three independent customizable prompt templates:
+
+1. Daily Quest Prompt
+2. Monthly Quest Prompt
+3. Geo-Quest Prompt
+
+They must not use one generic prompt field.
+
+Each must have:
+
+* System instructions
+* Generation instructions
+* Variables
+* Output schema
+* Safety requirements
+* Point requirements
+* Proof requirements
+* Version
+* Active/inactive status
+* Created timestamp
+* Updated timestamp
+* Updated by
+* Change reason
+
+This is a core product requirement.
+
+⸻
+
+8. Prompt Template Editor
+
+Each template editor should contain clearly separated sections:
+
+System Prompt
+
+Defines the model’s role and permanent instructions.
+
+Content Instructions
+
+Defines what Quest content should be generated.
+
+Safety Rules
+
+Defines prohibited and required safety behavior.
+
+Point Instructions
+
+Defines how reward recommendations should be produced.
+
+Proof Instructions
+
+Defines appropriate proof expectations.
+
+Output Format
+
+Defines structured output schema.
+
+Available Variables
+
+Shows supported placeholders.
+
+Test Input
+
+Allows admins to simulate a generation.
+
+Generated Preview
+
+Shows parsed result.
+
+Do not force admins to edit JSON manually.
+
+⸻
+
+9. Prompt Variables
+
+Use safe explicit variables.
+
+Potential Daily variables:
+
+{{interest_bubbles}}
+{{difficulty}}
+{{target_duration}}
+{{recent_completed_categories}}
+{{excluded_topics}}
+{{current_date}}
+{{season}}
+{{location_context}}
+{{point_guidelines}}
+{{allowed_proof_types}}
+
+Potential Monthly variables:
+
+{{monthly_theme}}
+{{month}}
+{{year}}
+{{quest_count_target}}
+{{point_total_target}}
+{{interest_distribution}}
+{{difficulty_distribution}}
+{{point_guidelines}}
+{{allowed_proof_types}}
+{{existing_quests}}
+
+Potential Geo variables:
+
+{{public_location_name}}
+{{city}}
+{{state}}
+{{approximate_area}}
+{{venue_type}}
+{{accessibility_context}}
+{{operating_hours}}
+{{season}}
+{{difficulty}}
+{{point_guidelines}}
+{{allowed_proof_types}}
+
+Do not support arbitrary code execution through variables.
+
+⸻
+
+10. Prompt Variable Validation
+
+When an admin edits a template:
+
+* Detect unknown variables.
+* Detect missing required variables.
+* Warn about unused variables.
+* Prevent malformed syntax from becoming active.
+* Preview substituted prompt safely.
+
+Do not allow template content to access:
+
+* API keys
+* Service credentials
+* User email
+* Exact protected GPS history
+* Passwords
+* Tokens
+
+⸻
+
+11. Prompt Versioning
+
+Every prompt edit must create a version.
+
+Store:
+
+* Prompt template ID
+* Prompt type
+* Version
+* System prompt
+* Content instructions
+* Safety instructions
+* Point instructions
+* Proof instructions
+* Model configuration
+* Created by
+* Created at
+* Change reason
+* Active status
+
+Do not destructively overwrite prompt history.
+
+Admin should be able to:
+
+* View version history
+* Compare versions
+* Restore an older version
+* Activate version
+
+Restoration creates a new active version rather than deleting history.
+
+⸻
+
+12. Prompt Test Mode
+
+Each template editor should have:
+
+Test Prompt
+
+Admin can provide sample variables.
+
+The system should:
+
+1. Assemble the prompt.
+2. Call the configured AI provider.
+3. Parse response.
+4. Validate structure.
+5. Run safety checks.
+6. Display result.
+7. Display warnings.
+8. Display token/cost estimate.
+9. NOT save a Quest automatically.
+
+Clearly label:
+
+TEST GENERATION — NOT SAVED
+
+Do not accidentally create consumer content.
+
+⸻
+
+13. Structured AI Output
+
+Require structured output.
+
+Do not accept uncontrolled prose as the final API contract.
+
+Use a schema validated by Zod or equivalent.
+
+Each generated Quest should contain fields such as:
+
+title
+summary
+description
+quest_type
+difficulty
+estimated_duration_minutes
+recommended_points
+category
+interest_tags
+objectives
+steps
+proof_type
+proof_instructions
+safety_notes
+accessibility_notes
+location_requirement
+reasoning_metadata
+
+Only include fields appropriate to the Quest type.
+
+Do not store model chain-of-thought.
+
+reasoning_metadata should contain only concise, safe rationale such as:
+
+* Why difficulty was selected
+* Why point value was recommended
+* Why proof type fits
+
+Do not request or persist hidden reasoning.
+
+⸻
+
+14. Output Schema Validation
+
+After AI response:
+
+1. Parse structured payload.
+2. Validate schema.
+3. Normalize enums.
+4. Validate difficulty.
+5. Validate points.
+6. Validate duration.
+7. Validate proof type.
+8. Validate title length.
+9. Validate description length.
+10. Validate safety fields.
+11. Validate Interest Bubble IDs/tags.
+12. Reject invalid Quest type.
+13. Reject unsafe location configuration.
+14. Run duplicate detection.
+
+If validation fails:
+
+* Do not save as valid content.
+* Show structured errors.
+* Allow Regenerate.
+* Allow Repair Output through a trusted structured repair request if implemented.
+
+Do not silently coerce dangerous values.
+
+⸻
+
+15. Canonical Difficulty Values
+
+Use the canonical difficulty system established in Prompt 18.
+
+The AI may only return accepted values.
+
+Reject unsupported values.
+
+Do not allow the earlier Extreme mismatch to return through AI generation.
+
+The schema, database, admin UI, consumer UI, and AI output must agree.
+
+⸻
+
+16. AI Point Recommendation
+
+The AI should recommend points based on existing platform guidelines.
+
+Inputs may include:
+
+* Difficulty
+* Estimated duration
+* Physical effort
+* Cognitive effort
+* Travel burden
+* Proof burden
+* Complexity
+* Accessibility burden
+* Location validation
+
+But the AI does not have final authority.
+
+Flow:
+
+AI suggested reward
+      ↓
+Deterministic point validator
+      ↓
+Admin review
+      ↓
+Authoritative reward
+
+If the AI suggests outside the valid range:
+
+* Flag it.
+* Provide deterministic recommended range.
+* Require admin correction.
+
+Do not let AI write directly to the points ledger.
+
+⸻
+
+17. AI Proof Recommendation
+
+The model may recommend:
+
+* None
+* Text
+* Image
+* Location
+* Image + Location
+* Text + Image
+* Manual confirmation
+
+Only types supported by the Quest domain may be returned.
+
+The model must not generate fake QR validation.
+
+If actual QR scanner/token infrastructure does not exist:
+
+* qr_scan must not be accepted as a generated proof type.
+
+Do not reintroduce the previously identified fake QR problem.
+
+⸻
+
+18. Daily Quest AI System
+
+Create dedicated Daily Quest generation.
+
+The Daily system is personalized using the Interest Bubbles selected during onboarding.
+
+This is a core Worlds behavior.
+
+Inputs should include:
+
+* Selected active Interest Bubbles
+* User-safe preference tags
+* Daily Quest pool exclusions
+* Recently completed Quest categories
+* Current Daily occurrence
+* Difficulty target
+* Duration target
+* Platform safety rules
+
+Do not send unnecessary personal profile information to the AI API.
+
+⸻
+
+19. Interest Privacy
+
+For Daily Quest personalization, send only necessary preference labels.
+
+Example:
+
+Interests:
+- Photography
+- Nature
+- History
+
+Do not send:
+
+* User email
+* Username unless unnecessary
+* Exact GPS history
+* Public profile
+* Friend list
+* Proof
+* Private bio
+* Reports
+* Moderation history
+
+Interest personalization must follow data minimization.
+
+⸻
+
+20. Daily Generation Strategy
+
+Do not generate a fresh AI request every time the consumer refreshes the app.
+
+Use a stable assignment strategy.
+
+Recommended architecture:
+
+Daily occurrence begins
+      ↓
+Determine user's active interest profile
+      ↓
+Find reusable matching approved Daily Quest
+      ↓
+If insufficient inventory:
+   generate candidate
+      ↓
+admin/system review rule
+      ↓
+approved Daily Quest
+      ↓
+stable user assignment
+
+For Build 1, AI-generated Daily Quests should normally enter a reviewable draft pool rather than publish instantly.
+
+Do not generate uncontrolled per-user content synchronously during consumer app load.
+
+⸻
+
+21. Personalized Daily Pool
+
+Create an AI-assisted content-pool strategy.
+
+The system may generate Daily candidates targeted toward Interest Bubble combinations such as:
+
+* Nature + Photography
+* Fitness
+* History + Exploration
+* Creativity
+* Learning
+* Food
+* Community
+
+Then the existing Daily assignment system matches approved Quests to users.
+
+This is preferred over generating millions of unique one-off Quests.
+
+Support future per-user generation through architecture, but do not make it the default if unnecessary.
+
+⸻
+
+22. Direct Per-User Daily Generation Readiness
+
+Prepare an optional future mode:
+
+daily_generation_mode:
+  shared_pool
+  per_interest_cluster
+  per_user
+
+For Build 1, recommended:
+
+per_interest_cluster
+
+or shared approved pool.
+
+Do not activate per-user generation unless Admin explicitly selects it and cost/privacy controls permit it.
+
+⸻
+
+23. Daily AI Admin Screen
+
+Create:
+
+/admin/ai/generate/daily
+
+Inputs:
+
+* Interest Bubble(s)
+* Difficulty
+* Duration
+* Quantity
+* Optional theme
+* Excluded categories
+* Proof preference
+* Generate button
+
+Results:
+
+* Generated Quest cards
+* Validation status
+* Safety status
+* Point suggestion
+* Interest tags
+* Duplicate similarity
+* Select
+* Edit
+* Regenerate
+* Reject
+* Save as Draft
+
+Support batch generation.
+
+⸻
+
+24. Daily AI Candidate Review
+
+Each candidate must show:
+
+* Title
+* Description
+* Interest match
+* Difficulty
+* Duration
+* Suggested points
+* Proof
+* Safety
+* Accessibility
+* Duplicate score
+* AI model
+* Prompt version
+
+Admin may:
+
+* Edit
+* Save Draft
+* Reject
+* Regenerate
+
+Do not publish directly from this review result.
+
+Saved content enters standard Admin Quest workflow.
+
+⸻
+
+25. Daily Fallback Generation
+
+The Daily system must support users whose selected interests have no adequate content pool.
+
+Admin coverage diagnostics from Prompt 18 should identify this.
+
+AI generation tool should offer:
+
+Generate Missing Daily Coverage
+
+The system should:
+
+1. Read aggregate Interest Bubble coverage.
+2. Identify underserved interest categories.
+3. Generate candidates.
+4. Validate.
+5. Present them to Admin.
+6. Save selected candidates as drafts.
+
+Do not send individual user identities.
+
+⸻
+
+26. Duplicate Daily Quest Detection
+
+Prevent repetitive Daily content.
+
+Before accepting AI candidate, compare against:
+
+* Active Daily Quests
+* Recent Daily Quests
+* Archived similar Quests
+* Same category/title/objective combinations
+
+Use:
+
+* Text normalization
+* Similarity search if existing database supports it
+* Embeddings only if implemented securely and intentionally
+* Simpler deterministic comparison if embeddings are unavailable
+
+Do not require embeddings for Build 1.
+
+Flag:
+
+* Possible Duplicate
+* High Similarity
+
+Do not automatically discard without showing Admin unless near-exact duplicate.
+
+⸻
+
+27. Monthly Quest AI System
+
+Create a separate Monthly Quest generation system.
+
+This must not reuse the Daily prompt blindly.
+
+Monthly Quests may be:
+
+* Larger
+* More varied
+* More thematic
+* More challenging
+* Designed as a month-long content collection
+
+Admin must be able to customize the Monthly AI prompt independently.
+
+⸻
+
+28. Monthly Generation Screen
+
+Create:
+
+/admin/ai/generate/monthly
+
+Inputs:
+
+* Month
+* Year
+* Theme
+* Target Quest count
+* Target total points
+* Interest distribution
+* Difficulty distribution
+* Duration distribution
+* Geo percentage if applicable
+* Proof mix
+* Excluded categories
+* Generate
+
+If current canonical Monthly rule remains:
+
+* 100 Quests
+* 10,000 total points
+
+pre-fill those values.
+
+Do not hardcode them if Prompt 18 moved them into configuration.
+
+Use current platform settings.
+
+⸻
+
+29. Monthly Batch Strategy
+
+Do not attempt to generate 100 full Quests in one giant uncontrolled response if that risks truncation or poor quality.
+
+Use staged batch generation.
+
+Example:
+
+Monthly generation plan
+      ↓
+Generate 10–20 Quest batches
+      ↓
+Validate each batch
+      ↓
+Track totals
+      ↓
+Generate remaining distribution
+      ↓
+Final balancing
+
+The batch size must be configurable.
+
+Preserve consistency across the whole set.
+
+⸻
+
+30. Monthly Generation Plan
+
+Before generating final Quests, optionally create a structured generation plan containing:
+
+* Theme
+* Interest distribution
+* Difficulty distribution
+* Quest-type distribution
+* Estimated point allocation
+* Proof distribution
+
+Admin may:
+
+* Review plan
+* Edit distribution
+* Approve plan
+* Generate Quest batches
+
+Do not treat plan output as Quest content.
+
+Do not expose hidden model reasoning.
+
+⸻
+
+31. Monthly AI Point Balancing
+
+After generated candidates:
+
+Calculate:
+
+* Quest count
+* Point total
+* Target count
+* Target point total
+* Difference
+
+Use Prompt 18 deterministic balancing helper.
+
+Example:
+
+Generated Quests: 100 / 100
+Generated Points: 10,480 / 10,000
+Adjustment Required: -480
+
+Offer:
+
+Auto-Balance Points
+
+The deterministic tool should adjust within allowed reward ranges.
+
+Do not ask AI alone to fix arithmetic totals.
+
+⸻
+
+32. Monthly Distribution Validation
+
+Validate:
+
+* Total Quest count
+* Total points
+* Interest diversity
+* Difficulty distribution
+* Proof diversity
+* Duration diversity
+* Duplicate content
+* Safety
+* Geo balance where configured
+* Overrepresentation of one category
+
+Warn Admin if:
+
+* 70% of Quests are nearly identical
+* One Interest Bubble dominates unexpectedly
+* Too many image-proof Quests
+* Too many high-difficulty Quests
+
+Do not automatically publish.
+
+⸻
+
+33. Monthly Quest Replacement
+
+Allow Admin to select an unwanted generated Quest and:
+
+* Regenerate This Quest
+* Replace With Alternative
+* Edit Manually
+* Remove
+
+When regenerating one Quest:
+
+Provide the AI with:
+
+* Monthly theme
+* Desired distribution
+* Existing Quest titles/categories
+* The slot’s target difficulty
+* Target point range
+
+Do not regenerate the entire 100-Quest set unnecessarily.
+
+⸻
+
+34. Monthly Set Save
+
+Admin can save AI output into an existing/new Monthly Quest Set.
+
+Flow:
+
+AI candidate collection
+      ↓
+Validation
+      ↓
+Admin selection/edit
+      ↓
+Save as Monthly Draft Set
+      ↓
+Existing Monthly admin workflow
+      ↓
+Publish when valid
+
+Do not bypass Monthly publication guards.
+
+⸻
+
+35. Geo-Quest AI System
+
+Create separate Geo-Quest AI generation.
+
+The Geo prompt must use location context, but the AI must not invent authoritative coordinates.
+
+Important:
+
+AI generates:
+
+* Quest concept
+* Quest instructions
+* Appropriate location type
+* Safety considerations
+* Proof recommendation
+* Difficulty
+* Duration
+* Suggested points
+
+Mapbox/geospatial systems provide actual geographic data.
+
+Do not allow the language model to create trusted coordinates from memory.
+
+⸻
+
+36. Geo Generation Screen
+
+Create:
+
+/admin/ai/generate/geo
+
+Admin selects location using the shared Mapbox interface.
+
+Inputs:
+
+* Search location
+* Public location/area
+* City
+* State
+* Venue/area type
+* Optional theme
+* Interest Bubble(s)
+* Difficulty
+* Duration
+* Proof preference
+* Quantity
+
+Then generate candidates.
+
+Do not expose private validation geometry to the AI unless truly required.
+
+Prefer general context.
+
+⸻
+
+37. Mapbox Grounding
+
+Before Geo generation, resolve safe factual location context through the existing mapping system.
+
+Possible data:
+
+* Public place name
+* Category
+* City
+* State
+* General coordinates for server use
+* Public access context already stored
+* Admin-supplied notes
+
+Do not claim Mapbox provides:
+
+* Safety guarantees
+* Current operating hours unless specifically sourced
+* Legal public-access permission
+* Accessibility guarantees
+
+AI must not invent those as facts.
+
+⸻
+
+38. Geo AI Prompt Context
+
+Example safe generation context:
+
+Location:
+Lettuce Lake Park
+City:
+Tampa
+State:
+Florida
+Location Type:
+Public park
+Interest Targets:
+Nature, Photography
+Create a Quest appropriate for this general public setting.
+Do not invent private access permissions, business hours, or inaccessible locations.
+
+Do not include secret validation coordinates in prompt text unless absolutely necessary.
+
+⸻
+
+39. Geo Candidate Review
+
+Each generated Geo candidate should show:
+
+* Title
+* Description
+* Location
+* Interest tags
+* Difficulty
+* Duration
+* Suggested points
+* Suggested proof
+* Safety
+* Accessibility assumptions
+* Location-specific claims requiring verification
+* Duplicate score
+
+Clearly flag:
+
+VERIFY LOCATION-SPECIFIC CLAIMS
+
+if AI mentions:
+
+* Hours
+* Accessibility
+* Admission
+* Rules
+* Public access
+* Amenities
+
+Do not automatically trust AI-generated local facts.
+
+⸻
+
+40. Geo Location Binding
+
+When Admin selects Save as Draft:
+
+1. Use the Mapbox-selected public display location.
+2. Create Geo Quest draft.
+3. Add generated content.
+4. Do not auto-create private validation geometry from AI text.
+5. Require Admin to configure validation region using the existing Geo editor.
+6. Require safety/accessibility verification.
+7. Require standard Quest publication review.
+
+Do not let AI select the final geofence.
+
+⸻
+
+41. Geo Safety
+
+AI-generated Geo Quests must explicitly avoid:
+
+* Trespassing
+* Entering restricted property
+* Unsafe roads
+* Railroad tracks
+* Dangerous waterways
+* Dangerous heights
+* Construction areas
+* Secure infrastructure
+* Private residences
+* Schools unless explicitly appropriate and reviewed
+* Activities while driving
+* Harassment
+* Photographing private individuals without consent
+
+Run structural safety checks after generation.
+
+Flag questionable content for human review.
+
+⸻
+
+42. AI Safety System Prompt
+
+All three prompt systems must contain a baseline nonremovable platform safety layer.
+
+Admins may add instructions but ordinary prompt editing must not remove core safety policy.
+
+Store:
+
+Platform Safety Layer
+
+Controlled by Super Admin / code policy.
+
+Admin Custom Prompt
+
+Editable Quest-generation behavior.
+
+Prompt assembly:
+
+Platform safety instructions
+      +
+Quest-type system prompt
+      +
+Admin custom instructions
+      +
+Structured variables
+      +
+Output schema
+
+Do not let Admin text accidentally override critical platform safety boundaries.
+
+⸻
+
+43. Safety Validation Layer
+
+After generation, run deterministic validation.
+
+Check for content suggesting:
+
+* Illegal activity
+* Trespassing
+* Dangerous driving
+* Unsafe heights
+* Hazardous substances
+* Extreme physical exertion
+* Harassment
+* Privacy invasion
+* Restricted locations
+* Weapons
+* Self-harm
+* Medical instructions
+* Sexual content
+* Discriminatory targeting
+* Dangerous stunts
+
+Do not treat keyword checks as perfect safety moderation.
+
+They are a preliminary guard.
+
+Human Admin review remains required.
+
+⸻
+
+44. Safety Status
+
+Each candidate should receive:
+
+* Pass
+* Warning
+* Blocked
+
+Pass
+
+No structural concern detected.
+
+Warning
+
+Requires Admin attention.
+
+Blocked
+
+Clearly violates platform structural policy.
+
+Blocked content cannot be saved as a publish-ready Quest.
+
+A sufficiently authorized Admin may revise it, but should not simply bypass the safety layer without a documented override path if platform policy allows one.
+
+Audit overrides.
+
+⸻
+
+45. AI Hallucination Guard
+
+Detect fields likely to contain unsupported factual claims.
+
+Particularly for Geo Quests:
+
+* Business hours
+* Admission prices
+* Accessibility guarantees
+* Event schedules
+* Public-access claims
+
+Mark these fields:
+
+Needs Verification
+
+Do not publish unsupported factual claims as authoritative.
+
+⸻
+
+46. AI Prompt Injection Protection
+
+Treat all user/admin-supplied variable data as data, not instructions.
+
+Escape and delimit:
+
+* Interest names
+* Themes
+* Location names
+* Existing Quest descriptions
+
+Use structured messages where provider supports them.
+
+Do not allow content from one Quest or user field to rewrite the system prompt.
+
+Do not send raw untrusted HTML.
+
+⸻
+
+47. Prompt Editor Safety
+
+Before activating a new prompt version:
+
+* Validate variables.
+* Run test generation.
+* Show diff from current active prompt.
+* Require change reason.
+* Confirm activation.
+
+For high-impact system prompt changes, require sufficient permission.
+
+Do not silently change production prompt behavior.
+
+⸻
+
+48. Generation History
+
+Create /admin/ai/history.
+
+Each generation record should include:
+
+* Generation ID
+* Quest type
+* Admin actor or scheduled job
+* Prompt version
+* Model
+* Provider
+* Timestamp
+* Quantity requested
+* Quantity produced
+* Quantity valid
+* Quantity rejected
+* Token usage
+* Estimated cost
+* Duration
+* Status
+* Saved Quest IDs
+* Error summary
+
+Do not store API keys.
+
+Do not store hidden model reasoning.
+
+⸻
+
+49. Generation Detail
+
+Display:
+
+* Request metadata
+* Prompt version
+* Safe variable inputs
+* Model configuration
+* Generated candidates
+* Validation results
+* Safety results
+* Admin decisions
+* Saved draft relationships
+* Token/cost data
+
+Sensitive exact user data must not be stored in generation history unless required.
+
+For Daily personalization, prefer storing:
+
+* Interest cluster IDs
+
+rather than unnecessary user identity.
+
+⸻
+
+50. Cost Tracking
+
+Track approximate AI usage.
+
+Store:
+
+* Input tokens
+* Output tokens
+* Total tokens
+* Provider-reported cost when available
+* Estimated cost otherwise
+* Model
+* Generation type
+
+Admin AI Overview should show:
+
+* Today
+* This month
+* Daily generation
+* Monthly generation
+* Geo generation
+
+Do not pretend estimates are exact if provider billing data is unavailable.
+
+⸻
+
+51. Cost Limits
+
+Support configurable safeguards:
+
+* Maximum request tokens
+* Maximum output tokens
+* Maximum Quests per generation
+* Maximum estimated cost per generation
+* Daily generation budget warning
+* Monthly budget warning
+
+When exceeding threshold:
+
+* Warn
+* Require higher permission
+* Or block based on configuration
+
+Do not allow a browser bug to trigger unlimited generations.
+
+⸻
+
+52. Rate Limiting
+
+Rate-limit AI generation server-side.
+
+Limits may apply by:
+
+* Admin user
+* Generation type
+* Time period
+* Scheduled job
+
+Do not rely only on disabling the Generate button.
+
+Prevent repeated double-click generations using idempotency key.
+
+⸻
+
+53. Generation Idempotency
+
+Each generation request must include an idempotency/request ID.
+
+Repeated request with same ID should:
+
+* Return existing generation if already completed
+* Return running state if currently processing
+* Not create duplicate paid API calls
+
+This is important for expensive Monthly batch generation.
+
+⸻
+
+54. Long-Running Monthly Jobs
+
+Monthly generation may exceed normal request duration.
+
+Implement generation jobs.
+
+Statuses:
+
+* Queued
+* Running
+* Partial
+* Completed
+* Failed
+* Cancelled
+
+Admin can:
+
+* View progress
+* Cancel remaining batches
+* Retry failed batch
+
+Do not promise background work through a client request that disappears.
+
+Use the project’s existing job architecture from Prompt 18.
+
+⸻
+
+55. Monthly Generation Progress
+
+Display:
+
+Generating Monthly Quest Drop
+Batches completed: 4 / 10
+Quests generated: 42 / 100
+Valid Quests: 39
+Warnings: 3
+Estimated points: 4,080 / 10,000
+
+Refresh from server job state.
+
+Do not derive status from local timer.
+
+⸻
+
+56. Retry Behavior
+
+For provider failures:
+
+* Timeout
+* Rate limit
+* Malformed output
+* Temporary provider error
+
+Allow safe retry.
+
+Use capped exponential backoff server-side where appropriate.
+
+Do not repeatedly retry safety-invalid content automatically without limit.
+
+Do not duplicate saved candidates after retry.
+
+⸻
+
+57. Repair Structured Output
+
+If AI returns near-valid JSON/schema:
+
+Optionally use a repair pass.
+
+Repair pass may correct:
+
+* Formatting
+* Missing required structural wrapper
+* Enum casing
+* JSON syntax
+
+Repair must not invent missing safety-critical content silently.
+
+After repair:
+
+Run full validation again.
+
+Track that output was repaired.
+
+Do not use repair to override blocked safety content.
+
+⸻
+
+58. Candidate Editing
+
+Admin must be able to edit AI-generated candidate before saving.
+
+Editable fields:
+
+* Title
+* Summary
+* Description
+* Difficulty
+* Duration
+* Points
+* Interest tags
+* Objectives
+* Steps
+* Proof
+* Safety
+* Accessibility
+
+For Geo:
+
+* Public location information remains map-grounded.
+* Validation geometry edited in normal Geo editor.
+
+Track:
+
+* AI original
+* Admin-edited final
+
+Do not overwrite generation history.
+
+⸻
+
+59. Save as Quest Draft
+
+When Admin saves a candidate:
+
+1. Validate Admin permission.
+2. Validate candidate.
+3. Create Quest draft.
+4. Set source:
+    * ai
+5. Store generation ID.
+6. Store prompt version.
+7. Store model reference.
+8. Store AI proposed points.
+9. Store Admin-edited fields.
+10. Route to standard Quest editor.
+
+Do not mark published.
+
+Do not mark approved.
+
+⸻
+
+60. AI Provenance
+
+Store safe provenance fields such as:
+
+* Source
+* Generation ID
+* Prompt version
+* Provider
+* Model
+* Generated timestamp
+* Admin editor
+* Original suggested points
+
+This is internal metadata.
+
+Do not display it to ordinary users.
+
+Do not expose prompt text in consumer APIs.
+
+⸻
+
+61. Manual Quest Preservation
+
+AI must not replace manually created Quest workflows.
+
+Admin Quest creation should support:
+
+* Create Manually
+* Generate with AI
+
+Both create normal Quest drafts.
+
+Do not force AI use.
+
+Do not make AI-generated content privileged over manually created content.
+
+⸻
+
+62. Regeneration
+
+Admin can regenerate:
+
+* Entire candidate
+* Title only
+* Description only
+* Proof suggestion
+* Safety wording
+* Alternative Quest concept
+
+Use a controlled request.
+
+When regenerating one field:
+
+* Preserve fields not selected.
+* Send enough context for consistency.
+* Validate result.
+
+Do not replace unrelated edits.
+
+⸻
+
+63. Variant Generation
+
+Support:
+
+Generate Alternatives
+
+For example:
+
+* 3 alternate Daily Quests
+* 3 alternate titles
+* 3 alternate Geo concepts
+
+Cap count.
+
+Do not generate huge uncontrolled variant sets.
+
+Allow Admin to select one.
+
+⸻
+
+64. Interest Bubble Mapping
+
+AI should return Interest Bubble references from the active global pool.
+
+Do not allow arbitrary invented interest tags to become official automatically.
+
+If AI returns an unknown interest:
+
+* Flag it.
+* Allow Admin to map to existing bubble.
+* Or optionally create a new Interest Bubble through the existing admin tool with separate confirmation.
+
+Do not auto-create taxonomy from model output.
+
+⸻
+
+65. Interest Coverage AI Assistant
+
+Admin Interest Bubble screen should offer:
+
+Generate Quest Coverage
+
+For an underserved Interest Bubble, the AI tool should prefill:
+
+* Interest
+* Daily Quest type
+* Suggested quantity
+
+Admin then reviews generated candidates.
+
+Do not automatically fill the live pool.
+
+⸻
+
+66. Personalized Daily Prompt Editor
+
+Daily prompt editor must explicitly support instructions describing personalization behavior.
+
+Admin should be able to edit language conceptually like:
+
+Create a Daily Quest relevant to the player's selected interests.
+Prioritize the supplied Interest Bubbles.
+Do not require every supplied interest to appear.
+Avoid repetitive activities from recently used categories.
+Create an activity that can realistically be completed today.
+Use only supported proof types.
+Recommend points consistent with platform guidelines.
+
+This text must be editable in Admin.
+
+Do not bury it in source code.
+
+⸻
+
+67. Monthly Prompt Editor
+
+Monthly prompt editor must be independent.
+
+Admin should be able to control instructions such as:
+
+* Monthly theme
+* Diversity
+* Difficulty distribution
+* Interest coverage
+* Duration balance
+* Geo mix
+* Proof mix
+* Safety
+* Point distribution
+
+Do not use the Daily personalization prompt as a replacement.
+
+⸻
+
+68. Geo Prompt Editor
+
+Geo prompt editor must be independent.
+
+Admin should be able to control instructions such as:
+
+* Respect provided location context.
+* Do not invent inaccessible locations.
+* Do not assume public access.
+* Do not invent operating hours.
+* Keep activities suitable for the location type.
+* Include safety guidance.
+* Recommend suitable proof.
+* Never generate validation coordinates.
+
+This text must be editable.
+
+⸻
+
+69. Prompt Presets
+
+Allow optional presets.
+
+For example:
+
+Daily:
+
+* Balanced
+* Active
+* Creative
+* Learning
+* Outdoor
+
+Monthly:
+
+* Balanced Month
+* Exploration Month
+* Creativity Month
+
+Geo:
+
+* Public Park
+* Museum
+* Downtown
+* Historic Landmark
+
+Presets should populate additional prompt instructions.
+
+They must not replace core safety.
+
+Admin may create/manage presets later.
+
+Do not overbuild a marketplace for prompts.
+
+⸻
+
+70. Scheduled AI Generation
+
+Prepare server-side scheduled generation.
+
+Potential jobs:
+
+* Generate missing Daily Interest coverage
+* Prepare next Monthly Drop
+* Generate Geo candidates for admin-selected areas
+
+For Build 1, automated scheduled AI output must remain:
+
+Draft / Pending Admin Review
+
+Do not autonomously publish AI-generated Quest content.
+
+⸻
+
+71. Daily AI Scheduler
+
+Optional scheduled job may:
+
+1. Read aggregate Daily coverage.
+2. Identify shortages.
+3. Generate candidate pool.
+4. Run validation.
+5. Save valid candidates as AI drafts.
+6. Alert Admin.
+
+Do not generate directly for individual users by default.
+
+Do not publish automatically.
+
+⸻
+
+72. Monthly AI Scheduler
+
+Optional job may prepare the next month’s draft early.
+
+Configuration:
+
+* How many days before month start
+* Theme source
+* Target count
+* Target points
+
+Result:
+
+Monthly AI Draft
+
+Admin must review and publish.
+
+Do not automatically activate the set.
+
+⸻
+
+73. Geo AI Scheduling
+
+Do not automatically scatter Geo-Quests across real-world maps.
+
+Geo AI generation requires an admin-selected location context or approved location dataset.
+
+Do not let the model independently choose real-world coordinates.
+
+⸻
+
+74. Generation Approval Boundary
+
+Keep separate statuses:
+
+AI Candidate
+Quest Draft
+Quest Approved
+Quest Scheduled
+Quest Published
+
+AI Candidate is not a Quest visible to consumers.
+
+Saving candidate creates Quest Draft.
+
+Normal Admin workflow handles approval/publication.
+
+Do not collapse these states.
+
+⸻
+
+75. AI Diagnostics
+
+Create /admin/ai/diagnostics.
+
+Show:
+
+* Provider configured
+* Model configured
+* API connectivity
+* Last successful request
+* Last failed request
+* Average latency
+* Structured response success rate
+* Safety-block rate
+* Schema validation failure rate
+* Daily generation health
+* Monthly generation health
+* Geo generation health
+* Estimated cost today/month
+
+Do not expose API key.
+
+⸻
+
+76. Provider Health Check
+
+Implement a lightweight trusted health check.
+
+Do not consume expensive large-generation calls.
+
+Return:
+
+* Configured
+* Reachable
+* Authentication valid
+* Model available
+* Safe error
+
+Do not display raw provider response secrets.
+
+⸻
+
+77. Audit Logging
+
+Audit:
+
+* Prompt created
+* Prompt edited
+* Prompt activated
+* Prompt restored
+* AI generation started
+* AI generation cancelled
+* Candidate saved
+* Candidate rejected
+* Safety override
+* Model changed
+* AI setting changed
+* Budget threshold changed
+
+Do not log the API key.
+
+⸻
+
+78. Internal Notes
+
+Allow Admin to add internal generation notes such as:
+
+* Why candidate was rejected
+* Why prompt changed
+* Why point recommendation overridden
+
+These are staff-only.
+
+Do not expose them to consumers.
+
+⸻
+
+79. Generation Feedback
+
+Allow Admin to mark candidate feedback:
+
+* Good
+* Too repetitive
+* Unsafe
+* Poor interest match
+* Bad point recommendation
+* Poor proof choice
+* Location hallucination
+* Too difficult
+* Too easy
+* Other
+
+Use this for future prompt improvement analytics.
+
+Do not automatically train an external model from this data unless explicitly implemented and permitted.
+
+⸻
+
+80. AI Quality Dashboard
+
+Add lightweight AI quality metrics:
+
+* Save rate
+* Reject rate
+* Regeneration rate
+* Safety warning rate
+* Duplicate rate
+* Average admin edits
+* Point override rate
+* Interest mismatch rate
+* Geo fact-verification warning rate
+
+Do not invent metrics without data.
+
+⸻
+
+81. Prompt Comparison
+
+Allow Admin to compare prompt versions.
+
+Display:
+
+* Changed text
+* Model changes
+* Temperature changes
+* Variable changes
+* Output schema changes
+* Test results where available
+
+Use diff UI.
+
+Do not allow version history deletion by ordinary Admins.
+
+⸻
+
+82. Prompt Rollback
+
+Authorized Admin can restore old prompt version.
+
+Flow:
+
+1. Select version.
+2. Preview.
+3. Enter reason.
+4. Confirm.
+5. Create new active version based on old content.
+6. Audit.
+
+Do not mutate historical rows.
+
+⸻
+
+83. Consumer Data Boundary
+
+The consumer application must never receive:
+
+* Prompt templates
+* AI API key
+* Generation history
+* AI cost data
+* Model settings
+* Admin feedback
+* Safety internal flags
+* Raw AI candidate data
+
+Consumer receives only normal approved Quest content.
+
+⸻
+
+84. AI Content Labeling
+
+Do not necessarily label Quests publicly as AI-generated unless product policy requires it.
+
+Internally, preserve provenance.
+
+Admin should always know source.
+
+Consumers should receive the same reviewed Quest schema regardless of source.
+
+Do not expose technical model names in gameplay UI.
+
+⸻
+
+85. AI Failure Must Not Break Quest System
+
+If AI provider is unavailable:
+
+* Manual Quest creation continues working.
+* Existing Daily Quest assignment continues.
+* Existing Monthly Drops continue.
+* Existing Geo-Quests continue.
+* Admin sees degraded AI status.
+
+AI is an authoring assistant, not a runtime dependency for core gameplay.
+
+This is critical.
+
+⸻
+
+86. AI API Cost Must Not Affect Consumer Requests
+
+Consumer Home, Quest, Map, and Progress screens must never call the AI API.
+
+Daily Quest loading uses approved stored Quest data and existing assignment logic.
+
+Do not make gameplay latency dependent on AI provider response.
+
+⸻
+
+87. Database Model
+
+Add focused tables where necessary.
+
+Potential:
+
+ai_prompt_templates
+ai_prompt_versions
+ai_generation_jobs
+ai_generation_requests
+ai_generation_candidates
+ai_generation_feedback
+ai_model_configuration
+
+Possible candidate fields:
+
+* ID
+* Generation request
+* Quest type
+* Structured content
+* Validation status
+* Safety status
+* Duplicate status
+* Suggested points
+* Saved Quest ID
+* Admin decision
+* Created at
+
+Do not store secrets in database tables readable through Admin UI.
+
+⸻
+
+88. RLS
+
+Strictly protect AI tables.
+
+Ordinary user:
+
+* No access.
+
+Moderator:
+
+* Only where required for content review.
+
+Admin:
+
+* Generation/history access based on permission.
+
+Super Admin:
+
+* Settings/prompt management as configured.
+
+Do not let consumer clients query prompt or generation tables.
+
+Do not use broad authenticated-user policies.
+
+⸻
+
+89. Trusted Functions
+
+Create trusted operations such as:
+
+* generate_ai_daily_quests
+* generate_ai_monthly_quests
+* generate_ai_geo_quests
+* test_ai_prompt
+* save_ai_candidate_as_quest_draft
+* activate_ai_prompt_version
+* restore_ai_prompt_version
+* cancel_ai_generation_job
+* retry_ai_generation_batch
+
+Or equivalent secure server endpoints.
+
+Requirements:
+
+* Auth validation
+* Permission validation
+* Server-side provider call
+* Request limits
+* Idempotency
+* Audit
+* No secret return
+
+⸻
+
+90. React Query Architecture
+
+Create:
+
+adminAIKeys.overview()
+adminAIKeys.prompt(type)
+adminAIKeys.promptVersions(type)
+adminAIKeys.generation(id)
+adminAIKeys.generationHistory(filters)
+adminAIKeys.candidates(generationId)
+adminAIKeys.settings()
+adminAIKeys.diagnostics()
+adminAIKeys.quality()
+
+Do not mix AI admin caches with consumer Quest query caches.
+
+⸻
+
+91. Invalidation
+
+After candidate saved:
+
+Invalidate:
+
+* AI candidate
+* AI generation
+* Admin Quest drafts
+* Appropriate Daily/Monthly/Geo admin list
+
+After prompt activation:
+
+Invalidate:
+
+* Prompt
+* Prompt history
+* AI settings/diagnostics
+
+After generation:
+
+Invalidate:
+
+* Generation history
+* Quality metrics
+* Cost totals
+
+Do not invalidate consumer Quests until an actual Quest draft is later approved/published.
+
+⸻
+
+92. Offline Behavior
+
+AI generation requires connectivity.
+
+When offline:
+
+* Prompt drafts may remain editable locally if safe.
+* Do not activate prompt.
+* Do not generate.
+* Do not save AI candidate as authoritative Quest draft.
+* Do not pretend generation queued unless server confirms it.
+
+Show:
+
+AI generation requires an internet connection.
+
+⸻
+
+93. Loading States
+
+Provide tailored states for:
+
+* Prompt load
+* Prompt save
+* Prompt test
+* AI request
+* Candidate parsing
+* Safety validation
+* Monthly batch progress
+* Geo generation
+* Generation history
+* Cost dashboard
+* Diagnostics
+
+Do not use an indefinite generic spinner.
+
+Long Monthly generations must show server-backed progress.
+
+⸻
+
+94. Empty States
+
+Examples:
+
+No generation history
+
+AI generations will appear here after an Admin creates the first Quest candidates.
+
+No Monthly candidate
+
+Generate a Monthly Quest set or create one manually.
+
+No Daily coverage gap
+
+Every active Interest Bubble currently has Daily Quest coverage.
+
+AI unavailable
+
+AI generation is currently unavailable. Manual Quest creation is still available.
+
+Do not display fake candidates.
+
+⸻
+
+95. Error Handling
+
+Handle:
+
+* Provider not configured
+* Invalid API credential
+* Model unavailable
+* Provider rate limit
+* Timeout
+* Malformed response
+* Schema failure
+* Safety block
+* Duplicate generation
+* Prompt invalid
+* Unknown variable
+* Monthly batch partial failure
+* Geo location context missing
+* Budget threshold exceeded
+* Permission denied
+* Network offline
+
+Show safe actionable errors.
+
+Do not expose provider secret values.
+
+⸻
+
+96. Admin AI Components
+
+Create reusable components such as:
+
+* AIGenerationOverview
+* AIPromptEditor
+* PromptVariableReference
+* PromptVersionHistory
+* PromptDiffViewer
+* PromptTestPanel
+* AIModelSelector
+* GenerationSettings
+* DailyGenerationForm
+* MonthlyGenerationForm
+* GeoGenerationForm
+* GenerationJobProgress
+* AICandidateCard
+* CandidateValidationSummary
+* CandidateSafetySummary
+* CandidatePointSummary
+* CandidateDuplicateWarning
+* CandidateEditor
+* MonthlyDistributionSummary
+* MonthlyPointBalancePanel
+* GenerationHistoryTable
+* GenerationDetail
+* AIUsageCard
+* AIQualitySummary
+* AIDiagnosticsPanel
+
+Reuse Admin design primitives from Prompt 18.
+
+⸻
+
+97. Accessibility
+
+Ensure:
+
+* Prompt editor fields have labels.
+* Code-like prompt text areas support keyboard navigation.
+* Version diff is screen-reader understandable.
+* Candidate warnings use text, not color alone.
+* Long generation status is announced.
+* Tables are keyboard accessible.
+* Candidate actions have clear labels.
+* Monthly progress includes textual values.
+* Validation errors link to affected fields.
+* Dynamic text works.
+
+⸻
+
+98. Security Verification
+
+Verify:
+
+* AI API key never reaches client.
+* Ordinary users cannot access AI routes.
+* Prompt edits require permission.
+* AI settings require permission.
+* Generation requires permission.
+* Generation is rate-limited.
+* Prompt variables cannot access secrets.
+* Prompt injection from variable content cannot replace system safety.
+* AI output never directly publishes.
+* AI output never awards points.
+* AI output cannot invent authoritative Geo coordinates.
+* Riddle answers are irrelevant to Quest AI unless supported securely.
+* QR proof is not generated when scanner is absent.
+* Consumer gameplay does not call AI provider.
+* Manual Quest creation still works if AI fails.
+
+⸻
+
+99. Privacy Verification
+
+Verify:
+
+* Daily personalization uses only necessary Interest Bubble data.
+* Individual user identity is not sent unless strictly required.
+* Exact GPS history is never sent.
+* Proof is never sent.
+* Friend graph is never sent.
+* Reports/moderation history are never sent.
+* Public-profile text is not sent without reason.
+* Generation history minimizes personal data.
+* Geo prompt avoids protected validation geometry.
+* AI provider data usage is documented operationally.
+
+⸻
+
+100. Automated Tests — Prompt System
+
+Test:
+
+* Daily, Monthly, and Geo templates are independent.
+* Version history preserved.
+* Invalid variable rejected.
+* Missing required variable rejected.
+* Test generation does not create Quest.
+* Prompt rollback creates new version.
+* Unauthorized user cannot read/edit prompt.
+* Platform safety layer cannot be bypassed by normal Admin prompt.
+
+⸻
+
+101. Automated Tests — Daily AI
+
+Test:
+
+* Interest Bubble variables populate.
+* No unnecessary personal data sent.
+* Candidate schema validates.
+* Unknown Interest Bubble flagged.
+* Duplicate candidate flagged.
+* Invalid proof type rejected.
+* Invalid difficulty rejected.
+* Invalid point recommendation flagged.
+* Candidate saves as draft.
+* Candidate never publishes automatically.
+
+⸻
+
+102. Automated Tests — Monthly AI
+
+Test:
+
+* Generation plan works.
+* Batch generation works.
+* Partial failure can retry.
+* Quest count tracked.
+* Point total tracked.
+* Canonical set rules enforced.
+* Deterministic auto-balance works.
+* One Quest can be regenerated.
+* Existing accepted candidates remain unchanged.
+* Invalid set cannot publish.
+
+⸻
+
+103. Automated Tests — Geo AI
+
+Test:
+
+* Map-selected location context provided.
+* AI cannot set authoritative geofence.
+* Candidate saves with Mapbox-selected public location.
+* Private validation geometry still requires Admin editor.
+* Unsupported factual claims flagged.
+* Dangerous Geo content blocked/warned.
+* Invalid location context rejected.
+* Consumer never receives AI generation metadata.
+
+⸻
+
+104. Automated Tests — Cost and Jobs
+
+Test:
+
+* Token usage recorded.
+* Estimated cost recorded.
+* Budget threshold warns/blocks.
+* Double click does not duplicate provider call.
+* Monthly job resumes/retries correctly.
+* Cancelled job stops future batches.
+* Completed candidate rows do not duplicate.
+* Provider timeout handled safely.
+
+⸻
+
+105. Automated Tests — Security
+
+Test:
+
+* API secret absent from frontend bundle.
+* Consumer user cannot invoke generation endpoint.
+* Admin without permission rejected.
+* Prompt variable cannot access secret.
+* Malicious variable cannot override core safety instructions.
+* Generation response cannot directly alter Quest publication status.
+* AI cannot insert points.
+* AI cannot write hidden Geo geometry directly.
+
+⸻
+
+106. Documentation
+
+Create or update:
+
+* /docs/AI_ARCHITECTURE.md
+* /docs/AI_PROVIDER.md
+* /docs/AI_PROMPTS.md
+* /docs/AI_PROMPT_VERSIONING.md
+* /docs/AI_DAILY_QUESTS.md
+* /docs/AI_MONTHLY_QUESTS.md
+* /docs/AI_GEO_QUESTS.md
+* /docs/AI_INTEREST_PERSONALIZATION.md
+* /docs/AI_STRUCTURED_OUTPUT.md
+* /docs/AI_SAFETY.md
+* /docs/AI_COST_CONTROLS.md
+* /docs/AI_GENERATION_JOBS.md
+* /docs/AI_GENERATION_HISTORY.md
+* /docs/AI_SECURITY.md
+* /docs/AI_PRIVACY.md
+* /docs/AI_TESTING.md
+
+Update:
+
+* /docs/PROJECT_CONSTITUTION.md
+* /docs/ADMIN_QUESTS.md
+* /docs/ADMIN_DAILY_QUESTS.md
+* /docs/ADMIN_MONTHLY_QUESTS.md
+* /docs/ADMIN_GEO_QUESTS.md
+* /docs/ADMIN_DIAGNOSTICS.md
+* replit.md
+
+only where required.
+
+⸻
+
+107. Out of Scope
+
+Do not implement:
+
+* AI Hunt generation
+* AI Custom Hunt approval
+* Automatic AI media moderation
+* Automatic AI proof approval
+* AI social recommendations
+* AI chat
+* AI direct messages
+* Autonomous AI publishing
+* AI point awarding
+* AI-generated geofence coordinates
+* AI-generated live map placement without Admin-selected location
+* Stripe
+* Creator payouts
+* Paid Hunts
+* Premium generation
+* Push notification provider
+* Game Zones
+* Outbreak
+
+The next prompt should implement the full moderation and safety automation layer, including actual automated image/media appropriateness scanning readiness, content moderation workflow integration, report automation, and final anti-cheat hardening—without allowing automation to bypass human review for high-risk decisions.
+
+⸻
+
+108. Final Verification
+
+Before finishing, confirm:
+
+* Admin AI section exists.
+* Daily, Monthly, and Geo prompt templates are completely separate.
+* Admin can edit the exact prompts sent to the AI.
+* Prompt variables are documented.
+* Prompt versions are immutable.
+* Admin can test a prompt without saving content.
+* AI calls occur server-side only.
+* API key is absent from the client.
+* AI provider is abstracted.
+* Daily Quest generation uses Interest Bubbles.
+* Daily personalization sends minimal user data.
+* Daily assignments remain stable and do not regenerate on refresh.
+* AI generation does not become a consumer runtime dependency.
+* Monthly generation supports current canonical count/point targets.
+* Monthly generation is batched.
+* Monthly point balancing uses deterministic arithmetic.
+* Individual Monthly Quests can be regenerated without rebuilding the whole set.
+* Geo generation uses Admin-selected Mapbox context.
+* AI never creates trusted geofence coordinates.
+* Geo factual claims receive verification warnings.
+* Unsupported difficulty values are rejected.
+* Unsupported proof types are rejected.
+* Fake QR proof is not reintroduced.
+* Safety layer cannot be removed by normal prompt editing.
+* AI output is structured and schema validated.
+* AI output receives safety validation.
+* AI output remains a Candidate until explicitly saved.
+* Saved AI content becomes a normal Quest Draft.
+* AI-generated Quest drafts follow normal human review/publication.
+* AI never directly awards points.
+* Prompt history exists.
+* Generation history exists.
+* Token/cost tracking exists.
+* Budget safeguards exist.
+* Rate limits exist.
+* Generation is idempotent.
+* Monthly jobs survive long-running generation safely.
+* Manual Quest creation continues working if AI is unavailable.
+* Consumer navigation and gameplay are unchanged.
+* Tests pass or blocked integration tests are documented.
+* App compiles.
+
+Resolve all known in-scope errors before stopping.
+
+⸻
+
+Deliverables
+
+When complete, provide:
+
+1. Admin AI route structure
+2. AI provider abstraction
+3. Secure server-side provider integration
+4. Environment configuration
+5. AI permission model
+6. AI Settings screen
+7. Daily Prompt editor
+8. Monthly Prompt editor
+9. Geo Prompt editor
+10. Prompt variables
+11. Prompt validation
+12. Prompt versioning
+13. Prompt comparison
+14. Prompt rollback
+15. Prompt Test mode
+16. Structured output schemas
+17. AI point recommendation
+18. AI proof recommendation
+19. Canonical difficulty enforcement
+20. Daily Interest Bubble personalization
+21. Daily candidate generator
+22. Daily coverage generator
+23. Duplicate Daily detection
+24. Monthly generation form
+25. Monthly generation plan
+26. Monthly batch jobs
+27. Monthly count/point validation
+28. Monthly deterministic point balancing
+29. Individual Monthly candidate regeneration
+30. Geo generation form
+31. Mapbox-grounded location context
+32. Geo candidate verification warnings
+33. Geo draft binding
+34. Platform AI safety layer
+35. Post-generation safety validation
+36. Hallucination/factual-claim warnings
+37. Prompt injection defenses
+38. Candidate editor
+39. Save-as-Quest-Draft flow
+40. AI provenance
+41. Candidate regeneration/alternatives
+42. Interest mapping
+43. Scheduled Daily candidate generation readiness
+44. Scheduled Monthly draft generation readiness
+45. Generation history
+46. Generation Detail
+47. Cost/token tracking
+48. Budget controls
+49. Rate limiting
+50. Generation idempotency
+51. Long-running generation jobs
+52. Retry and structured repair behavior
+53. AI diagnostics
+54. Provider health check
+55. AI quality dashboard
+56. Admin audit integration
+57. React Query hooks, keys, and invalidation
+58. Database migrations/RPCs/Edge Functions/job changes/RLS
+59. Tests and results
+60. Documentation
+61. Assumptions
+62. Known limitations
+63. Exact remaining work for Prompt 20
+
+Do not begin Prompt 20.
+
+Do not redesign the consumer application.
+
+Create checkpoint:
+
+Build 1 — Prompt 19 — AI Quest Generation and Custom Prompt System
