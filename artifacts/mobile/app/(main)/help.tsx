@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useColors } from '@/hooks/useColors';
@@ -15,11 +15,26 @@ const FAQ = [
 
 export default function HelpScreen() {
   const colors = useColors();
+  const handleContactSupport = async () => {
+    const supportUrl = 'mailto:support@worlds.app';
+    try {
+      if (!(await Linking.canOpenURL(supportUrl))) {
+        throw new Error('Email support is unavailable on this device.');
+      }
+      await Linking.openURL(supportUrl);
+    } catch {
+      Alert.alert(
+        'Support unavailable',
+        'Email support is not available on this device. Please check your connection or contact your local support team.'
+      );
+    }
+  };
+
   return <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.content}>
     <View style={styles.header}><Pressable onPress={() => router.back()} accessibilityLabel="Go back"><Feather name="arrow-left" size={22} color={colors.foreground} /></Pressable><Text style={[styles.title, { color: colors.foreground }]}>Help & Support</Text><View style={{ width: 22 }} /></View>
     <Text style={[styles.intro, { color: colors.mutedForeground }]}>Quick answers for exploring, creating, and staying safe in Worlds.</Text>
     {FAQ.map(([question, answer]) => <View key={question} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}><Text style={[styles.question, { color: colors.foreground }]}>{question}</Text><Text style={[styles.answer, { color: colors.mutedForeground }]}>{answer}</Text></View>)}
-    <Pressable onPress={() => void Linking.openURL('mailto:support@worlds.app')} style={[styles.support, { backgroundColor: colors.primary }]} accessibilityRole="button"><Feather name="mail" size={18} color={colors.primaryForeground} /><Text style={{ color: colors.primaryForeground, fontFamily: fontFamily.semiBold }}>Contact support</Text></Pressable>
+    <Pressable onPress={() => void handleContactSupport()} style={[styles.support, { backgroundColor: colors.primary }]} accessibilityRole="button"><Feather name="mail" size={18} color={colors.primaryForeground} /><Text style={{ color: colors.primaryForeground, fontFamily: fontFamily.semiBold }}>Contact support</Text></Pressable>
     <Text style={[styles.note, { color: colors.mutedForeground }]}>For urgent personal safety concerns, contact local emergency services first.</Text>
   </ScrollView>;
 }

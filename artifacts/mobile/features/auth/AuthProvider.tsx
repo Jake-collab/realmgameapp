@@ -37,6 +37,7 @@ import { authErrorMessage, normalizeAuthError } from '@/lib/auth/errorNormalizer
 import { analytics } from '@/lib/auth/analyticsHooks';
 import { queryClient } from '@/lib/queryClient';
 import { useAppStore } from '@/lib/store';
+import { offlineStorage } from '@/features/offline/storage/offlineStorage';
 import type { AuthUser } from '@/types/auth.types';
 import type { ProfileRow } from '@/lib/supabase/database.types';
 
@@ -408,26 +409,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── Sign out ──────────────────────────────────────────────────────────────
 
   const signOut = useCallback(async () => {
-    if (!authService.isConfigured()) return;
+    const signedOutUserId = user?.id;
 
-    // Clear sensitive caches before signing out
+    // Clear local state before attempting the network request. This keeps a
+    // failed or unavailable remote sign-out from leaving private data visible.
     queryClient.clear();
     clearUnread();
     clearToasts();
-
-    const { error } = await authService.signOut();
-    if (error && __DEV__) {
-      console.warn('[AuthProvider] signOut error:', error.message);
-    }
-
-    // Even if sign-out fails (network), clear local state
     setStartupState('unauthenticated');
     setUser(null);
     setProfile(null);
     setSession(null);
     setHasOnboarded(false);
+
+    // Offline query snapshots, queued mutations, and local proof assets are
+    // user-scoped sensitive data. Signing out explicitly discards them.
+    if (signedOutUserId) {
+      await offlineStorage.clearUser(signedOutUserId).catch((error) => {
+        if (__DEV__) console.warn('[AuthProvider] Local sign-out cleanup:', error);
+      });
+    }
+
+    if (!authService.isConfigured()) {
+      analytics.logoutCompleted();
+      return;
+    }
+
+    try {
+      const { error } = await authService.signOut();
+      if (error && __DEV__) {
+        console.warn('[AuthProvider] signOut error:', error.message);
+      }
+    } catch (error) {
+      // Local state is already cleared, so a network or client failure must
+      // not prevent the user from reaching the auth flow.
+      if (__DEV__) console.warn('[AuthProvider] signOut request failed:', error);
+    }
+
     analytics.logoutCompleted();
-  }, [clearUnread, clearToasts, setHasOnboarded]);
+  }, [user?.id, clearUnread, clearToasts, setHasOnboarded]);
 
   // ── Password recovery ─────────────────────────────────────────────────────
 
