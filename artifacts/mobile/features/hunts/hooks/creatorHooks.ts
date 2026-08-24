@@ -69,7 +69,13 @@ export function useAutosaveHuntDraft(
       } else {
         mutation.mutate({ draftId: draft.id, payload: JSON.parse(payloadJson) as HuntCreatorPayload, revision: draft.revision }, {
           onSuccess: () => setSaveState('saved'),
-          onError: () => setSaveState('unsynced'),
+          onError: () => {
+            void enqueueOfflineMutation({
+              userId, mutationType: 'creator_draft_save', entityType: 'hunt_draft', entityId: draft.id,
+              payload: { draftId: draft.id, payload: JSON.parse(payloadJson), revision: draft.revision },
+              conflictStrategy: 'draft_merge', localVersion: draft.revision,
+            }).then(() => setSaveState('saved_local')).catch(() => setSaveState('unsynced'));
+          },
         });
       }
     }, 700);

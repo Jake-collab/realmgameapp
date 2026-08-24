@@ -260,6 +260,7 @@ function HuntMapInner() {
   // ── Disconnected / unavailable ────────────────────────────────────────────
   if (isTokenMissing) return <MapDisconnectedState reason="token_missing" />;
   if (isModuleUnavailable) return <MapDisconnectedState reason="module_unavailable" />;
+  if (viewportQuery.isError && viewportQuery.hunts.length === 0) return <MapDisconnectedState reason="error" />;
 
   // ── Build marker data ─────────────────────────────────────────────────────
   const markers = viewportQuery.hunts.map(h => ({

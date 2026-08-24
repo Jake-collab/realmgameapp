@@ -1,7 +1,7 @@
 import { offlineStorage } from '../storage/offlineStorage';
 import type { ConflictStrategy, OfflineMutationType, OfflineQueueItem, QueueStatus } from '../types/offline.types';
 
-const SAFE_MUTATIONS = new Set<OfflineMutationType>(['notification_read', 'notification_archive', 'creator_draft_save', 'profile_preference_save', 'proof_submission_intent', 'proof_media_upload']);
+const SAFE_MUTATIONS = new Set<OfflineMutationType>(['notification_read', 'notification_read_all', 'notification_archive', 'creator_draft_save', 'profile_preference_save', 'proof_submission_intent', 'proof_media_upload']);
 const MAX_ATTEMPTS = 5;
 const queueLocks = new Map<string, Promise<unknown>>();
 

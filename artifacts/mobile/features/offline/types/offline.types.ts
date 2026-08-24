@@ -4,6 +4,7 @@ export type ConflictStrategy = 'server_wins' | 'draft_merge' | 'explicit_review'
 
 export type OfflineMutationType =
   | 'notification_read'
+  | 'notification_read_all'
   | 'notification_archive'
   | 'creator_draft_save'
   | 'profile_preference_save'

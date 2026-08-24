@@ -142,7 +142,6 @@ export default function MainLayout() {
         options={{ animation: 'slide_from_right' }}
       />
       {/* Custom Hunt creator flow — no tab bar */}
-      <Stack.Screen name="hunt/create" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="hunt/create/[draftId]/details" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="hunt/create/[draftId]/privacy" options={{ animation: 'slide_from_right' }} />
       <Stack.Screen name="hunt/create/[draftId]/schedule" options={{ animation: 'slide_from_right' }} />

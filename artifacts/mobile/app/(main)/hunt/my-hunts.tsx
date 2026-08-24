@@ -11,11 +11,11 @@
  *   4. Active (general default)
  *
  * Build 1 scope:
- *   Active   — lists active hunts; Continue Hunt routes to placeholder (Prompt 13)
- *   Ready    — lists joined hunts awaiting start; Start Hunt fully implemented
- *   Completed — placeholder (Prompt 14)
- *   Invitations — fully implemented (view, accept, decline)
- *   Create Hunt — controlled placeholder (later creator prompt)
+ *   Active   — lists active hunts and resumes gameplay
+ *   Ready    — lists joined hunts awaiting start
+ *   Completed — lists completed Hunts
+ *   Invitations — view, accept, and decline
+ *   Create Hunt — opens the creator draft flow
  */
 
 import React, { useCallback, useEffect, useState } from 'react';

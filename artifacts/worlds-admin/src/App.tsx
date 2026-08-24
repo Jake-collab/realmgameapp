@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Link, Redirect, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
+import { Redirect, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import { AlertTriangle } from 'lucide-react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Toaster } from '@/components/ui/toaster';
@@ -30,27 +30,33 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
   return <ErrorBoundary resetKey={location}>{children}</ErrorBoundary>;
 }
 
-function AccessNotice({ data }: { data: ReturnType<typeof useAdminData> }) {
-  const session = data.session.data;
-  if (data.session.isLoading || (!data.session.isError && session?.authenticated && session.authorized)) return null;
-  const message = data.session.isError
-    ? 'Staff session could not be resolved. Data requests may remain unavailable until the API is connected.'
-    : session?.reason || 'This account is not authorized for the staff console.';
+function AccessState({ message, loading = false }: { message: string; loading?: boolean }) {
   return (
-    <div style={{ margin: '18px 32px 0', display: 'flex', alignItems: 'center', gap: 9, padding: '11px 13px', borderRadius: 7, border: '1px solid hsl(var(--accent) / .35)', background: 'hsl(var(--accent) / .10)', color: 'hsl(var(--foreground))', fontSize: 12 }} data-testid="notice-session-state">
-      <AlertTriangle style={{ width: 16, color: 'hsl(24 71% 41%)', flex: '0 0 auto' }} />
-      <span>{message}</span>
-      <Link href="/diagnostics" style={{ marginLeft: 'auto', color: 'hsl(24 71% 36%)', fontWeight: 700, whiteSpace: 'nowrap' }} data-testid="link-session-diagnostics">Open diagnostics</Link>
+    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24, background: 'hsl(var(--background))', color: 'hsl(var(--foreground))' }} data-testid="admin-access-state">
+      <div style={{ width: 'min(420px, 100%)', textAlign: 'center', padding: 32, borderRadius: 12, border: '1px solid hsl(var(--border))', background: 'hsl(var(--card))' }}>
+        {!loading && <AlertTriangle style={{ width: 22, color: 'hsl(24 71% 41%)', marginBottom: 14 }} />}
+        <h1 style={{ margin: '0 0 10px', fontSize: 20 }}>{loading ? 'Checking staff access…' : 'Staff access required'}</h1>
+        <p style={{ margin: 0, color: 'hsl(var(--muted-foreground))', lineHeight: 1.6 }}>{message}</p>
+      </div>
     </div>
   );
 }
 
 function Router() {
   const data = useAdminData();
+  const session = data.session.data;
+  if (data.session.isLoading) {
+    return <AccessState loading message="We’re verifying your approved Worlds staff account." />;
+  }
+  if (data.session.isError) {
+    return <AccessState message="The staff session could not be verified. Try again after the admin API is available." />;
+  }
+  if (!session?.authenticated || !session.authorized) {
+    return <AccessState message={session?.reason || 'Sign in with an approved Worlds staff account to continue.'} />;
+  }
   return (
     <RoutedErrorBoundary>
-      <AdminShell session={data.session.data}>
-        <AccessNotice data={data} />
+      <AdminShell session={session}>
         <Switch>
           <Route path="/" component={HomeRedirect} />
           <Route path="/dashboard"><DashboardPage data={data} /></Route>

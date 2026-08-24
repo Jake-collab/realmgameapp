@@ -14,6 +14,7 @@
  */
 
 import { isSupabaseConfigured } from '@/lib/supabase/client';
+import { isTransientNetworkError } from '@/lib/errors/normalizeError';
 import {
   createDraftProof,
   updateDraftProof,
@@ -202,7 +203,14 @@ export function validateProofRequirements(
 
   // Location validation
   if (config.requiresLocation) {
-    if (!proof.location_lat || !proof.location_lng) {
+    if (
+      proof.location_lat === null ||
+      proof.location_lat === undefined ||
+      proof.location_lng === null ||
+      proof.location_lng === undefined ||
+      !Number.isFinite(proof.location_lat) ||
+      !Number.isFinite(proof.location_lng)
+    ) {
       missing.push('Location evidence required');
     }
   }
@@ -268,6 +276,13 @@ export async function submitQuestProof(
 
     return { success: true, proof: submitted };
   } catch (err) {
+    if (isTransientNetworkError(err)) {
+      await enqueueOfflineMutation({
+        userId, mutationType: 'proof_submission_intent', entityType: 'quest_proof', entityId: proofId,
+        payload: { operation: 'submit', proofId, userId, participationId },
+        conflictStrategy: 'server_wins',
+      });
+    }
     return { success: false, proof: null, error: normalizeQuestError(err) };
   }
 }

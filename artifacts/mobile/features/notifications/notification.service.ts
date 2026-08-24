@@ -1,6 +1,7 @@
 import { requireSupabase, isSupabaseConfigured } from '@/lib/supabase/client';
 import type { AppNotification, NotificationPreferences } from './notification.types';
 import { enqueueOfflineMutation } from '@/features/offline/queue/mutationQueue';
+import { isTransientNetworkError } from '@/lib/errors/normalizeError';
 
 export function isInQuietHours(now: Date, preferences: Pick<NotificationPreferences, 'quietHoursEnabled' | 'quietHoursStart' | 'quietHoursEnd' | 'timezone'>) {
   if (!preferences.quietHoursEnabled) return false;
@@ -24,18 +25,37 @@ export async function getUnreadCount(userId: string) {
   if (error) throw error;
   return Number(data ?? 0);
 }
-export async function markAsRead(userId: string, notificationId: string) {
+export async function markAsRead(userId: string, notificationId: string, queueOnFailure = true) {
   if (!isSupabaseConfigured()) {
     await enqueueOfflineMutation({ userId, mutationType: 'notification_read', entityType: 'notification', entityId: notificationId, payload: { notificationId } });
     return;
   }
-  const { error } = await requireSupabase().rpc('mark_notification_read', { p_notification_id: notificationId });
-  if (error) throw error;
+  try {
+    const { error } = await requireSupabase().rpc('mark_notification_read', { p_notification_id: notificationId });
+    if (error) throw error;
+  } catch (error) {
+    if (queueOnFailure && isTransientNetworkError(error)) {
+      await enqueueOfflineMutation({ userId, mutationType: 'notification_read', entityType: 'notification', entityId: notificationId, payload: { notificationId } });
+      return;
+    }
+    throw error;
+  }
 }
-export async function markAllAsRead(userId: string) {
-  if (!isSupabaseConfigured()) return;
-  const { error } = await requireSupabase().rpc('mark_all_notifications_read');
-  if (error) throw error;
+export async function markAllAsRead(userId: string, queueOnFailure = true) {
+  if (!isSupabaseConfigured()) {
+    await enqueueOfflineMutation({ userId, mutationType: 'notification_read_all', entityType: 'notification', entityId: userId, payload: {} });
+    return;
+  }
+  try {
+    const { error } = await requireSupabase().rpc('mark_all_notifications_read');
+    if (error) throw error;
+  } catch (error) {
+    if (queueOnFailure && isTransientNetworkError(error)) {
+      await enqueueOfflineMutation({ userId, mutationType: 'notification_read_all', entityType: 'notification', entityId: userId, payload: {} });
+      return;
+    }
+    throw error;
+  }
 }
 export async function getNotificationPreferences(userId: string): Promise<NotificationPreferences | null> {
   if (!isSupabaseConfigured()) return null;
@@ -43,12 +63,20 @@ export async function getNotificationPreferences(userId: string): Promise<Notifi
   if (error) throw error;
   return data as NotificationPreferences | null;
 }
-export async function updateNotificationPreferences(userId: string, patch: Partial<NotificationPreferences>) {
+export async function updateNotificationPreferences(userId: string, patch: Partial<NotificationPreferences>, queueOnFailure = true) {
   if (!isSupabaseConfigured()) {
     await enqueueOfflineMutation({ userId, mutationType: 'profile_preference_save', entityType: 'notification_preferences', entityId: userId, payload: patch as Record<string, unknown> });
     return patch;
   }
-  const { data, error } = await requireSupabase().rpc('update_notification_preferences', { p_preferences: patch });
-  if (error) throw error;
-  return data;
+  try {
+    const { data, error } = await requireSupabase().rpc('update_notification_preferences', { p_preferences: patch });
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    if (queueOnFailure && isTransientNetworkError(error)) {
+      await enqueueOfflineMutation({ userId, mutationType: 'profile_preference_save', entityType: 'notification_preferences', entityId: userId, payload: patch as Record<string, unknown> });
+      return patch;
+    }
+    throw error;
+  }
 }

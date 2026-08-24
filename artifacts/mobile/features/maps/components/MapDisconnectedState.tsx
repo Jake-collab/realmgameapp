@@ -29,9 +29,12 @@ export function MapDisconnectedState({ reason }: MapDisconnectedStateProps) {
 
   const isDev = __DEV__;
   const isModuleIssue = reason === 'module_unavailable';
+  const isQueryIssue = reason === 'error';
 
   const heading = 'Map Unavailable';
-  const body = isDev
+  const body = isQueryIssue
+    ? 'We could not load Hunts right now. Check your connection and try again.'
+    : isDev
     ? DEV_MAP_UNAVAILABLE_MESSAGE +
       (isModuleIssue
         ? '\n\nA development build (npx expo run:ios / run:android) is required to load the Mapbox native module.'

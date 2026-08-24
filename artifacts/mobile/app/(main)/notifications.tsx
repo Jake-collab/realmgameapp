@@ -23,10 +23,13 @@ export default function NotificationsScreen() {
   const notifications = useNotifications();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
-  const sections = useMemo(() => {
+  const rows = useMemo(() => {
     const grouped: Record<string, AppNotification[]> = { Today: [], Earlier: [] };
     (notifications.data ?? []).forEach(n => grouped[sectionLabel(n.created_at)].push(n));
-    return Object.entries(grouped).flatMap(([title, data]) => data.length ? [{ title, data }] : []);
+    return Object.entries(grouped).flatMap(([title, data]) => [
+      ...(data.length ? [{ kind: 'section' as const, id: `section-${title}`, title }] : []),
+      ...data.map(notification => ({ kind: 'notification' as const, id: notification.id, notification })),
+    ]);
   }, [notifications.data]);
 
   const open = (item: AppNotification) => {
@@ -39,23 +42,25 @@ export default function NotificationsScreen() {
       <View style={[styles.header, { borderBottomColor: colors.border }]}>
         <Pressable onPress={() => router.back()} accessibilityLabel="Go back" hitSlop={12}><Feather name="arrow-left" size={22} color={colors.foreground} /></Pressable>
         <Text style={[styles.title, { color: colors.foreground }]}>Notifications</Text>
-        <Pressable onPress={() => markAll.mutate()} disabled={!notifications.unreadCount} accessibilityRole="button">
+        <Pressable onPress={() => markAll.mutate()} disabled={!notifications.unreadCount} accessibilityRole="button" accessibilityLabel="Mark all notifications as read">
           <Text style={[styles.markAll, { color: notifications.unreadCount ? colors.primary : colors.mutedForeground }]}>Mark all read</Text>
         </Pressable>
       </View>
       {notifications.isLoading ? <ActivityIndicator style={styles.loader} color={colors.primary} /> : (
         <FlatList
-          data={sections}
-          keyExtractor={item => item.title}
+          data={rows}
+          keyExtractor={item => item.id}
           contentContainerStyle={styles.content}
           ListEmptyComponent={<View style={styles.empty}><Feather name="bell-off" size={28} color={colors.mutedForeground} /><Text style={[styles.emptyTitle, { color: colors.foreground }]}>You’re all caught up</Text><Text style={[styles.emptyBody, { color: colors.mutedForeground }]}>Important Quest, Hunt, and account updates will appear here.</Text></View>}
-          renderItem={({ item: section }) => <View style={styles.section}><Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>{section.title}</Text>{section.data.map(item => (
-            <Pressable key={item.id} onPress={() => open(item)} style={({ pressed }) => [styles.row, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.8 : 1 }]}>
-              <View style={[styles.icon, { backgroundColor: item.read_at ? colors.muted : colors.primary + '18' }]}><Feather name={icons[item.category]} size={17} color={item.read_at ? colors.mutedForeground : colors.primary} /></View>
-              <View style={styles.copy}><Text style={[styles.rowTitle, { color: colors.foreground }]}>{item.title}</Text><Text style={[styles.body, { color: colors.mutedForeground }]}>{item.body}</Text><Text style={[styles.time, { color: colors.mutedForeground }]}>{new Date(item.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</Text></View>
-              {!item.read_at && <View style={[styles.dot, { backgroundColor: colors.primary }]} />}
+           renderItem={({ item }) => item.kind === 'section' ? (
+             <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>{item.title}</Text>
+           ) : (
+             <Pressable onPress={() => open(item.notification)} accessibilityRole="button" accessibilityLabel={`${item.notification.title}. ${item.notification.body}`} accessibilityState={{ checked: !!item.notification.read_at }} style={({ pressed }) => [styles.row, { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.8 : 1 }]}>
+               <View style={[styles.icon, { backgroundColor: item.notification.read_at ? colors.muted : colors.primary + '18' }]}><Feather name={icons[item.notification.category]} size={17} color={item.notification.read_at ? colors.mutedForeground : colors.primary} /></View>
+               <View style={styles.copy}><Text style={[styles.rowTitle, { color: colors.foreground }]}>{item.notification.title}</Text><Text style={[styles.body, { color: colors.mutedForeground }]}>{item.notification.body}</Text><Text style={[styles.time, { color: colors.mutedForeground }]}>{new Date(item.notification.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</Text></View>
+               {!item.notification.read_at && <View accessibilityLabel="Unread" style={[styles.dot, { backgroundColor: colors.primary }]} />}
             </Pressable>
-          ))}</View>}
+           )}
         />
       )}
     </View>

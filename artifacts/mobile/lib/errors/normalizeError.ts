@@ -53,3 +53,17 @@ export function normalizeError(error: unknown): NormalizedError {
 
   return new Error('An unexpected error occurred') as NormalizedError;
 }
+
+/** Network failures can happen after Supabase has already been configured. */
+export function isTransientNetworkError(error: unknown): boolean {
+  const normalized = normalizeError(error);
+  const message = normalized.message.toLowerCase();
+  return (
+    normalized.statusCode === 408 ||
+    normalized.statusCode === 429 ||
+    normalized.statusCode === 502 ||
+    normalized.statusCode === 503 ||
+    normalized.statusCode === 504 ||
+    /network|fetch|failed to fetch|timeout|timed out|offline|econnreset|econnrefused|dns|connection/i.test(message)
+  );
+}

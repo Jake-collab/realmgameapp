@@ -13,6 +13,7 @@
 
 import { requireSupabase } from '@/lib/supabase/client';
 import { normalizeError } from '@/lib/errors/normalizeError';
+import { isValidBoundingBox, isValidLatLng } from '../../maps/utils/geoUtils';
 import type {
   PublicHuntMapItem,
   HuntMapFilter,
@@ -40,6 +41,10 @@ export async function fetchHuntsInViewport(
   userId: string | null,
   limit = 60,
 ): Promise<HuntViewportResponse> {
+  if (!isValidBoundingBox(bounds)) {
+    throw new Error('Invalid map viewport');
+  }
+  const safeLimit = Math.min(Math.max(Math.floor(limit), 1), 100);
   const supabase = db();
 
   // Call the migration-022 RPC for viewport queries
@@ -50,7 +55,7 @@ export async function fetchHuntsInViewport(
       p_east:    bounds.east,
       p_north:   bounds.north,
       p_user_id: userId,
-      p_limit:   limit,
+       p_limit:   safeLimit,
       // Filter params
       p_available_now:        filter.availableNow,
       p_starting_soon:        filter.startingSoon,
@@ -62,15 +67,15 @@ export async function fetchHuntsInViewport(
     } as any);
 
   if (error) {
-    // Graceful degradation: return empty result rather than crashing the map
-    console.warn('[HuntMap] Viewport query error:', error.message);
-    return { hunts: [], totalCount: 0, isLimitReached: false };
+    throw normalizeError(error);
   }
 
   const rows: any[] = Array.isArray(data) ? data : [];
 
   // Apply client-side participation/status filters that require userId context
-  let hunts: PublicHuntMapItem[] = rows.map(rowToPublicHuntMapItem);
+  let hunts: PublicHuntMapItem[] = rows
+    .map(rowToPublicHuntMapItem)
+    .filter((hunt): hunt is PublicHuntMapItem => hunt !== null);
 
   if (filter.notJoined) {
     hunts = hunts.filter(h => !h.participationStatus || h.participationStatus === 'declined');
@@ -85,7 +90,7 @@ export async function fetchHuntsInViewport(
   return {
     hunts,
     totalCount: hunts.length,
-    isLimitReached: rows.length >= limit,
+    isLimitReached: hunts.length >= safeLimit,
   };
 }
 
@@ -103,6 +108,7 @@ export async function fetchNearbyHunts(
   userId: string | null,
   limit = 20,
 ): Promise<PublicHuntMapItem[]> {
+  const safeLimit = Math.min(Math.max(Math.floor(limit), 1), 100);
   const supabase = db();
 
   const { data, error } = await supabase
@@ -111,7 +117,7 @@ export async function fetchNearbyHunts(
       p_lng:                  approximateLng,
       p_user_id:              userId,
       p_sort:                 sortOrder,
-      p_limit:                limit,
+       p_limit:                safeLimit,
       p_available_now:        filter.availableNow,
       p_starting_soon:        filter.startingSoon,
       p_has_space:            filter.hasSpace,
@@ -121,12 +127,11 @@ export async function fetchNearbyHunts(
     } as any);
 
   if (error) {
-    console.warn('[HuntMap] Nearby query error:', error.message);
-    return [];
+    throw normalizeError(error);
   }
 
   let hunts: PublicHuntMapItem[] = Array.isArray(data)
-    ? (data as any[]).map(rowToPublicHuntMapItem)
+    ? (data as any[]).map(rowToPublicHuntMapItem).filter((hunt): hunt is PublicHuntMapItem => hunt !== null)
     : [];
 
   if (filter.notJoined) {
@@ -144,15 +149,18 @@ export async function fetchNearbyHunts(
 
 // ─── Row mapper ───────────────────────────────────────────────────────────────
 
-function rowToPublicHuntMapItem(row: any): PublicHuntMapItem {
+function rowToPublicHuntMapItem(row: any): PublicHuntMapItem | null {
+  const displayLatitude = row.display_lat;
+  const displayLongitude = row.display_lng;
+  if (!isValidLatLng(displayLatitude, displayLongitude)) return null;
   return {
     huntId:                   row.hunt_id ?? row.id,
     occurrenceId:             row.occurrence_id ?? null,
     slug:                     row.slug ?? '',
     title:                    row.title ?? '',
     summary:                  row.summary ?? '',
-    displayLatitude:          row.display_lat ?? 0,
-    displayLongitude:         row.display_lng ?? 0,
+    displayLatitude,
+    displayLongitude,
     publicLocationLabel:      row.public_location_label ?? null,
     approximateDistanceMeters: row.distance_meters ?? null,
     pointsReward:             row.points_reward ?? 0,
