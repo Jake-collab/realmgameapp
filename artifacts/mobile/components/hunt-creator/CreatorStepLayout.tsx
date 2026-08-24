@@ -35,9 +35,9 @@ export function CreatorStepLayout({ step, draftId, saveState, children }: {
         {children}
       </ScrollView>
       <View style={[styles.saveBar, { borderTopColor: colors.border, backgroundColor: colors.card }]}>
-        <Feather name={saveState === 'saved' ? 'check' : saveState === 'saving' ? 'upload-cloud' : saveState === 'unsynced' ? 'cloud-off' : 'edit-3'} size={14} color={saveState === 'unsynced' ? colors.destructive : colors.mutedForeground} />
+         <Feather name={saveState === 'saved' || saveState === 'saved_local' ? 'check' : saveState === 'saving' ? 'upload-cloud' : saveState === 'unsynced' ? 'cloud-off' : 'edit-3'} size={14} color={saveState === 'unsynced' ? colors.destructive : colors.mutedForeground} />
         <Text style={[styles.saveText, { color: saveState === 'unsynced' ? colors.destructive : colors.mutedForeground }]}>
-          {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'unsynced' ? 'Changes not synced — retry when online' : 'Changes save automatically'}
+           {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'saved_local' ? 'Saved on this device — syncs when online' : saveState === 'unsynced' ? 'Changes not synced — retry when online' : 'Changes save automatically'}
         </Text>
       </View>
     </View>

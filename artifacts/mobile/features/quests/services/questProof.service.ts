@@ -33,6 +33,7 @@ import {
 } from '../stateMachine/proof.machine';
 import { normalizeQuestError, makeQuestError } from '../utils/questErrors';
 import { onProofStarted, onProofSubmitted } from '../events/questEvents';
+import { enqueueOfflineMutation } from '@/features/offline/queue/mutationQueue';
 import type { ProofSubmissionRow, ProofType } from '@/lib/supabase/database.types';
 import type { ProofRequirementConfig } from '../types/quest.types';
 import { MAX_PROOF_IMAGES, MAX_PROOF_TEXT_LENGTH, MIN_PROOF_TEXT_LENGTH } from '../constants';
@@ -126,6 +127,11 @@ export async function updateQuestProofDraft(
   }
 ): Promise<ProofOperationResult> {
   if (!isSupabaseConfigured()) {
+    await enqueueOfflineMutation({
+      userId, mutationType: 'proof_submission_intent', entityType: 'quest_proof', entityId: proofId,
+      payload: { operation: 'update_draft', proofId, userId, updates },
+      conflictStrategy: 'draft_merge',
+    });
     return {
       success: false,
       proof: null,
@@ -217,6 +223,11 @@ export async function submitQuestProof(
   participationId: string
 ): Promise<ProofOperationResult> {
   if (!isSupabaseConfigured()) {
+    await enqueueOfflineMutation({
+      userId, mutationType: 'proof_submission_intent', entityType: 'quest_proof', entityId: proofId,
+      payload: { operation: 'submit', proofId, userId, participationId },
+      conflictStrategy: 'server_wins',
+    });
     return {
       success: false,
       proof: null,

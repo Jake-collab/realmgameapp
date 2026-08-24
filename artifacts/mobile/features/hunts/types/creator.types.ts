@@ -1,7 +1,7 @@
 import type { Difficulty, HuntPrivacy, ParticipationMode, StopCompletionMethod, StopOrdering, HuntStatus } from './hunt.types';
 
 export type CreatorStep = 'details' | 'privacy' | 'start' | 'stops' | 'invite' | 'preview' | 'review';
-export type CreatorSaveState = 'idle' | 'saving' | 'saved' | 'unsynced' | 'error';
+export type CreatorSaveState = 'idle' | 'saving' | 'saved' | 'saved_local' | 'unsynced' | 'error';
 export type CreatorStopType = 'location' | 'activity' | 'clue' | 'mixed';
 
 export interface CreatorLocation {

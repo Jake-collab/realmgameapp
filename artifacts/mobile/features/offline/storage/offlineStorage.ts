@@ -6,6 +6,7 @@ const key = (userId: string, area: string) => `worlds-offline:v${OFFLINE_SCHEMA_
 const queueKey = (userId: string) => key(userId, 'queue');
 const cacheKey = (userId: string) => key(userId, 'cache');
 const assetsKey = (userId: string) => key(userId, 'assets');
+const queryCacheKey = (userId: string) => key(userId, 'query-cache');
 
 async function read<T>(storageKey: string, fallback: T): Promise<T> {
   try {
@@ -27,7 +28,9 @@ export const offlineStorage = {
   saveCache: (userId: string, cache: Record<string, CachedRecord>) => write(cacheKey(userId), cache),
   loadAssets: (userId: string) => read<LocalAsset[]>(assetsKey(userId), []),
   saveAssets: (userId: string, assets: LocalAsset[]) => write(assetsKey(userId), assets),
-  clearUser: async (userId: string) => { await AsyncStorage.multiRemove([queueKey(userId), cacheKey(userId), assetsKey(userId)]); },
+  loadQueryCache: (userId: string) => read<unknown>(queryCacheKey(userId), null),
+  saveQueryCache: (userId: string, cache: unknown) => write(queryCacheKey(userId), cache),
+  clearUser: async (userId: string) => { await AsyncStorage.multiRemove([queueKey(userId), cacheKey(userId), assetsKey(userId), queryCacheKey(userId)]); },
   clearAllOffline: async () => {
     const keys = await AsyncStorage.getAllKeys();
     await AsyncStorage.multiRemove(keys.filter(item => item.startsWith('worlds-offline:')));

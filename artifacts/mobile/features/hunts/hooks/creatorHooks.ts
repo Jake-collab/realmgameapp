@@ -8,6 +8,7 @@ import {
   updateCreatorDraft, validateCreatorDraftRemote,
 } from '../repositories/creator.repository';
 import { CREATOR_DEFAULT_PAYLOAD, normalizeCreatorPayload, type HuntCreatorDraft, type HuntCreatorPayload } from '../types/creator.types';
+import { enqueueOfflineMutation } from '@/features/offline/queue/mutationQueue';
 
 export function useCreatorHunts(userId: string | null) {
   return useQuery({
@@ -53,16 +54,24 @@ export function useAutosaveHuntDraft(
   userId: string | null, draft: HuntCreatorDraft | null | undefined, payload: HuntCreatorPayload,
 ) {
   const mutation = useUpdateHuntDraft(userId);
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'unsynced' | 'error'>('idle');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'saved_local' | 'unsynced' | 'error'>('idle');
   const payloadJson = useMemo(() => JSON.stringify(payload), [payload]);
   useEffect(() => {
-    if (!draft || !isSupabaseConfigured() || draft.status === 'pending_review') return;
+    if (!draft || !userId || draft.status === 'pending_review') return;
     setSaveState('saving');
     const timer = setTimeout(() => {
-      mutation.mutate({ draftId: draft.id, payload: JSON.parse(payloadJson) as HuntCreatorPayload, revision: draft.revision }, {
-        onSuccess: () => setSaveState('saved'),
-        onError: () => setSaveState('unsynced'),
-      });
+      if (!isSupabaseConfigured()) {
+        void enqueueOfflineMutation({
+          userId, mutationType: 'creator_draft_save', entityType: 'hunt_draft', entityId: draft.id,
+          payload: { draftId: draft.id, payload: JSON.parse(payloadJson), revision: draft.revision },
+          conflictStrategy: 'draft_merge', localVersion: draft.revision,
+        }).then(() => setSaveState('saved_local')).catch(() => setSaveState('error'));
+      } else {
+        mutation.mutate({ draftId: draft.id, payload: JSON.parse(payloadJson) as HuntCreatorPayload, revision: draft.revision }, {
+          onSuccess: () => setSaveState('saved'),
+          onError: () => setSaveState('unsynced'),
+        });
+      }
     }, 700);
     return () => clearTimeout(timer);
   }, [draft?.id, draft?.revision, payloadJson]);

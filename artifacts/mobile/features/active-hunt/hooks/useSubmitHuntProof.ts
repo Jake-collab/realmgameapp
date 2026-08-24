@@ -11,6 +11,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { rpcSubmitHuntProof } from '@/features/hunts/repositories/hunt.repository';
 import { huntKeys, getCompleteStopInvalidationKeys } from '@/features/hunts/queries/huntKeys';
+import { isSupabaseConfigured } from '@/lib/supabase/client';
+import { enqueueOfflineMutation } from '@/features/offline/queue/mutationQueue';
 
 interface SubmitHuntProofParams {
   participationId: string;
@@ -31,8 +33,15 @@ export function useSubmitHuntProof() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: SubmitHuntProofParams) =>
-      rpcSubmitHuntProof(
+    mutationFn: async (params: SubmitHuntProofParams) => {
+      if (!isSupabaseConfigured()) {
+        await enqueueOfflineMutation({
+          userId: params.userId, mutationType: 'proof_submission_intent', entityType: 'hunt_proof', entityId: `${params.participationId}:${params.stopId}`,
+          payload: { operation: 'hunt_submit', ...params }, conflictStrategy: 'server_wins',
+        });
+        return { success: false, submissionId: null, stopStatus: null, reasonCode: 'OFFLINE_QUEUED', userMessage: 'Saved on this device. It will submit when you are online.' };
+      }
+      return rpcSubmitHuntProof(
         params.participationId,
         params.stopId,
         params.submissionType,
@@ -42,7 +51,8 @@ export function useSubmitHuntProof() {
         params.locationLng,
         params.locationAccuracy,
         params.previousSubmissionId,
-      ),
+      );
+    },
     retry: 0, // Do not retry — server handles idempotency
     onSuccess: (_data, { participationId, huntId, occurrenceId = null, userId, stopId }) => {
       // Invalidate active hunt state (stop progress has changed)

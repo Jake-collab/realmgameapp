@@ -115,6 +115,23 @@ export async function registerMediaAsset(payload: RegisterMediaPayload): Promise
   return data;
 }
 
+export async function uploadProofMediaFromUri(input: {
+  userId: string; localUri: string; mimeType: string; fileSize?: number; proofId?: string;
+}): Promise<MediaAssetRow> {
+  const response = await fetch(input.localUri);
+  if (!response.ok) throw new Error(`Local media could not be read (${response.status})`);
+  const blob = await response.blob();
+  const ext = input.mimeType.split('/')[1] ?? 'jpg';
+  const storagePath = `${input.userId}/${input.proofId ?? 'draft'}/${Date.now()}.${ext}`;
+  const client = requireSupabase();
+  const { error } = await client.storage.from('proof-submissions').upload(storagePath, blob, { contentType: input.mimeType, upsert: false });
+  if (error) throw normalizeError(error);
+  return registerMediaAsset({
+    ownerUserId: input.userId, bucket: 'proof-submissions', storagePath, mediaType: 'image',
+    mimeType: input.mimeType, purpose: 'proof', fileSize: input.fileSize,
+  });
+}
+
 // ─── URL resolution ───────────────────────────────────────────────────────────
 
 /**

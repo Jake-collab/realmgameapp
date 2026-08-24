@@ -20,13 +20,14 @@ export async function syncOfflineQueue(userId: string, executor: MutationExecuto
   const results: Array<{ item: OfflineQueueItem; result: SyncResult }> = [];
   const limit = options.maxItems ?? 10;
   const working = [...items];
+  const dependencyView = [...allItems];
   for (const item of working.slice(0, limit)) {
     if (item.nextAttemptAt && new Date(item.nextAttemptAt).getTime() > (options.now ?? Date.now())) continue;
     if (item.attemptCount >= MAX_QUEUE_ATTEMPTS) {
       await updateQueueItem(userId, item.id, { status: 'needs_attention', errorCode: 'RETRY_LIMIT_REACHED', errorMessage: 'This change needs your attention.' });
       continue;
     }
-    const dependencyStatus = dependencyState(item, allItems);
+    const dependencyStatus = dependencyState(item, dependencyView);
     if (dependencyStatus === 'invalid') {
       await updateQueueItem(userId, item.id, { status: 'needs_attention', errorCode: 'DEPENDENCY_UNAVAILABLE', errorMessage: 'A required saved change is no longer available.' });
       continue;
@@ -44,11 +45,15 @@ export async function syncOfflineQueue(userId: string, executor: MutationExecuto
       results.push({ item, result });
       const workingItem = working.find(candidate => candidate.id === item.id);
       if (workingItem) workingItem.status = result.status === 'completed' ? 'completed' : result.status === 'retryable' ? 'failed_retryable' : 'needs_attention';
+      const persistedItem = dependencyView.find(candidate => candidate.id === item.id);
+      if (persistedItem) persistedItem.status = workingItem?.status ?? persistedItem.status;
     } catch (error) {
       const failure = classifySyncFailure(error);
       const status: QueueStatus = failure.retryable && item.attemptCount + 1 < MAX_QUEUE_ATTEMPTS ? 'failed_retryable' : 'needs_attention';
       const result: SyncResult = { status: status === 'failed_retryable' ? 'retryable' : 'needs_attention', errorCode: failure.code, message: failure.message };
       await updateQueueItem(userId, item.id, { status, errorCode: failure.code, errorMessage: failure.message, nextAttemptAt: status === 'failed_retryable' ? nextRetryAt(item.attemptCount + 1, options.now ?? Date.now()) : null });
+      const persistedItem = dependencyView.find(candidate => candidate.id === item.id);
+      if (persistedItem) persistedItem.status = status;
       results.push({ item, result });
     }
   }

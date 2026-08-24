@@ -12,7 +12,11 @@
  * - No private geometry or clue solutions are ever stored.
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { loadCachedRecord, saveCachedRecord } from '@/features/offline/storage/offlineStorage';
+import { saveLocalAsset } from '@/features/offline/storage/localAssets';
+import { enqueueOfflineMutation } from '@/features/offline/queue/mutationQueue';
 import type { StopCompletionMethod } from '@/features/hunts/types/hunt.types';
 import {
   createEmptyProofDraft,
@@ -34,9 +38,26 @@ export function useHuntProofDraft({
   completionMethod,
   previousSubmissionId,
 }: UseHuntProofDraftOptions) {
+  const { user } = useAuth();
+  const restored = useRef(false);
   const [draft, setDraft] = useState<ProofDraftState>(() =>
     createEmptyProofDraft(participationId, stopId, completionMethod, previousSubmissionId)
   );
+
+  const cacheId = `hunt-proof-draft:${participationId}:${stopId}`;
+  useEffect(() => {
+    if (!user?.id || restored.current) return;
+    restored.current = true;
+    void loadCachedRecord<ProofDraftState>(user.id, cacheId).then(record => {
+      if (!record?.value) return;
+      const value = record.value;
+      setDraft({ ...value, lastUpdatedAt: value.lastUpdatedAt ? new Date(value.lastUpdatedAt) : null });
+    });
+  }, [cacheId, user?.id]);
+  useEffect(() => {
+    if (!user?.id || !restored.current || !draft.textResponse && draft.images.length === 0) return;
+    void saveCachedRecord(user.id, cacheId, draft, { staleAfterMs: 7 * 24 * 60 * 60 * 1000 });
+  }, [cacheId, draft, user?.id]);
 
   // ── Text ─────────────────────────────────────────────────────────────────────
 
@@ -51,6 +72,18 @@ export function useHuntProofDraft({
   // ── Images ────────────────────────────────────────────────────────────────────
 
   const addImage = useCallback((localUri: string, fileSizeBytes?: number) => {
+    const assetId = `asset_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    if (user?.id) {
+      void saveLocalAsset({
+        id: assetId, userId: user.id, uri: localUri, mimeType: 'image/jpeg', size: fileSizeBytes ?? null, sha256: null,
+        domain: 'hunt_proof', entityId: participationId, status: 'waiting', retryCount: 0, remoteAssetId: null,
+        createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+      });
+      void enqueueOfflineMutation({
+        userId: user.id, mutationType: 'proof_media_upload', entityType: 'proof_media', entityId: assetId,
+        payload: { assetId, localUri, mimeType: 'image/jpeg', fileSize: fileSizeBytes ?? null, proofId: participationId },
+      });
+    }
     setDraft(prev => {
       if (prev.images.length >= prev.maxImages) return prev;
       const newImage: ProofImageItem = {
@@ -66,7 +99,7 @@ export function useHuntProofDraft({
         lastUpdatedAt: new Date(),
       };
     });
-  }, []);
+  }, [participationId, user?.id]);
 
   const removeImage = useCallback((localUri: string) => {
     setDraft(prev => ({
@@ -111,7 +144,8 @@ export function useHuntProofDraft({
 
   const clearDraft = useCallback(() => {
     setDraft(createEmptyProofDraft(participationId, stopId, completionMethod, previousSubmissionId));
-  }, [participationId, stopId, completionMethod, previousSubmissionId]);
+    if (user?.id) void saveCachedRecord(user.id, cacheId, null, { staleAfterMs: 0 });
+  }, [cacheId, completionMethod, participationId, previousSubmissionId, user?.id]);
 
   // ── Derived readiness ─────────────────────────────────────────────────────────
 
