@@ -79,6 +79,24 @@ BEGIN
     ORDER BY
       CASE
         WHEN EXISTS (
+          SELECT 1 FROM quest_interest_tags preferred
+          WHERE preferred.quest_id = q.id
+            AND preferred.targeting_mode = 'PREFER_COMBINATION'
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM quest_interest_tags preferred
+          WHERE preferred.quest_id = q.id
+            AND preferred.targeting_mode = 'PREFER_COMBINATION'
+            AND NOT EXISTS (
+              SELECT 1 FROM user_interests ui
+              WHERE ui.user_id = p_user_id
+                AND ui.interest_id = preferred.interest_id
+            )
+        ) THEN 1
+        ELSE 0
+      END DESC,
+      CASE
+        WHEN EXISTS (
           SELECT 1 FROM quest_interest_tags tag
           JOIN user_interests ui ON ui.interest_id = tag.interest_id
           WHERE tag.quest_id = q.id AND ui.user_id = p_user_id
@@ -100,6 +118,8 @@ BEGIN
       SELECT q.id INTO assigned
       FROM quests q
       WHERE q.quest_type = 'daily' AND q.status = 'published'
+        AND (q.available_from IS NULL OR q.available_from <= p_occurrence_date + INTERVAL '1 day')
+        AND (q.available_until IS NULL OR q.available_until >= p_occurrence_date)
         AND NOT EXISTS (
           SELECT 1 FROM quest_interest_tags tag WHERE tag.quest_id = q.id
         )
