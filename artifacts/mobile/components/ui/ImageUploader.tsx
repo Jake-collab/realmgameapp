@@ -31,6 +31,7 @@ import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
+import * as ImagePicker from 'expo-image-picker';
 
 interface Props {
   label?: string;
@@ -40,6 +41,9 @@ interface Props {
   onImage?: (uri: string) => void;
   onRemove?: () => void;
   disabled?: boolean;
+  /** Proof must use the live camera; library remains the default for content uploads. */
+  captureMode?: 'camera' | 'library';
+  mediaType?: 'image' | 'video';
 }
 
 export default function ImageUploader({
@@ -49,19 +53,42 @@ export default function ImageUploader({
   onImage,
   onRemove,
   disabled = false,
+  captureMode = 'library',
+  mediaType = 'image',
 }: Props) {
   const colors = useColors();
   const [loading, setLoading] = useState(false);
 
   async function handlePress() {
-    // TODO (Build — Storage step): Integrate expo-image-picker here.
-    // 1. Request camera roll permissions via expo-media-library
-    // 2. Launch ImagePicker.launchImageLibraryAsync with { mediaTypes: 'images', quality: 0.85 }
-    // 3. Call onImage(result.assets[0].uri)
-    Alert.alert(
-      'Image upload',
-      'Image picker will be wired up in the Storage build step.'
-    );
+    setLoading(true);
+    try {
+      const permission = captureMode === 'camera'
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Permission needed',
+          captureMode === 'camera'
+            ? 'Allow camera access to capture live proof.'
+            : 'Allow photo access to choose an image.'
+        );
+        return;
+      }
+
+      const options = {
+        mediaTypes: mediaType === 'video'
+          ? ImagePicker.MediaTypeOptions.Videos
+          : ImagePicker.MediaTypeOptions.Images,
+        quality: 0.85 as const,
+        allowsEditing: false,
+      };
+      const result = captureMode === 'camera'
+        ? await ImagePicker.launchCameraAsync(options)
+        : await ImagePicker.launchImageLibraryAsync(options);
+      if (!result.canceled && result.assets[0]) onImage?.(result.assets[0].uri);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -73,7 +100,7 @@ export default function ImageUploader({
       <Pressable
         onPress={handlePress}
         disabled={disabled || loading}
-        accessibilityLabel={label ?? 'Upload image'}
+          accessibilityLabel={label ?? (captureMode === 'camera' ? 'Capture proof' : 'Upload image')}
         accessibilityRole="button"
         style={({ pressed }) => [
           styles.area,
@@ -92,7 +119,7 @@ export default function ImageUploader({
           <>
             <Feather name="image" size={28} color={colors.mutedForeground} />
             <Text style={[styles.prompt, { color: colors.mutedForeground }]}>
-              {currentUri ? 'Tap to change' : 'Tap to upload'}
+              {currentUri ? 'Tap to change' : captureMode === 'camera' ? 'Capture with camera' : 'Tap to upload'}
             </Text>
           </>
         )}

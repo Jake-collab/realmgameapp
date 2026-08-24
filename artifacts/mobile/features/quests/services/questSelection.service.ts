@@ -7,7 +7,7 @@
  *  1. Published, within availability window
  *  2. Highest home_priority first
  *  3. Not completed by the user in the current daily window
- *  4. Matching user interests (future personalization hook)
+ *  4. Matching user interests and targeting mode
  *  5. Fallback to most recently published
  *
  * Monthly Quest Drop selection:
@@ -27,6 +27,7 @@ import {
 } from '../repositories/quest.repository';
 import { isWithinAvailabilityWindow, buildDailyOccurrenceKey, buildMonthlyOccurrenceKey } from './questScheduling.service';
 import { isSupabaseConfigured } from '@/lib/supabase/client';
+import { requireSupabase } from '@/lib/supabase/client';
 
 // ─── Daily quest selection ────────────────────────────────────────────────────
 
@@ -35,6 +36,33 @@ export interface DailyQuestSelectionInput {
   completedOccurrenceKeys: Set<string>;
   userInterestIds?: string[];
   now?: Date;
+}
+
+export function rankDailyQuestCandidates(
+  quests: QuestRowExtended[],
+  userInterestIds: string[],
+): QuestRowExtended[] {
+  const interests = new Set(userInterestIds);
+  const scored = quests.map((quest, index) => {
+    const tags = quest.interest_bubble_ids ?? [];
+    const matches = tags.filter((id) => interests.has(id)).length;
+    const allMatch = tags.length > 0 && matches === tags.length;
+    const mode = quest.interest_targeting_mode ?? 'ANY_MATCH';
+    const excluded = mode === 'REQUIRE_COMBINATION' && !allMatch;
+    const combinationBonus = mode === 'PREFER_COMBINATION' && allMatch ? 1000 : 0;
+    const matchScore = tags.length === 0 ? 0 : (matches / tags.length) * 100;
+    return {
+      quest,
+      excluded,
+      score: combinationBonus + matchScore + (quest.home_priority ?? 0),
+      index,
+    };
+  });
+
+  return scored
+    .filter((item) => !item.excluded)
+    .sort((a, b) => b.score - a.score || (b.quest.home_priority ?? 0) - (a.quest.home_priority ?? 0) || a.index - b.index)
+    .map((item) => item.quest);
 }
 
 /**
@@ -49,6 +77,19 @@ export async function selectDailyQuest(
   if (!isSupabaseConfigured()) return buildMockDailyQuest();
 
   const now = input.now ?? new Date();
+  // The RPC owns the assignment when the canonical migration is installed.
+  // The local ranking path below remains a compatibility path for older environments.
+  try {
+    const client = requireSupabase();
+    const { data, error } = await client.rpc('get_daily_quest_assignment', {
+      p_user_id: input.userId,
+      p_occurrence_date: now.toISOString().slice(0, 10),
+    } as never);
+    if (!error && data) return data as unknown as QuestRowExtended;
+  } catch {
+    // Explicit compatibility fallback; never fabricate a completed assignment.
+  }
+
   let quests: QuestRowExtended[];
   try {
     quests = await fetchQuestsByType('daily', 0, 20);
@@ -69,14 +110,8 @@ export async function selectDailyQuest(
   // If all completed, return the highest-priority one (for display)
   const candidates = notCompleted.length > 0 ? notCompleted : available;
 
-  // Sort: home_priority desc, then available_from desc (stable ordering)
-  return candidates.sort((a, b) => {
-    const priorityDiff = (b.home_priority ?? 0) - (a.home_priority ?? 0);
-    if (priorityDiff !== 0) return priorityDiff;
-    const aFrom = a.available_from ? new Date(a.available_from).getTime() : 0;
-    const bFrom = b.available_from ? new Date(b.available_from).getTime() : 0;
-    return bFrom - aFrom;
-  })[0] ?? null;
+  const ranked = rankDailyQuestCandidates(candidates, input.userInterestIds ?? []);
+  return (ranked[0] ?? candidates.sort((a, b) => (b.home_priority ?? 0) - (a.home_priority ?? 0))[0]) ?? null;
 }
 
 // ─── Monthly quest drop selection ─────────────────────────────────────────────
@@ -221,9 +256,9 @@ function buildMockDailyQuest(): QuestRowExtended {
     description: 'Head outside for a refreshing morning walk. Notice three things you find beautiful.',
     quest_type: 'daily',
     status: 'published',
-    difficulty: 'very_easy',
+    difficulty: 'easy',
     estimated_duration_minutes: 15,
-    points_reward: 50,
+    points_reward: 100,
     indoor_outdoor: 'outdoor',
     accessibility_notes: 'Wheelchair accessible routes available.',
     safety_notes: 'Stay on designated paths.',

@@ -35,6 +35,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import {
   useActiveQuest,
   useDailyQuests,
+  useAssignedDailyQuest,
   useMonthlyQuests,
   useGeoQuests,
   useHomeQuestSummary,
@@ -419,15 +420,16 @@ export default function QuestHomeScreen() {
 
   const activeQuery = useActiveQuest();
   const dailyQuery = useDailyQuests();
+  const assignedDailyQuery = useAssignedDailyQuest();
   const monthlyQuery = useMonthlyQuests();
   const geoQuery = useGeoQuests();
   const summaryQuery = useHomeQuestSummary(new Set());
 
   const isLoading =
-    activeQuery.isLoading || dailyQuery.isLoading;
+    activeQuery.isLoading || dailyQuery.isLoading || assignedDailyQuery.isLoading;
 
   const isRefreshing =
-    activeQuery.isFetching || dailyQuery.isFetching ||
+    activeQuery.isFetching || dailyQuery.isFetching || assignedDailyQuery.isFetching ||
     monthlyQuery.isFetching || geoQuery.isFetching;
 
   const handleRefresh = useCallback(() => {
@@ -447,10 +449,7 @@ export default function QuestHomeScreen() {
     )[0] ?? null;
   }, [activeQuery.data]);
 
-  const dominantDaily = useMemo<QuestRowExtended | null>(() => {
-    const quests = dailyQuery.data ?? [];
-    return quests[0] ?? null;
-  }, [dailyQuery.data]);
+  const dominantDaily = assignedDailyQuery.data ?? null;
 
   const dominantMonthly = useMemo<QuestRowExtended | null>(() => {
     const quests = monthlyQuery.data ?? [];

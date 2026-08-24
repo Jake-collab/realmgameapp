@@ -33,6 +33,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import { useQuery } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 import { fontFamily, fontSize } from '@/constants/typography';
@@ -113,6 +114,7 @@ export default function QuestProofScreen() {
   const [textResponse, setTextResponse] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [locationCaptured, setLocationCaptured] = useState(false);
+  const [capturedLocation, setCapturedLocation] = useState<{ latitude: number; longitude: number; accuracy: number | null } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -164,10 +166,9 @@ export default function QuestProofScreen() {
         userId: user.id,
         submissionType: proofType,
         textResponse: needsText(proofType) ? textResponse.trim() : undefined,
-        // Location wired in Geo-Quest prompt (Prompt 10)
-        locationLat: undefined,
-        locationLng: undefined,
-        locationAccuracyMeters: undefined,
+        locationLat: capturedLocation?.latitude,
+        locationLng: capturedLocation?.longitude,
+        locationAccuracyMeters: capturedLocation?.accuracy ?? undefined,
       });
 
       if (!draftResult.success || !draftResult.proof) {
@@ -193,7 +194,7 @@ export default function QuestProofScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [canSubmit, participationId, user, proofType, textResponse, questId, queryClient]);
+  }, [canSubmit, participationId, user, proofType, textResponse, questId, queryClient, capturedLocation]);
 
   // ── Submitted state ─────────────────────────────────────────────────────────
 
@@ -345,11 +346,13 @@ export default function QuestProofScreen() {
               {proofType === 'video' ? 'Video Evidence' : 'Photo Evidence'}
             </Text>
             <ImageUploader
-              label={proofType === 'video' ? 'Upload video' : 'Upload photo'}
+              label={proofType === 'video' ? 'Capture live video' : 'Capture live photo'}
               aspectRatio={4 / 3}
               currentUri={imageUri}
               onImage={setImageUri}
               onRemove={() => setImageUri(null)}
+              captureMode="camera"
+              mediaType={proofType === 'video' ? 'video' : 'image'}
             />
           </View>
         )}
@@ -361,9 +364,25 @@ export default function QuestProofScreen() {
               Location Check-In
             </Text>
             <Pressable
-              onPress={() => {
-                // Location service integration in Prompt 10 (Geo-Quest)
-                Alert.alert('Location Check-In', 'Location check-in will be enabled in the Geo-Quest update.');
+              onPress={async () => {
+                try {
+                  const permission = await Location.requestForegroundPermissionsAsync();
+                  if (permission.status !== Location.PermissionStatus.GRANTED) {
+                    Alert.alert('Permission needed', 'Allow foreground location access to verify this Quest.');
+                    return;
+                  }
+                  const position = await Location.getCurrentPositionAsync({
+                    accuracy: Location.Accuracy.Balanced,
+                  });
+                  setCapturedLocation({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy,
+                  });
+                  setLocationCaptured(true);
+                } catch {
+                  Alert.alert('Location unavailable', 'We could not capture your current location. Try again outdoors.');
+                }
               }}
               style={[
                 styles.locationBtn,

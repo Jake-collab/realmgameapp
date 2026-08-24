@@ -5,6 +5,12 @@ import { z } from "zod";
 
 export const questGenerationTypes = ["daily", "monthly", "geo"] as const;
 export type QuestGenerationType = (typeof questGenerationTypes)[number];
+export const canonicalQuestPoints = {
+  easy: 100,
+  medium: 200,
+  hard: 300,
+  epic: 500,
+} as const;
 
 const promptFields = z.object({
   systemInstructions: z.string().trim().min(1).max(12000),
@@ -20,11 +26,11 @@ export const generatedQuestSchema = z.object({
   summary: z.string().trim().min(10).max(300),
   description: z.string().trim().min(20).max(4000),
   quest_type: z.enum(questGenerationTypes),
-  difficulty: z.enum(["very_easy", "easy", "medium", "hard", "epic"]),
+  difficulty: z.enum(["easy", "medium", "hard", "epic"]),
   estimated_duration_minutes: z.number().int().min(1).max(1440),
   recommended_points: z.number().int().min(1).max(1000),
   category: z.string().trim().min(1).max(80),
-  interest_tags: z.array(z.string().trim().min(1).max(60)).max(10),
+  interest_bubble_ids: z.array(z.string().uuid()).max(10),
   objectives: z.array(z.string().trim().min(1).max(500)).min(1).max(20),
   proof_type: z.enum(["photo", "video", "text", "location", "none"]),
   proof_instructions: z.string().max(1000),
@@ -187,7 +193,7 @@ export function aiConfiguration() {
 }
 
 const allowedVariables = new Set([
-  "current_date", "interest_cluster", "interest_tags", "theme", "season",
+  "current_date", "interest_bubble_ids", "theme", "season",
   "target_month", "public_location_context", "approximate_area", "region",
   "weather_context", "difficulty", "point_budget",
 ]);
@@ -201,7 +207,7 @@ export function validatePromptVariables(template: string, supplied: Record<strin
 }
 
 export function validateGenerationInputs(type: QuestGenerationType, variables: Record<string, string>) {
-  const required = type === "daily" ? ["interest_cluster"] : type === "monthly" ? ["theme", "target_month"] : ["public_location_context", "approximate_area"];
+  const required = type === "daily" ? ["interest_bubble_ids"] : type === "monthly" ? ["theme", "target_month"] : ["public_location_context", "approximate_area"];
   const missing = required.filter((key) => !variables[key]?.trim());
   const unknown = Object.keys(variables).filter((key) => !allowedVariables.has(key));
   return { valid: missing.length === 0 && unknown.length === 0, missing, unknown };
@@ -215,7 +221,9 @@ export function inspectCandidate(candidate: GeneratedQuest, type: QuestGeneratio
   const diagnostics: string[] = [];
   if (candidate.quest_type !== type) diagnostics.push("Quest type does not match the requested generation lane.");
   if (candidate.proof_type === "location" && candidate.location_requirement === "none") diagnostics.push("Location proof requires a location requirement.");
-  if (candidate.recommended_points > 500) diagnostics.push("Recommended points exceed the local review threshold.");
+  if (candidate.recommended_points !== canonicalQuestPoints[candidate.difficulty]) {
+    diagnostics.push(`Recommended points must use the canonical ${candidate.difficulty.toUpperCase()} base of ${canonicalQuestPoints[candidate.difficulty]}.`);
+  }
   if (candidate.safety_notes.length === 0) diagnostics.push("Candidate has no explicit safety notes.");
   const duplicate = state.history.some((item) => item.inputFingerprint === fingerprint(candidate));
   if (duplicate) diagnostics.push("Candidate matches a previously generated candidate fingerprint.");
@@ -234,7 +242,7 @@ function recordHistory(item: GenerationHistoryItem) {
 
 export function getGenerationPlan(type: QuestGenerationType, quantity: number, variables: Record<string, string>) {
   const diagnostics = type === "daily"
-    ? [`Daily pool: ${variables.interest_cluster ?? "unassigned"}`, "Use fallback coverage when the interest pool is below target."]
+    ? [`Daily Interest Bubbles: ${variables.interest_bubble_ids ?? "unassigned"}`, "Use fallback coverage when the interest pool is below target."]
     : type === "monthly"
       ? [`Monthly theme: ${variables.theme ?? "unassigned"}`, `Target month: ${variables.target_month ?? "unassigned"}`, "Balance difficulty and points across the staged batch."]
       : [`Grounding area: ${variables.approximate_area ?? "unassigned"}`, "Claim verification and exact-coordinate validation remain a human review step."];

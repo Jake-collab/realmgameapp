@@ -27,6 +27,9 @@ export interface QuestRowExtended extends QuestRow {
   completion_mode: 'auto' | 'manual_review';
   expiration_behavior: 'hard' | 'started_users_may_finish';
   home_priority: number;
+  /** Public targeting metadata used by the server-selected Daily Quest. */
+  interest_bubble_ids?: string[];
+  interest_targeting_mode?: 'ANY_MATCH' | 'PREFER_COMBINATION' | 'REQUIRE_COMBINATION';
 }
 
 export interface QuestParticipationRowExtended extends QuestParticipationRow {
@@ -105,14 +108,22 @@ export async function fetchQuestsByType(
   const client = requireSupabase();
   const { data, error } = await client
     .from('quests')
-    .select('*')
+    .select('*, quest_interest_tags(interest_id, targeting_mode)')
     .eq('quest_type', questType)
     .order('home_priority', { ascending: false })
     .order('available_from', { ascending: false })
     .range(page * pageSize, (page + 1) * pageSize - 1);
 
   if (error) throw normalizeQuestError(error);
-  return (data ?? []) as unknown as QuestRowExtended[];
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    interest_bubble_ids: (row.quest_interest_tags ?? []).map((tag: { interest_id: string }) => tag.interest_id),
+    interest_targeting_mode: (row.quest_interest_tags ?? []).some((tag: { targeting_mode?: string }) => tag.targeting_mode === 'REQUIRE_COMBINATION')
+      ? 'REQUIRE_COMBINATION'
+      : (row.quest_interest_tags ?? []).some((tag: { targeting_mode?: string }) => tag.targeting_mode === 'PREFER_COMBINATION')
+        ? 'PREFER_COMBINATION'
+        : 'ANY_MATCH',
+  })) as unknown as QuestRowExtended[];
 }
 
 /**

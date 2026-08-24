@@ -6,6 +6,7 @@
  */
 
 export { useDailyQuests } from './useDailyQuests';
+export { useAssignedDailyQuest } from './useAssignedDailyQuest';
 export { useMonthlyQuests } from './useMonthlyQuests';
 export { useGeoQuests } from './useGeoQuests';
 export { useQuestDetail } from './useQuestDetail';

@@ -198,7 +198,7 @@ export function AIPage({ data }: { data: AdminData }) {
     setMessage('');
     try {
       const variables = type === 'daily'
-        ? { current_date: new Date().toISOString().slice(0, 10), interest_cluster: interestCluster }
+        ? { current_date: new Date().toISOString().slice(0, 10), interest_bubble_ids: JSON.stringify(interestCluster.split(',').map((value) => value.trim()).filter(Boolean)) }
         : type === 'monthly'
           ? { current_date: new Date().toISOString().slice(0, 10), theme, target_month: targetMonth }
           : { current_date: new Date().toISOString().slice(0, 10), public_location_context: locationContext, approximate_area: approximateArea };
@@ -260,7 +260,7 @@ export function AIPage({ data }: { data: AdminData }) {
           <div className="toolbar">
             <label className="field">Quest type<select value={type} onChange={(event) => setType(event.target.value as typeof type)}><option value="daily">Daily</option><option value="monthly">Monthly</option><option value="geo">Geo</option></select></label>
             <label className="field">Quantity<input type="number" min="1" max="20" value={quantity} onChange={(event) => setQuantity(event.target.value)} /></label>
-            {type === 'daily' && <label className="field">Interest cluster<input value={interestCluster} onChange={(event) => setInterestCluster(event.target.value)} placeholder="urban gardening" /></label>}
+            {type === 'daily' && <label className="field">Interest Bubble IDs<input value={interestCluster} onChange={(event) => setInterestCluster(event.target.value)} placeholder="Comma-separated Interest Bubble UUIDs" /></label>}
             {type === 'monthly' && <><label className="field">Monthly theme<input value={theme} onChange={(event) => setTheme(event.target.value)} placeholder="Spring reset" /></label><label className="field">Target month<input type="month" value={targetMonth} onChange={(event) => setTargetMonth(event.target.value)} /></label></>}
             {type === 'geo' && <><label className="field">Public location context<input value={locationContext} onChange={(event) => setLocationContext(event.target.value)} placeholder="Public library district" /></label><label className="field">Approximate area<input value={approximateArea} onChange={(event) => setApproximateArea(event.target.value)} placeholder="Downtown" /></label></>}
             <button className="btn btn-primary" onClick={() => void generate()} disabled={loading || !data.session.data.permissions.includes('ai.generate')}>Generate preview</button>

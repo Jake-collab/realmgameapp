@@ -50,3 +50,10 @@ Tests must check `__DEV__` rather than assuming it is false.
 `QuestRowExtended` and `QuestParticipationRowExtended` in quest.repository.ts add migration 017 columns locally.
 This keeps `database.types.ts` as the hand-authored canonical file without duplicating partial-migration fields.
 The extended interfaces inherit from the base row types.
+
+## Canonical Daily assignment
+Daily Quest personalization is Interest Bubble based, but the selected Quest must be persisted per user and UTC occurrence date by a server-side assignment function. Client ranking is only a compatibility path for environments that have not applied the canonical migration.
+
+**Why:** Refresh-time client selection can reshuffle a user's Daily Quest and cannot be trusted as an authority.
+
+**How to apply:** Keep Interest Bubble IDs and targeting mode separate from public Quest content; never use raw interest labels or client-only randomness for assignment.

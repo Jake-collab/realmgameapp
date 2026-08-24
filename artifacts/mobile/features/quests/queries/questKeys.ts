@@ -24,6 +24,7 @@ export const questKeys = {
 
   /** Daily quests for a user */
   daily: (userId: string) => [...questKeys.lists(), 'daily', userId] as const,
+  assignedDaily: (userId: string) => [...questKeys.all, 'assigned-daily', userId] as const,
 
   /** Monthly quest drops for a user */
   monthly: (userId: string) => [...questKeys.lists(), 'monthly', userId] as const,
