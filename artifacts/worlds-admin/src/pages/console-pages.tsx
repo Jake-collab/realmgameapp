@@ -330,7 +330,7 @@ export function OperationsPage({ data }: { data: AdminData }) {
           <QueueList items={relevantQueues} loading={data.reviewQueues.isLoading} onRetry={() => void data.reviewQueues.refetch()} />
         </section>
       </div>
-      <div className="notice" style={{ marginTop: 18 }}><AlertTriangle /><span>This lane is intentionally truthful about its connection state. No local placeholder records are presented as real platform data.</span></div>
+      <div className="notice" style={{ marginTop: 18 }}><AlertTriangle /><span>The console is online, but each operational dataset reports its own live service state. No missing records are treated as zero.</span></div>
     </div>
   );
 }

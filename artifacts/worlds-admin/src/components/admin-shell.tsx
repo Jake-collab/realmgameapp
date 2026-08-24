@@ -133,8 +133,8 @@ export function AdminShell({
           <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
             <span className="status-dot" />
             <div>
-               <div style={{ fontSize: 11, fontWeight: 700 }}>{session?.authorized ? 'Operations online' : 'Access unavailable'}</div>
-               <div style={{ color: 'hsl(var(--sidebar-foreground) / .45)', fontSize: 10, marginTop: 2 }}>{session?.authorized ? 'API connection monitored' : 'Staff session required'}</div>
+              <div style={{ fontSize: 11, fontWeight: 700 }}>{session?.authorized ? 'Console online' : 'Access unavailable'}</div>
+              <div style={{ color: 'hsl(var(--sidebar-foreground) / .45)', fontSize: 10, marginTop: 2 }}>{session?.authorized ? 'Operational data queried live' : 'Staff session required'}</div>
             </div>
           </div>
           <div style={{ borderTop: '1px solid hsl(var(--sidebar-border))', marginTop: 15, paddingTop: 13, display: 'flex', gap: 9, alignItems: 'center' }}>

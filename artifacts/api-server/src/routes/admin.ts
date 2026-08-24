@@ -1,4 +1,4 @@
-import { Router, type IRouter, type Request } from "express";
+import { Router, type IRouter, type Request, type Response as ExpressResponse } from "express";
 import { randomUUID } from "node:crypto";
 import {
   GetAdminDashboardResponse,
@@ -81,6 +81,29 @@ function getUnavailableSession(req: Request) {
 
 function unavailableMetric(label: string, detail: string) {
   return { label, value: null, status: "unavailable" as const, detail };
+}
+
+async function adminRead<T>(path: string, options: RequestInit = {}) {
+  if (!supabaseAdminConfigured()) throw new Error("Live admin data requires trusted Supabase access.");
+  return supabaseAdminRequest<T>(path, options);
+}
+
+async function adminCount(path: string) {
+  if (!supabaseAdminConfigured()) throw new Error("Live admin data requires trusted Supabase access.");
+  const response = await fetch(`${process.env.SUPABASE_URL!.replace(/\/$/, "")}/rest/v1/${path}`, {
+    headers: {
+      apikey: process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY!}`,
+      prefer: "count=exact",
+    },
+  });
+  if (!response.ok) throw new Error(`Supabase request failed with status ${response.status}.`);
+  const range = response.headers.get("content-range");
+  return range ? Number(range.split("/")[1]) || 0 : 0;
+}
+
+function liveUnavailable(res: ExpressResponse, error: unknown, resource: string) {
+  res.status(503).json({ error: error instanceof Error ? error.message : `${resource} is unavailable.` });
 }
 
 router.get("/admin/session", async (req, res) => {
@@ -174,39 +197,87 @@ router.post("/admin/notifications/test", requireAdmin("admin.read"), async (req,
   res.status(201).json({ test: true, notification: record ?? renderNotification(event), delivery });
 });
 
-router.get("/admin/dashboard", requireAdmin("admin.read"), (_req, res) => {
-  res.json(GetAdminDashboardResponse.parse({
-    metrics: [
-      unavailableMetric("Active users", "Supabase connection required"),
-      unavailableMetric("Published Quests", "Supabase connection required"),
-      unavailableMetric("Pending proof", "Supabase connection required"),
-      unavailableMetric("Custom Hunt review", "Supabase connection required"),
-      unavailableMetric("Open safety reports", "Supabase connection required"),
-      unavailableMetric("Failed jobs", "Scheduler connection required"),
-    ],
-    actionQueue: [],
-    generatedAt: new Date(),
-  }));
+router.get("/admin/dashboard", requireAdmin("admin.read"), async (_req, res) => {
+  try {
+    const [users, quests, proofs, hunts, reports, cases] = await Promise.all([
+      adminCount("profiles?account_status=eq.active"),
+      adminCount("quests?status=eq.published"),
+      adminCount("proof_submissions?status=in.(submitted,under_review)"),
+      adminCount("hunts?status=in.(pending_review,active)"),
+      adminCount("reports?status=eq.open"),
+      adminCount("moderation_cases?status=in.(open,under_review)"),
+    ]);
+    const actionQueue = [
+      { id: "proofs", category: "proof", title: `${proofs} proof submissions need review`, priority: proofs ? "high" : "normal", href: "/quests/submissions", age: null },
+      { id: "hunts", category: "hunts", title: `${hunts} Hunts need attention`, priority: hunts ? "high" : "normal", href: "/hunts", age: null },
+      { id: "reports", category: "safety", title: `${reports} safety reports are open`, priority: reports ? "critical" : "normal", href: "/moderation/reports", age: null },
+    ].filter((item) => !item.title.startsWith("0 "));
+    res.json(GetAdminDashboardResponse.parse({
+      metrics: [
+        { label: "Active users", value: users, status: "available" },
+        { label: "Published Quests", value: quests, status: "available" },
+        { label: "Pending proof", value: proofs, status: "available" },
+        { label: "Custom Hunt review", value: hunts, status: "available" },
+        { label: "Open safety reports", value: reports, status: "available" },
+        { label: "Open moderation cases", value: cases, status: "available" },
+      ],
+      actionQueue,
+      generatedAt: new Date(),
+    }));
+  } catch (error) { liveUnavailable(res, error, "Dashboard data"); }
 });
 
-router.get("/admin/users", requireAdmin("admin.users.read"), (req, res) => {
+router.get("/admin/users", requireAdmin("admin.users.read"), async (req, res) => {
   const query = ListAdminUsersQueryParams.parse(req.query);
-  res.json(ListAdminUsersResponse.parse({
-    items: [],
-    page: query.page,
-    pageSize: query.pageSize,
-    total: 0,
-  }));
+  const offset = (query.page - 1) * query.pageSize;
+  const filters = [
+    query.status ? `&account_status=eq.${encodeURIComponent(query.status)}` : "",
+    query.search ? `&or=(username.ilike.*${encodeURIComponent(query.search)}*,display_name.ilike.*${encodeURIComponent(query.search)}*)` : "",
+  ].join("");
+  try {
+    const [rows, total] = await Promise.all([
+      adminRead<Array<Record<string, unknown>>>(`profiles?select=id,display_name,username,role,account_status,created_at,last_active_at&order=created_at.desc&offset=${offset}&limit=${query.pageSize}${filters}`),
+      adminCount(`profiles?select=id${filters.replace(/^&/, "&")}`),
+    ]);
+    res.json(ListAdminUsersResponse.parse({
+      items: rows.map((row) => ({ id: String(row.id), displayName: String(row.display_name), username: String(row.username), publicUserRef: null, role: String(row.role), accountStatus: String(row.account_status), createdAt: row.created_at, lastActiveAt: row.last_active_at ?? null, questCompletions: null, huntCompletions: null, totalPoints: null, openCases: null })),
+      page: query.page, pageSize: query.pageSize, total,
+    }));
+  } catch (error) { liveUnavailable(res, error, "User data"); }
 });
 
-router.get("/admin/quests", requireAdmin("admin.quests.read"), (req, res) => {
+router.get("/admin/quests", requireAdmin("admin.quests.read"), async (req, res) => {
   const query = ListAdminQuestsQueryParams.parse(req.query);
-  res.json(ListAdminQuestsResponse.parse({
-    items: [],
-    page: query.page,
-    pageSize: query.pageSize,
-    total: 0,
-  }));
+  const offset = (query.page - 1) * query.pageSize;
+  const filters = `${query.status ? `&status=eq.${encodeURIComponent(query.status)}` : ""}${query.type ? `&quest_type=eq.${encodeURIComponent(query.type)}` : ""}${query.search ? `&title=ilike.*${encodeURIComponent(query.search)}*` : ""}`;
+  try {
+    const [rows, total] = await Promise.all([
+      adminRead<Array<Record<string, unknown>>>(`quests?select=id,title,quest_type,status,difficulty,points_reward,source_type,updated_at&order=updated_at.desc&offset=${offset}&limit=${query.pageSize}${filters}`),
+      adminCount(`quests?select=id${filters}`),
+    ]);
+    res.json(ListAdminQuestsResponse.parse({
+      items: rows.map((row) => ({ id: String(row.id), title: String(row.title), type: String(row.quest_type), status: String(row.status), difficulty: row.difficulty ?? null, points: row.points_reward ?? null, source: String(row.source_type), completionCount: null, reviewCount: null, updatedAt: row.updated_at })),
+      page: query.page, pageSize: query.pageSize, total,
+    }));
+  } catch (error) { liveUnavailable(res, error, "Quest data"); }
+});
+
+router.get("/admin/hunts", requireAdmin("admin.review.read"), async (req, res) => {
+  const page = Math.max(1, Number(req.query.page) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 25));
+  const offset = (page - 1) * pageSize;
+  const search = typeof req.query.search === "string" ? req.query.search : "";
+  const filter = search ? `&or=(title.ilike.*${encodeURIComponent(search)}*,slug.ilike.*${encodeURIComponent(search)}*)` : "";
+  try {
+    const [rows, total] = await Promise.all([
+      adminRead<Array<Record<string, unknown>>>(`hunts?select=id,title,slug,status,privacy,created_at,updated_at,starts_at&order=updated_at.desc&offset=${offset}&limit=${pageSize}${filter}`),
+      adminCount(`hunts?select=id${filter}`),
+    ]);
+    res.json({ items: rows.map((row) => ({
+      id: row.id, title: row.title, slug: row.slug, status: row.status, privacy: row.privacy,
+      createdAt: row.created_at, updatedAt: row.updated_at, startsAt: row.starts_at ?? null,
+    })), page, pageSize, total });
+  } catch (error) { liveUnavailable(res, error, "Hunt data"); }
 });
 
 router.get("/admin/interests", requireAdmin("admin.quests.read"), async (_req, res) => {
@@ -261,25 +332,47 @@ router.patch("/admin/interests/:id", requireAdmin("admin.quests.manage"), async 
   } catch { res.status(503).json({ error: "Interest Bubble could not be updated." }); }
 });
 
-router.get("/admin/review-queues", requireAdmin("admin.review.read"), (_req, res) => {
-  res.json(GetAdminReviewQueuesResponse.parse({ queues: [] }));
+router.get("/admin/review-queues", requireAdmin("admin.review.read"), async (_req, res) => {
+  try {
+    const [proofs, hunts, reports] = await Promise.all([
+      adminCount("proof_submissions?status=in.(submitted,under_review)"),
+      adminCount("hunts?status=eq.pending_review"),
+      adminCount("reports?status=eq.open"),
+    ]);
+    res.json(GetAdminReviewQueuesResponse.parse({ queues: [
+      { id: "proofs", category: "Proof review", title: "Quest and Hunt proof submissions", priority: proofs ? "high" : "normal", href: "/quests/submissions", age: null, count: proofs },
+      { id: "hunts", category: "Hunt review", title: "Creator Hunt submissions", priority: hunts ? "high" : "normal", href: "/hunts", age: null, count: hunts },
+      { id: "reports", category: "Safety", title: "Open safety reports", priority: reports ? "critical" : "normal", href: "/moderation/reports", age: null, count: reports },
+    ] }));
+  } catch (error) { liveUnavailable(res, error, "Review queue data"); }
 });
 
-router.get("/admin/audit", requireAdmin("admin.audit.read"), (req, res) => {
+router.get("/admin/audit", requireAdmin("admin.audit.read"), async (req, res) => {
   const query = ListAdminAuditLogsQueryParams.parse(req.query);
-  res.json(ListAdminAuditLogsResponse.parse({
-    items: [],
-    page: query.page,
-    pageSize: query.pageSize,
-    total: 0,
-  }));
+  const offset = (query.page - 1) * query.pageSize;
+  const filter = query.search ? `&or=(action.ilike.*${encodeURIComponent(query.search)}*,entity_type.ilike.*${encodeURIComponent(query.search)}*)` : "";
+  try {
+    const [rows, total] = await Promise.all([
+      adminRead<Array<Record<string, unknown>>>(`audit_logs?select=id,created_at,actor_id,action,entity_type,entity_id,result,reason&order=created_at.desc&offset=${offset}&limit=${query.pageSize}${filter}`),
+      adminCount(`audit_logs?select=id${filter}`),
+    ]);
+    res.json(ListAdminAuditLogsResponse.parse({ items: rows.map((row) => ({ id: String(row.id), timestamp: row.created_at, actor: row.actor_id ?? null, actorRole: null, action: String(row.action), entityType: String(row.entity_type), entity: row.entity_id ?? null, result: String(row.result), reason: row.reason ?? null })), page: query.page, pageSize: query.pageSize, total }));
+  } catch (error) { liveUnavailable(res, error, "Audit data"); }
 });
 
-router.get("/admin/diagnostics", requireAdmin("admin.diagnostics.read"), (_req, res) => {
+router.get("/admin/diagnostics", requireAdmin("admin.diagnostics.read"), async (_req, res) => {
+  const checkedAt = new Date();
+  let database: { status: "healthy" | "unavailable"; summary: string };
+  try {
+    await adminRead<Array<{ id: string }>>("profiles?select=id&limit=1");
+    database = { status: "healthy", summary: "Trusted Supabase reads are available." };
+  } catch {
+    database = { status: "unavailable", summary: "Trusted Supabase reads are unavailable." };
+  }
   res.json(GetAdminDiagnosticsResponse.parse({
     checks: [
-      { name: "Supabase", status: "unavailable", summary: "Connect Supabase to enable staff data and trusted operations.", checkedAt: new Date() },
-      { name: "Mapbox", status: "missing", summary: "Mapbox diagnostics will appear when the native map configuration is connected.", checkedAt: new Date() },
+      { name: "Supabase", status: database.status, summary: database.summary, checkedAt },
+      { name: "Mapbox", status: "missing", summary: "Mapbox diagnostics will appear when the native map configuration is connected.", checkedAt },
       { name: "Storage", status: "unavailable", summary: "Media moderation storage is not connected.", checkedAt: new Date() },
       { name: "Operational jobs", status: "unavailable", summary: "Scheduled job health requires the production scheduler.", checkedAt: new Date() },
     ],

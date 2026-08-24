@@ -85,6 +85,25 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminQuestPage"
+  /admin/hunts:
+    get:
+      operationId: listAdminHunts
+      tags: [admin]
+      summary: List privacy-safe Hunt summaries for staff review
+      parameters:
+        - $ref: "#/components/parameters/Search"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200":
+          description: Paginated Hunt summaries without private proof or geometry
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminHuntPage"
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "503": { description: Live data unavailable }
   /admin/review-queues:
     get:
       operationId: getAdminReviewQueues
@@ -529,6 +548,28 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/AdminQuest" }
+    AdminHunt:
+      type: object
+      required: [id, title, slug, status, privacy, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        slug: { type: string }
+        status: { type: string }
+        privacy: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        startsAt: { type: ["string", "null"], format: date-time }
+    AdminHuntPage:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AdminHunt" }
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
         page: { type: integer }
         pageSize: { type: integer }
         total: { type: integer }
