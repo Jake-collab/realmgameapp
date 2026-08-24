@@ -227,24 +227,10 @@ export async function getMyInterests(userId: string): Promise<InterestRow[]> {
 
 export async function setMyInterests(userId: string, interestIds: string[]): Promise<void> {
   const client = requireSupabase();
-
-  // Delete existing, then insert new (replace all)
-  const { error: deleteError } = await client
-    .from('user_interests')
-    .delete()
-    .eq('user_id', userId);
-  if (deleteError) throw normalizeError(deleteError);
-
-  if (interestIds.length === 0) return;
-
-  const rows: UserInterestRow[] = interestIds.map((id) => ({
-    user_id: userId,
-    interest_id: id,
-    created_at: new Date().toISOString(),
-  }));
-
-  const { error: insertError } = await client.from('user_interests').insert(rows);
-  if (insertError) throw normalizeError(insertError);
+  const { error } = await client.rpc('replace_my_interests', {
+    p_interest_ids: [...new Set(interestIds)],
+  });
+  if (error) throw normalizeError(error);
 }
 
 // ─── Username availability ────────────────────────────────────────────────────

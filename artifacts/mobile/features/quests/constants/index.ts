@@ -36,9 +36,20 @@ export const GEO_QUEST_PARTICIPATION_EXPIRY_DAYS = 7;
 /** Maximum repeat cooldown allowed (30 days) */
 export const MAX_REPEAT_COOLDOWN_HOURS = 30 * 24;
 
-// ─── Point constraints ────────────────────────────────────────────────────────
-export const MIN_QUEST_POINTS = 1;
-export const MAX_QUEST_POINTS = 10000;
+// ─── Canonical Quest rewards ──────────────────────────────────────────────────
+// Hunt rewards intentionally use their own rules; never reuse this table there.
+export const CANONICAL_QUEST_POINTS = {
+  easy: 100,
+  medium: 200,
+  hard: 300,
+  epic: 500,
+} as const;
+
+export type CanonicalQuestDifficulty = keyof typeof CANONICAL_QUEST_POINTS;
+
+export function canonicalQuestPoints(difficulty: CanonicalQuestDifficulty): number {
+  return CANONICAL_QUEST_POINTS[difficulty];
+}
 
 // ─── Proof constraints ────────────────────────────────────────────────────────
 export const MAX_PROOF_IMAGES = 10;

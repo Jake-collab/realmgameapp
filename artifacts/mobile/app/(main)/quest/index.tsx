@@ -435,10 +435,11 @@ export default function QuestHomeScreen() {
   const handleRefresh = useCallback(() => {
     void activeQuery.refetch();
     void dailyQuery.refetch();
+    void assignedDailyQuery.refetch();
     void monthlyQuery.refetch();
     void geoQuery.refetch();
     void summaryQuery.refetch();
-  }, [activeQuery, dailyQuery, monthlyQuery, geoQuery, summaryQuery]);
+  }, [activeQuery, dailyQuery, assignedDailyQuery, monthlyQuery, geoQuery, summaryQuery]);
 
   // Pick the most urgent active participation
   const dominantParticipation = useMemo<QuestParticipationRowExtended | null>(() => {

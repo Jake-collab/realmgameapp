@@ -79,41 +79,19 @@ export async function selectDailyQuest(
   if (!isSupabaseConfigured()) return buildMockDailyQuest();
 
   const now = input.now ?? new Date();
-  // The RPC owns the assignment when the canonical migration is installed.
-  // The local ranking path below remains a compatibility path for older environments.
+  // The RPC owns the assignment. A configured app must not silently swap in a
+  // locally-ranked alternative if that trusted assignment is unavailable.
   try {
     const client = requireSupabase();
     const { data, error } = await client.rpc('get_daily_quest_assignment', {
       p_user_id: input.userId,
       p_occurrence_date: now.toISOString().slice(0, 10),
     } as never);
-    if (!error && data) return data as unknown as QuestRowExtended;
-  } catch {
-    // Explicit compatibility fallback; never fabricate a completed assignment.
-  }
-
-  let quests: QuestRowExtended[];
-  try {
-    quests = await fetchQuestsByType('daily', 0, 20);
+    if (!error) return data ? data as unknown as QuestRowExtended : null;
   } catch {
     return null;
   }
-
-  // Filter to currently available quests
-  const available = quests.filter(q => isWithinAvailabilityWindow(q, now));
-  if (available.length === 0) return null;
-
-  // Exclude quests the user has already completed today (by occurrence key)
-  const notCompleted = available.filter(q => {
-    const occKey = buildDailyOccurrenceKey(q.slug, now);
-    return !input.completedOccurrenceKeys.has(occKey);
-  });
-
-  // If all completed, return the highest-priority one (for display)
-  const candidates = notCompleted.length > 0 ? notCompleted : available;
-
-  const ranked = rankDailyQuestCandidates(candidates, input.userInterestIds ?? []);
-  return ranked[0] ?? null;
+  return null;
 }
 
 // ─── Monthly quest drop selection ─────────────────────────────────────────────

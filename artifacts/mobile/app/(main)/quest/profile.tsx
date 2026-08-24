@@ -170,6 +170,13 @@ export default function QuestProfileScreen() {
       {/* Account links */}
       <Text style={[styles.groupLabel, { color: colors.mutedForeground }]}>Account</Text>
       <ProfileLink
+        icon="compass"
+        label="Interest Bubbles"
+        sublabel="Personalize future Daily Quests"
+        onPress={() => router.push('/interests')}
+        color={QUEST_COLOR}
+      />
+      <ProfileLink
         icon="shield"
         label="Privacy"
         sublabel="Profile, discovery, connections"

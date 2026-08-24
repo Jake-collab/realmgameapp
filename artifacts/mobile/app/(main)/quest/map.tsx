@@ -92,6 +92,17 @@ function QuestMapInner() {
   const didInitialCenterRef = useRef(false);
   const cameraRef = useRef<any>(null);
 
+  // A public viewport is useful even when the player declines location. Nearby
+  // sorting remains off until the optional foreground permission is granted.
+  useEffect(() => {
+    setActiveBounds({
+      west: DEFAULT_MAP_REGION.longitude - 0.1,
+      south: DEFAULT_MAP_REGION.latitude - 0.1,
+      east: DEFAULT_MAP_REGION.longitude + 0.1,
+      north: DEFAULT_MAP_REGION.latitude + 0.1,
+    });
+  }, []);
+
   // ── Filters ─────────────────────────────────────────────────────────────────
   const { filter, activeFilterCount, setFilter, clearFilters } = useMapFilters();
 

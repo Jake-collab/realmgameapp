@@ -22,7 +22,7 @@ import { useColors } from '@/hooks/useColors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
 import { shadows } from '@/constants/theme';
-import { useDailyQuests, useMonthlyQuests, useGeoQuests } from '@/features/quests/hooks';
+import { useAssignedDailyQuest, useDailyQuests, useMonthlyQuests, useGeoQuests } from '@/features/quests/hooks';
 import QuestTypeBadge from '@/components/quest/QuestTypeBadge';
 import DifficultyBadge from '@/components/quest/DifficultyBadge';
 import DurationLabel from '@/components/quest/DurationLabel';
@@ -235,6 +235,7 @@ export default function QuestListScreen() {
   const [activeSection, setActiveSection] = useState<QuestSection>('daily');
 
   const dailyQuery = useDailyQuests();
+  const assignedDailyQuery = useAssignedDailyQuest();
   const monthlyQuery = useMonthlyQuests();
   const geoQuery = useGeoQuests();
 
@@ -245,16 +246,22 @@ export default function QuestListScreen() {
 
   const handleRefresh = useCallback(() => {
     void dailyQuery.refetch();
+    void assignedDailyQuery.refetch();
     void monthlyQuery.refetch();
     void geoQuery.refetch();
-  }, [dailyQuery, monthlyQuery, geoQuery]);
+  }, [dailyQuery, assignedDailyQuery, monthlyQuery, geoQuery]);
 
   const handleQuestPress = useCallback(
     (questId: string) => router.push(`/quest-detail/${questId}`),
     [router]
   );
 
-  const quests: QuestRowExtended[] = (activeQuery.data ?? []) as QuestRowExtended[];
+  const quests: QuestRowExtended[] = activeSection === 'daily' && assignedDailyQuery.data
+    ? [
+      assignedDailyQuery.data,
+      ...((dailyQuery.data ?? []) as QuestRowExtended[]).filter((quest) => quest.id !== assignedDailyQuery.data?.id),
+    ]
+    : (activeQuery.data ?? []) as QuestRowExtended[];
 
   // Empty state configs per section
   const emptyConfig = {
@@ -271,7 +278,7 @@ export default function QuestListScreen() {
     geo: {
       icon: 'map-pin' as const,
       title: 'No Geo-Quests Nearby',
-      description: 'Enable location to discover nearby Geo-Quests.',
+      description: 'Browse public Geo-Quests here. Enable location only to sort nearby results.',
     },
   }[activeSection];
 

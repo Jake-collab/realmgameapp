@@ -554,6 +554,80 @@ router.post("/admin/ai/candidates/draft", requireAdmin("admin.quests.manage"), a
   }
 });
 
+router.get("/admin/ai/candidates", requireAdmin("ai.read"), async (_req, res) => {
+  if (!supabaseAdminConfigured()) {
+    res.status(503).json({ error: "AI review records require trusted Supabase access." });
+    return;
+  }
+  try {
+    const rows = await supabaseAdminRequest<Array<Record<string, unknown>>>(
+      "ai_generated_content?content_type=eq.quest&select=id,output_draft,suggested_points,approval_status,reviewer_notes,reviewed_at,created_at&order=created_at.desc&limit=100",
+    );
+    res.json({
+      candidates: rows.map((row) => {
+        const draft = row.output_draft && typeof row.output_draft === "object" ? row.output_draft as Record<string, unknown> : {};
+        return {
+          id: String(row.id),
+          title: typeof draft.title === "string" ? draft.title : "Untitled AI Quest candidate",
+          type: typeof draft.quest_type === "string" ? draft.quest_type : null,
+          difficulty: typeof draft.difficulty === "string" ? draft.difficulty : null,
+          points: typeof row.suggested_points === "number" ? row.suggested_points : null,
+          status: String(row.approval_status),
+          reviewNotes: typeof row.reviewer_notes === "string" ? row.reviewer_notes : null,
+          reviewedAt: row.reviewed_at ?? null,
+          createdAt: row.created_at,
+        };
+      }),
+      publicationPolicy: "approval_never_publishes",
+    });
+  } catch {
+    res.status(503).json({ error: "AI review records are unavailable." });
+  }
+});
+
+router.post("/admin/ai/candidates/:id/review", requireAdmin("admin.quests.manage"), async (req, res) => {
+  const input = z.object({
+    decision: z.enum(["approved", "rejected", "needs_revision"]),
+    reviewNotes: z.string().trim().max(1000).optional(),
+  }).safeParse(req.body);
+  if (!input.success) {
+    res.status(400).json({ error: "A supported review decision is required." });
+    return;
+  }
+  if (!supabaseAdminConfigured()) {
+    res.status(503).json({ error: "AI review records require trusted Supabase access." });
+    return;
+  }
+  try {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const rows = await supabaseAdminRequest<Array<Record<string, unknown>>>(`ai_generated_content?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { prefer: "return=representation" },
+      body: JSON.stringify({
+        approval_status: input.data.decision,
+        reviewer_id: req.adminPrincipal?.userId ?? null,
+        reviewer_notes: input.data.reviewNotes ?? null,
+        reviewed_at: new Date().toISOString(),
+      }),
+    });
+    const updated = rows[0];
+    if (!updated) {
+      res.status(404).json({ error: "AI candidate not found." });
+      return;
+    }
+    res.json({
+      candidate: {
+        id: String(updated.id),
+        status: String(updated.approval_status),
+        reviewedAt: updated.reviewed_at ?? null,
+      },
+      message: "Review recorded. This decision does not publish a Quest or award points.",
+    });
+  } catch {
+    res.status(503).json({ error: "The AI review decision could not be saved." });
+  }
+});
+
 router.get("/admin/ai/history", requireAdmin("ai.read"), (_req, res) => {
   res.json({ items: listGenerationHistory(), persistence: "local-development-only" });
 });

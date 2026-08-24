@@ -54,6 +54,28 @@ export interface CreateDraftInput {
 function requiresOneTimeVerification(type: ProofType) {
   return type === 'photo' || type === 'video' || type === 'location';
 }
+
+async function issueVerificationSession(
+  participationId: string,
+  userId: string,
+  submissionType: ProofType,
+): Promise<string | null> {
+  if (!requiresOneTimeVerification(submissionType)) return null;
+
+  const { requireSupabase } = await import('@/lib/supabase/client');
+  const { data, error } = await requireSupabase().rpc('issue_quest_proof_verification_session', {
+    p_participation_id: participationId,
+    p_user_id: userId,
+    p_evidence_kind: submissionType,
+  } as never);
+  if (error || !data) {
+    throw makeQuestError(
+      'VERIFICATION_SESSION_UNAVAILABLE',
+      'A one-time proof verification session could not be issued.',
+    );
+  }
+  return data as unknown as string;
+}
 export interface ProofOperationResult {
   success: boolean;
   proof: ProofSubmissionRow | null;
@@ -80,6 +102,16 @@ export async function createQuestProofDraft(input: CreateDraftInput): Promise<Pr
     };
   }
 
+  // QR scans must come from the scanner flow. There is no text or placeholder
+  // value that can stand in for a server-validated scan.
+  if (input.submissionType === 'qr_code') {
+    return {
+      success: false,
+      proof: null,
+      error: makeQuestError('PROOF_REQUIRED', 'QR evidence must be created by the scanner flow.'),
+    };
+  }
+
   // Check for existing draft
   const existing = await fetchCurrentProof(participationId).catch(() => null);
   if (existing && isProofEditable(existing.status)) {
@@ -102,19 +134,11 @@ export async function createQuestProofDraft(input: CreateDraftInput): Promise<Pr
   }
 
   try {
-    let verificationSessionId: string | undefined;
-    if (requiresOneTimeVerification(input.submissionType)) {
-      const { requireSupabase } = await import('@/lib/supabase/client');
-      const { data, error } = await requireSupabase().rpc('issue_quest_proof_verification_session', {
-        p_participation_id: participationId,
-        p_user_id: userId,
-        p_evidence_kind: input.submissionType,
-      } as never);
-      if (error || !data) {
-        return { success: false, proof: null, error: makeQuestError('SERVICE_UNAVAILABLE', 'A one-time proof verification session could not be issued.') };
-      }
-      verificationSessionId = data as unknown as string;
-    }
+    const verificationSessionId = await issueVerificationSession(
+      participationId,
+      userId,
+      input.submissionType,
+    );
     const proof = await createDraftProof({
       userId,
       participationId,
@@ -123,7 +147,7 @@ export async function createQuestProofDraft(input: CreateDraftInput): Promise<Pr
       locationLat: input.locationLat,
       locationLng: input.locationLng,
       locationAccuracyMeters: input.locationAccuracyMeters,
-      verificationSessionId,
+      verificationSessionId: verificationSessionId ?? undefined,
     });
 
     onProofStarted(userId, participation.quest_id, participationId);
@@ -267,6 +291,13 @@ export async function submitQuestProof(
   const proof = await fetchCurrentProof(participationId).catch(() => null);
   if (!proof) return { success: false, proof: null, error: makeQuestError('PROOF_REQUIRED') };
   if (proof.user_id !== userId) return { success: false, proof: null, error: makeQuestError('NOT_ELIGIBLE') };
+  if (proof.submission_type === 'qr_code') {
+    return {
+      success: false,
+      proof,
+      error: makeQuestError('PROOF_REQUIRED', 'QR evidence must be created by the scanner flow.'),
+    };
+  }
 
   // Validate transition
   const transitionCheck = validateProofTransition(proof.status, 'submitted', false);
@@ -324,12 +355,21 @@ async function createResubmissionDraft(
   previousSubmissionId: string
 ): Promise<ProofOperationResult> {
   try {
+    const verificationSessionId = await issueVerificationSession(
+      input.participationId,
+      input.userId,
+      input.submissionType,
+    );
     const proof = await createDraftProof({
       userId: input.userId,
       participationId: input.participationId,
       submissionType: input.submissionType,
       textResponse: input.textResponse,
       previousSubmissionId,
+      locationLat: input.locationLat,
+      locationLng: input.locationLng,
+      locationAccuracyMeters: input.locationAccuracyMeters,
+      verificationSessionId: verificationSessionId ?? undefined,
     });
     return { success: true, proof };
   } catch (err) {

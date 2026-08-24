@@ -174,7 +174,14 @@ export default function QuestProofScreen() {
       });
 
       if (!draftResult.success || !draftResult.proof) {
-        Alert.alert('Error', draftResult.error?.message ?? 'Could not create proof draft.');
+        if (draftResult.error?.code === 'VERIFICATION_SESSION_UNAVAILABLE') {
+          Alert.alert(
+            'Secure verification unavailable',
+            'We could not start the required secure verification session. Your evidence was not submitted. Please try again.',
+          );
+        } else {
+          Alert.alert('Error', draftResult.error?.message ?? 'Could not create proof draft.');
+        }
         return;
       }
 
@@ -226,7 +233,9 @@ export default function QuestProofScreen() {
             Proof Submitted!
           </Text>
           <Text style={[styles.successBody, { color: colors.mutedForeground }]}>
-            {quest?.completion_mode === 'manual_review'
+            {needsLocation(proofType)
+              ? 'Your location evidence was submitted and is awaiting server validation. You will be notified when a decision is available.'
+              : quest?.completion_mode === 'manual_review'
               ? "Your proof is now under review. You'll be notified when a decision is available."
               : 'Your proof has been received.'}
           </Text>
@@ -359,7 +368,7 @@ export default function QuestProofScreen() {
               {proofType === 'video' ? 'Video Evidence' : 'Photo Evidence'}
             </Text>
             <ImageUploader
-              label={proofType === 'video' ? 'Capture live video' : 'Capture live photo'}
+               label={proofType === 'video' ? 'Live video required' : 'Live photo required'}
               aspectRatio={4 / 3}
               currentUri={imageUri}
               onImage={setImageUri}
@@ -367,6 +376,11 @@ export default function QuestProofScreen() {
               captureMode="camera"
               mediaType={proofType === 'video' ? 'video' : 'image'}
             />
+             <Text style={[styles.evidenceHint, { color: colors.mutedForeground }]}>
+               {proofType === 'video'
+                 ? 'Record a new video with your camera. Videos from your library cannot be used.'
+                 : 'Take a new photo with your camera. Photos from your library cannot be used.'}
+             </Text>
           </View>
         )}
 
@@ -381,7 +395,7 @@ export default function QuestProofScreen() {
                 try {
                   const permission = await Location.requestForegroundPermissionsAsync();
                   if (permission.status !== Location.PermissionStatus.GRANTED) {
-                    Alert.alert('Permission needed', 'Allow foreground location access to verify this Quest.');
+                    Alert.alert('Permission needed', 'Allow foreground location access to collect location evidence for this Quest.');
                     return;
                   }
                   const position = await Location.getCurrentPositionAsync({
@@ -413,7 +427,7 @@ export default function QuestProofScreen() {
                 color={locationCaptured ? colors.success : colors.accent}
               />
               <Text style={[styles.locationText, { color: locationCaptured ? colors.success : colors.foreground }]}>
-                {locationCaptured ? 'Location captured' : 'Capture current location'}
+                {locationCaptured ? 'Location evidence captured — awaiting server validation' : 'Capture current location'}
               </Text>
               {!locationCaptured && (
                 <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
@@ -433,7 +447,7 @@ export default function QuestProofScreen() {
             >
               <Feather name="maximize" size={18} color={colors.primary} />
               <Text style={[styles.confirmNoteText, { color: colors.mutedForeground }]}>
-                QR code scanning will be available in the next update.
+                QR scanning is not available in this version, so this quest cannot be submitted here.
               </Text>
             </View>
           </View>
@@ -482,6 +496,8 @@ export default function QuestProofScreen() {
                 ? `${proofType === 'video' ? 'Video' : 'Photo'} required`
                 : needsLocation(proofType) && !locationCaptured
                 ? 'Location check-in required'
+                 : needsQrCode(proofType)
+                 ? 'QR scanning is unavailable for this quest'
                 : ''}
             </Text>
           )}
@@ -587,6 +603,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: fontFamily.medium,
     fontSize: fontSize.base,
+  },
+  evidenceHint: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    lineHeight: fontSize.xs * 1.5,
   },
   confirmNote: {
     flexDirection: 'row',

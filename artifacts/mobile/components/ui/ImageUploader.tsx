@@ -1,8 +1,8 @@
 /**
  * ImageUploader
  *
- * Tap-to-upload image component. Displays the selected image or a
- * placeholder prompt. Enforces file type and size constraints.
+ * Image/video picker component. When camera capture is configured, it only
+ * launches the device camera and never offers a library fallback.
  *
  * Used for: avatar upload, quest cover image, hunt cover image,
  *           clue image attachments, proof submission.
@@ -117,9 +117,17 @@ export default function ImageUploader({
           <ActivityIndicator color={colors.primary} />
         ) : (
           <>
-            <Feather name="image" size={28} color={colors.mutedForeground} />
+          <Feather
+            name={captureMode === 'camera' ? (mediaType === 'video' ? 'video' : 'camera') : 'image'}
+            size={28}
+            color={colors.mutedForeground}
+          />
             <Text style={[styles.prompt, { color: colors.mutedForeground }]}>
-              {currentUri ? 'Tap to change' : captureMode === 'camera' ? 'Capture with camera' : 'Tap to upload'}
+              {currentUri
+                ? 'Tap to recapture'
+                : captureMode === 'camera'
+                ? mediaType === 'video' ? 'Record live video' : 'Take live photo'
+                : 'Tap to upload'}
             </Text>
           </>
         )}

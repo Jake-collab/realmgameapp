@@ -38,13 +38,13 @@ const PROOF_INFO: Record<ProofType, ProofInfo> = {
   },
   photo: {
     icon: 'camera',
-    label: 'Photo Required',
-    description: 'Submit a photo as evidence of completion.',
+    label: 'Live Photo Required',
+    description: 'Take a new photo with your camera as evidence of completion.',
   },
   video: {
     icon: 'video',
-    label: 'Video Required',
-    description: 'Submit a short video as evidence of completion.',
+    label: 'Live Video Required',
+    description: 'Record a new video with your camera as evidence of completion.',
   },
   location: {
     icon: 'map-pin',

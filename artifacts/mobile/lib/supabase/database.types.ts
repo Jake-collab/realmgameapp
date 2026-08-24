@@ -26,6 +26,10 @@ export type QuestStatus =
   | 'draft' | 'pending_review' | 'approved' | 'scheduled'
   | 'published' | 'paused' | 'expired' | 'archived' | 'rejected';
 export type QuestSourceType = 'admin' | 'ai' | 'system';
+/**
+ * `very_easy` is retained only so pre-canonical Quest and Hunt rows can be read.
+ * New Quest writes are normalized to easy/medium/hard/epic by migration 040.
+ */
 export type Difficulty = 'very_easy' | 'easy' | 'medium' | 'hard' | 'epic';
 export type ProofType = 'photo' | 'video' | 'text' | 'location' | 'qr_code' | 'none';
 export type LocationRequirementType = 'none' | 'approximate' | 'precise';

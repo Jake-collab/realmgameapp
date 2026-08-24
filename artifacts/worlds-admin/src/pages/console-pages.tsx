@@ -123,6 +123,9 @@ type AiResponse = {
   plan?: { diagnostics?: string[]; replacementAllowed?: boolean; publishRequiresReview?: boolean };
   results?: Array<{ ok?: boolean; candidate?: Record<string, unknown>; review?: { diagnostics?: string[] } }>;
   draft?: { id: string; status: string; createdAt: string; reviewRequired: boolean };
+  candidates?: Array<{ id: string; title: string; type: string | null; difficulty: string | null; points: number | null; status: string; reviewNotes: string | null; reviewedAt: string | null; createdAt: string }>;
+  candidate?: { id: string; status: string; reviewedAt: string | null };
+  message?: string;
   comparison?: { changedFields?: string[]; fields?: Array<{ field: string; changed: boolean; left: string; right: string }> };
 };
 type AiPrompt = {
@@ -178,7 +181,10 @@ export function AIPage({ data }: { data: AdminData }) {
       return;
     }
     let cancelled = false;
-    void aiFetch(location === '/ai' ? '/overview' : location === '/ai/prompts' ? '/prompts' : location === '/ai/settings' ? '/settings' : '/history')
+    const request = location === '/ai'
+      ? Promise.all([aiFetch('/overview'), aiFetch('/candidates')]).then(([overview, review]) => ({ ...overview, ...review }))
+      : aiFetch(location === '/ai/prompts' ? '/prompts' : location === '/ai/settings' ? '/settings' : '/history');
+    void request
       .then((value) => { if (!cancelled) setResult(value); })
       .catch((error: Error) => { if (!cancelled) setMessage(error.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -234,6 +240,26 @@ export function AIPage({ data }: { data: AdminData }) {
     }
   };
 
+  const reviewCandidate = async (id: string, decision: 'approved' | 'rejected' | 'needs_revision') => {
+    setLoading(true);
+    setMessage('');
+    try {
+      const value = await aiFetch(`/candidates/${id}/review`, { method: 'POST', body: JSON.stringify({ decision }) });
+      setResult((current) => ({
+        ...current,
+        ...value,
+        candidates: current?.candidates?.map((candidate) => candidate.id === id
+          ? { ...candidate, status: value.candidate?.status ?? decision, reviewedAt: value.candidate?.reviewedAt ?? candidate.reviewedAt }
+          : candidate),
+      }));
+      setMessage(value.message ?? 'Review recorded. It does not publish a Quest.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Candidate review could not be saved.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const changeVersion = async (action: 'activate' | 'deactivate' | 'restore') => {
     if (!selectedVersion) return;
     setLoading(true);
@@ -283,6 +309,17 @@ export function AIPage({ data }: { data: AdminData }) {
   if (!data.session.data?.authorized) {
     return <div className="page-wrap"><PageHeader eyebrow="AI studio" title="AI access unavailable" description="An authorized staff session is required before AI tools can be opened." /><UnavailableState /></div>;
   }
+  const requiredAiPermission = location === '/ai/generate'
+    ? 'ai.generate'
+    : location === '/ai/settings'
+      ? 'ai.settings.read'
+      : location === '/ai/prompts'
+        ? 'ai.prompts.read'
+        : 'ai.read';
+  if (!data.session.data.permissions.includes(requiredAiPermission)) {
+    return <div className="page-wrap"><PageHeader eyebrow="AI studio" title="AI access unavailable" description="Your staff role does not include access to this AI workflow." /><UnavailableState /></div>;
+  }
+  const canManageQuestCandidates = data.session.data.permissions.includes('admin.quests.manage');
   const title = location === '/ai' ? 'AI Quest Studio' : location === '/ai/prompts' ? 'Prompt templates' : location === '/ai/settings' ? 'AI settings' : 'Generate Quest candidates';
   return (
     <div className="page-wrap">
@@ -324,7 +361,7 @@ export function AIPage({ data }: { data: AdminData }) {
       ) : (
         <section className="panel" style={{ marginTop: 25 }}>
           <div className="panel-header"><div><div className="panel-title">{location === '/ai/prompts' ? 'Independent Quest prompts' : 'Configuration status'}</div><div className="panel-kicker">Server-controlled and reviewable</div></div><span className={`tag ${result?.provider?.configured ? 'green' : 'orange'}`}>{result?.provider?.configured ? 'Configured' : 'Unavailable'}</span></div>
-          {loading ? <TableSkeleton columns={3} /> : result ? <pre className="code-panel">{JSON.stringify(result, null, 2)}</pre> : <UnavailableState />}
+           {loading ? <TableSkeleton columns={3} /> : result ? <><div className="notice"><LockKeyhole /><span>Approval keeps a candidate in human-controlled content review. It never publishes a Quest or awards points.</span></div><div className="table-wrap" style={{ marginTop: 18 }}><table className="data-table"><thead><tr><th>Candidate</th><th>Lane</th><th>Reward</th><th>Review</th><th>Action</th></tr></thead><tbody>{result.candidates?.length ? result.candidates.map((candidate) => <tr key={candidate.id}><td><strong>{candidate.title}</strong><div className="identity-handle">{new Date(candidate.createdAt).toLocaleString()}</div></td><td>{candidate.type ?? '—'} · {candidate.difficulty ?? '—'}</td><td>{candidate.points ?? '—'} pts</td><td><StatusBadge status={candidate.status} />{candidate.reviewNotes && <div className="identity-handle">{candidate.reviewNotes}</div>}</td><td>{candidate.status === 'pending_review' && <div className="toolbar"><button className="btn btn-quiet" disabled={loading || !canManageQuestCandidates} onClick={() => void reviewCandidate(candidate.id, 'approved')}>Approve</button><button className="btn btn-quiet" disabled={loading || !canManageQuestCandidates} onClick={() => void reviewCandidate(candidate.id, 'needs_revision')}>Request changes</button><button className="btn btn-quiet" disabled={loading || !canManageQuestCandidates} onClick={() => void reviewCandidate(candidate.id, 'rejected')}>Reject</button></div>}</td></tr>) : <tr><td colSpan={5}>No saved AI Quest candidates are awaiting review.</td></tr>}</tbody></table></div></> : <UnavailableState />}
         </section>
       )}
     </div>

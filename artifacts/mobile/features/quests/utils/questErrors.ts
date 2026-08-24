@@ -164,6 +164,10 @@ const ERROR_CONFIG: Record<QuestErrorCode, { message: string; canRetry: boolean 
     message: 'Quest progress is temporarily unavailable. Nothing was saved.',
     canRetry: true,
   },
+  VERIFICATION_SESSION_UNAVAILABLE: {
+    message: 'We could not start the secure verification required for this evidence. Nothing was submitted.',
+    canRetry: true,
+  },
   NETWORK_UNAVAILABLE: {
     message: 'Check your internet connection and try again.',
     canRetry: true,

@@ -78,6 +78,7 @@ describe('canSubmit logic', () => {
     if (needsText(proofType) && textResponse.trim().length < 10) return false;
     if (needsPhoto(proofType) && !imageUri) return false;
     if (needsLocation(proofType) && !locationCaptured) return false;
+    if (needsQrCode(proofType)) return false;
     return true;
   }
 
@@ -101,8 +102,8 @@ describe('canSubmit logic', () => {
     expect(canSubmit('location', '', null, true)).toBe(true);
   });
 
-  it('qr_code: always submittable (scanning is external)', () => {
-    expect(canSubmit('qr_code', '', null, false)).toBe(true);
+  it('qr_code: cannot submit without a real scanner result', () => {
+    expect(canSubmit('qr_code', '', null, false)).toBe(false);
   });
 
   it('none: always can submit', () => {
