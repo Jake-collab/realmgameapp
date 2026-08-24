@@ -1,0 +1,2821 @@
+Prompt 26 should now make the Hunt side just as explicit and canonical as Prompt 25 did for Quest. This is the prompt that locks in the **Pokémon-Go-like Hunt map behavior, broad search zones instead of exact pins, clue reveal logic, collection camera flow, Hunt point budgets, live 360° creator placement scan, GPS + Mapbox + vision safety checks, indoor-public allowance, private/residential/roadway restrictions, uploaded Drop image moderation, and PASS/REVIEW/REJECT placement decisions**.
+
+```text
+# Worlds — Build 1, Prompt 26
+# Canonical Hunt System: Search Zones, Clues, Camera Collection, Drop Points, 360° Placement Verification & Safety
+
+Continue from the existing Worlds project.
+
+Treat Prompts 1–25 and the current implementation as the foundation.
+
+However, THIS PROMPT is the canonical source of truth for Hunt behavior wherever an earlier prompt, schema, UI, documentation, or implementation conflicts with the rules below.
+
+Do not redesign the approved simplified Hunt UI.
+
+Do not implement Quest changes from Prompt 25 again.
+
+The application remains:
+
+Worlds
+
+Supported games:
+
+- Quest
+- Hunt
+
+Explicitly exclude:
+
+- Game Zones
+- Outbreak
+
+This prompt is specifically for finalizing the complete Hunt system.
+
+---
+
+# PRIMARY OBJECTIVE
+
+Audit, repair, implement, connect, and test the Hunt system so that it has one coherent model for:
+
+1. Hunt Map gameplay
+2. Broad search zones/blobs
+3. Standard Drops
+4. Riddle/Clue Drops
+5. Remote creator placement where appropriate
+6. Custom Hunt sequencing
+7. Drop discovery
+8. Clue reveal radius
+9. Collection radius
+10. Camera Search/Collect mode
+11. Drop confirmation
+12. Hunt Points
+13. Hunt point budgets
+14. Creator point allocation
+15. Main Hunt point rules
+16. Custom Hunt point rules
+17. Live 360° creator placement verification
+18. One-time placement sessions
+19. GPS placement validation
+20. Mapbox location context
+21. Vision scene analysis
+22. Public-indoor location allowance
+23. Roadway/private-residential restrictions
+24. Location/scene mismatch detection
+25. Uploaded Drop image moderation
+26. Drop media safety
+27. Drop placement PASS/REVIEW/REJECT
+28. Manual review
+29. Anti-cheat
+30. Offline behavior
+31. Hunt Progress
+32. Hunt leaderboard
+33. Custom Hunt creator flow
+34. Admin moderation
+35. Notifications
+36. Privacy
+37. Security
+
+Do not merely add another implementation beside older Hunt implementations.
+
+Find conflicting old behaviors and migrate them to this canonical model.
+
+---
+
+# 1. APPROVED HUNT NAVIGATION
+
+Hunt mode bottom navigation remains exactly:
+
+1. Map
+2. My Hunts
+3. Progress
+4. Profile
+
+The Quest/Hunt game selector remains at the top-level app shell.
+
+Profile remains shared.
+
+Do NOT add:
+
+- Discover tab
+- Drops tab
+- Clues tab
+- Creator tab
+- Search tab
+- Leaderboard bottom tab
+
+Hunt Map is the central Hunt gameplay/discovery screen.
+
+---
+
+# 2. HUNT MAP = PRIMARY DISCOVERY EXPERIENCE
+
+The Hunt Map should feel Pokémon-Go-like without requiring full world-anchored AR.
+
+It should be one large map.
+
+It should display Hunt activity in an exploratory way.
+
+Do NOT display exact Drop coordinates as ordinary pins for every discoverable Drop.
+
+That would undermine the Hunt.
+
+Instead, use broad search zones / soft colored blobs.
+
+---
+
+# 3. SEARCH ZONES / BLOBS
+
+A discoverable Drop should generally be represented by a broad approximate search zone.
+
+The map may show:
+
+- Soft colored circular/organic zone
+- Search-area halo
+- Density/blob region
+- Optional count indicator
+
+Example conceptual copy:
+
+"3 Drops in this area"
+
+or:
+
+"Clue available nearby"
+
+Do not expose the exact server Drop coordinate.
+
+---
+
+# 4. SEARCH ZONE GEOMETRY
+
+Each Drop should have:
+
+- private authoritative collection coordinate/geometry
+- public search zone
+- optional clue reveal zone
+- collection radius
+
+Keep these distinct.
+
+Suggested conceptual fields:
+
+private_drop_location
+public_search_center
+public_search_radius
+clue_reveal_radius
+collection_radius
+
+Do not expose private_drop_location directly to ordinary consumer queries.
+
+---
+
+# 5. DEFAULT SEARCH ZONE
+
+Use a centrally configurable default broad search radius.
+
+Recommended starting range:
+
+200–500 meters
+
+depending on Hunt type and environment.
+
+Do NOT hardcode exact values throughout the app.
+
+Admin/platform configuration should define defaults and limits.
+
+For a clue/riddle Drop, the search zone may be intentionally broad.
+
+For a simple standard Drop, it may be narrower.
+
+---
+
+# 6. CLUE REVEAL RADIUS
+
+Canonical default clue reveal radius:
+
+approximately 500 meters
+
+Make configurable per Drop/Hunt within sensible platform bounds.
+
+When a player enters the clue reveal radius:
+
+- Unlock clue/riddle if configured
+- Persist that clue is authorized
+- Allow offline cache of that now-authorized clue
+- Do not reveal future locked clues
+
+Do not continuously reveal clues based only on client-side GPS.
+
+Server-authoritative unlock where practical.
+
+---
+
+# 7. COLLECTION RADIUS
+
+Canonical default collection radius:
+
+25 meters.
+
+Allow configurable values within safe limits.
+
+Suggested normal bounds:
+
+10–50 meters
+
+Use broader values only where environment legitimately requires it.
+
+Do not expose the exact internal radius if anti-cheat policy chooses to keep some tolerance private.
+
+Use one canonical server configuration.
+
+---
+
+# 8. THREE STAGES OF DROP DISCOVERY
+
+Canonical Hunt geography flow:
+
+1. SEARCH ZONE
+2. CLUE RANGE
+3. COLLECTION RANGE
+
+Conceptually:
+
+Broad map blob
+    ↓
+Player approaches
+    ↓
+Clue unlocks around ~500 m if configured
+    ↓
+Player solves/searches
+    ↓
+Player reaches ~25 m
+    ↓
+"Drop Nearby"
+    ↓
+Search / Camera
+    ↓
+Collect
+
+This is the default gameplay model.
+
+---
+
+# 9. STANDARD DROP
+
+A Standard Drop may use:
+
+- broad search zone
+- no riddle
+- optional simple clue
+- collection radius
+- camera collection
+
+Do not show exact coordinate pin.
+
+As player approaches:
+
+the map may subtly narrow confidence/search area.
+
+Do not literally reveal the hidden database coordinate.
+
+---
+
+# 10. RIDDLE / CLUE DROP
+
+A Riddle Drop must NOT behave like an exact GPS pin.
+
+Canonical flow:
+
+Broad search zone visible
+    ↓
+Player enters clue radius
+    ↓
+Clue becomes available
+    ↓
+Player solves clue
+    ↓
+Searches within area
+    ↓
+Collection radius reached
+    ↓
+Camera Search/Collect
+
+If a clue itself points to a location, do not simultaneously display an exact map pin for the solution.
+
+That destroys the puzzle.
+
+---
+
+# 11. RIDDLE ANSWER MODE
+
+Some riddle Drops may require a textual answer before collection or next clue unlock.
+
+Support:
+
+- server-private accepted answers
+- normalized exact matching
+- case-insensitive option
+- whitespace normalization
+- punctuation normalization where configured
+- rate limiting
+- manual review fallback where configured
+
+Do not send accepted answers to client.
+
+Do not treat riddle as generic GPS completion.
+
+---
+
+# 12. CUSTOM HUNT — ORDERED CLUE FLOW
+
+For ordered Custom Hunts:
+
+Clue 1
+↓
+Search Zone 1
+↓
+Collect Drop 1
+↓
+Clue 2 unlocks
+↓
+Search Zone 2
+↓
+Collect Drop 2
+↓
+...
+
+Future stops/clues remain completely hidden until authorized.
+
+Do not preload future clue content into the client/offline cache.
+
+---
+
+# 13. CUSTOM HUNT — UNORDERED FLOW
+
+For unordered Custom Hunts:
+
+Show only currently authorized search zones.
+
+Multiple zones may appear simultaneously.
+
+Player may choose order.
+
+Future locked content still remains hidden.
+
+Do not reveal every Drop location just because the Hunt is unordered.
+
+---
+
+# 14. MAIN HUNT VS CUSTOM HUNT
+
+Use the same core Drop mechanics.
+
+Main Hunt:
+
+- platform-managed Drops
+- broad search zones
+- standard/clue/riddle types
+- platform point rules
+
+Custom Hunt:
+
+- creator-defined sequence/configuration
+- creator-selected allowed Drop configuration
+- platform-moderated
+- point budget system
+- approved reward constraints
+
+Do not create two incompatible engines.
+
+Reuse shared Drop domain.
+
+---
+
+# 15. CAMERA COLLECTION MODE
+
+When the player enters the collection radius:
+
+Show:
+
+"Drop Nearby"
+
+Primary action:
+
+"Search"
+
+Tapping Search opens an in-app camera collection mode.
+
+This is NOT necessarily full ARKit/ARCore world anchoring.
+
+Use a lightweight camera-overlay experience.
+
+---
+
+# 16. CAMERA SEARCH EXPERIENCE
+
+Conceptual flow:
+
+Player taps Search
+    ↓
+Server creates short-lived collection session
+    ↓
+Camera opens
+    ↓
+Worlds Drop visual/object appears as overlay
+    ↓
+Player looks around
+    ↓
+Server verifies:
+    - Drop active
+    - user eligible
+    - collection session valid
+    - player location in range
+    ↓
+"COLLECT" becomes enabled
+    ↓
+Player taps COLLECT
+    ↓
+Server completes Drop collection
+
+Do not let client directly mark a Drop collected.
+
+---
+
+# 17. CAMERA OVERLAY
+
+For Build 1:
+
+Use a visual overlay/animation such as:
+
+- floating Worlds orb
+- drop icon
+- collectible object
+- glow/particle effect
+
+It may move slightly or appear in a randomized screen-relative position to create a search feel.
+
+It does NOT need to be spatially anchored to a real physical object.
+
+Do not overbuild ARCore/ARKit world mapping.
+
+Full world-anchored AR can be future work.
+
+---
+
+# 18. COLLECTION SESSION
+
+Before camera collection:
+
+Create trusted server session.
+
+Fields conceptually:
+
+session_id
+user_id
+hunt_id
+drop_id
+created_at
+expires_at
+nonce
+required_collection_radius
+consumed_at
+device/app metadata where appropriate
+
+One-time use.
+
+Short-lived.
+
+Do not allow replay.
+
+---
+
+# 19. COLLECTION SERVER VALIDATION
+
+When player taps COLLECT:
+
+Server validates:
+
+- authenticated user
+- active Hunt
+- active Drop
+- Drop availability window
+- participation/access
+- purchase/access rights where applicable in future
+- collection session valid
+- session not consumed
+- GPS in collection range
+- location accuracy acceptable
+- anti-cheat risk
+- Drop not already collected by this user where prohibited
+
+Then:
+
+- record collection
+- award Hunt Points if applicable
+- unlock next clue if ordered
+- emit notification/event
+
+Atomic/idempotent.
+
+---
+
+# 20. NO EXACT PIN AT COLLECTION
+
+Even when within collection radius:
+
+Do not expose private Drop coordinate as a visible exact pin unless that specific Hunt design intentionally permits it.
+
+Use:
+
+- proximity state
+- camera Search
+- clue context
+
+Map remains part of the puzzle.
+
+---
+
+# 21. HUNT POINTS — SEPARATE SCORE
+
+Hunt Points are separate from Quest Points.
+
+Track:
+
+hunt_points
+
+Quest tracks:
+
+quest_points
+
+Shared Profile may show derived:
+
+total_worlds_points
+
+But Hunt leaderboard uses only valid Hunt Points.
+
+Quest leaderboard uses only valid Quest Points.
+
+---
+
+# 22. MAIN HUNT DROP POINTS
+
+Platform-managed Drops receive authoritative Hunt Point values from platform rules.
+
+Recommended base scale:
+
+Common/easy Drop: 25
+Standard Drop: 50
+Challenging Drop: 100
+Rare/complex Drop: 200
+
+These are Hunt Drop values, NOT Quest difficulty values.
+
+Make the exact categories/configuration centrally managed.
+
+Do not let normal users edit platform Drop point values.
+
+---
+
+# 23. DROP POINT CONFIGURATION
+
+Create canonical Drop reward fields:
+
+base_hunt_points
+final_hunt_points
+reward_reason/category
+approved_by/system
+version
+
+Points must be server-authoritative.
+
+Do not award from client.
+
+---
+
+# 24. CUSTOM HUNT POINT BUDGET
+
+Creators must NOT be allowed to assign unlimited points.
+
+Canonical model:
+
+Worlds calculates/authorizes a total Hunt Point budget.
+
+Example:
+
+Approved Custom Hunt budget:
+500 Hunt Points
+
+Creator may distribute within that total.
+
+Example:
+
+Drop 1 = 50
+Drop 2 = 50
+Drop 3 = 100
+Drop 4 = 100
+Drop 5 = 200
+
+Total = 500
+
+Do not allow sum to exceed approved budget.
+
+---
+
+# 25. CUSTOM HUNT BUDGET CALCULATION
+
+Budget may consider:
+
+- number of required Drops
+- difficulty
+- estimated duration
+- proof burden
+- riddle complexity
+- travel burden
+- location complexity
+- safety/accessibility burden
+
+Use deterministic platform rules.
+
+AI may assist with suggestions later, but is not authoritative.
+
+Admin has final approval.
+
+---
+
+# 26. CREATOR BUDGET EDITOR
+
+Custom Hunt creator UI should show:
+
+Total Hunt Point Budget:
+500
+
+Allocated:
+350
+
+Remaining:
+150
+
+Each Drop:
+[ points ]
+
+Validate in real time.
+
+Creator can reallocate.
+
+Do not allow negative or extreme values.
+
+Do not allow published total > approved budget.
+
+---
+
+# 27. REQUIRED VS OPTIONAL DROP POINTS
+
+Required Drops can carry points.
+
+Optional Drops may carry additional points only if approved by platform rules.
+
+Do not let optional Drops create infinite leaderboard farming.
+
+Use per-Hunt limits.
+
+---
+
+# 28. HUNT COMPLETION BONUS
+
+If current domain supports a Hunt-completion bonus:
+
+Keep it separate from per-Drop points.
+
+Example:
+
+Drop points total:
+400
+
+Hunt completion bonus:
+100
+
+Total:
+500
+
+Do not double count.
+
+If completion bonus was not part of established architecture, do not invent one without config.
+
+---
+
+# 29. HUNT LEDGER
+
+All Hunt Point changes use canonical append-only ledger.
+
+Events may include:
+
+HUNT_DROP_COLLECTION
+HUNT_COMPLETION
+HUNT_REVERSAL
+HUNT_QUARANTINE
+HUNT_QUARANTINE_RELEASE
+ADMIN_ADJUSTMENT
+
+Use idempotency.
+
+No duplicate collection reward.
+
+---
+
+# 30. HUNT LEADERBOARD
+
+Use valid Hunt Points only.
+
+Exclude:
+
+- Quest Points
+- quarantined Hunt Points
+- reversed Hunt Points
+- invalid collections
+- duplicate collections
+
+Leaderboard refresh remains server-controlled/automatic.
+
+---
+
+# 31. CREATOR DROP PLACEMENT = VERIFIED PROCESS
+
+A creator must not be able to simply type coordinates and claim a physical Drop is there when the Drop type requires in-person placement.
+
+Create verified placement mode.
+
+Canonical flow:
+
+Create/Edit Drop
+    ↓
+Choose "Place Drop"
+    ↓
+Worlds requires creator to physically go to location
+    ↓
+Start Verified Placement
+    ↓
+Server creates placement session
+    ↓
+GPS captured
+    ↓
+Live 360° environment sweep
+    ↓
+Sensor/motion validation
+    ↓
+Video/frame upload
+    ↓
+Mapbox location context
+    ↓
+Vision scene analysis
+    ↓
+Worlds location policy
+    ↓
+PASS / REVIEW / REJECT
+
+---
+
+# 32. REMOTE PLACEMENT
+
+Some creator/admin scenarios may intentionally allow remote configuration.
+
+Keep remote placement as a separate explicit mode.
+
+Remote placement:
+
+- requires direct location selection in map
+- cannot masquerade as verified in-person placement
+- may require stricter Admin review
+- should have lower trust status
+- must not default coordinates to 0,0
+
+Do not label remote placement as physically verified.
+
+---
+
+# 33. VERIFIED PLACEMENT SESSION
+
+Create one-time placement session.
+
+Fields conceptually:
+
+placement_session_id
+creator_id
+draft_id
+drop_id
+created_at
+expires_at
+nonce
+initial_gps
+final_gps
+gps_accuracy
+sensor_summary
+video_asset_id
+status
+consumed_at
+
+Short-lived.
+
+Cannot be reused across Drops.
+
+---
+
+# 34. LIVE 360° SWEEP
+
+Require in-app video capture.
+
+Do not allow creator to upload old 360° video from gallery as verified placement.
+
+Instruction:
+
+"Slowly turn in a full circle so Worlds can review the area around this Drop."
+
+Capture:
+
+- short continuous video
+- device orientation/heading changes where available
+- gyroscope/accelerometer summary where appropriate
+- initial GPS
+- final GPS
+
+Do not demand expensive full 3D reconstruction.
+
+---
+
+# 35. 360° COMPLETENESS
+
+Use device motion/heading where available to estimate whether the user performed a sufficiently broad sweep.
+
+Do not require mathematically perfect 360.0°.
+
+Allow practical tolerance.
+
+If movement is insufficient:
+
+Ask user to repeat scan.
+
+Do not send an incomplete scan as automatically verified.
+
+---
+
+# 36. PLACEMENT ANTI-UPLOAD PROTECTION
+
+Verified placement requires:
+
+- live camera
+- one-time server session
+- short expiration
+- sensor movement
+- GPS captured during session
+- media hash
+- upload immediately after capture
+
+No gallery import.
+
+Do not claim this makes spoofing impossible.
+
+It creates strong evidence.
+
+---
+
+# 37. MAPBOX LOCATION CONTEXT
+
+After verified GPS capture:
+
+Use Mapbox reverse geocoding/search context.
+
+Collect safe fields such as:
+
+- place name
+- address or general location where appropriate
+- place category
+- neighborhood/locality
+- city/place
+- region
+- roadway context
+- POI context where available
+
+Do not expose raw Mapbox internals to user.
+
+Do not assume geocoding proves public/legal access.
+
+---
+
+# 38. LOCATION CLASSIFICATION
+
+Worlds should derive a platform classification.
+
+Potential categories:
+
+PUBLIC_OUTDOOR
+PUBLIC_INDOOR
+COMMERCIAL_PUBLIC_ACCESS
+PEDESTRIAN_PUBLIC_AREA
+UNKNOWN
+RESIDENTIAL_PRIVATE_LIKELY
+ROADWAY
+RESTRICTED_LIKELY
+HAZARDOUS_LIKELY
+
+Use map context + scene analysis + creator declaration.
+
+Do not treat this classification as legal certainty.
+
+---
+
+# 39. INDOOR PUBLIC LOCATIONS ARE ALLOWED
+
+Do NOT reject a Drop merely because it is indoors.
+
+Potentially valid:
+
+- Museum
+- Library
+- Mall common area
+- Public market
+- Public attraction
+- Community center
+- Publicly accessible commercial venue
+- Transit public concourse where appropriate
+- Indoor event venue with appropriate access
+
+The policy is:
+
+safe + appropriate + publicly accessible enough for intended gameplay
+
+not:
+
+outdoors only.
+
+---
+
+# 40. PRIVATE/RESIDENTIAL PROTECTION
+
+Flag/reject locations likely to be:
+
+- private residence interior
+- apartment unit
+- private backyard
+- residential hallway/common area where access is restricted
+- gated residential space
+- obvious private property inaccessible to public
+
+Use:
+
+Mapbox context
++
+Vision scene classification
++
+creator declaration
++
+manual review where uncertain
+
+Do not rely on GPS alone.
+
+---
+
+# 41. ROADWAY PROTECTION
+
+Reject or require review if Drop appears placed:
+
+- in active roadway
+- highway lane
+- median without pedestrian access
+- dangerous roadside
+- railroad tracks
+- active construction traffic area
+
+If safe pedestrian sidewalk/plaza adjacent to roadway:
+
+Potentially valid.
+
+Use scene context rather than raw proximity to a road alone.
+
+---
+
+# 42. RESTRICTED/HIGH-RISK LOCATIONS
+
+Flag/reject:
+
+- railroad right-of-way
+- restricted infrastructure
+- secure government facility area
+- construction site
+- dangerous industrial area
+- dangerous water access
+- inaccessible rooftops/heights
+- obvious "No Trespassing" environment
+- restricted private property
+
+Manual review when ambiguous.
+
+---
+
+# 43. CREATOR DECLARATION
+
+Before placement submission:
+
+Require confirmation such as:
+
+"I confirm this Drop can be accessed safely and legally by intended players and does not require trespassing."
+
+Also confirm:
+
+- no dangerous driving required
+- no restricted access
+- no harassment/privacy invasion
+- permission where venue rules require it
+
+Do not treat declaration alone as proof.
+
+---
+
+# 44. VISION ENVIRONMENT ANALYSIS
+
+Use a vision-capable provider through a server-side abstraction.
+
+The vision layer should analyze representative frames from the live 360° sweep.
+
+Do not rely on one frame only.
+
+Extract a practical set of frames.
+
+Example:
+
+8 frames around the sweep.
+
+---
+
+# 45. VISION STRUCTURED OUTPUT
+
+Request structured fields such as:
+
+indoor_outdoor
+roadway_visible
+pedestrian_space
+residential_environment
+private_home_likely
+public_venue_likely
+restricted_signage
+construction_or_hazard
+traffic_risk
+water_hazard
+accessible_path_visible
+safe_drop_area_likely
+manual_review_recommended
+confidence_summary
+
+Do not request or store hidden model chain-of-thought.
+
+Only concise classifications/rationale.
+
+---
+
+# 46. VISION PROVIDER ABSTRACTION
+
+Create/extend:
+
+EnvironmentVisionProvider
+
+Possible implementation may use OpenAI vision-capable API.
+
+Do not hardcode provider logic into Hunt screens.
+
+Server-side only.
+
+No API key in client.
+
+---
+
+# 47. LOCATION / SCENE CROSS-CHECK
+
+This is critical.
+
+Compare:
+
+Map/GPS context
+
+with
+
+Vision scene context.
+
+Examples:
+
+GPS:
+public park
+
+Vision:
+outdoor pedestrian park-like area
+
+→ consistent
+
+GPS:
+museum
+
+Vision:
+indoor public exhibit/lobby
+
+→ consistent
+
+GPS:
+public park
+
+Vision:
+residential bedroom
+
+→ mismatch
+
+GPS:
+middle of highway
+
+Vision:
+roadway
+
+→ high risk/reject
+
+GPS:
+shopping center
+
+Vision:
+mall public corridor
+
+→ potentially valid
+
+Create LOCATION_SCENE_MISMATCH signal.
+
+---
+
+# 48. PLACEMENT DECISION ENGINE
+
+Create one deterministic Worlds placement policy engine.
+
+Inputs:
+
+- GPS
+- GPS accuracy
+- Mapbox context
+- scene analysis
+- creator declaration
+- prior moderation/account restrictions
+- placement type
+- venue/place type
+- scan completeness
+- mismatch signals
+
+Output:
+
+PASS
+REVIEW
+REJECT
+
+Also return user-safe reason and internal signals.
+
+Do not let AI provider alone make final authoritative decision.
+
+---
+
+# 49. PASS
+
+PASS means:
+
+- location appears appropriate
+- scan complete
+- GPS valid
+- no major scene mismatch
+- no obvious public-safety issue
+- media moderation acceptable
+- platform rules satisfied
+
+PASS may allow Drop to proceed to normal moderation/publication workflow.
+
+Do not bypass other Custom Hunt moderation requirements.
+
+---
+
+# 50. REVIEW
+
+REVIEW means:
+
+- ambiguous public/private status
+- commercial venue ambiguity
+- indoor access unclear
+- uncertain signage
+- scene/map mismatch
+- weak GPS
+- moderation warning
+- unusual environment
+
+Creator sees:
+
+"Worlds needs to review this Drop location before it can be published."
+
+Do not expose all internal risk signals.
+
+---
+
+# 51. REJECT
+
+REJECT may apply to clear structural issues such as:
+
+- invalid/missing GPS
+- 0,0 placeholder
+- roadway
+- obvious private residential interior
+- restricted environment
+- dangerous location
+- incomplete fraudulent scan
+- blocked public media
+- impossible location/scene conflict
+
+Give safe actionable explanation.
+
+Do not expose detection thresholds.
+
+---
+
+# 52. MANUAL REVIEW
+
+Admin moderation detail should show:
+
+- Drop
+- creator
+- map
+- public search zone
+- private authoritative location
+- geocoding context
+- 360° representative frames/video
+- vision summary
+- location/scene consistency
+- creator declaration
+- media moderation
+- safety signals
+- previous related issues
+
+Actions:
+
+Approve
+Request New Placement
+Reject
+
+Do not make creator re-create entire Hunt just to replace one bad Drop.
+
+---
+
+# 53. DROP IMAGE UPLOAD
+
+The Drop's public image is separate from the 360° environment scan.
+
+It may represent:
+
+- collectible art
+- clue image
+- creator image
+- public Drop image
+
+Store initially private/pending.
+
+Do not publish before moderation policy allows it.
+
+---
+
+# 54. DROP IMAGE MODERATION
+
+Use the existing moderation provider abstraction.
+
+OpenAI Moderation may be used as one provider for general appropriateness.
+
+Moderation checks general content safety.
+
+Worlds policy checks app-specific rules.
+
+Flow:
+
+Upload
+↓
+Pending private storage
+↓
+Moderation API
+↓
+Worlds policy
+↓
+PASS / REVIEW / REJECT
+
+Do not expose provider confidence/category scores to creators.
+
+---
+
+# 55. WORLDS-SPECIFIC IMAGE POLICY
+
+General moderation alone is not sufficient.
+
+Worlds-specific checks may include:
+
+- private address/document visible
+- personally identifying sensitive content
+- image clearly unrelated to Drop
+- prohibited promotional/spam content
+- unsafe instructions
+- misleading image
+- sexual/graphic content
+- harassment/privacy violation
+
+Manual review for ambiguity.
+
+---
+
+# 56. TWO AI/ML USES — KEEP SEPARATE
+
+Use two separate logical services even if both use OpenAI.
+
+1. Content Moderation
+   Purpose:
+   Is uploaded image/text appropriate?
+
+2. Environment Vision Analysis
+   Purpose:
+   What kind of physical environment does the 360° placement scan show?
+
+Do not conflate them.
+
+One API account may support both if provider capabilities allow.
+
+---
+
+# 57. PROVIDER FAILURE
+
+If content moderation provider is unavailable:
+
+- keep Drop image pending/manual review
+- do not claim Safe
+
+If environment vision provider is unavailable:
+
+- route verified placement to manual review
+- do not claim PASS automatically if automated scene review is required
+
+Core Hunt app must not crash.
+
+---
+
+# 58. PLACEMENT SESSION OFFLINE
+
+Verified in-person Drop placement should require live server session.
+
+Do not allow fully offline verified placement.
+
+If offline:
+
+allow creator to save draft fields, but not perform verified placement.
+
+Show:
+
+"Connect to the internet to verify this Drop location."
+
+---
+
+# 59. GPS ACCURACY FOR PLACEMENT
+
+Require reasonable GPS accuracy.
+
+If poor:
+
+Ask creator to retry.
+
+Do not immediately accuse spoofing.
+
+Repeated suspicious patterns may feed anti-cheat/integrity engine.
+
+---
+
+# 60. MOCK LOCATION FOR PLACEMENT
+
+Capture mock-location signal where supported.
+
+Treat as strong integrity signal.
+
+Do not automatically permanently ban on one signal.
+
+Placement may be sent to REVIEW/REJECT depending on policy.
+
+---
+
+# 61. REMOTE DROP COORDINATE VALIDATION
+
+Any remote placement must validate:
+
+latitude -90..90
+longitude -180..180
+not missing
+not placeholder 0,0 by default
+
+Require map confirmation.
+
+Do not silently assign 0,0.
+
+This explicitly fixes the old known bug.
+
+---
+
+# 62. ACTIVE WINDOW ENFORCEMENT
+
+All Drops/Hunts must enforce:
+
+available_from
+available_until
+occurrence window
+join window
+collection window
+stop window where configured
+
+Map queries must filter server-side.
+
+Do not show expired Drops as collectible.
+
+---
+
+# 63. HUNT MAP VISUAL LANGUAGE
+
+Use soft search zones rather than exact pins.
+
+Potential color categories may represent:
+
+- standard
+- clue/riddle
+- rare/high-value
+- Custom Hunt
+- active owned Hunt
+
+Keep palette restrained.
+
+Do not make the map unreadable.
+
+Use legend only if needed.
+
+---
+
+# 64. SEARCH ZONE PRIVACY
+
+Do not make search zone trivially reveal the exact center if center equals private Drop coordinate.
+
+Generate/derive a public zone that protects the precise point.
+
+Could use:
+
+- deliberately offset public center
+- broad radius
+- polygon/heat area
+- server-generated search geometry
+
+Document method.
+
+Do not send exact coordinate disguised as a translucent circle centered exactly on it if that leaks the solution.
+
+---
+
+# 65. SEARCH ZONE OFFSET
+
+For hidden Drops:
+
+Use a server-generated public search center that can be offset from the true Drop location.
+
+Ensure true location remains within zone.
+
+The offset must be deterministic/stable for the Drop, not change every refresh.
+
+Do not allow client to calculate it from secret coordinate.
+
+---
+
+# 66. MAP PROGRESSIVE REFINEMENT
+
+Optionally refine search information as player gets closer.
+
+Example:
+
+Far:
+broad blob
+
+Within clue radius:
+clue + slightly narrower search zone
+
+Near:
+"Drop Nearby"
+
+Do not reveal precise coordinate.
+
+This is preferred Hunt gameplay.
+
+---
+
+# 67. CLUE LIST UX
+
+When multiple clue-enabled Drops are within relevant range:
+
+Provide a lightweight clue list accessible from the Map, such as:
+
+"Nearby Clues"
+
+Each item may show:
+
+- clue title/number
+- general area
+- Hunt name
+- points if public
+- unlocked/locked state
+
+Do not create a separate bottom navigation tab.
+
+Do not show exact coordinates.
+
+---
+
+# 68. MAIN HUNT CLUE DISCOVERY
+
+For the general/main Hunt Map:
+
+A player may encounter multiple independent clue Drops.
+
+Only show clue content when:
+
+- Drop is discoverable to player
+- player within configured reveal rules
+- time window active
+- access requirement satisfied
+
+Do not dump all riddles globally.
+
+---
+
+# 69. CUSTOM HUNT CLUE UX
+
+In Active Custom Hunt:
+
+The current clue should be prominent.
+
+Map shows its search zone.
+
+For ordered Hunt:
+
+one current clue/zone.
+
+For unordered:
+
+authorized clue list/zones.
+
+This must integrate with Prompt 13 Active Hunt UI.
+
+---
+
+# 70. DROP PURCHASE PREPARATION
+
+Build 1 contains no revenue.
+
+Do not add payment behavior.
+
+However, preserve architecture so Build 2 can gate certain Drops behind purchase.
+
+For Build 1:
+
+Drop access is determined by non-payment eligibility.
+
+Do not create fake purchase state.
+
+---
+
+# 71. FUTURE PAID COLLECTION
+
+Do not implement, but keep collection authorization contract extensible.
+
+Future Build 2 may check:
+
+hunt_purchase/access entitlement
+
+before enabling collection.
+
+Do not hardwire collection engine to "always free."
+
+---
+
+# 72. CAMERA COLLECTION ANTI-CHEAT
+
+Collection session can include:
+
+- current GPS
+- accuracy
+- timestamp
+- app/device metadata
+- mock-location signal
+- session nonce
+- Drop ID
+- Hunt participation
+
+Do not require user to photograph the real Drop unless product design explicitly uses visual proof.
+
+Camera mode is primarily gameplay/collection UI.
+
+---
+
+# 73. COLLECTION DOES NOT REQUIRE SEEING A PHYSICAL OBJECT
+
+Drops are digital.
+
+The user does not have to find an actual physical object unless a specific Custom Hunt is configured that way.
+
+Canonical main Hunt behavior:
+
+Reach location
+↓
+Open camera
+↓
+Find digital Worlds collectible overlay
+↓
+Collect
+
+Do not confuse with physical geocache.
+
+---
+
+# 74. OPTIONAL PHYSICAL PROOF DROP
+
+Custom Hunt may optionally configure physical proof separately.
+
+Example:
+
+"Photograph the statue"
+
+This uses the proof system.
+
+Do not make every Drop require photo proof.
+
+---
+
+# 75. HUNT COLLECTION STATES
+
+Use consistent states:
+
+DISCOVERABLE
+CLUE_LOCKED
+CLUE_AVAILABLE
+SEARCHING
+NEARBY
+COLLECTION_SESSION
+COLLECTED
+UNDER_REVIEW if proof involved
+INVALIDATED where necessary
+
+Do not conflate Hunt occurrence state with Drop collection state.
+
+---
+
+# 76. COLLECTION UI
+
+Map:
+
+broad zone
+
+When nearby:
+
+Bottom sheet/card:
+
+"Drop Nearby"
+
+[ Search ]
+
+Camera:
+
+Worlds collectible visual
+
+[ COLLECT ]
+
+After server success:
+
+"Collected"
+
++ Hunt Points
+
+Then:
+
+- update Progress
+- unlock next clue if applicable
+- update map
+
+No duplicate reward.
+
+---
+
+# 77. COLLECTION FAILURE
+
+Handle:
+
+- moved out of range
+- GPS poor
+- Drop expired
+- session expired
+- already collected
+- Hunt paused
+- Hunt cancelled
+- access revoked
+- offline
+- integrity review
+
+Provide safe actionable messages.
+
+Do not expose anti-cheat thresholds.
+
+---
+
+# 78. COLLECTION WHILE DRIVING
+
+Do not encourage use while driving.
+
+If motion/speed indicates likely vehicle travel at collection moment:
+
+- block camera collection until safe/stationary where practical
+- show safety message
+
+Do not turn speed into a gameplay mechanic.
+
+---
+
+# 79. HUNT SAFETY COPY
+
+Use clear platform warning where appropriate:
+
+"Only search in places you can safely and legally access. Never enter roads, restricted areas, or private property."
+
+Keep concise.
+
+Do not overwhelm every screen with warnings.
+
+---
+
+# 80. DROP PLACEMENT SAFETY UX
+
+Creator placement UI should show:
+
+Before scan:
+- safe/legal access reminder
+
+After scan:
+- placement result
+
+PASS:
+"Location verified for review."
+
+REVIEW:
+"This location needs additional review."
+
+REJECT:
+"This location cannot be used for this Drop."
+
+Do not say "legally verified."
+
+---
+
+# 81. ADMIN PLACEMENT POLICY SETTINGS
+
+Create Admin settings for:
+
+- default search radius
+- clue reveal radius
+- collection radius
+- allowed range limits
+- verified-placement requirement
+- remote placement allowance
+- public indoor allowance
+- residential risk policy
+- roadway risk policy
+- scan completeness threshold
+- manual review policy
+- vision provider enabled
+- moderation provider enabled
+
+Use typed config/versioning.
+
+---
+
+# 82. PLACEMENT POLICY VERSIONING
+
+Store policy version on each placement evaluation.
+
+Historical Drop decision should reference policy used at time.
+
+Do not silently rewrite historical decision when thresholds change.
+
+---
+
+# 83. HUNT ANTI-CHEAT
+
+Integrate with canonical integrity engine.
+
+Signals may include:
+
+- mock location
+- poor GPS
+- impossible movement
+- collection session reuse
+- rapid multi-Drop collection
+- duplicate collection
+- placement session misuse
+- scene/GPS mismatch
+- fake/incomplete 360 scan
+- media reuse
+- VPN weak signal only
+
+Use graduated risk.
+
+No automatic permanent ban.
+
+---
+
+# 84. RAPID DROP COLLECTION
+
+Detect physically implausible collection sequence.
+
+Compare trusted collection events where meaningful.
+
+Do not penalize multiple Drops intentionally placed near one another.
+
+Risk calculation must consider distance/time.
+
+---
+
+# 85. CREATOR PLACEMENT ABUSE
+
+Track repeated rejected/unsafe placement attempts.
+
+Possible outcomes:
+
+- warnings
+- manual review
+- temporary creator restriction
+
+Do not auto-ban from one failed scan.
+
+Use Admin moderation.
+
+---
+
+# 86. DROP REPORTING
+
+Players must be able to report a Drop/Hunt for:
+
+- unsafe location
+- private property
+- trespassing concern
+- inappropriate image/content
+- misleading location
+- dangerous environment
+- other
+
+Use existing report system.
+
+High-priority safety report may temporarily suppress Drop from discovery pending review according to policy.
+
+Do not delete automatically.
+
+---
+
+# 87. POST-PUBLICATION SAFETY REVIEW
+
+If a previously approved Drop becomes unsafe or reported:
+
+Admin may:
+
+- remove from discovery
+- pause collection
+- request creator relocation
+- archive Drop
+- cancel affected Hunt occurrence if necessary
+
+Preserve historical collections.
+
+---
+
+# 88. RELOCATE DROP
+
+For Custom Hunt creator:
+
+If Admin requests new placement:
+
+Allow creator to re-place that Drop.
+
+New verified placement creates a new location version.
+
+Active participants should remain on appropriate version according to occurrence rules.
+
+Do not overwrite history.
+
+---
+
+# 89. DROP LOCATION VERSIONING
+
+Version:
+
+- private location
+- public search geometry
+- clue radius
+- collection radius
+- placement verification result
+- placement media reference
+- policy version
+
+Active occurrence references stable Drop version.
+
+Do not mutate live Hunt geography underneath active players.
+
+---
+
+# 90. DROP IMAGE VERSIONING
+
+Replacing public Drop image should create new media version/moderation state.
+
+Do not instantly overwrite approved image with unreviewed replacement in public view.
+
+Keep previous approved version until new one passes policy, where appropriate.
+
+---
+
+# 91. HUNT PROGRESS
+
+Hunt Progress remains exactly:
+
+- Leaderboards
+- In Action
+- Completed
+
+In Action should show relevant active Hunt status.
+
+Do not add "Drops" as a fourth primary Progress section.
+
+Drop collections contribute to Hunt progress/history.
+
+---
+
+# 92. HUNT COLLECTION HISTORY
+
+Completed/Progress detail may show:
+
+- Drop title
+- collected date
+- Hunt Points
+- clue/riddle type
+- required/optional
+- Hunt name
+
+Do not expose hidden exact location after completion unless product intentionally allows it.
+
+---
+
+# 93. HUNT LEADERBOARD
+
+Use valid Hunt Points.
+
+No Quest Points.
+
+No quarantined value.
+
+No reversed value.
+
+Custom Hunt creator cannot inflate score beyond approved budget.
+
+---
+
+# 94. NOTIFICATIONS
+
+Use existing notification infrastructure.
+
+Appropriate Hunt notifications:
+
+- Hunt invitation
+- Hunt starting soon
+- Hunt started
+- Hunt paused/resumed/cancelled
+- major clue/update where asynchronous
+- Hunt result
+- moderation result for creator
+
+Do not send push for every Drop collection while user is actively playing.
+
+Use immediate UI feedback.
+
+---
+
+# 95. DROP CLUE NOTIFICATIONS
+
+Do not continuously background-track to notify:
+
+"You're near a clue."
+
+Build 1 has no continuous background location.
+
+Clue reveal occurs while actively using Hunt/location gameplay.
+
+No background location surveillance.
+
+---
+
+# 96. OFFLINE MAP / CLUES
+
+Offline may cache:
+
+- already authorized clue
+- current public search zone
+- already loaded map content
+
+Offline must NOT:
+
+- unlock new clue
+- validate collection
+- mark Drop collected
+- award points
+
+Collection requires online authoritative session.
+
+---
+
+# 97. OFFLINE CREATOR PLACEMENT
+
+Creator may edit Drop draft offline.
+
+Verified 360 placement requires online.
+
+Do not save an offline scan as "verified."
+
+---
+
+# 98. PRIVACY
+
+Do not expose:
+
+- creator exact current location beyond selected Drop placement
+- hidden true Drop coordinate
+- private validation geometry
+- other players' locations
+- placement anti-cheat signals
+- vision provider raw scores
+- internal moderation notes
+- report identities
+
+360 scan media should be private moderation evidence.
+
+Do not publish it.
+
+---
+
+# 99. 360 SCAN RETENTION
+
+Store placement scan only as long as needed for:
+
+- moderation
+- safety appeals
+- abuse investigation
+- policy retention
+
+Do not treat it as public Hunt content.
+
+Use protected storage.
+
+Document retention.
+
+---
+
+# 100. VISION FRAME RETENTION
+
+Representative extracted frames may be stored transiently.
+
+Prefer:
+
+- process
+- store normalized result
+- retain only moderation evidence if policy requires
+
+Do not keep redundant frames indefinitely.
+
+---
+
+# 101. MAPBOX DATA BOUNDARY
+
+Mapbox helps identify location context.
+
+It does NOT prove:
+
+- public access
+- legal permission
+- current safety
+- current venue hours
+
+Do not represent geocoding as legal verification.
+
+Worlds decision engine remains risk-based.
+
+---
+
+# 102. OPENAI / MODERATION CONFIGURATION
+
+If OpenAI is used:
+
+Environment Vision:
+use a vision-capable model through server-side provider abstraction.
+
+Drop Image Safety:
+use moderation provider abstraction capable of image moderation.
+
+Do not put API key in mobile app.
+
+Do not make OpenAI a hard dependency for playing already-published Hunts.
+
+If provider unavailable:
+
+route new placement to manual review where policy allows.
+
+---
+
+# 103. MAPBOX + VISION + POLICY ARCHITECTURE
+
+Canonical placement decision:
+
+Live GPS
+   ↓
+Mapbox context
+   +
+360° scan
+   ↓
+Vision scene analysis
+   +
+Creator declaration
+   +
+Worlds deterministic location policy
+   ↓
+PASS / REVIEW / REJECT
+
+Uploaded Drop image:
+   ↓
+Content moderation
+   ↓
+Worlds media policy
+   ↓
+PASS / REVIEW / REJECT
+
+These are separate but both must be considered before publication.
+
+---
+
+# 104. DATABASE AUDIT
+
+Audit old Hunt schema for conflicting concepts.
+
+Pay special attention to:
+
+custom_hunts
+custom_hunt_games
+
+There must be one canonical meaning/model.
+
+Also audit:
+
+hunt_drops
+hunt_riddles
+hunt_collections
+hunt_purchases
+creator_wallets
+placement fields
+active windows
+riddle fields
+point fields
+location fields
+
+Do not retain contradictory duplicate tables.
+
+---
+
+# 105. DROP SCHEMA
+
+Canonical Drop data should clearly separate:
+
+- Hunt ownership
+- Drop type
+- required/optional
+- public search geometry
+- private collection geometry
+- clue reveal rules
+- riddle config
+- collection radius
+- active window
+- point value
+- image/media
+- placement verification status
+- placement version
+- moderation state
+
+Do not overload one field for multiple purposes.
+
+---
+
+# 106. DROP TYPES
+
+Canonical consumer-facing types can remain simple:
+
+STANDARD
+CLUE
+RIDDLE
+
+REMOTE is not necessarily a consumer-facing Drop type.
+
+It is a placement method.
+
+Separate:
+
+drop_type
+
+from:
+
+placement_method
+
+Examples:
+
+drop_type:
+RIDDLE
+
+placement_method:
+VERIFIED_IN_PERSON
+
+or
+
+REMOTE_ADMIN_REVIEW
+
+Do not confuse content type and placement process.
+
+---
+
+# 107. TEST — STANDARD DROP
+
+Create published Standard Drop.
+
+Verify:
+
+- broad search zone
+- exact coordinate hidden
+- player approaches
+- Drop Nearby
+- camera opens
+- Collect
+- server validates
+- points awarded once
+- map updates
+
+---
+
+# 108. TEST — RIDDLE DROP
+
+Verify:
+
+- broad zone
+- exact location hidden
+- clue unlocks at reveal radius
+- wrong answer safely handled if answer required
+- correct answer works
+- collection radius
+- camera
+- collect
+- next state
+
+---
+
+# 109. TEST — ORDERED CUSTOM HUNT
+
+Create:
+
+Drop 1
+Drop 2
+Drop 3
+
+Verify:
+
+- only Drop 1 clue/zone visible
+- collect Drop 1
+- Drop 2 unlocks
+- Drop 3 remains hidden
+- complete all
+- points correct
+
+---
+
+# 110. TEST — UNORDERED CUSTOM HUNT
+
+Verify:
+
+- authorized zones visible
+- player chooses order
+- future locked content hidden
+- all required Drops tracked
+- completion correct
+
+---
+
+# 111. TEST — CAMERA COLLECTION
+
+Verify:
+
+- collection session created
+- camera opens
+- overlay appears
+- Collect disabled outside radius
+- Collect enabled inside valid radius
+- session expires
+- session replay rejected
+- duplicate collect rejected
+- points idempotent
+
+---
+
+# 112. TEST — POINT BUDGET
+
+Custom Hunt budget:
+500
+
+Creator attempts:
+600
+
+Reject.
+
+Creator allocation:
+50 + 50 + 100 + 100 + 200
+
+Accept.
+
+Complete Hunt.
+
+Verify Hunt Points equal approved logic.
+
+Quest leaderboard unchanged.
+
+---
+
+# 113. TEST — 360 PLACEMENT
+
+Creator:
+
+- starts verified placement
+- GPS captured
+- live camera required
+- performs full sweep
+- sensor summary valid
+- uploads
+- Mapbox context created
+- vision analysis produced
+- decision engine returns result
+
+No gallery import.
+
+---
+
+# 114. TEST — INCOMPLETE 360
+
+Creator records only small partial movement.
+
+System should require repeat or send to review according to policy.
+
+Do not mark PASS.
+
+---
+
+# 115. TEST — PUBLIC OUTDOOR
+
+Use safe development fixture representing public park.
+
+Expected:
+PASS or review based on policy.
+
+Do not rely on actual harmful/location content in automated tests.
+
+---
+
+# 116. TEST — PUBLIC INDOOR
+
+Use safe fixture representing:
+
+- museum lobby
+- mall common area
+- library
+
+Verify system does NOT reject merely because indoor.
+
+Expected:
+PASS/REVIEW based on access signals.
+
+---
+
+# 117. TEST — RESIDENTIAL
+
+Use development-safe fixture/context representing private residence.
+
+Expected:
+REVIEW or REJECT according to policy.
+
+Do not publish.
+
+---
+
+# 118. TEST — ROADWAY
+
+Use safe fixture/context representing active roadway.
+
+Expected:
+REJECT.
+
+---
+
+# 119. TEST — LOCATION/SCENE MISMATCH
+
+Map context:
+public park
+
+Vision fixture:
+residential bedroom
+
+Expected:
+LOCATION_SCENE_MISMATCH
+
+Decision:
+REVIEW or REJECT
+
+No PASS.
+
+---
+
+# 120. TEST — DROP IMAGE MODERATION
+
+Test with provider-safe fixtures.
+
+Safe image:
+PASS
+
+Warning:
+REVIEW
+
+Blocked:
+REJECT
+
+Do not publish rejected image.
+
+---
+
+# 121. TEST — PROVIDER FAILURE
+
+Vision provider unavailable.
+
+Expected:
+new verified placement → manual review/degraded flow
+
+Moderation provider unavailable.
+
+Expected:
+Drop image → pending/manual review
+
+Existing published Hunts still playable.
+
+---
+
+# 122. TEST — REMOTE PLACEMENT
+
+Creator/admin uses remote placement.
+
+Verify:
+
+- explicit remote label/status
+- valid coordinate required
+- 0,0 rejected
+- map confirmation
+- no claim of verified in-person scan
+- review policy applied
+
+---
+
+# 123. TEST — ACTIVE WINDOW
+
+Future Drop:
+not collectible
+
+Expired Drop:
+not collectible
+
+Active Drop:
+visible according to rules
+
+Map backend filters correctly.
+
+---
+
+# 124. TEST — PRIVACY
+
+Consumer API must NOT return:
+
+- true hidden Drop coordinate where not intended
+- placement scan media
+- vision raw output
+- accepted riddle answers
+- internal risk signals
+- creator private data
+
+Admin access permission-controlled.
+
+---
+
+# 125. TEST — ANTI-CHEAT
+
+Test:
+
+- mock location
+- poor accuracy
+- impossible movement
+- collection session replay
+- rapid impossible Drop sequence
+- VPN-only signal
+
+VPN alone:
+no sanction.
+
+High risk:
+review/quarantine according to policy.
+
+No permanent auto-ban.
+
+---
+
+# 126. ADMIN HUNT DIAGNOSTICS
+
+Add status for:
+
+Hunt Map
+Drop search-zone queries
+Placement verification
+Mapbox
+Environment vision provider
+Image moderation provider
+Riddle validation
+Collection sessions
+Hunt point ledger
+Leaderboard refresh
+Custom Hunt moderation
+
+Use:
+
+READY
+DEGRADED
+DISABLED
+MISSING_CONFIG
+FAILED
+
+Do not show secrets.
+
+---
+
+# 127. ADMIN DROP REVIEW
+
+Create/extend moderation queue for:
+
+- placement REVIEW
+- public Drop image review
+- location mismatch
+- residential/private ambiguity
+- safety reports
+- creator relocation requests
+
+Allow granular action on one Drop.
+
+Do not require rejecting whole Custom Hunt unnecessarily.
+
+---
+
+# 128. DOCUMENTATION
+
+Create/update canonical Hunt docs:
+
+/docs/HUNT_SYSTEM.md
+/docs/HUNT_MAP_SEARCH_ZONES.md
+/docs/HUNT_CLUES_AND_RIDDLES.md
+/docs/HUNT_COLLECTION.md
+/docs/HUNT_POINTS.md
+/docs/HUNT_DROP_PLACEMENT.md
+/docs/HUNT_360_VERIFICATION.md
+/docs/HUNT_LOCATION_SAFETY.md
+/docs/HUNT_DROP_MODERATION.md
+
+Update documentation index.
+
+Mark older conflicting Hunt/drop behavior as superseded.
+
+---
+
+# 129. DO NOT ADD REVENUE
+
+Do not implement:
+
+- Stripe
+- paid Drops
+- creator payouts
+- memberships
+- transaction fees
+- premium Custom Hunts
+
+Preserve future entitlement interface only.
+
+---
+
+# 130. DO NOT ADD FULL AR
+
+Do not implement:
+
+- ARKit world anchors
+- ARCore world anchors
+- persistent spatial mesh
+- VPS/geospatial AR anchoring
+
+Build 1 uses:
+
+camera overlay + server-validated proximity + collection session.
+
+---
+
+# 131. OUT OF SCOPE
+
+Do not implement:
+
+- Game Zones
+- Outbreak
+- Direct messaging
+- Hunt chat
+- live participant location
+- continuous background location
+- paid Drops
+- paid Custom Hunts
+- creator payouts
+- premium membership
+- AI Hunt generation
+- full AR geospatial anchoring
+
+---
+
+# 132. FINAL AUDIT
+
+Before stopping verify all of the following:
+
+- Hunt navigation remains Map / My Hunts / Progress / Profile.
+- No Discover tab exists.
+- Hunt Map is one large map.
+- Drop discovery uses broad search zones/blobs.
+- Exact hidden coordinates are protected.
+- Search geometry does not trivially leak true coordinate.
+- Default clue reveal radius is approximately 500 m and configurable.
+- Default collection radius is 25 m and configurable.
+- Standard Drops work.
+- Clue Drops work.
+- Riddle Drops work.
+- Riddle answers are server-private.
+- Ordered Custom Hunt unlocks clues sequentially.
+- Unordered Custom Hunt shows only authorized zones.
+- Camera Search/Collect works.
+- Collection session is server-authoritative and one-time.
+- Full world-anchored AR was not added.
+- Hunt Points are separate from Quest Points.
+- Main Hunt Drop point rules are controlled.
+- Custom Hunt uses approved total point budget.
+- Creator cannot exceed point budget.
+- Hunt leaderboard uses Hunt Points only.
+- In-person Drop placement requires live verification when configured.
+- Verified placement uses server session.
+- 360° scan uses live in-app capture.
+- Gallery cannot be used for verified placement.
+- Sensor/motion sweep completeness is checked.
+- GPS is captured.
+- Mapbox context is used.
+- Vision environment analysis is used when configured.
+- Indoor public locations are allowed.
+- Roadways are rejected/reviewed appropriately.
+- Private residential areas are rejected/reviewed appropriately.
+- Restricted/hazardous areas are rejected/reviewed.
+- GPS/scene mismatch is detected.
+- Creator declaration is required.
+- Placement engine returns PASS/REVIEW/REJECT.
+- PASS does not mean legally guaranteed.
+- Manual review works.
+- Remote placement is clearly separate from verified placement.
+- 0,0 coordinate bug is fixed.
+- Active windows are enforced.
+- Drop image moderation works.
+- General moderation and environment analysis remain separate services.
+- OpenAI/provider secrets remain server-side.
+- Provider failure degrades safely.
+- Placement scan remains private.
+- Reports can flag unsafe Drops.
+- Drop location changes are versioned.
+- Active participants do not have geography changed underneath them.
+- Hunt Progress remains Leaderboards / In Action / Completed.
+- Offline does not unlock clues or collect Drops.
+- No background location exists.
+- Anti-cheat integrates.
+- VPN alone is weak signal only.
+- No permanent automatic ban.
+- Tests pass.
+- Typecheck passes.
+- Lint passes.
+
+Fix all code-level failures within Prompt 26 scope before stopping.
+
+---
+
+# FINAL REPORT
+
+When complete return:
+
+## 1. Hunt Architecture Status
+
+PASS / FAIL for:
+
+- Search Zones
+- Standard Drops
+- Clue Drops
+- Riddle Drops
+- Ordered Custom Hunt
+- Unordered Custom Hunt
+- Camera Collection
+- Hunt Points
+- Custom Hunt Point Budget
+- 360 Placement
+- GPS Placement
+- Mapbox Context
+- Vision Analysis
+- Location Safety
+- Drop Image Moderation
+- Anti-Cheat
+- Progress
+- Leaderboard
+
+## 2. Conflicts Resolved
+
+List all older Hunt behavior replaced by this canonical model.
+
+## 3. Search-Zone Rules
+
+Confirm actual configured defaults and limits.
+
+## 4. Clue/Collection Rules
+
+Confirm reveal and collection distances.
+
+## 5. Camera Collection
+
+Explain final Build 1 experience.
+
+## 6. Point System
+
+Confirm main Hunt and Custom Hunt allocation rules.
+
+## 7. Placement Verification
+
+Explain:
+GPS + live 360 + sensor motion + Mapbox + vision + declaration + policy.
+
+## 8. Indoor/Public Policy
+
+Confirm indoor public locations are not automatically rejected.
+
+## 9. Safety Rules
+
+Confirm roadway/private/residential/restricted behavior.
+
+## 10. Drop Image Moderation
+
+Explain final moderation provider architecture.
+
+## 11. Provider Configuration
+
+List required environment variable NAMES only.
+
+Do not include secret values.
+
+## 12. Database Changes
+
+List migrations/schema changes.
+
+## 13. UI Changes
+
+List consumer/creator/Admin changes.
+
+## 14. Tests
+
+Provide exact results.
+
+## 15. Remaining External Configuration
+
+List Mapbox / vision provider / moderation provider / Supabase / native camera-location requirements.
+
+## 16. Remaining Code Issues
+
+There should be none within Prompt 26 scope.
+
+If genuinely blocked by external provider credentials, state exactly which test is blocked.
+
+Create checkpoint:
+
+Worlds — Build 1 — Prompt 26 — Canonical Hunt System and Verified Drop Placement
+```
