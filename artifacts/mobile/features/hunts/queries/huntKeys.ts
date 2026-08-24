@@ -79,6 +79,10 @@ export const huntKeys = {
   activeHunt: (participationId: string, userId: string) =>
     [...huntKeys.all, 'active-hunt', participationId, userId] as const,
 
+  /** Participant-authorized, approximate Drop search zones only. */
+  dropSearchZones: (participationId: string, userId: string) =>
+    [...huntKeys.all, 'drop-search-zones', participationId, userId] as const,
+
   /** Stop progress for a participation */
   stopProgress: (participationId: string, userId: string) =>
     [...huntKeys.all, 'stop-progress', participationId, userId] as const,

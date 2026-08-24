@@ -53,6 +53,7 @@ import {
 import { persistIntegritySnapshot, persistModerationResult } from "../lib/supabase-moderation";
 import { notificationStore, renderNotification, type NotificationEvent } from "../lib/notifications";
 import { supabaseAdminConfigured, supabaseAdminRequest } from "../lib/supabase-admin";
+import { evaluateHuntPlacement, type HuntPlacementSignals } from "../lib/hunt-placement";
 
 const router: IRouter = Router();
 
@@ -474,6 +475,72 @@ router.post("/admin/integrity/evaluate", requireAdmin("integrity.manage"), async
   const snapshot = createIntegritySnapshot({ userId, entityType, entityId, signals });
   const databasePersistence = await persistIntegritySnapshot({ userId, entityType, entityId, snapshot }).catch((error: unknown) => ({ persisted: false, reason: error instanceof Error ? error.message : "Database persistence failed." }));
   res.json({ ...snapshot, persistence: databasePersistence });
+});
+
+router.get("/admin/hunts/drops/review", requireAdmin("admin.review.read"), async (_req, res) => {
+  if (!supabaseAdminConfigured()) {
+    res.json({ items: [], configured: false, reason: "Live Hunt Drop reviews require trusted Supabase access." });
+    return;
+  }
+  try {
+    const items = await supabaseAdminRequest<unknown[]>(
+      "hunt_drop_placements?select=id,hunt_stop_id,placement_method,decision,policy_version,safety_signals,created_at&order=created_at.desc&limit=100",
+    );
+    res.json({ items, configured: true });
+  } catch (error) {
+    res.status(503).json({ error: error instanceof Error ? error.message : "Hunt Drop review is unavailable." });
+  }
+});
+
+router.post("/admin/hunts/drops/placement-diagnostic", requireAdmin("admin.review.read"), (req, res) => {
+  const input = z.object({
+    latitude: z.number().nullable(), longitude: z.number().nullable(),
+    gpsAccuracyMeters: z.number().nonnegative().nullable(),
+    scanComplete: z.boolean(), motionCoverageDegrees: z.number().nonnegative().nullable(),
+    creatorDeclarationConfirmed: z.boolean(),
+    mapClassification: z.enum(["PUBLIC_OUTDOOR", "PUBLIC_INDOOR", "COMMERCIAL_PUBLIC_ACCESS", "PEDESTRIAN_PUBLIC_AREA", "UNKNOWN", "RESIDENTIAL_PRIVATE_LIKELY", "ROADWAY", "RESTRICTED_LIKELY", "HAZARDOUS_LIKELY"]),
+    moderation: z.enum(["approved", "pending", "rejected", "not_required"]),
+    visionAvailable: z.boolean(), locationSceneMismatch: z.boolean(), mockLocationDetected: z.boolean().optional(),
+    scene: z.object({
+      roadwayVisible: z.boolean(), restrictedSignage: z.boolean(), constructionOrHazard: z.boolean(),
+      trafficRisk: z.boolean(), safeDropAreaLikely: z.boolean(),
+    }).nullable().optional(),
+  }).safeParse(req.body);
+  if (!input.success) { res.status(400).json({ error: "Placement diagnostic inputs are invalid." }); return; }
+  res.json(evaluateHuntPlacement(input.data as HuntPlacementSignals));
+});
+
+router.post("/admin/hunts/drops/:id/relocation-requests", requireAdmin("admin.review.read"), async (req, res) => {
+  const input = z.object({ reason: z.string().trim().min(1).max(2000) }).safeParse(req.body);
+  if (!input.success) { res.status(400).json({ error: "A relocation reason is required." }); return; }
+  if (!supabaseAdminConfigured()) { res.status(503).json({ error: "Live Hunt Drop reviews require trusted Supabase access." }); return; }
+  try {
+    const records = await supabaseAdminRequest<unknown[]>("hunt_drop_relocation_requests", {
+      method: "POST", headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ hunt_stop_id: req.params.id, requested_by: req.adminPrincipal!.userId, reason: input.data.reason }),
+    });
+    res.status(201).json({ request: records[0] ?? null });
+  } catch (error) {
+    res.status(503).json({ error: error instanceof Error ? error.message : "Unable to create relocation request." });
+  }
+});
+
+router.post("/admin/hunts/drops/:id/safety-reports", requireAdmin("moderation.manage"), async (req, res) => {
+  const input = z.object({
+    category: z.enum(["unsafe_access", "private_property", "roadway", "restricted_area", "hazard", "moved_or_missing", "other"]),
+    detail: z.string().trim().max(2000).optional(),
+  }).safeParse(req.body);
+  if (!input.success) { res.status(400).json({ error: "Safety report inputs are invalid." }); return; }
+  if (!supabaseAdminConfigured()) { res.status(503).json({ error: "Live Hunt Drop reviews require trusted Supabase access." }); return; }
+  try {
+    const records = await supabaseAdminRequest<unknown[]>("hunt_drop_safety_reports", {
+      method: "POST", headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ hunt_stop_id: req.params.id, reporter_id: req.adminPrincipal!.userId, ...input.data }),
+    });
+    res.status(201).json({ report: records[0] ?? null });
+  } catch (error) {
+    res.status(503).json({ error: error instanceof Error ? error.message : "Unable to create safety report." });
+  }
 });
 
 router.post("/admin/reports/triage", requireAdmin("moderation.manage"), (req, res) => {

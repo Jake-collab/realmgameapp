@@ -15,3 +15,4 @@
 - [Creator safety boundary](creator-safety-boundary.md) — creator drafts may hold private answers and exact geometry, but validation requires explicit public-access and safety acknowledgments before review.
 - [Admin AI boundary](admin-ai-boundary.md) — AI credentials and generation stay server-side, fail closed without configuration, and always enter human Quest review.
 - [Moderation and integrity boundary](moderation-integrity-boundary.md) — safety automation is server-only, conservative, provider-neutral, and separate from proof validity.
+- [Canonical Hunt Drops](canonical-hunt-drops.md) — public search zones, private collection geometry, online sessions, and placement policy must remain separate.

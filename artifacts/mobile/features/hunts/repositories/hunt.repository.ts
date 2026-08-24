@@ -37,7 +37,10 @@ import { normalizeError } from '@/lib/errors/normalizeError';
 
 // ─── Supabase client ──────────────────────────────────────────────────────────
 
-function db() {
+// The checked-in schema intentionally lags migrations while Supabase is not
+// connected. Keep that uncertainty at this repository boundary; callers still
+// receive the domain types declared in hunt.types.
+function db(): any {
   const client = getSupabaseClient();
   if (!client) throw HuntErrors.unavailable();
   return client;

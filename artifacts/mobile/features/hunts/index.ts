@@ -160,6 +160,28 @@ export {
   getStopStatusLabel,
   getCompletionMethodLabel,
 } from './services/huntStop.service';
+export {
+  distanceMeters,
+  isInsideSearchZone,
+  isInsideCollectionRadius,
+  evaluateHuntPlacement,
+} from './services/huntCanonical.service';
+export {
+  calculateCustomHuntBudget,
+  validateHuntPointAllocations,
+} from './services/huntPointBudget.service';
+export {
+  fetchHuntDropSearchZones,
+  issueHuntDropCollectionSession,
+  collectHuntDrop,
+  submitHuntDropRiddleAnswer,
+} from './repositories/huntDrop.repository';
+export type {
+  PublicHuntSearchZone,
+  HuntPlacementSignals,
+  HuntPlacementEvaluation,
+  HuntPlacementDecision,
+} from './types/canonicalHunt.types';
 
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 export { useHuntAvailability }    from './hooks/useHuntAvailability';
@@ -172,6 +194,8 @@ export { useStartHunt }           from './hooks/useStartHunt';
 export { useAcceptHuntInvitation, useDeclineHuntInvitation } from './hooks/useHuntInvitationActions';
 export { useWithdrawFromHunt }    from './hooks/useWithdrawFromHunt';
 export { useCompleteHuntStop }    from './hooks/useCompleteHuntStop';
+export { useHuntDropSearchZones } from './hooks/useHuntDropSearchZones';
+export { useCollectHuntDrop } from './hooks/useCollectHuntDrop';
 export { useCompleteHunt }        from './hooks/useCompleteHunt';
 export { useInviteToHunt }        from './hooks/useInviteToHunt';
 export {

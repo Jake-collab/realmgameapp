@@ -53,6 +53,8 @@ import { useActiveHunt } from '@/features/hunts/hooks/useActiveHunt';
 import { useCompleteHuntStop } from '@/features/hunts/hooks/useCompleteHuntStop';
 import { useCompleteHunt } from '@/features/hunts/hooks/useCompleteHunt';
 import { useWithdrawFromHunt } from '@/features/hunts/hooks/useWithdrawFromHunt';
+import { useCollectHuntDrop } from '@/features/hunts/hooks/useCollectHuntDrop';
+import { useHuntDropSearchZones } from '@/features/hunts/hooks/useHuntDropSearchZones';
 
 import {
   useSubmitHuntProof,
@@ -81,6 +83,7 @@ import { HuntProofDraft }         from '@/components/active-hunt/HuntProofDraft'
 import { HuntProofReview }        from '@/components/active-hunt/HuntProofReview';
 import { WithdrawalConfirmation } from '@/components/active-hunt/WithdrawalConfirmation';
 import { HuntSubmissionStatus }   from '@/components/active-hunt/HuntSubmissionStatus';
+import { DropSearchPanel }       from '@/components/active-hunt/DropSearchPanel';
 
 import type { ActiveHuntStop } from '@/features/hunts/types/hunt.types';
 import type { StopCompletionMethod } from '@/features/hunts/types/hunt.types';
@@ -109,6 +112,15 @@ export default function HuntActiveScreen() {
   const completeHuntMutation   = useCompleteHunt();
   const withdrawMutation       = useWithdrawFromHunt();
   const submitProofMutation    = useSubmitHuntProof();
+  const dropZones = useHuntDropSearchZones({
+    participationId: participationId ?? null,
+    userId: user?.id ?? null,
+  });
+  const dropCollection = useCollectHuntDrop({
+    participationId: participationId ?? '',
+    userId: user?.id ?? '',
+    huntId: hunt?.huntId ?? '',
+  });
 
   // ── View mode ─────────────────────────────────────────────────────────────────
   const viewMode = useMemo(
@@ -200,6 +212,11 @@ export default function HuntActiveScreen() {
       isCurrent:        true,
     });
   }, [currentStop, validationResult.validated, proofDraft.isReady]);
+
+  const currentDrop = useMemo(
+    () => dropZones.data?.find(zone => zone.dropId === currentStop?.id) ?? null,
+    [dropZones.data, currentStop?.id],
+  );
 
   // ── Hunt-level action ────────────────────────────────────────────────────────
   const huntLevelAction = useMemo(() =>
@@ -486,6 +503,16 @@ export default function HuntActiveScreen() {
               You're ready to complete the hunt!
             </Text>
           </View>
+        )}
+
+        {/* Canonical Drop collection is a separate online-only, server-authorized flow. */}
+        {currentDrop && currentStop && (
+          <DropSearchPanel
+            zone={currentDrop}
+            isCollecting={dropCollection.isPending}
+            errorMessage={dropCollection.error?.message ?? null}
+            onCollect={() => void dropCollection.collect(currentStop.id)}
+          />
         )}
 
         {/* Location validation panel */}
