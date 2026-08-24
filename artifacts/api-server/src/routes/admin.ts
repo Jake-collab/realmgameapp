@@ -52,6 +52,7 @@ import {
 } from "../lib/moderation-state";
 import { persistIntegritySnapshot, persistModerationResult } from "../lib/supabase-moderation";
 import { notificationStore, renderNotification, type NotificationEvent } from "../lib/notifications";
+import { supabaseAdminConfigured, supabaseAdminRequest } from "../lib/supabase-admin";
 
 const router: IRouter = Router();
 
@@ -198,6 +199,57 @@ router.get("/admin/quests", requireAdmin("admin.quests.read"), (req, res) => {
     pageSize: query.pageSize,
     total: 0,
   }));
+});
+
+router.get("/admin/interests", requireAdmin("admin.quests.read"), async (_req, res) => {
+  if (!supabaseAdminConfigured()) {
+    res.status(503).json({ error: "Interest Bubble administration requires Supabase." });
+    return;
+  }
+  try {
+    const items = await supabaseAdminRequest<Array<Record<string, unknown>>>("interests?select=*&order=sort_order.asc,name.asc");
+    res.json({ items });
+  } catch {
+    res.status(503).json({ error: "Interest Bubble records are unavailable." });
+  }
+});
+
+router.post("/admin/interests", requireAdmin("admin.quests.edit"), async (req, res) => {
+  const parsed = z.object({
+    slug: z.string().regex(/^[a-z0-9_-]+$/).min(1).max(60),
+    name: z.string().trim().min(2).max(60),
+    description: z.string().trim().max(500).nullable().optional(),
+    icon_key: z.string().trim().max(60).nullable().optional(),
+    sort_order: z.number().int().min(0).max(10000).default(0),
+  }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: "Invalid Interest Bubble." }); return; }
+  try {
+    const items = await supabaseAdminRequest<Array<Record<string, unknown>>>("interests", {
+      method: "POST",
+      headers: { prefer: "return=representation" },
+      body: JSON.stringify({ ...parsed.data, is_active: true }),
+    });
+    res.status(201).json({ item: items[0] ?? null });
+  } catch { res.status(503).json({ error: "Interest Bubble could not be created." }); }
+});
+
+router.patch("/admin/interests/:id", requireAdmin("admin.quests.edit"), async (req, res) => {
+  const parsed = z.object({
+    name: z.string().trim().min(2).max(60).optional(),
+    description: z.string().trim().max(500).nullable().optional(),
+    icon_key: z.string().trim().max(60).nullable().optional(),
+    sort_order: z.number().int().min(0).max(10000).optional(),
+    is_active: z.boolean().optional(),
+  }).safeParse(req.body);
+  if (!parsed.success || Object.keys(parsed.data).length === 0) { res.status(400).json({ error: "Invalid Interest Bubble update." }); return; }
+  try {
+    const items = await supabaseAdminRequest<Array<Record<string, unknown>>>(`interests?id=eq.${encodeURIComponent(req.params.id)}`, {
+      method: "PATCH",
+      headers: { prefer: "return=representation" },
+      body: JSON.stringify(parsed.data),
+    });
+    res.json({ item: items[0] ?? null });
+  } catch { res.status(503).json({ error: "Interest Bubble could not be updated." }); }
 });
 
 router.get("/admin/review-queues", requireAdmin("admin.review.read"), (_req, res) => {
