@@ -124,8 +124,8 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 # ─── App ──────────────────────────────────────────────────────────────────────
 EXPO_PUBLIC_APP_VERSION=1.0.0-dev
 
-# Owner-supplied only after a production domain exists
-# EXPO_PUBLIC_PRODUCTION_DOMAIN=YOUR_PRODUCTION_DOMAIN
+# Production domain used by universal links and Auth redirect allowlists
+EXPO_PUBLIC_PRODUCTION_DOMAIN=matterrealm.com
 ```
 
 ---

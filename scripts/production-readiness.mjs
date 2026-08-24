@@ -16,7 +16,7 @@ const activeLines = (text) => text.split(/\r?\n/).filter((line) => /^\s*[A-Z][A-
 check("server-only boundary", !activeLines(mobileEnv).some((line) => line.startsWith("SUPABASE_SERVICE_ROLE_KEY=")), "service-role credentials are not declared in the mobile template");
 check("server-only template", activeLines(serverEnv).some((line) => line.startsWith("SUPABASE_SERVICE_ROLE_KEY=")) && !activeLines(serverEnv).some((line) => line.startsWith("EXPO_PUBLIC_")), "server template contains no Expo-public variables");
 check("development-stub guard", !serverEnv.includes("MODERATION_STUB_DECISION="), "production server template does not enable moderation stubs");
-check("production domain placeholder", readFileSync("artifacts/mobile/app.json", "utf8").includes("YOUR_PRODUCTION_DOMAIN"), "no production domain is invented in native configuration");
+check("production domain", readFileSync("artifacts/mobile/app.json", "utf8").includes("matterrealm.com") && !readFileSync("artifacts/mobile/app.json", "utf8").includes("YOUR_PRODUCTION_DOMAIN"), "native configuration is bound to matterrealm.com");
 
 const commands = [
   ["mobile typecheck", ["--filter", "@workspace/mobile", "run", "typecheck"]],

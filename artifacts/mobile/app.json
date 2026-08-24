@@ -21,7 +21,7 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "Worlds uses your location to find nearby quests and hunts, track your progress, and validate geo-anchored steps. Your location is never shared without your permission."
       },
       "associatedDomains": [
-        "applinks:YOUR_PRODUCTION_DOMAIN"
+        "applinks:matterrealm.com"
       ]
     },
     "android": {
@@ -54,7 +54,7 @@
           "data": [
             {
               "scheme": "https",
-              "host": "YOUR_PRODUCTION_DOMAIN",
+              "host": "matterrealm.com",
               "pathPrefix": "/auth/callback"
             }
           ],
