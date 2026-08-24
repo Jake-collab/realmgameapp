@@ -20,6 +20,7 @@ export interface OfflineQueueItem<TPayload = Record<string, unknown>> {
   idempotencyKey: string;
   createdAt: string;
   lastAttemptedAt: string | null;
+  nextAttemptAt: string | null;
   attemptCount: number;
   status: QueueStatus;
   dependencyIds: string[];

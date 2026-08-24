@@ -34,7 +34,7 @@ export async function enqueueOfflineMutation<TPayload extends Record<string, unk
     const item: OfflineQueueItem<TPayload> = {
       id: `offline_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, userId: input.userId, mutationType: input.mutationType,
       entityType: input.entityType, entityId: input.entityId, payload: input.payload, idempotencyKey,
-      createdAt: new Date().toISOString(), lastAttemptedAt: null, attemptCount: 0, status: 'pending',
+      createdAt: new Date().toISOString(), lastAttemptedAt: null, nextAttemptAt: null, attemptCount: 0, status: 'pending',
       dependencyIds: input.dependencyIds ?? [], localAssetRefs: input.localAssetRefs ?? [], conflictStrategy: input.conflictStrategy ?? 'server_wins', errorCode: null, errorMessage: null,
     };
     await offlineStorage.saveQueue(input.userId, [...items, item]);
