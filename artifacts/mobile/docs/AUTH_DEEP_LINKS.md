@@ -22,7 +22,7 @@ The app is registered for the `worlds://` URL scheme in `app.json`:
 { "scheme": "worlds" }
 ```
 
-On iOS, universal links (`https://worlds.example.com/...`) are also supported via `associatedDomains` (placeholder until a production domain is set).
+On iOS, universal links (`https://YOUR_PRODUCTION_DOMAIN/...`) are also supported via `associatedDomains` (placeholder until a production domain is set).
 
 On Android, explicit intent filters handle both the `worlds://` scheme and the HTTPS universal link fallback.
 
@@ -67,7 +67,7 @@ Add the following URLs:
 worlds://auth-callback
 
 # Production (update when domain is assigned)
-https://worlds.example.com/auth/callback
+https://YOUR_PRODUCTION_DOMAIN/auth/callback
 ```
 
 > **Note**: Without these registered redirect URLs, Supabase will reject deep link callbacks with a 400 error. This is a server-side security allowlist.

@@ -383,7 +383,7 @@ The application will support:
 
 **Map Style:** Custom dark Mapbox Studio style matching the Worlds palette (`#0A0A12` background).
 
-**Environment Variable:** `EXPO_PUBLIC_MAPBOX_TOKEN` (public token only — never the secret token).
+**Environment Variable:** `EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN` (public token only — never the secret token).
 
 ---
 

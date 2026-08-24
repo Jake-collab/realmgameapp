@@ -18,7 +18,7 @@ Chosen over Google Maps / Apple Maps because:
 ## Environment
 
 ```
-EXPO_PUBLIC_MAPBOX_TOKEN=pk.your-token-here
+EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.your-token-here
 ```
 
 Set in `.env` (client-safe public token). Never use the secret token on the client.

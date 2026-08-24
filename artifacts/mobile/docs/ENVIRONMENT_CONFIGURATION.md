@@ -12,7 +12,11 @@ This document covers all environment variables and secrets used by the Worlds mo
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Yes (for auth) | Bundled in app | Supabase anon/public key — safe to bundle |
 | `SUPABASE_SERVICE_ROLE_KEY` | **SERVER ONLY** | **Never bundle** | Server-side admin access — must NOT be in mobile bundle |
 | `EXPO_PUBLIC_APP_VERSION` | No | Bundled in app | Version string sent in request headers (`x-app-version`) |
-| `EXPO_PUBLIC_MAPBOX_TOKEN` | Future | Bundled in app | Mapbox public token for map rendering |
+| `EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN` | No (for maps) | Bundled in app | Mapbox public token for map rendering |
+| `EXPO_PUBLIC_MAPBOX_STYLE_LIGHT` | No | Bundled in app | Optional Mapbox light style URL |
+| `EXPO_PUBLIC_MAPBOX_STYLE_DARK` | No | Bundled in app | Optional Mapbox dark style URL |
+| `EXPO_PUBLIC_MAPBOX_STYLE_SATELLITE` | No | Bundled in app | Optional Mapbox satellite style URL |
+| `EXPO_PUBLIC_PRODUCTION_DOMAIN` | No | Bundled in app | Owner-supplied HTTPS domain for universal links |
 
 ---
 
@@ -115,10 +119,13 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 
 # ─── Maps ─────────────────────────────────────────────────────────────────────
 # Mapbox public token (Build 5+)
-# EXPO_PUBLIC_MAPBOX_TOKEN=pk.eyJ1...
+# EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN=pk.eyJ1...
 
 # ─── App ──────────────────────────────────────────────────────────────────────
 EXPO_PUBLIC_APP_VERSION=1.0.0-dev
+
+# Owner-supplied only after a production domain exists
+# EXPO_PUBLIC_PRODUCTION_DOMAIN=YOUR_PRODUCTION_DOMAIN
 ```
 
 ---

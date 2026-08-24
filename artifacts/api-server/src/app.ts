@@ -3,6 +3,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { corsOrigins } from "./lib/config";
 
 const app: Express = express();
 
@@ -25,7 +26,8 @@ app.use(
     },
   }),
 );
-app.use(cors());
+const allowedOrigins = corsOrigins();
+app.use(cors(allowedOrigins.length ? { origin: allowedOrigins } : undefined));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
