@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { AlertTriangle, ArrowUpRight, Check, ChevronRight, Database, FileText, Flag, LockKeyhole, Search, ShieldCheck, SlidersHorizontal, UsersRound } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Check, ChevronRight, Database, FileText, Flag, LockKeyhole, Plus, Search, ShieldCheck, SlidersHorizontal, UsersRound } from 'lucide-react';
 import { useAdminData } from '@/hooks/use-admin-data';
 import { DiagnosticsList, ErrorState, MetricGrid, PageHeader, QueueList, RefreshButton, StatusBadge, UnavailableState } from '@/components/admin-ui';
 
@@ -312,6 +312,7 @@ export function OperationsPage({ data }: { data: AdminData }) {
   const [location] = useLocation();
   if (location.startsWith('/moderation/')) return <ModerationOperationsPage data={data} location={location} />;
   if (location === '/notifications') return <NotificationOperationsPage data={data} />;
+  if (location === '/interests') return <InterestOperationsPage data={data} />;
   const config = operationConfig[location] || operationConfig['/hunts'];
   const isQuestLane = location.startsWith('/quests/');
   const queues = data.reviewQueues.data?.queues;
@@ -332,6 +333,69 @@ export function OperationsPage({ data }: { data: AdminData }) {
       <div className="notice" style={{ marginTop: 18 }}><AlertTriangle /><span>This lane is intentionally truthful about its connection state. No local placeholder records are presented as real platform data.</span></div>
     </div>
   );
+}
+
+type Interest = { id: string; slug: string; name: string; description?: string | null; icon_key?: string | null; sort_order: number; is_active: boolean };
+
+function InterestOperationsPage({ data }: { data: AdminData }) {
+  const [items, setItems] = useState<Interest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState('');
+  const [draft, setDraft] = useState({ slug: '', name: '', description: '', sort_order: '0' });
+  const canEdit = data.session.data?.permissions.includes('admin.quests.manage') === true;
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('/api/admin/interests', { credentials: 'include' });
+      if (!response.ok) throw new Error((await response.json() as { error?: string }).error ?? 'Interest Bubble records are unavailable.');
+      setItems((await response.json() as { items: Interest[] }).items);
+      setMessage('');
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Interest Bubble records are unavailable.'); }
+    finally { setLoading(false); }
+  };
+  useEffect(() => { void load(); }, []);
+
+  const create = async () => {
+    try {
+      const response = await fetch('/api/admin/interests', {
+        method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...draft, sort_order: Number(draft.sort_order) }),
+      });
+      if (!response.ok) throw new Error((await response.json() as { error?: string }).error ?? 'Could not create Interest Bubble.');
+      setDraft({ slug: '', name: '', description: '', sort_order: '0' });
+      await load();
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Could not create Interest Bubble.'); }
+  };
+
+  const toggle = async (item: Interest) => {
+    try {
+      const response = await fetch(`/api/admin/interests/${encodeURIComponent(item.id)}`, {
+        method: 'PATCH', credentials: 'include', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ is_active: !item.is_active }),
+      });
+      if (!response.ok) throw new Error('Could not update Interest Bubble.');
+      await load();
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Could not update Interest Bubble.'); }
+  };
+
+  return <div className="page-wrap">
+    <PageHeader eyebrow="Operations / taxonomy" title="Interest Bubble administration" description="Manage the active Interest Bubble taxonomy used by onboarding and Daily Quest targeting." actions={<RefreshButton onClick={() => void load()} loading={loading} />} />
+    {message && <div className="notice" style={{ marginTop: 18 }}><AlertTriangle /><span>{message}</span></div>}
+    <section className="panel" style={{ marginTop: 25 }}>
+      <div className="panel-header"><div><div className="panel-title">Create Interest Bubble</div><div className="panel-kicker">Only active, staff-managed IDs can target Daily Quests</div></div><Plus style={{ width: 16 }} /></div>
+      <div className="toolbar">
+        <label className="field">Slug<input value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value })} placeholder="urban-gardening" /></label>
+        <label className="field">Name<input value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} placeholder="Urban gardening" /></label>
+        <label className="field">Description<input value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} placeholder="Optional player-facing description" /></label>
+        <button className="btn btn-primary" onClick={() => void create()} disabled={!canEdit || loading || !draft.slug || !draft.name}>Create</button>
+      </div>
+    </section>
+    <section className="panel" style={{ marginTop: 22 }}>
+      <div className="panel-header"><div><div className="panel-title">Interest Bubble catalog</div><div className="panel-kicker">Inactive records remain valid for historical data but cannot be newly targeted</div></div><span className="tag blue">{items.length} records</span></div>
+      {loading ? <TableSkeleton columns={4} /> : !items.length ? <UnavailableState onRetry={() => void load()} /> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Name</th><th>Slug</th><th>Status</th><th>Action</th></tr></thead><tbody>{items.map((item) => <tr key={item.id}><td><div className="identity-name">{item.name}</div><div className="identity-handle">{item.description || 'No description'}</div></td><td className="mono">{item.slug}</td><td><StatusBadge status={item.is_active ? 'live' : 'failed'} /></td><td><button className="btn btn-quiet" onClick={() => void toggle(item)} disabled={!canEdit}>{item.is_active ? 'Deactivate' : 'Activate'}</button></td></tr>)}</tbody></table></div>}
+    </section>
+  </div>;
 }
 
 function NotificationOperationsPage({ data }: { data: AdminData }) {

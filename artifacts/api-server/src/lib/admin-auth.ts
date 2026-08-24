@@ -4,6 +4,7 @@ export type AdminPermission =
   | "admin.read"
   | "admin.users.read"
   | "admin.quests.read"
+  | "admin.quests.manage"
   | "admin.review.read"
   | "admin.audit.read"
   | "admin.diagnostics.read"
@@ -44,6 +45,7 @@ const rolePermissions: Record<AdminRole, AdminPermission[]> = {
     "admin.read",
     "admin.users.read",
     "admin.quests.read",
+    "admin.quests.manage",
     "admin.review.read",
     "admin.audit.read",
     "admin.diagnostics.read",

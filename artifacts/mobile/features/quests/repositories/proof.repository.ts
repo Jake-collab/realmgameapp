@@ -89,6 +89,7 @@ export async function createDraftProof(payload: {
   locationLng?: number;
   locationAccuracyMeters?: number;
   previousSubmissionId?: string;
+  verificationSessionId?: string;
 }): Promise<ProofSubmissionRow> {
   const client = requireSupabase();
   const insertPayload = {
@@ -104,6 +105,9 @@ export async function createDraftProof(payload: {
       : {}),
     ...(payload.previousSubmissionId
       ? { previous_submission_id: payload.previousSubmissionId }
+      : {}),
+    ...(payload.verificationSessionId
+      ? { verification_session_id: payload.verificationSessionId }
       : {}),
   };
   const { data, error } = await client

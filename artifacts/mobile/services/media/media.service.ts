@@ -116,7 +116,7 @@ export async function registerMediaAsset(payload: RegisterMediaPayload): Promise
 }
 
 export async function uploadProofMediaFromUri(input: {
-  userId: string; localUri: string; mimeType: string; fileSize?: number; proofId?: string;
+  userId: string; localUri: string; mimeType: string; fileSize?: number; proofId?: string; mediaType?: MediaType;
 }): Promise<MediaAssetRow> {
   const response = await fetch(input.localUri);
   if (!response.ok) throw new Error(`Local media could not be read (${response.status})`);
@@ -127,7 +127,7 @@ export async function uploadProofMediaFromUri(input: {
   const { error } = await client.storage.from('proof-submissions').upload(storagePath, blob, { contentType: input.mimeType, upsert: false });
   if (error) throw normalizeError(error);
   return registerMediaAsset({
-    ownerUserId: input.userId, bucket: 'proof-submissions', storagePath, mediaType: 'image',
+    ownerUserId: input.userId, bucket: 'proof-submissions', storagePath, mediaType: input.mediaType ?? 'image',
     mimeType: input.mimeType, purpose: 'proof', fileSize: input.fileSize,
   });
 }

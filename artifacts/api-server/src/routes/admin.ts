@@ -214,7 +214,7 @@ router.get("/admin/interests", requireAdmin("admin.quests.read"), async (_req, r
   }
 });
 
-router.post("/admin/interests", requireAdmin("admin.quests.edit"), async (req, res) => {
+router.post("/admin/interests", requireAdmin("admin.quests.manage"), async (req, res) => {
   const parsed = z.object({
     slug: z.string().regex(/^[a-z0-9_-]+$/).min(1).max(60),
     name: z.string().trim().min(2).max(60),
@@ -233,7 +233,7 @@ router.post("/admin/interests", requireAdmin("admin.quests.edit"), async (req, r
   } catch { res.status(503).json({ error: "Interest Bubble could not be created." }); }
 });
 
-router.patch("/admin/interests/:id", requireAdmin("admin.quests.edit"), async (req, res) => {
+router.patch("/admin/interests/:id", requireAdmin("admin.quests.manage"), async (req, res) => {
   const parsed = z.object({
     name: z.string().trim().min(2).max(60).optional(),
     description: z.string().trim().max(500).nullable().optional(),
@@ -243,7 +243,8 @@ router.patch("/admin/interests/:id", requireAdmin("admin.quests.edit"), async (r
   }).safeParse(req.body);
   if (!parsed.success || Object.keys(parsed.data).length === 0) { res.status(400).json({ error: "Invalid Interest Bubble update." }); return; }
   try {
-    const items = await supabaseAdminRequest<Array<Record<string, unknown>>>(`interests?id=eq.${encodeURIComponent(req.params.id)}`, {
+    const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+    const items = await supabaseAdminRequest<Array<Record<string, unknown>>>(`interests?id=eq.${encodeURIComponent(id)}`, {
       method: "PATCH",
       headers: { prefer: "return=representation" },
       body: JSON.stringify(parsed.data),

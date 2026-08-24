@@ -57,3 +57,10 @@ Daily Quest personalization is Interest Bubble based, but the selected Quest mus
 **Why:** Refresh-time client selection can reshuffle a user's Daily Quest and cannot be trusted as an authority.
 
 **How to apply:** Keep Interest Bubble IDs and targeting mode separate from public Quest content; never use raw interest labels or client-only randomness for assignment.
+
+## One-time proof verification
+Quest photo, video, and location submissions require a short-lived server-issued verification session; the database validates ownership/expiry and consumes the session on submission.
+
+**Why:** A live camera or GPS reading is only evidence when the server can bind it to the active participation and reject replay.
+
+**How to apply:** Upload captured media to private proof storage, attach it to the draft, then submit; never treat a local URI or device-reported coordinate as completed proof by itself.

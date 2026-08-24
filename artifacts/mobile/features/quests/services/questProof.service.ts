@@ -50,6 +50,10 @@ export interface CreateDraftInput {
   locationLng?: number;
   locationAccuracyMeters?: number;
 }
+
+function requiresOneTimeVerification(type: ProofType) {
+  return type === 'photo' || type === 'video' || type === 'location';
+}
 export interface ProofOperationResult {
   success: boolean;
   proof: ProofSubmissionRow | null;
@@ -98,6 +102,19 @@ export async function createQuestProofDraft(input: CreateDraftInput): Promise<Pr
   }
 
   try {
+    let verificationSessionId: string | undefined;
+    if (requiresOneTimeVerification(input.submissionType)) {
+      const { requireSupabase } = await import('@/lib/supabase/client');
+      const { data, error } = await requireSupabase().rpc('issue_quest_proof_verification_session', {
+        p_participation_id: participationId,
+        p_user_id: userId,
+        p_evidence_kind: input.submissionType,
+      } as never);
+      if (error || !data) {
+        return { success: false, proof: null, error: makeQuestError('SERVICE_UNAVAILABLE', 'A one-time proof verification session could not be issued.') };
+      }
+      verificationSessionId = data as unknown as string;
+    }
     const proof = await createDraftProof({
       userId,
       participationId,
@@ -106,6 +123,7 @@ export async function createQuestProofDraft(input: CreateDraftInput): Promise<Pr
       locationLat: input.locationLat,
       locationLng: input.locationLng,
       locationAccuracyMeters: input.locationAccuracyMeters,
+      verificationSessionId,
     });
 
     onProofStarted(userId, participation.quest_id, participationId);

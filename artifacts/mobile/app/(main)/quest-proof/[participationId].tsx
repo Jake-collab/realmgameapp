@@ -53,6 +53,8 @@ import type { QuestParticipationRowExtended } from '@/features/quests/repositori
 import type { ProofType } from '@/lib/supabase/database.types';
 import type { ProofOperationResult } from '@/features/quests/services/questProof.service';
 import { getSubmitProofInvalidationKeys } from '@/features/quests/queries/questKeys';
+import { uploadProofMediaFromUri } from '@/services/media/media.service';
+import { attachProofMedia } from '@/features/quests/repositories/proof.repository';
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
@@ -174,6 +176,17 @@ export default function QuestProofScreen() {
       if (!draftResult.success || !draftResult.proof) {
         Alert.alert('Error', draftResult.error?.message ?? 'Could not create proof draft.');
         return;
+      }
+
+      if (needsPhoto(proofType) && imageUri) {
+        const asset = await uploadProofMediaFromUri({
+          userId: user.id,
+          localUri: imageUri,
+          mimeType: proofType === 'video' ? 'video/mp4' : 'image/jpeg',
+          proofId: draftResult.proof.id,
+          mediaType: proofType === 'video' ? 'video' : 'image',
+        });
+        await attachProofMedia(draftResult.proof.id, asset.id, 0);
       }
 
       // 2. Submit the draft
