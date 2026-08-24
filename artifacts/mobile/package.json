@@ -9,6 +9,8 @@
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "jest",
+    "test:integration": "jest --runInBand __tests__/socialRpc.integration.test.ts",
+    "test:hunt-drop-security": "jest --runInBand __tests__/huntDropAuthorization.integration.test.ts",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"
   },

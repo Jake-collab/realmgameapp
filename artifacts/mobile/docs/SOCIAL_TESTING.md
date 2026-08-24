@@ -113,7 +113,36 @@ pnpm --filter @workspace/mobile test --coverage __tests__/social.test.ts
 
 ## Integration Tests
 
-Tests marked `[REQUIRES_DB]` need a Supabase instance with migration 026 applied. They are skipped automatically when `EXPO_PUBLIC_SUPABASE_URL` is absent.
+`__tests__/socialRpc.integration.test.ts` exercises the real repository wrappers
+against Supabase. It provisions two disposable, email-confirmed users, then
+verifies the request → acceptance → friendship flow and the friendship →
+block → search exclusion flow from fresh authenticated reads. It also checks
+the `get_social_privacy_settings` response for both users.
+
+The test requires a local or CI Supabase project with all migrations applied
+through `026_social.sql` (and the migrations that follow it). Use test-only
+variable names so a mobile app configuration is not accidentally treated as
+an integration target:
+
+```bash
+export SOCIAL_TEST_SUPABASE_URL=http://127.0.0.1:54321
+export SOCIAL_TEST_SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+export SOCIAL_TEST_SUPABASE_SERVICE_ROLE_KEY="$SUPABASE_SERVICE_ROLE_KEY"
+
+pnpm --filter @workspace/mobile test:integration
+```
+
+For the Supabase CLI, the two key values can be obtained with
+`supabase status`; do not commit them or print the service-role key in CI logs.
+CI should provide the three `SOCIAL_TEST_*` values as protected environment
+secrets. The service-role key is used only to create/update/delete disposable
+test users; all social assertions run through the authenticated mobile client
+and the production repository RPC wrappers.
+
+The suite is skipped when any required variable is absent, which keeps the
+normal unit-test command safe in disconnected development environments. If all
+variables are present but the schema is missing or an RPC contract is wrong, it
+fails rather than silently falling back to mocks.
 
 Full integration test coverage should verify:
 - RPC authentication enforcement
