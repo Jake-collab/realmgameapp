@@ -111,6 +111,16 @@ function audit(actorId: string | null, action: string, entityType: string, entit
   state.audit = state.audit.slice(-1000);
 }
 
+/** Records both rejected attempts and successful transitions in the same append-only stream. */
+export function recordAuditEvent(input: { actorId: string | null; action: string; entityType: string; entityId?: string | null; result: "attempted" | "completed" | "rejected" | "conflict"; reason?: string; metadata?: Record<string, unknown> }) {
+  audit(input.actorId, input.action, input.entityType, input.entityId ?? null, {
+    ...input.metadata,
+    result: input.result,
+    reason: input.reason ?? null,
+  });
+  persist();
+}
+
 export function createModerationRequest(input: { entityType: string; entityId: string; context: string; contentHash: string; result?: ModerationResult; outcome?: ModerationOutcome }) {
   const idempotencyKey = createHash("sha256").update([input.entityType, input.entityId, input.context, input.contentHash, MODERATION_POLICY_VERSION].join(":")).digest("hex");
   const existing = state.requests.find((item) => item.idempotencyKey === idempotencyKey);
@@ -142,7 +152,7 @@ export function claimModerationCase(id: string, moderatorId: string) {
   return { ok: true as const, case: item };
 }
 
-export function resolveModerationCase(id: string, input: { actorId: string; decision: CaseDecision; reason: string; expectedUpdatedAt?: string }) {
+export function resolveModerationCase(id: string, input: { actorId: string; decision: CaseDecision; reason: string; expectedUpdatedAt?: string; idempotencyKey?: string }) {
   const item = getModerationCase(id);
   if (!item) return { ok: false as const, code: "not_found" };
   if (item.status === "resolved") return { ok: false as const, code: "already_resolved" };

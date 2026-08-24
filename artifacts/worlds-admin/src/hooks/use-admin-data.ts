@@ -13,6 +13,7 @@ import {
   useListAdminAuditLogs,
   useListAdminQuests,
   useListAdminUsers,
+  resolveAdminModerationCase,
 } from '@workspace/api-client-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -52,7 +53,7 @@ export function useModerationData(enabled = true) {
   const diagnostics = useQuery({ queryKey: ['/admin/moderation/diagnostics'], enabled, queryFn: () => moderationFetch<{ state?: { counts: Record<string, number>; persistence: string; policyVersion: string }; provider?: Record<string, unknown> }>('/api/admin/moderation/diagnostics') });
   const settings = useQuery({ queryKey: ['/admin/moderation/settings'], enabled, queryFn: () => moderationFetch<{ settings: { automationEnabled: boolean; autoApprovalMode: 'manual_only' | 'low_risk' | 'mixed'; quarantineThreshold: number; reviewThreshold: number; persistence: string; policyVersion: string } }>('/api/admin/moderation/settings') });
   const claim = useMutation({ mutationFn: (id: string) => moderationFetch(`/api/admin/moderation/cases/${id}/claim`, { method: 'POST', body: '{}' }), onSuccess: () => void client.invalidateQueries({ queryKey: ['/admin/moderation/cases'] }) });
-  const resolve = useMutation({ mutationFn: (input: { id: string; decision: string; reason: string; expectedUpdatedAt?: string }) => moderationFetch(`/api/admin/moderation/cases/${input.id}/resolve`, { method: 'POST', body: JSON.stringify({ decision: input.decision, reason: input.reason, expectedUpdatedAt: input.expectedUpdatedAt }) }), onSuccess: () => { void client.invalidateQueries({ queryKey: ['/admin/moderation/cases'] }); void client.invalidateQueries({ queryKey: ['/admin/moderation/diagnostics'] }); } });
+  const resolve = useMutation({ mutationFn: (input: { id: string; decision: 'no_action' | 'warning' | 'content_removed' | 'account_restricted' | 'account_suspended' | 'quarantine' | 'release' | 'reverse'; reason: string; expectedUpdatedAt?: string }) => resolveAdminModerationCase(input.id, { decision: input.decision, reason: input.reason, confirmed: true, expectedUpdatedAt: input.expectedUpdatedAt, idempotencyKey: crypto.randomUUID() }), onSuccess: () => { void client.invalidateQueries({ queryKey: ['/admin/moderation/cases'] }); void client.invalidateQueries({ queryKey: ['/admin/moderation/diagnostics'] }); void client.invalidateQueries({ queryKey: ['/admin/moderation/audit'] }); } });
   const updateSettings = useMutation({ mutationFn: (input: Record<string, unknown>) => moderationFetch('/api/admin/moderation/settings', { method: 'PUT', body: JSON.stringify(input) }), onSuccess: () => { void client.invalidateQueries({ queryKey: ['/admin/moderation/settings'] }); void client.invalidateQueries({ queryKey: ['/admin/moderation/diagnostics'] }); } });
   return { cases, reports, snapshots, diagnostics, settings, claim, resolve, updateSettings };
 }

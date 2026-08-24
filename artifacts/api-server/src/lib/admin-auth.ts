@@ -16,8 +16,14 @@ export type AdminPermission =
   | "ai.settings.edit"
   | "moderation.read"
   | "moderation.manage"
+  | "moderation.case.claim"
+  | "moderation.case.resolve"
+  | "moderation.report.resolve"
   | "integrity.read"
-  | "integrity.manage";
+  | "integrity.manage"
+  | "integrity.reward.quarantine"
+  | "integrity.reward.release"
+  | "integrity.reward.reverse";
 
 export type AdminRole = "user" | "creator" | "moderator" | "admin" | "super_admin";
 
@@ -40,7 +46,7 @@ declare global {
 const rolePermissions: Record<AdminRole, AdminPermission[]> = {
   user: [],
   creator: [],
-  moderator: ["admin.read", "admin.review.read", "admin.diagnostics.read", "ai.read", "moderation.read", "moderation.manage", "integrity.read"],
+  moderator: ["admin.read", "admin.review.read", "admin.diagnostics.read", "ai.read", "moderation.read", "moderation.manage", "moderation.case.claim", "moderation.case.resolve", "integrity.read", "integrity.reward.quarantine", "integrity.reward.release"],
   admin: [
     "admin.read",
     "admin.users.read",
@@ -56,8 +62,14 @@ const rolePermissions: Record<AdminRole, AdminPermission[]> = {
     "ai.settings.read",
     "moderation.read",
     "moderation.manage",
+    "moderation.case.claim",
+    "moderation.case.resolve",
+    "moderation.report.resolve",
     "integrity.read",
     "integrity.manage",
+    "integrity.reward.quarantine",
+    "integrity.reward.release",
+    "integrity.reward.reverse",
   ],
   super_admin: [
     "admin.read",
@@ -75,8 +87,14 @@ const rolePermissions: Record<AdminRole, AdminPermission[]> = {
     "ai.settings.edit",
     "moderation.read",
     "moderation.manage",
+    "moderation.case.claim",
+    "moderation.case.resolve",
+    "moderation.report.resolve",
     "integrity.read",
     "integrity.manage",
+    "integrity.reward.quarantine",
+    "integrity.reward.release",
+    "integrity.reward.reverse",
   ],
 };
 

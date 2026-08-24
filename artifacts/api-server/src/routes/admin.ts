@@ -51,6 +51,7 @@ import {
   resolveModerationCase,
   resolveReward,
   updateModerationSettings,
+  recordAuditEvent,
 } from "../lib/moderation-state";
 import { persistIntegritySnapshot, persistModerationResult } from "../lib/supabase-moderation";
 import { ExpoPushProvider, NoopPushProvider, notificationStore, renderNotification, type NotificationEvent } from "../lib/notifications";
@@ -715,17 +716,30 @@ router.get("/admin/moderation/cases/:id", requireAdmin("moderation.read"), (req,
   res.json({ case: item });
 });
 
-router.post("/admin/moderation/cases/:id/claim", requireAdmin("moderation.manage"), (req, res) => {
+router.post("/admin/moderation/cases/:id/claim", requireAdmin("moderation.case.claim"), (req, res) => {
   const result = claimModerationCase(String(req.params.id), req.adminPrincipal!.userId);
   if (!result.ok) { res.status(result.code === "not_found" ? 404 : 409).json({ error: result.code === "claimed_by_other" ? "This case is already claimed by another moderator." : "This case cannot be claimed." }); return; }
   res.json(result);
 });
 
-router.post("/admin/moderation/cases/:id/resolve", requireAdmin("moderation.manage"), (req, res) => {
-  const input = z.object({ decision: z.enum(["no_action", "warning", "content_removed", "account_restricted", "account_suspended", "quarantine", "release", "reverse"]), reason: z.string().trim().min(1).max(2000), expectedUpdatedAt: z.string().optional() }).safeParse(req.body);
-  if (!input.success) { res.status(400).json({ error: "A decision and reason are required." }); return; }
+router.post("/admin/moderation/cases/:id/resolve", requireAdmin("moderation.case.resolve"), (req, res) => {
+  const input = z.object({ decision: z.enum(["no_action", "warning", "content_removed", "account_restricted", "account_suspended", "quarantine", "release", "reverse"]), reason: z.string().trim().min(1).max(2000), confirmed: z.literal(true), expectedUpdatedAt: z.string().optional(), idempotencyKey: z.string().trim().min(8).max(100).optional() }).safeParse(req.body);
+  if (!input.success) {
+    recordAuditEvent({ actorId: req.adminPrincipal?.userId ?? null, action: "moderation_decision", entityType: "moderation_case", entityId: String(req.params.id), result: "rejected", metadata: { validation: "confirmation_reason_or_decision_missing" } });
+    res.status(400).json({ error: "Explicit confirmation, a decision, and a reason are required." }); return;
+  }
+  const actionPermission = input.data.decision === "account_restricted" ? "moderation.manage" : input.data.decision === "account_suspended" ? "moderation.manage" : "moderation.case.resolve";
+  if (!req.adminPrincipal?.permissions.includes(actionPermission)) {
+    recordAuditEvent({ actorId: req.adminPrincipal?.userId ?? null, action: "moderation_decision", entityType: "moderation_case", entityId: String(req.params.id), result: "rejected", reason: input.data.reason, metadata: { decision: input.data.decision, permission: actionPermission } });
+    res.status(403).json({ error: "You do not have permission for this moderation action." }); return;
+  }
+  recordAuditEvent({ actorId: req.adminPrincipal?.userId ?? null, action: "moderation_decision", entityType: "moderation_case", entityId: String(req.params.id), result: "attempted", reason: input.data.reason, metadata: { decision: input.data.decision, idempotencyKey: input.data.idempotencyKey ?? null } });
   const result = resolveModerationCase(String(req.params.id), { ...input.data, actorId: req.adminPrincipal!.userId });
-  if (!result.ok) { res.status(result.code === "not_found" ? 404 : 409).json({ error: result.code === "stale_case" ? "This case was updated by another moderator. Refresh before taking action." : "This case cannot be resolved." }); return; }
+  if (!result.ok) {
+    recordAuditEvent({ actorId: req.adminPrincipal?.userId ?? null, action: "moderation_decision", entityType: "moderation_case", entityId: String(req.params.id), result: result.code === "stale_case" ? "conflict" : "rejected", reason: input.data.reason, metadata: { decision: input.data.decision, code: result.code } });
+    res.status(result.code === "not_found" ? 404 : 409).json({ error: result.code === "stale_case" ? "This case was updated by another moderator. Refresh before taking action." : "This case cannot be resolved." }); return;
+  }
+  recordAuditEvent({ actorId: req.adminPrincipal?.userId ?? null, action: "moderation_decision", entityType: "moderation_case", entityId: String(req.params.id), result: "completed", reason: input.data.reason, metadata: { decision: input.data.decision } });
   res.json(result);
 });
 
@@ -738,18 +752,25 @@ router.get("/admin/integrity/snapshots", requireAdmin("integrity.read"), (_req, 
   res.json({ items: listIntegritySnapshots() });
 });
 
-router.post("/admin/rewards/quarantine", requireAdmin("integrity.manage"), (req, res) => {
-  const input = z.object({ rewardId: z.string().min(1), userId: z.string().min(1), entityType: z.string().min(1), entityId: z.string().min(1), amount: z.number().int().positive(), reason: z.string().trim().min(1).max(1000), snapshotId: z.string().optional() }).safeParse(req.body);
-  if (!input.success) { res.status(400).json({ error: "Reward quarantine inputs are invalid." }); return; }
+router.post("/admin/rewards/quarantine", requireAdmin("integrity.reward.quarantine"), (req, res) => {
+  const input = z.object({ rewardId: z.string().min(1), userId: z.string().min(1), entityType: z.string().min(1), entityId: z.string().min(1), amount: z.number().int().positive(), reason: z.string().trim().min(1).max(1000), confirmed: z.literal(true), snapshotId: z.string().optional(), idempotencyKey: z.string().trim().min(8).max(100).optional() }).safeParse(req.body);
+  if (!input.success) { recordAuditEvent({ actorId: req.adminPrincipal?.userId ?? null, action: "points_quarantined", entityType: "reward", entityId: String(req.body?.rewardId ?? ""), result: "rejected", metadata: { validation: "confirmation_reason_or_fields_missing" } }); res.status(400).json({ error: "Explicit confirmation, a reason, and valid reward inputs are required." }); return; }
+  recordAuditEvent({ actorId: req.adminPrincipal?.userId ?? null, action: "points_quarantined", entityType: input.data.entityType, entityId: input.data.entityId, result: "attempted", reason: input.data.reason, metadata: { rewardId: input.data.rewardId, idempotencyKey: input.data.idempotencyKey ?? null } });
   res.json(quarantineReward({ ...input.data, actorId: req.adminPrincipal!.userId }));
 });
 
-router.post("/admin/rewards/:id/:action", requireAdmin("integrity.manage"), (req, res) => {
+router.post("/admin/rewards/:id/:action", async (req, res, next) => {
   if (req.params.action !== "release" && req.params.action !== "reverse") { res.status(400).json({ error: "Unsupported reward action." }); return; }
-  const input = z.object({ reason: z.string().trim().min(1).max(1000) }).safeParse(req.body);
-  if (!input.success) { res.status(400).json({ error: "A reason is required." }); return; }
+  const permission = req.params.action === "release" ? "integrity.reward.release" : "integrity.reward.reverse";
+  return requireAdmin(permission)(req, res, next);
+}, (req, res) => {
+  if (req.params.action !== "release" && req.params.action !== "reverse") { res.status(400).json({ error: "Unsupported reward action." }); return; }
+  const input = z.object({ reason: z.string().trim().min(1).max(1000), confirmed: z.literal(true), idempotencyKey: z.string().trim().min(8).max(100).optional() }).safeParse(req.body);
+  if (!input.success) { recordAuditEvent({ actorId: req.adminPrincipal?.userId ?? null, action: `points_${String(req.params.action)}`, entityType: "reward", entityId: String(req.params.id), result: "rejected", metadata: { validation: "confirmation_or_reason_missing" } }); res.status(400).json({ error: "Explicit confirmation and a reason are required." }); return; }
+  recordAuditEvent({ actorId: req.adminPrincipal?.userId ?? null, action: `points_${String(req.params.action)}`, entityType: "reward", entityId: String(req.params.id), result: "attempted", reason: input.data.reason, metadata: { idempotencyKey: input.data.idempotencyKey ?? null } });
   const result = resolveReward({ actorId: req.adminPrincipal!.userId, rewardId: String(req.params.id), action: String(req.params.action) as "release" | "reverse", reason: input.data.reason });
-  if (!result.ok) { res.status(result.code === "not_found" ? 404 : 409).json({ error: result.code === "already_resolved" ? "This reward quarantine is already resolved." : "Reward not found." }); return; }
+  if (!result.ok) { recordAuditEvent({ actorId: req.adminPrincipal?.userId ?? null, action: `points_${String(req.params.action)}`, entityType: "reward", entityId: String(req.params.id), result: "conflict", reason: input.data.reason, metadata: { code: result.code } }); res.status(result.code === "not_found" ? 404 : 409).json({ error: result.code === "already_resolved" ? "This reward quarantine is already resolved." : "Reward not found." }); return; }
+  recordAuditEvent({ actorId: req.adminPrincipal?.userId ?? null, action: `points_${String(req.params.action)}`, entityType: "reward", entityId: String(req.params.id), result: "completed", reason: input.data.reason });
   res.json(result);
 });
 

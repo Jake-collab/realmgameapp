@@ -245,6 +245,95 @@ paths:
           content:
             application/json:
               schema: { type: object, additionalProperties: true }
+  /admin/moderation/cases/{id}/resolve:
+    post:
+      operationId: resolveAdminModerationCase
+      tags: [admin]
+      summary: Resolve a moderation case with confirmation and an audit event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, reason, confirmed]
+              properties:
+                decision:
+                  type: string
+                  enum: [no_action, warning, content_removed, account_restricted, account_suspended, quarantine, release, reverse]
+                reason: { type: string, minLength: 1, maxLength: 2000 }
+                confirmed: { type: boolean, description: Must be true to authorize the action }
+                expectedUpdatedAt: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Case resolved }
+        "400": { description: Confirmation, reason, or decision missing }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "409": { description: Concurrent update }
+  /admin/rewards/quarantine:
+    post:
+      operationId: quarantineAdminReward
+      tags: [admin]
+      summary: Quarantine points with confirmation and an audit event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rewardId, userId, entityType, entityId, amount, reason, confirmed]
+              properties:
+                rewardId: { type: string }
+                userId: { type: string }
+                entityType: { type: string }
+                entityId: { type: string }
+                amount: { type: integer, minimum: 1 }
+                reason: { type: string, minLength: 1, maxLength: 1000 }
+                confirmed: { type: boolean, description: Must be true to authorize the action }
+                snapshotId: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Reward quarantine result }
+        "400": { description: Invalid or unconfirmed request }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+  /admin/rewards/{id}/{action}:
+    post:
+      operationId: resolveAdminReward
+      tags: [admin]
+      summary: Release or reverse quarantined points with confirmation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+        - name: action
+          in: path
+          required: true
+          schema: { type: string, enum: [release, reverse] }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason, confirmed]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 1000 }
+                confirmed: { type: boolean, description: Must be true to authorize the action }
+                idempotencyKey: { type: string }
+      responses:
+        "200": { description: Reward resolution result }
+        "400": { description: Invalid or unconfirmed request }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "409": { description: Reward already resolved }
   /admin/ai/overview:
     get:
       operationId: getAdminAiOverview
@@ -662,4 +751,3 @@ components:
           type: array
           items: { $ref: "#/components/schemas/AdminDiagnostic" }
         generatedAt: { type: string, format: date-time }
-
