@@ -121,6 +121,8 @@ type AiResponse = {
   settings?: Record<string, unknown>;
   prompt?: AiPrompt & { type: string };
   plan?: { diagnostics?: string[]; replacementAllowed?: boolean; publishRequiresReview?: boolean };
+  results?: Array<{ ok?: boolean; candidate?: Record<string, unknown>; review?: { diagnostics?: string[] } }>;
+  draft?: { id: string; status: string; createdAt: string; reviewRequired: boolean };
 };
 type AiPrompt = {
   systemInstructions: string;
@@ -214,6 +216,22 @@ export function AIPage({ data }: { data: AdminData }) {
     }
   };
 
+  const saveCandidateForReview = async () => {
+    const candidate = result?.results?.find((item) => item.ok && item.candidate)?.candidate;
+    if (!candidate) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      const value = await aiFetch('/candidates/draft', { method: 'POST', body: JSON.stringify({ candidate }) });
+      setResult((current) => ({ ...current, ...value }));
+      setMessage('Candidate saved for human review. It is not published or player-visible.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Candidate could not be saved.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const changeVersion = async (action: 'activate' | 'deactivate' | 'restore') => {
     if (!selectedVersion) return;
     setLoading(true);
@@ -266,6 +284,7 @@ export function AIPage({ data }: { data: AdminData }) {
             <button className="btn btn-primary" onClick={() => void generate()} disabled={loading || !data.session.data.permissions.includes('ai.generate')}>Generate preview</button>
           </div>
           {result?.plan && <div className="notice"><AlertTriangle /><span>{result.plan.diagnostics?.join(' ') || 'Candidate review is required.'} Never publish directly from AI generation.</span></div>}
+           {result?.results?.some((item) => item.ok && item.candidate) && <div className="panel-footer"><span className="identity-handle">{result.draft ? `Saved as review draft ${result.draft.id}` : 'Validate the candidate, then send it to the human review queue.'}</span><button className="btn btn-primary" onClick={() => void saveCandidateForReview()} disabled={loading || Boolean(result.draft) || !data.session.data.permissions.includes('admin.quests.manage')}>Save candidate for review</button></div>}
           {result && <pre className="code-panel">{JSON.stringify(result, null, 2)}</pre>}
         </section>
       ) : location === '/ai/prompts' ? (

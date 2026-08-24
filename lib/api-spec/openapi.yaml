@@ -333,6 +333,26 @@ paths:
         "401": { description: Authentication required }
         "403": { description: Permission denied }
         "503": { description: AI or staff service unavailable }
+  /admin/ai/candidates/draft:
+    post:
+      operationId: saveAdminAiQuestCandidateForReview
+      tags: [admin]
+      summary: Save a validated AI Quest candidate to human review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminAiCandidateDraftRequest" }
+      responses:
+        "201":
+          description: Candidate saved as a pending human-review draft
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminAiCandidateDraftResponse" }
+        "400": { description: Invalid or unsafe candidate }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "503": { description: Trusted draft persistence unavailable }
   /admin/ai/history:
     get:
       operationId: listAdminAiHistory
@@ -465,6 +485,27 @@ components:
         mode: { type: string }
         results: { type: array, items: { type: object, additionalProperties: true } }
         saved: { type: boolean }
+    AdminAiCandidateDraftRequest:
+      type: object
+      required: [candidate]
+      properties:
+        candidate:
+          type: object
+          description: A deterministic-schema validated Quest candidate. This is always saved as pending review, never published.
+          additionalProperties: true
+    AdminAiCandidateDraftResponse:
+      type: object
+      required: [draft, message]
+      properties:
+        draft:
+          type: object
+          required: [id, status, createdAt, reviewRequired]
+          properties:
+            id: { type: string, format: uuid }
+            status: { type: string, enum: [pending_review] }
+            createdAt: { type: string, format: date-time }
+            reviewRequired: { type: boolean, enum: [true] }
+        message: { type: string }
     AdminAiHistory:
       type: object
       additionalProperties: true

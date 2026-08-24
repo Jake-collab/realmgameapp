@@ -19,6 +19,8 @@ import {
   consumeGenerationQuota,
   generateQuest,
   getGenerationPlan,
+  generatedQuestSchema,
+  inspectCandidate,
   listPromptVersions,
   listGenerationHistory,
   questGenerationTypes,
@@ -485,6 +487,48 @@ router.post("/admin/ai/generate", requireAdmin("ai.generate"), async (req, res) 
     plan,
     saved: false,
   });
+});
+
+router.post("/admin/ai/candidates/draft", requireAdmin("admin.quests.manage"), async (req, res) => {
+  const candidate = generatedQuestSchema.safeParse(req.body?.candidate);
+  if (!candidate.success) {
+    res.status(400).json({ error: "A complete, validated Quest candidate is required." });
+    return;
+  }
+  const review = inspectCandidate(candidate.data, candidate.data.quest_type);
+  if (!review.valid) {
+    res.status(400).json({ error: "This candidate must be fixed before it can enter review.", diagnostics: review.diagnostics });
+    return;
+  }
+  if (!supabaseAdminConfigured()) {
+    res.status(503).json({ error: "Saving AI drafts requires trusted Supabase access." });
+    return;
+  }
+  try {
+    const rows = await supabaseAdminRequest<Array<{ id: string; approval_status: string; created_at: string }>>("ai_generated_content", {
+      method: "POST",
+      headers: { prefer: "return=representation" },
+      body: JSON.stringify({
+        content_type: "quest",
+        output_draft: candidate.data,
+        suggested_points: candidate.data.recommended_points,
+        approval_status: "pending_review",
+      }),
+    });
+    const draft = rows[0];
+    if (!draft) throw new Error("Draft record was not returned.");
+    res.status(201).json({
+      draft: {
+        id: draft.id,
+        status: draft.approval_status,
+        createdAt: draft.created_at,
+        reviewRequired: true,
+      },
+      message: "AI candidate saved for human review. It is not a published Quest.",
+    });
+  } catch {
+    res.status(503).json({ error: "The AI candidate could not be saved to the review workflow." });
+  }
 });
 
 router.get("/admin/ai/history", requireAdmin("ai.read"), (_req, res) => {

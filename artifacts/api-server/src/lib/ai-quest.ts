@@ -45,6 +45,57 @@ export const generatedQuestSchema = z.object({
 });
 export type GeneratedQuest = z.infer<typeof generatedQuestSchema>;
 
+type ProviderCompletion = {
+  content: string | null;
+  promptTokens?: number;
+  completionTokens?: number;
+  retryable: boolean;
+};
+
+/**
+ * Provider adapters are server-only. Browser and mobile code only ever sees
+ * normalized candidates and safe provider health, never an API key or raw
+ * provider response.
+ */
+export interface QuestGenerationProvider {
+  complete(input: { prompt: string; signal: AbortSignal }): Promise<ProviderCompletion>;
+}
+
+export function getQuestGenerationProvider(): QuestGenerationProvider {
+  return {
+    async complete(input) {
+      const response = await fetch(process.env.AI_API_URL ?? "https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${process.env.AI_API_KEY}` },
+        body: JSON.stringify({
+          model: process.env.AI_MODEL,
+          temperature: Number(process.env.AI_TEMPERATURE ?? 0.4),
+          max_tokens: Number(process.env.AI_MAX_OUTPUT_TOKENS ?? 2000),
+          messages: [{ role: "system", content: input.prompt }],
+          response_format: { type: "json_object" },
+        }),
+        signal: input.signal,
+      });
+      if (!response.ok) {
+        return { content: null, retryable: response.status >= 500 };
+      }
+      const body = await response.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+      return {
+        content: body.choices?.[0]?.message?.content ?? null,
+        promptTokens: body.usage?.prompt_tokens,
+        completionTokens: body.usage?.completion_tokens,
+        retryable: false,
+      };
+    },
+  };
+}
+
+const immutableSafetyRules = [
+  "Never require trespassing, unsafe activity, private information, or restricted access.",
+  "Never invent authoritative coordinates, operating hours, accessibility, or location facts.",
+  "Generated content is a draft candidate only and must not be published or awarded points automatically.",
+].join(" ");
+
 export interface PromptVersion extends z.infer<typeof promptFields> {
   id: string;
   type: QuestGenerationType;
@@ -225,9 +276,15 @@ export function inspectCandidate(candidate: GeneratedQuest, type: QuestGeneratio
     diagnostics.push(`Recommended points must use the canonical ${candidate.difficulty.toUpperCase()} base of ${canonicalQuestPoints[candidate.difficulty]}.`);
   }
   if (candidate.safety_notes.length === 0) diagnostics.push("Candidate has no explicit safety notes.");
+  if (candidate.quest_type === "geo" && candidate.location_requirement === "none") diagnostics.push("Geo Quests must require staff-verified approximate or precise location context.");
+  if (candidate.quest_type !== "geo" && candidate.location_requirement === "precise") diagnostics.push("Only staff-reviewed Geo Quests may request precise location.");
+  if (candidate.proof_type === "none" && candidate.proof_instructions.trim()) diagnostics.push("No-proof candidates must not contain proof instructions.");
+  if (candidate.interest_bubble_ids.length === 0) diagnostics.push("Candidate must include at least one approved Interest Bubble.");
+  const unsafeLanguage = /\b(trespass|break in|private residence|restricted area|dangerous|unsafe)\b/i.test(`${candidate.title} ${candidate.summary} ${candidate.description}`);
+  if (unsafeLanguage) diagnostics.push("Candidate contains a potentially unsafe or private-access claim.");
   const duplicate = state.history.some((item) => item.inputFingerprint === fingerprint(candidate));
   if (duplicate) diagnostics.push("Candidate matches a previously generated candidate fingerprint.");
-  return { duplicate, reviewRequired: true, diagnostics };
+  return { duplicate, reviewRequired: true, diagnostics, valid: diagnostics.length === 0 };
 }
 
 export function listGenerationHistory() {
@@ -287,42 +344,43 @@ export async function generateQuest(type: QuestGenerationType, variables: Record
     recordHistory({ ...base, status: "unavailable", attemptCount: 0, reason: "AI provider configuration is unavailable." });
     return { ok: false as const, status: "unavailable" as const, reason: "AI provider configuration is unavailable." };
   }
-  const assembled = `${prompt.systemInstructions}\n${prompt.contentInstructions}\n${prompt.safetyInstructions}\n${prompt.pointInstructions}\n${prompt.proofInstructions}\n${prompt.outputFormat}\n${JSON.stringify(variables)}`;
+  const assembled = `${immutableSafetyRules}\n${prompt.systemInstructions}\n${prompt.contentInstructions}\n${prompt.safetyInstructions}\n${prompt.pointInstructions}\n${prompt.proofInstructions}\n${prompt.outputFormat}\nTrusted variables only: ${JSON.stringify(variables)}`;
   const maxRetries = Math.min(3, Math.max(0, Number(process.env.AI_MAX_RETRIES ?? 1)));
   let attemptCount = 0;
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), Number(process.env.AI_REQUEST_TIMEOUT_MS ?? 15000));
+  const provider = getQuestGenerationProvider();
   try {
-    let response: Response | undefined;
+    let completion: ProviderCompletion | undefined;
     for (; attemptCount <= maxRetries; attemptCount += 1) {
-      response = await fetch(process.env.AI_API_URL ?? "https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${process.env.AI_API_KEY}` },
-        body: JSON.stringify({ model: process.env.AI_MODEL, temperature: Number(process.env.AI_TEMPERATURE ?? 0.4), max_tokens: Number(process.env.AI_MAX_OUTPUT_TOKENS ?? 2000), messages: [{ role: "system", content: assembled }], response_format: { type: "json_object" } }),
-        signal: controller.signal,
-      });
-      if (response.ok || response.status < 500) break;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), Number(process.env.AI_REQUEST_TIMEOUT_MS ?? 15000));
+      try {
+        completion = await provider.complete({ prompt: assembled, signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+      if (!completion.retryable) break;
     }
-    if (!response?.ok) {
+    if (!completion?.content) {
       const item = { ...base, status: "failed" as const, attemptCount: Math.max(1, attemptCount), reason: "The AI provider rejected the request.", estimatedInputTokens: Math.ceil(assembled.length / 4) };
       recordHistory(item);
       return { ok: false as const, status: "failed" as const, reason: item.reason };
     }
-    const body = await response.json() as { choices?: Array<{ message?: { content?: string }; usage?: { prompt_tokens?: number; completion_tokens?: number } }> };
-    const content = body.choices?.[0]?.message?.content;
-    const parsed = generatedQuestSchema.safeParse(content ? JSON.parse(content) : null);
+    let rawCandidate: unknown = null;
+    try { rawCandidate = JSON.parse(completion.content); } catch { /* recorded as invalid below */ }
+    const parsed = generatedQuestSchema.safeParse(rawCandidate);
     if (!parsed.success || parsed.data.quest_type !== type) {
       recordHistory({ ...base, status: "invalid", attemptCount: Math.max(1, attemptCount), reason: "Provider output failed Quest validation.", estimatedInputTokens: Math.ceil(assembled.length / 4) });
       return { ok: false as const, status: "invalid" as const, reason: "The provider returned content that failed Quest validation." };
     }
     const review = inspectCandidate(parsed.data, type);
-    const usage = body.choices?.[0]?.usage;
-    recordHistory({ ...base, status: "candidate", attemptCount: Math.max(1, attemptCount), inputFingerprint: fingerprint(parsed.data), estimatedInputTokens: usage?.prompt_tokens ?? Math.ceil(assembled.length / 4), estimatedOutputTokens: usage?.completion_tokens ?? Math.ceil(JSON.stringify(parsed.data).length / 4), estimatedCostUsd: 0, diagnostics: review.diagnostics });
+    if (!review.valid) {
+      recordHistory({ ...base, status: "invalid", attemptCount: Math.max(1, attemptCount), inputFingerprint: fingerprint(parsed.data), estimatedInputTokens: Math.ceil(assembled.length / 4), diagnostics: review.diagnostics, reason: "Candidate failed deterministic safety validation." });
+      return { ok: false as const, status: "invalid" as const, reason: "The provider candidate failed Worlds safety validation.", review };
+    }
+    recordHistory({ ...base, status: "candidate", attemptCount: Math.max(1, attemptCount), inputFingerprint: fingerprint(parsed.data), estimatedInputTokens: completion.promptTokens ?? Math.ceil(assembled.length / 4), estimatedOutputTokens: completion.completionTokens ?? Math.ceil(JSON.stringify(parsed.data).length / 4), estimatedCostUsd: 0, diagnostics: review.diagnostics });
     return { ok: true as const, status: "candidate" as const, candidate: parsed.data, review };
   } catch {
     recordHistory({ ...base, status: "failed", attemptCount: Math.max(1, attemptCount), reason: "The AI provider could not be reached." });
     return { ok: false as const, status: "failed" as const, reason: "The AI provider could not be reached." };
-  } finally {
-    clearTimeout(timer);
-  }
+  } finally {}
 }

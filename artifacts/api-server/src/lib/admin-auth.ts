@@ -152,7 +152,7 @@ export async function resolveAdminPrincipal(req: Request): Promise<
   const profiles = await supabaseRequest<ProfileRecord[]>(
     `${config.url}/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=id,display_name,username,role,account_status`,
     config.serviceKey,
-    config.serviceKey,
+    token,
   );
   const profile = profiles?.[0];
   if (!profile || profile.account_status !== "active") {
