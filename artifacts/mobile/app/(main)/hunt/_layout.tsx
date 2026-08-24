@@ -126,6 +126,14 @@ export default function HuntTabLayout() {
             ),
         }}
       />
+
+      <Tabs.Screen
+        name="create"
+        options={{
+          href: null,
+          headerShown: false,
+        }}
+      />
     </Tabs>
   );
 }

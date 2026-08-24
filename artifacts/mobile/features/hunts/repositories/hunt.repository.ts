@@ -55,14 +55,16 @@ export async function fetchHuntDetail(
 ): Promise<HuntDetail | null> {
   const supabase = db();
 
-  const { data, error } = await supabase
-    .from('hunts')
+  // Database typings lag the cover_media_id migration; keep this detailed
+  // projection untyped until generated Supabase types are refreshed.
+  const { data, error } = await (supabase
+    .from('hunts') as any)
     .select(`
       id, slug, title, summary, description, hunt_type, status, privacy,
       join_policy, points_reward, estimated_duration_minutes, difficulty,
       max_participants, min_participants, starts_at, ends_at, participation_mode,
       stop_ordering, start_model, is_featured, safety_note, accessibility_note,
-      public_meeting_info, venue_hours_note, version,
+      public_meeting_info, venue_hours_note, cover_media_id, version,
       hunt_stops (
         id, sort_order, title, description, stop_role, is_required,
         estimated_duration_minutes, safety_note, accessibility_note, completion_method
@@ -113,6 +115,23 @@ export async function fetchHuntDetail(
   const maxParticipants =
     activeOccurrence?.max_participants ?? (data as any).max_participants ?? null;
   const currentCount = activeOccurrence?.participant_count ?? 0;
+  let thumbnailUrl: string | null = null;
+  // Covers are stored privately. Participants receive a short-lived URL only
+  // after both the Hunt and the selected cover have passed moderation.
+  if ((data as any).cover_media_id && participation) {
+    const { data: media } = await (supabase
+      .from('media_assets') as any)
+      .select('bucket, storage_path')
+      .eq('id', (data as any).cover_media_id)
+      .eq('moderation_status', 'approved')
+      .maybeSingle();
+    if (media) {
+      const { data: signed } = await supabase.storage
+        .from(media.bucket)
+        .createSignedUrl(media.storage_path, 3600);
+      thumbnailUrl = signed?.signedUrl ?? null;
+    }
+  }
 
   const result: HuntDetail = {
     id: data.id,
@@ -133,7 +152,7 @@ export async function fetchHuntDetail(
     participationId: (participation as any)?.id ?? null,
     invitationId: (invitation as any)?.id ?? null,
     invitationStatus: (invitation as any)?.status ?? null,
-    thumbnailUrl: null,
+    thumbnailUrl,
     occurrenceId: activeOccurrence?.id ?? null,
     startsAt: activeOccurrence?.starts_at ?? (data as any).starts_at ?? null,
     endsAt: activeOccurrence?.ends_at ?? (data as any).ends_at ?? null,

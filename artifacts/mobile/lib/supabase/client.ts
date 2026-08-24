@@ -66,6 +66,11 @@ if (isSupabaseConfigured()) {
  */
 export const supabase = _supabase;
 
+/** Returns the configured client, or null in disconnected development mode. */
+export function getSupabaseClient(): SupabaseClient<Database> | null {
+  return _supabase;
+}
+
 /**
  * Returns the Supabase client, throwing if credentials are not configured.
  * Use in service functions that must not silently proceed without a client.
@@ -81,9 +86,4 @@ export function requireSupabase(): SupabaseClient<any> {
     );
   }
   return _supabase;
-}
-
-/** Backwards-compatible alias used by older feature repositories. */
-export function getSupabaseClient(): SupabaseClient<any> {
-  return requireSupabase();
 }

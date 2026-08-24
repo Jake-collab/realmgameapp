@@ -70,6 +70,12 @@ export type {
   HuntMapItem,
   HuntDomainEvent,
 } from './types/hunt.types';
+export type {
+  CreatorProofType,
+  HuntCreatorStop,
+  HuntCreatorDraft,
+  CreatedHuntSummary,
+} from './types/huntCreator.types';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 export {
@@ -168,6 +174,12 @@ export { useWithdrawFromHunt }    from './hooks/useWithdrawFromHunt';
 export { useCompleteHuntStop }    from './hooks/useCompleteHuntStop';
 export { useCompleteHunt }        from './hooks/useCompleteHunt';
 export { useInviteToHunt }        from './hooks/useInviteToHunt';
+export {
+  useCreatedHunts,
+  useCreatorHuntDraft,
+  useHuntCreator,
+  useHuntCreatorFriendInvite,
+} from './hooks/useHuntCreator';
 
 // ─── Events ───────────────────────────────────────────────────────────────────
 export {

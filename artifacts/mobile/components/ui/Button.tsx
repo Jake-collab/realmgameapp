@@ -37,6 +37,7 @@ interface ButtonProps {
   loading?: boolean;
   fullWidth?: boolean;
   style?: ViewStyle;
+  testID?: string;
 }
 
 export function Button({
@@ -48,6 +49,7 @@ export function Button({
   loading = false,
   fullWidth = false,
   style,
+  testID,
 }: ButtonProps) {
   const colors = useColors();
   const scale = useRef(new Animated.Value(1)).current;
@@ -109,6 +111,7 @@ export function Button({
   return (
     <Animated.View style={{ transform: [{ scale }], width: fullWidth ? '100%' : undefined }}>
       <Pressable
+        testID={testID}
         onPress={handlePress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}

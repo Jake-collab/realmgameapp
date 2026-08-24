@@ -11,11 +11,11 @@
  *   4. Active (general default)
  *
  * Build 1 scope:
- *   Active   — lists active hunts and resumes gameplay
- *   Ready    — lists joined hunts awaiting start
- *   Completed — lists completed Hunts
- *   Invitations — view, accept, and decline
- *   Create Hunt — opens the creator draft flow
+ *   Active   — lists active hunts; Continue Hunt routes to placeholder (Prompt 13)
+ *   Ready    — lists joined hunts awaiting start; Start Hunt fully implemented
+ *   Completed — placeholder (Prompt 14)
+ *   Invitations — fully implemented (view, accept, decline)
+ *   Create Hunt — controlled placeholder (later creator prompt)
  */
 
 import React, { useCallback, useEffect, useState } from 'react';
@@ -27,6 +27,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -37,7 +38,8 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useMyHunts } from '@/features/hunts/hooks/useMyHunts';
 import { useHuntInvitations } from '@/features/hunts/hooks/useHuntInvitations';
 import { useStartHunt } from '@/features/hunts/hooks/useStartHunt';
-import { useCreatorHunts, useCreateHuntDraft, useArchiveHunt } from '@/features/hunts/hooks/creatorHooks';
+import { useCreatedHunts, useHuntCreator } from '@/features/hunts/hooks/useHuntCreator';
+import { HuntFriendSelector } from '@/components/hunt/HuntFriendSelector';
 import { InvitationCard } from '@/components/hunt/InvitationCard';
 import type { MyHuntsSummaryEntry } from '@/features/hunts/types/hunt.types';
 
@@ -61,8 +63,6 @@ export default function MyHuntsScreen() {
 
   const myHuntsQuery = useMyHunts({ userId: user?.id ?? null });
   const invitationsQuery = useHuntInvitations({ userId: user?.id ?? null });
-  const creatorQuery = useCreatorHunts(user?.id ?? null);
-  const createDraft = useCreateHuntDraft(user?.id ?? null);
 
   const summary = myHuntsQuery.data as import('@/features/hunts/types/hunt.types').MyHuntsSummary | undefined;
   const invitations = invitationsQuery.data ?? [];
@@ -165,15 +165,7 @@ export default function MyHuntsScreen() {
               />
             )}
             {activeSection === 'create' && (
-              <CreateHuntSection
-                colors={colors}
-                drafts={creatorQuery.data ?? []}
-                loading={creatorQuery.isLoading}
-                onCreate={() => createDraft.mutate(undefined, {
-                  onSuccess: d => router.push(`/(main)/hunt/create/${d.id}/details`),
-                })}
-                creating={createDraft.isPending}
-              />
+              <CreateHuntSection colors={colors} />
             )}
           </>
         )}
@@ -411,42 +403,85 @@ function InvitationsSection({
 
 // ─── Create Section ───────────────────────────────────────────────────────────
 
-function CreateHuntSection({ colors, drafts, loading, onCreate, creating }: {
-  colors: ReturnType<typeof useColors>;
-  drafts: import('@/features/hunts/types/creator.types').HuntCreatorDraft[];
-  loading: boolean;
-  onCreate: () => void;
-  creating: boolean;
-}) {
+function CreateHuntSection({ colors }: { colors: ReturnType<typeof useColors> }) {
+  const created = useCreatedHunts();
+  const { archive, beginRevision, remove } = useHuntCreator();
+  const [inviteHuntId, setInviteHuntId] = useState<string | null>(null);
+  const hunts = created.data ?? [];
+
+  const archiveHunt = (huntId: string) => Alert.alert(
+    'Archive this Hunt?',
+    'Players will no longer be able to join it.',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Archive', style: 'destructive', onPress: () => archive.mutate(huntId) },
+    ],
+  );
+  const deleteHunt = (huntId: string) => Alert.alert(
+    'Delete this Hunt?',
+    'This permanently deletes the draft and its stops.',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => remove.mutate(huntId) },
+    ],
+  );
+  const editHunt = async (hunt: { id: string; status: string }) => {
+    try {
+      const draftId = hunt.status === 'rejected'
+        ? await beginRevision.mutateAsync(hunt.id)
+        : hunt.id;
+      router.push({ pathname: './create', params: { draftId } });
+    } catch {
+      Alert.alert('Could not start revision', 'Please try again.');
+    }
+  };
+
   return (
     <View style={styles.sectionList}>
-      <View style={[styles.placeholderCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Feather name="compass" size={40} color={colors.hunt} />
-        <Text style={[styles.placeholderTitle, { color: colors.foreground }]}>Build an adventure</Text>
-        <Text style={[styles.placeholderBody, { color: colors.mutedForeground }]}>
-          Create a custom Hunt for friends and explorers. Your work saves as you go and goes through review before publication.
-        </Text>
-        <TouchableOpacity onPress={onCreate} disabled={creating} style={[styles.emptyAction, { backgroundColor: colors.hunt, opacity: creating ? 0.6 : 1 }]}>
-          <Text style={styles.emptyActionText}>{creating ? 'Starting…' : '+ Create Hunt'}</Text>
+      <View style={[styles.creatorHero, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <View style={[styles.creatorIcon, { backgroundColor: colors.hunt + '18' }]}>
+          <Feather name="compass" size={26} color={colors.hunt} />
+        </View>
+        <View style={styles.creatorCopy}>
+          <Text style={[styles.placeholderTitle, { color: colors.foreground }]}>Create a Hunt</Text>
+          <Text style={[styles.placeholderBody, { color: colors.mutedForeground }]}>Build a route, write clues, and bring friends along.</Text>
+        </View>
+        <TouchableOpacity
+          testID="create-hunt-button"
+          onPress={() => router.push('./create')}
+          style={[styles.createButton, { backgroundColor: colors.hunt }]}
+        >
+          <Feather name="plus" size={18} color={colors.huntForeground} />
+          <Text style={styles.createButtonText}>New</Text>
         </TouchableOpacity>
       </View>
-      {loading && <ActivityIndicator color={colors.hunt} />}
-      {drafts.map(draft => <CreatorDraftCard key={draft.id} draft={draft} colors={colors} />)}
+
+      {created.isLoading && <ActivityIndicator color={colors.hunt} />}
+      {hunts.length > 0 && <Text style={[styles.subheader, { color: colors.mutedForeground }]}>Your Hunts</Text>}
+      {hunts.map(hunt => (
+        <View key={hunt.id} style={[styles.createdCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.createdTop}>
+            <View style={[styles.createdStatus, { backgroundColor: hunt.status === 'draft' ? colors.warning + '18' : colors.hunt + '18' }]}>
+              <Text style={[styles.createdStatusText, { color: hunt.status === 'draft' ? colors.warning : colors.hunt }]}>{hunt.status.replace('_', ' ')}</Text>
+            </View>
+            <Text style={[styles.createdMeta, { color: colors.mutedForeground }]}>{hunt.stopCount} stops · {hunt.pointsReward} pts</Text>
+          </View>
+          <Text style={[styles.cardTitle, { color: colors.foreground }]}>{hunt.title}</Text>
+          <Text style={[styles.createdSummary, { color: colors.mutedForeground }]} numberOfLines={2}>{hunt.summary}</Text>
+          <View style={styles.createdActions}>
+            {hunt.status === 'draft' || hunt.status === 'rejected' ? (
+              <TouchableOpacity onPress={() => editHunt(hunt)} style={[styles.viewBtn, { borderColor: colors.border }]}><Feather name="edit-3" size={14} color={colors.foreground} /><Text style={[styles.viewBtnText, { color: colors.foreground }]}>{hunt.status === 'rejected' ? 'Revise' : 'Edit'}</Text></TouchableOpacity>
+            ) : hunt.occurrenceId ? (
+              <TouchableOpacity onPress={() => setInviteHuntId(inviteHuntId === hunt.id ? null : hunt.id)} style={[styles.viewBtn, { borderColor: colors.border }]}><Feather name="user-plus" size={14} color={colors.foreground} /><Text style={[styles.viewBtnText, { color: colors.foreground }]}>Invite</Text></TouchableOpacity>
+            ) : null}
+            <TouchableOpacity onPress={() => archiveHunt(hunt.id)} style={[styles.viewBtn, { borderColor: colors.border }]}><Feather name="archive" size={14} color={colors.foreground} /><Text style={[styles.viewBtnText, { color: colors.foreground }]}>Archive</Text></TouchableOpacity>
+            {(hunt.status === 'draft' || hunt.status === 'archived' || hunt.status === 'rejected') && <TouchableOpacity onPress={() => deleteHunt(hunt.id)} style={[styles.iconAction, { borderColor: colors.destructive }]} accessibilityLabel="Delete Hunt"><Feather name="trash-2" size={14} color={colors.destructive} /></TouchableOpacity>}
+          </View>
+          {inviteHuntId === hunt.id && hunt.occurrenceId && <HuntFriendSelector huntId={hunt.id} occurrenceId={hunt.occurrenceId} onDone={() => setInviteHuntId(null)} />}
+        </View>
+      ))}
     </View>
   );
-}
-
-function CreatorDraftCard({ draft, colors }: { draft: import('@/features/hunts/types/creator.types').HuntCreatorDraft; colors: ReturnType<typeof useColors> }) {
-  const archive = useArchiveHunt(draft.ownerUserId);
-  const title = draft.payload.title.trim() || 'Untitled Hunt';
-  const action = draft.status === 'pending_review' ? 'View status' : 'Continue editing';
-  return <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-    <View style={[styles.cardStrip, { backgroundColor: colors.hunt }]} />
-    <View style={styles.cardBody}><View style={{flexDirection:'row',alignItems:'center'}}><Text style={[styles.cardTitle,{color:colors.foreground,flex:1}]}>{title}</Text><Text style={[styles.cardMeta,{color:colors.hunt}]}>{draft.status.replace('_',' ')}</Text></View>
-      <Text style={[styles.cardMeta,{color:colors.mutedForeground}]}>{draft.payload.stops.length} stops · updated {new Date(draft.updatedAt).toLocaleDateString()}</Text>
-      <View style={styles.readyActions}><TouchableOpacity onPress={()=>router.push(`/(main)/hunt/create/${draft.id}/review`)} style={[styles.continueBtn,{backgroundColor:colors.hunt}]}><Text style={styles.continueBtnText}>{action}</Text></TouchableOpacity>{draft.status !== 'pending_review'&&<TouchableOpacity onPress={()=>archive.mutate(draft.id)}><Text style={{color:colors.destructive,fontWeight:'600'}}>Archive</Text></TouchableOpacity>}</View>
-    </View>
-  </View>;
 }
 
 // ─── Shared empty state ───────────────────────────────────────────────────────
@@ -617,6 +652,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing[3],
   },
+  creatorHero: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+  },
+  creatorIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  creatorCopy: { flex: 1 },
+  createButton: { flexDirection: 'row', alignItems: 'center', gap: spacing[1], borderRadius: radius.md, paddingVertical: spacing[2], paddingHorizontal: spacing[3] },
+  createButtonText: { color: '#fff', fontFamily: fontFamily.semiBold, fontSize: fontSize.sm },
+  createdCard: { borderWidth: StyleSheet.hairlineWidth, borderRadius: radius.lg, padding: spacing[4], gap: spacing[2] },
+  createdTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  createdStatus: { paddingHorizontal: spacing[2], paddingVertical: 3, borderRadius: radius.full },
+  createdStatusText: { fontFamily: fontFamily.semiBold, fontSize: fontSize.xs, textTransform: 'capitalize' },
+  createdMeta: { fontFamily: fontFamily.regular, fontSize: fontSize.xs },
+  createdSummary: { fontFamily: fontFamily.regular, fontSize: fontSize.sm, lineHeight: 19 },
+  createdActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[2], marginTop: spacing[2] },
+  iconAction: { borderWidth: 1, borderRadius: radius.md, padding: spacing[2] },
   placeholderTitle: {
     fontFamily: fontFamily.bold,
     fontSize: fontSize.xl,

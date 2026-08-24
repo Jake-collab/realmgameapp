@@ -582,7 +582,6 @@ BEGIN
     RETURN jsonb_build_object('success', FALSE, 'reasonCode', 'HUNT_NOT_PUBLISHED',
       'userMessage', 'Hunt not found.');
   END IF;
-
   -- Must be active status
   IF v_hunt.status NOT IN ('active', 'ready', 'scheduled') THEN
     RETURN jsonb_build_object('success', FALSE, 'reasonCode', 'HUNT_NOT_PUBLISHED',
@@ -891,7 +890,6 @@ BEGIN
     RETURN jsonb_build_object('success', FALSE, 'reasonCode', 'HUNT_NOT_PUBLISHED',
       'userMessage', 'Hunt not found.');
   END IF;
-
   -- Check inviter role
   SELECT * INTO v_participant FROM hunt_participants
     WHERE hunt_id = p_hunt_id AND user_id = v_user_id AND role IN ('creator', 'co_host');

@@ -14,6 +14,16 @@ Mirrors `features/quests/` exactly:
 
 **Reward snapshot**: Captured at `join_hunt` time as JSONB in `hunt_participants`. `complete_hunt` uses snapshot, not current hunt config. Never silently changed by post-join edits.
 
+**Creator proof contract**: Creator-facing proof choices must translate to the canonical active-Hunt completion methods (`manual_confirmation`, `text`, `image`, `location`, `image_and_location`). Do not offer QR proof until scanning and trusted server-token validation exist.
+**Why:** The active stop resolver deliberately has no completion action for unknown values, and a plain text field cannot safely validate a QR credential.
+**How to apply:** When adding a creator proof option, define both its write mapping and draft-resume reverse mapping, then verify it resolves to a supported participant action.
+
+**Creator drafts, revisions, and covers**: Existing drafts must finish their server read and timestamp-based local-recovery merge before any autosave; each submitted Hunt version is immutable, and rejected content must start a new editable revision. Covers remain private until independently approved as media.
+**Why:** An eager autosave can replace a server draft with defaults, changing a reviewed version destroys auditability, and Hunt approval must not silently approve pending media.
+
+**Creator proof enforcement**: Completion must match the stop’s persisted proof method; manual client completion cannot substitute for an approved proof or a server-recorded geofence validation.
+**Why:** UI-level proof choices are advisory unless the completion RPC verifies the linked submission, its review state, and any location check.
+
 **Start models**: `individual` (each participant starts themselves), `scheduled` (auto at starts_at), `host_controlled` (creator/co_host triggers). `evaluateStartEligibility` blocks `player` role from host_controlled.
 
 **Completion idempotency**: `hunt_completion:{participationId}` key in both `hunt_participants.completion_idempotency_key` and `points_ledger.idempotency_key` — both UNIQUE.
