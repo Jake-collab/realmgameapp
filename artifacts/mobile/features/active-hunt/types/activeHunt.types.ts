@@ -54,6 +54,8 @@ export type ProofUploadState =
   | 'error';
 
 export interface ProofImageItem {
+  /** Stable local asset ID used to reconcile upload replay */
+  localAssetId?: string;
   /** Local URI from image picker */
   localUri: string;
   /** Uploaded media asset ID (null until uploaded) */

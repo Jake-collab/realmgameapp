@@ -17,6 +17,7 @@ import { useAuth } from '@/features/auth/hooks/useAuth';
 import { loadCachedRecord, saveCachedRecord } from '@/features/offline/storage/offlineStorage';
 import { saveLocalAsset } from '@/features/offline/storage/localAssets';
 import { enqueueOfflineMutation } from '@/features/offline/queue/mutationQueue';
+import { offlineStorage } from '@/features/offline/storage/offlineStorage';
 import type { StopCompletionMethod } from '@/features/hunts/types/hunt.types';
 import {
   createEmptyProofDraft,
@@ -58,6 +59,25 @@ export function useHuntProofDraft({
     if (!user?.id || !restored.current || !draft.textResponse && draft.images.length === 0) return;
     void saveCachedRecord(user.id, cacheId, draft, { staleAfterMs: 7 * 24 * 60 * 60 * 1000 });
   }, [cacheId, draft, user?.id]);
+  useEffect(() => {
+    if (!user?.id || !draft.images.length) return;
+    const timer = setInterval(() => {
+      void offlineStorage.loadAssets(user.id).then(assets => {
+        const byId = new Map(assets.map(asset => [asset.id, asset]));
+        setDraft(current => {
+          let changed = false;
+          const images = current.images.map(image => {
+            const asset = image.localAssetId ? byId.get(image.localAssetId) : undefined;
+            if (!asset?.remoteAssetId || image.mediaId === asset.remoteAssetId) return image;
+            changed = true;
+            return { ...image, mediaId: asset.remoteAssetId, uploadState: 'uploaded' as const, errorMessage: null };
+          });
+          return changed ? { ...current, images } : current;
+        });
+      });
+    }, 1500);
+    return () => clearInterval(timer);
+  }, [draft.images.length, user?.id]);
 
   // ── Text ─────────────────────────────────────────────────────────────────────
 
@@ -87,6 +107,7 @@ export function useHuntProofDraft({
     setDraft(prev => {
       if (prev.images.length >= prev.maxImages) return prev;
       const newImage: ProofImageItem = {
+        localAssetId: assetId,
         localUri,
         mediaId:     null,
         uploadState: 'idle',

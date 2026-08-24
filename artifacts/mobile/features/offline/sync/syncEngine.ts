@@ -1,5 +1,6 @@
 import { updateQueueItem, classifySyncFailure, MAX_QUEUE_ATTEMPTS, nextRetryAt } from '../queue/mutationQueue';
 import { offlineStorage } from '../storage/offlineStorage';
+import { consumeOfflineFailureSimulation } from './failureSimulation';
 import type { OfflineQueueItem, QueueStatus } from '../types/offline.types';
 
 export type SyncResult = { status: 'completed' | 'retryable' | 'needs_attention'; errorCode?: string; message?: string };
@@ -38,6 +39,7 @@ export async function syncOfflineQueue(userId: string, executor: MutationExecuto
     }
     await updateQueueItem(userId, item.id, { status: 'syncing', attemptCount: item.attemptCount + 1, lastAttemptedAt: new Date(options.now ?? Date.now()).toISOString(), nextAttemptAt: null });
     try {
+      await consumeOfflineFailureSimulation();
       const result = await executor(item);
       await updateQueueItem(userId, item.id, result.status === 'completed'
         ? { status: 'completed', errorCode: null, errorMessage: null }

@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { canQueueOffline, enqueueOfflineMutation, makeIdempotencyKey, classifySyncFailure, nextRetryAt } from '@/features/offline/queue/mutationQueue';
 import { offlineStorage } from '@/features/offline/storage/offlineStorage';
 import { syncOfflineQueue } from '@/features/offline/sync/syncEngine';
+import { setOfflineFailureSimulation } from '@/features/offline/sync/failureSimulation';
 
 describe('offline queue boundaries', () => {
   beforeEach(async () => { await AsyncStorage.clear(); });
@@ -53,5 +54,14 @@ describe('offline queue boundaries', () => {
     expect(classifySyncFailure(new Error('version conflict')).retryable).toBe(false);
     expect(classifySyncFailure(new Error('timeout')).retryable).toBe(true);
     expect(new Date(nextRetryAt(20, 0)).getTime()).toBe(30 * 60 * 1000);
+  });
+
+  it('supports development-only failure simulation without changing queue rules', async () => {
+    await enqueueOfflineMutation({ userId: 'user-1', mutationType: 'notification_read', entityType: 'notification', entityId: 'n-sim', payload: { notificationId: 'n-sim' } });
+    setOfflineFailureSimulation({ failNext: 1 });
+    const failed = await syncOfflineQueue('user-1', async () => ({ status: 'completed' }), { now: 0 });
+    expect(failed[0]?.result.status).toBe('retryable');
+    const recovered = await syncOfflineQueue('user-1', async () => ({ status: 'completed' }), { now: 2000 });
+    expect(recovered[0]?.result.status).toBe('completed');
   });
 });
