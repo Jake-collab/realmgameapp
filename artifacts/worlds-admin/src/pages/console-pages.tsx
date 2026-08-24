@@ -39,8 +39,8 @@ export function UsersPage({ data }: { data: AdminData }) {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
   const users = data.users.data?.items;
-  const filtered = useMemo(() => users?.filter((user) => `${user.displayName} ${user.username} ${user.role}`.toLowerCase().includes(search.toLowerCase()) && (status === 'all' || user.accountStatus === status)), [users, search, status]);
-  const statuses = Array.from(new Set(users?.map((user) => user.accountStatus) || []));
+  const filtered = useMemo(() => users?.filter((user: any) => `${user.displayName} ${user.username} ${user.role}`.toLowerCase().includes(search.toLowerCase()) && (status === 'all' || user.accountStatus === status)), [users, search, status]);
+  const statuses = Array.from(new Set(users?.map((user: any) => user.accountStatus) || [])) as string[];
   return (
     <div className="page-wrap">
       <PageHeader eyebrow="Operations / people" title="User directory" description="Search staff-facing identity and activity signals without leaving the operations console." actions={<RefreshButton onClick={() => void data.users.refetch()} loading={data.users.isFetching} />} />
@@ -50,7 +50,7 @@ export function UsersPage({ data }: { data: AdminData }) {
       </div>
       <section className="panel">
         <div className="panel-header"><div><div className="panel-title">All users</div><div className="panel-kicker">{data.users.data?.total ?? '—'} records returned · page 1</div></div><UsersRound style={{ width: 17, color: 'hsl(var(--muted-foreground))' }} /></div>
-        {data.users.isError ? <ErrorState onRetry={() => void data.users.refetch()} /> : data.users.isLoading ? <TableSkeleton columns={5} /> : !users ? <UnavailableState onRetry={() => void data.users.refetch()} /> : !filtered?.length ? <div className="empty-state"><Search /><strong>No matching users</strong><p>Try a different name, username, or account status.</p></div> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Identity</th><th>Role</th><th>Account</th><th>Activity</th><th>Points</th><th>Open cases</th></tr></thead><tbody>{filtered.map((user) => <tr key={user.id} data-testid={`row-user-${user.id}`}><td><div className="identity"><div className="avatar">{initials(user.displayName)}</div><div><div className="identity-name" data-testid={`text-user-name-${user.id}`}>{user.displayName}</div><div className="identity-handle">@{user.username}</div></div></div></td><td><StatusBadge status={user.role} /></td><td><StatusBadge status={user.accountStatus} /></td><td><div style={{ fontWeight: 600 }}>{fmtDate(user.lastActiveAt)}</div><div className="identity-handle">Joined {fmtDate(user.createdAt)}</div></td><td className="mono">{user.totalPoints ?? '—'}</td><td><span className={user.openCases ? 'tag red' : 'tag'}>{user.openCases ?? '—'}</span></td></tr>)}</tbody></table></div>}
+        {data.users.isError ? <ErrorState onRetry={() => void data.users.refetch()} /> : data.users.isLoading ? <TableSkeleton columns={5} /> : !users ? <UnavailableState onRetry={() => void data.users.refetch()} /> : !filtered?.length ? <div className="empty-state"><Search /><strong>No matching users</strong><p>Try a different name, username, or account status.</p></div> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Identity</th><th>Role</th><th>Account</th><th>Activity</th><th>Points</th><th>Open cases</th></tr></thead><tbody>{filtered.map((user: any) => <tr key={user.id} data-testid={`row-user-${user.id}`}><td><div className="identity"><div className="avatar">{initials(user.displayName)}</div><div><div className="identity-name" data-testid={`text-user-name-${user.id}`}>{user.displayName}</div><div className="identity-handle">@{user.username}</div></div></div></td><td><StatusBadge status={user.role} /></td><td><StatusBadge status={user.accountStatus} /></td><td><div style={{ fontWeight: 600 }}>{fmtDate(user.lastActiveAt)}</div><div className="identity-handle">Joined {fmtDate(user.createdAt)}</div></td><td className="mono">{user.totalPoints ?? '—'}</td><td><span className={user.openCases ? 'tag red' : 'tag'}>{user.openCases ?? '—'}</span></td></tr>)}</tbody></table></div>}
       </section>
     </div>
   );
@@ -60,7 +60,7 @@ export function QuestsPage({ data }: { data: AdminData }) {
   const [search, setSearch] = useState('');
   const [type, setType] = useState('all');
   const quests = data.quests.data?.items;
-  const filtered = useMemo(() => quests?.filter((quest) => `${quest.title} ${quest.source}`.toLowerCase().includes(search.toLowerCase()) && (type === 'all' || quest.type === type)), [quests, search, type]);
+  const filtered = useMemo(() => quests?.filter((quest: any) => `${quest.title} ${quest.source}`.toLowerCase().includes(search.toLowerCase()) && (type === 'all' || quest.type === type)), [quests, search, type]);
   return (
     <div className="page-wrap">
       <PageHeader eyebrow="Operations / content" title="Quest administration" description="Review the content pipeline, publishing state, and proof load across every Quest format." actions={<RefreshButton onClick={() => void data.quests.refetch()} loading={data.quests.isFetching} />} />
@@ -68,7 +68,7 @@ export function QuestsPage({ data }: { data: AdminData }) {
       <div className="toolbar"><div className="search-box"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search Quest title or source" aria-label="Search quests" data-testid="input-search-quests" /></div><select value={type} onChange={(event) => setType(event.target.value)} style={{ border: '1px solid hsl(var(--input))', background: 'hsl(var(--card))', borderRadius: 6, padding: '9px 10px', color: 'hsl(var(--foreground))', fontSize: 12 }} data-testid="select-quest-type"><option value="all">Every type</option><option value="daily">Daily</option><option value="monthly">Monthly</option><option value="geo">Geo</option></select></div>
       <section className="panel">
         <div className="panel-header"><div><div className="panel-title">Quest catalog</div><div className="panel-kicker">{data.quests.data?.total ?? '—'} records returned · sorted by latest update</div></div><TargetIcon /></div>
-        {data.quests.isError ? <ErrorState onRetry={() => void data.quests.refetch()} /> : data.quests.isLoading ? <TableSkeleton columns={6} /> : !quests ? <UnavailableState onRetry={() => void data.quests.refetch()} /> : !filtered?.length ? <div className="empty-state"><Search /><strong>No matching Quests</strong><p>There are no records matching this search and type filter.</p></div> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Quest</th><th>Type</th><th>Status</th><th>Difficulty</th><th>Completions</th><th>Reviews</th><th>Updated</th></tr></thead><tbody>{filtered.map((quest) => <tr key={quest.id} data-testid={`row-quest-${quest.id}`}><td><div className="identity-name">{quest.title}</div><div className="identity-handle">{quest.source} · {quest.points ?? '—'} pts</div></td><td><span className="tag blue">{quest.type}</span></td><td><StatusBadge status={quest.status} /></td><td>{quest.difficulty || '—'}</td><td className="mono">{quest.completionCount ?? '—'}</td><td className="mono">{quest.reviewCount ?? '—'}</td><td>{fmtDate(quest.updatedAt)}</td></tr>)}</tbody></table></div>}
+        {data.quests.isError ? <ErrorState onRetry={() => void data.quests.refetch()} /> : data.quests.isLoading ? <TableSkeleton columns={6} /> : !quests ? <UnavailableState onRetry={() => void data.quests.refetch()} /> : !filtered?.length ? <div className="empty-state"><Search /><strong>No matching Quests</strong><p>There are no records matching this search and type filter.</p></div> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Quest</th><th>Type</th><th>Status</th><th>Difficulty</th><th>Completions</th><th>Reviews</th><th>Updated</th></tr></thead><tbody>{filtered.map((quest: any) => <tr key={quest.id} data-testid={`row-quest-${quest.id}`}><td><div className="identity-name">{quest.title}</div><div className="identity-handle">{quest.source} · {quest.points ?? '—'} pts</div></td><td><span className="tag blue">{quest.type}</span></td><td><StatusBadge status={quest.status} /></td><td>{quest.difficulty || '—'}</td><td className="mono">{quest.completionCount ?? '—'}</td><td className="mono">{quest.reviewCount ?? '—'}</td><td>{fmtDate(quest.updatedAt)}</td></tr>)}</tbody></table></div>}
       </section>
     </div>
   );
@@ -85,13 +85,13 @@ function TableSkeleton({ columns }: { columns: number }) {
 export function AuditPage({ data }: { data: AdminData }) {
   const [search, setSearch] = useState('');
   const events = data.audit.data?.items;
-  const filtered = events?.filter((event) => `${event.actor} ${event.action} ${event.entityType} ${event.entity}`.toLowerCase().includes(search.toLowerCase()));
+  const filtered = events?.filter((event: any) => `${event.actor} ${event.action} ${event.entityType} ${event.entity}`.toLowerCase().includes(search.toLowerCase()));
   return (
     <div className="page-wrap">
       <PageHeader eyebrow="Platform / accountability" title="Audit log" description="An append-only view of staff actions and their recorded outcomes." actions={<RefreshButton onClick={() => void data.audit.refetch()} loading={data.audit.isFetching} />} />
       <div className="notice" style={{ marginTop: 25 }}><LockKeyhole /><span>Audit events are immutable. This view is for investigation and traceability; it does not expose controls to alter history.</span></div>
       <div className="toolbar"><div className="search-box"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search actor, action, or entity" aria-label="Search audit log" data-testid="input-search-audit" /></div><span className="mono" style={{ color: 'hsl(var(--muted-foreground))', fontSize: 10 }}>{data.audit.data?.total ?? '—'} EVENTS</span></div>
-      <section className="panel">{data.audit.isError ? <ErrorState onRetry={() => void data.audit.refetch()} /> : data.audit.isLoading ? <TableSkeleton columns={5} /> : !events ? <UnavailableState onRetry={() => void data.audit.refetch()} /> : !filtered?.length ? <div className="empty-state"><FileLogIcon /><strong>No audit events found</strong><p>Nothing matches this search in the returned event page.</p></div> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Timestamp</th><th>Actor</th><th>Action</th><th>Entity</th><th>Result</th><th>Reason</th></tr></thead><tbody>{filtered.map((event) => <tr key={event.id} data-testid={`row-audit-${event.id}`}><td className="mono" style={{ whiteSpace: 'nowrap', fontSize: 10 }}>{fmtDateTime(event.timestamp)}</td><td><div style={{ fontWeight: 600 }}>{event.actor || 'System'}</div><div className="identity-handle">{event.actorRole || '—'}</div></td><td>{event.action}</td><td>{event.entityType}{event.entity ? <div className="identity-handle">{event.entity}</div> : null}</td><td><StatusBadge status={event.result} /></td><td style={{ maxWidth: 240, color: 'hsl(var(--muted-foreground))' }}>{event.reason || '—'}</td></tr>)}</tbody></table></div>}</section>
+      <section className="panel">{data.audit.isError ? <ErrorState onRetry={() => void data.audit.refetch()} /> : data.audit.isLoading ? <TableSkeleton columns={5} /> : !events ? <UnavailableState onRetry={() => void data.audit.refetch()} /> : !filtered?.length ? <div className="empty-state"><FileLogIcon /><strong>No audit events found</strong><p>Nothing matches this search in the returned event page.</p></div> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Timestamp</th><th>Actor</th><th>Action</th><th>Entity</th><th>Result</th><th>Reason</th></tr></thead><tbody>{filtered.map((event: any) => <tr key={event.id} data-testid={`row-audit-${event.id}`}><td className="mono" style={{ whiteSpace: 'nowrap', fontSize: 10 }}>{fmtDateTime(event.timestamp)}</td><td><div style={{ fontWeight: 600 }}>{event.actor || 'System'}</div><div className="identity-handle">{event.actorRole || '—'}</div></td><td>{event.action}</td><td>{event.entityType}{event.entity ? <div className="identity-handle">{event.entity}</div> : null}</td><td><StatusBadge status={event.result} /></td><td style={{ maxWidth: 240, color: 'hsl(var(--muted-foreground))' }}>{event.reason || '—'}</td></tr>)}</tbody></table></div>}</section>
     </div>
   );
 }
@@ -102,7 +102,7 @@ function FileLogIcon() {
 
 export function DiagnosticsPage({ data }: { data: AdminData }) {
   const diagnostics = data.diagnostics.data;
-  const unavailableCount = diagnostics?.checks.filter((check) => ['missing', 'degraded', 'failed', 'unavailable'].includes(check.status)).length || 0;
+  const unavailableCount = diagnostics?.checks.filter((check: any) => ['missing', 'degraded', 'failed', 'unavailable'].includes(check.status)).length || 0;
   return (
     <div className="page-wrap">
       <PageHeader eyebrow="Platform / health" title="Diagnostics" description="Safe, read-only checks for the services that power staff operations." actions={<RefreshButton onClick={() => void data.diagnostics.refetch()} loading={data.diagnostics.isFetching} />} />
@@ -123,6 +123,7 @@ type AiResponse = {
   plan?: { diagnostics?: string[]; replacementAllowed?: boolean; publishRequiresReview?: boolean };
   results?: Array<{ ok?: boolean; candidate?: Record<string, unknown>; review?: { diagnostics?: string[] } }>;
   draft?: { id: string; status: string; createdAt: string; reviewRequired: boolean };
+  comparison?: { changedFields?: string[]; fields?: Array<{ field: string; changed: boolean; left: string; right: string }> };
 };
 type AiPrompt = {
   systemInstructions: string;
@@ -162,6 +163,7 @@ export function AIPage({ data }: { data: AdminData }) {
   const [locationContext, setLocationContext] = useState('');
   const [approximateArea, setApproximateArea] = useState('');
   const [selectedVersion, setSelectedVersion] = useState('');
+  const [compareVersion, setCompareVersion] = useState('');
 
   useEffect(() => {
     const requiredPermission = location === '/ai/generate'
@@ -264,6 +266,20 @@ export function AIPage({ data }: { data: AdminData }) {
     }
   };
 
+  const comparePrompts = async () => {
+    if (!selectedVersion || !compareVersion) return;
+    setLoading(true);
+    setMessage('');
+    try {
+      const response = await aiFetch(`/prompts/${type}/compare?left=${encodeURIComponent(selectedVersion)}&right=${encodeURIComponent(compareVersion)}`);
+      setResult((current) => ({ ...current, ...response }));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Prompt comparison failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!data.session.data?.authorized) {
     return <div className="page-wrap"><PageHeader eyebrow="AI studio" title="AI access unavailable" description="An authorized staff session is required before AI tools can be opened." /><UnavailableState /></div>;
   }
@@ -290,7 +306,9 @@ export function AIPage({ data }: { data: AdminData }) {
       ) : location === '/ai/prompts' ? (
         <section className="panel" style={{ marginTop: 25 }}>
           <div className="panel-header"><div><div className="panel-title">Independent Quest prompt templates</div><div className="panel-kicker">Every save creates a new version; history is never overwritten</div></div><span className="tag blue">Version {prompt.version ?? 1}</span></div>
-          <div className="toolbar"><label className="field">Quest lane<select value={type} onChange={(event) => setType(event.target.value as typeof type)}><option value="daily">Daily</option><option value="monthly">Monthly</option><option value="geo">Geo</option></select></label><label className="field">Version<input value={selectedVersion} onChange={(event) => setSelectedVersion(event.target.value)} inputMode="numeric" /></label><button className="btn btn-quiet" onClick={() => void changeVersion('activate')} disabled={loading || !data.session.data.permissions.includes('ai.prompts.edit')}>Activate</button><button className="btn btn-quiet" onClick={() => void changeVersion('deactivate')} disabled={loading || !data.session.data.permissions.includes('ai.prompts.edit')}>Deactivate</button><button className="btn btn-quiet" onClick={() => void changeVersion('restore')} disabled={loading || !data.session.data.permissions.includes('ai.prompts.edit')}>Restore as new</button></div>
+           <div className="toolbar"><label className="field">Quest lane<select value={type} onChange={(event) => setType(event.target.value as typeof type)}><option value="daily">Daily</option><option value="monthly">Monthly</option><option value="geo">Geo</option></select></label><label className="field">Version<input value={selectedVersion} onChange={(event) => setSelectedVersion(event.target.value)} inputMode="numeric" /></label><button className="btn btn-quiet" onClick={() => void changeVersion('activate')} disabled={loading || !data.session.data.permissions.includes('ai.prompts.edit')}>Activate</button><button className="btn btn-quiet" onClick={() => void changeVersion('deactivate')} disabled={loading || !data.session.data.permissions.includes('ai.prompts.edit')}>Deactivate</button><button className="btn btn-quiet" onClick={() => void changeVersion('restore')} disabled={loading || !data.session.data.permissions.includes('ai.prompts.edit')}>Restore as new</button></div>
+           <div className="toolbar" style={{ marginTop: 10 }}><label className="field">Compare with<input value={compareVersion} onChange={(event) => setCompareVersion(event.target.value)} inputMode="numeric" placeholder="Another version" /></label><button className="btn btn-quiet" onClick={() => void comparePrompts()} disabled={loading || !selectedVersion || !compareVersion}>Compare immutable versions</button></div>
+           {result?.comparison && <div className="notice"><Check /><span>{result.comparison.changedFields?.length ? `Changed fields: ${result.comparison.changedFields.join(', ')}` : 'These prompt versions are identical.'}</span></div>}
           <div className="form-grid">
             {([
               ['systemInstructions', 'System prompt'],
@@ -335,7 +353,7 @@ export function OperationsPage({ data }: { data: AdminData }) {
   const config = operationConfig[location] || operationConfig['/hunts'];
   const isQuestLane = location.startsWith('/quests/');
   const queues = data.reviewQueues.data?.queues;
-  const relevantQueues = queues?.filter((item) => item.title.toLowerCase().includes(config.label.toLowerCase().split(' ')[0]) || item.category.toLowerCase().includes(config.label.toLowerCase().split(' ')[0]));
+  const relevantQueues = queues?.filter((item: any) => item.title.toLowerCase().includes(config.label.toLowerCase().split(' ')[0]) || item.category.toLowerCase().includes(config.label.toLowerCase().split(' ')[0]));
   return (
     <div className="page-wrap">
       <PageHeader eyebrow={config.eyebrow} title={config.title} description={config.description} actions={<RefreshButton onClick={() => { void data.reviewQueues.refetch(); if (isQuestLane) void data.quests.refetch(); }} loading={data.reviewQueues.isFetching || (isQuestLane && data.quests.isFetching)} />} />
@@ -490,12 +508,12 @@ function CaseRow({ item, onClaim, onResolve }: { item: import('@/hooks/use-admin
 
 function QuestLanePreview({ data, location, helper }: { data: AdminData; location: string; helper: string }) {
   const type = location.split('/').pop();
-  const items = data.quests.data?.items.filter((quest) => quest.type === type);
+  const items = data.quests.data?.items.filter((quest: any) => quest.type === type);
   if (data.quests.isLoading) return <TableSkeleton columns={4} />;
   if (data.quests.isError) return <ErrorState onRetry={() => void data.quests.refetch()} />;
   if (!items) return <UnavailableState message={helper} onRetry={() => void data.quests.refetch()} />;
   if (!items.length) return <div className="empty-state"><CircleIcon /><strong>No {type} Quest records returned</strong><p>{helper}</p></div>;
-  return <div>{items.slice(0, 8).map((quest) => <div className="queue-row" key={quest.id}><div className="queue-mark"><TargetIcon /></div><div className="queue-copy"><div className="queue-title">{quest.title}</div><div className="queue-meta">{quest.source} · updated {fmtDate(quest.updatedAt)}</div></div><StatusBadge status={quest.status} /></div>)}</div>;
+  return <div>{items.slice(0, 8).map((quest: any) => <div className="queue-row" key={quest.id}><div className="queue-mark"><TargetIcon /></div><div className="queue-copy"><div className="queue-title">{quest.title}</div><div className="queue-meta">{quest.source} · updated {fmtDate(quest.updatedAt)}</div></div><StatusBadge status={quest.status} /></div>)}</div>;
 }
 
 function CircleIcon() {

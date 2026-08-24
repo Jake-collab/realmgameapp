@@ -85,7 +85,7 @@ export function useAdminData() {
   const diagnostics = useGetAdminDiagnostics({
     query: { queryKey: getGetAdminDiagnosticsQueryKey(), enabled: can('admin.diagnostics.read') },
   });
-  const moderation = useModerationData(session.data?.authorized === true && permissions.some((permission) => permission === 'moderation.read' || permission === 'integrity.read'));
+  const moderation = useModerationData(session.data?.authorized === true && permissions.some((permission: string) => permission === 'moderation.read' || permission === 'integrity.read'));
   const notifications = useNotificationAdminData(session.data?.authorized === true && permissions.includes('admin.read'));
 
   return { session, dashboard, reviewQueues, users, quests, audit, diagnostics, moderation, notifications };

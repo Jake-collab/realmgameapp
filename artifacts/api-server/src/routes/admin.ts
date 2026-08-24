@@ -16,6 +16,7 @@ import { getRolePermissions, requireAdmin, resolveAdminPrincipal } from "../lib/
 import {
   createPromptVersion,
   changePromptState,
+  comparePromptVersions,
   consumeGenerationQuota,
   generateQuest,
   getGenerationPlan,
@@ -23,6 +24,8 @@ import {
   inspectCandidate,
   listPromptVersions,
   listGenerationHistory,
+  createLocalCandidateDraft,
+  recordRateLimitedGeneration,
   questGenerationTypes,
   validatePromptVariables,
   aiConfiguration,
@@ -451,6 +454,19 @@ router.post("/admin/ai/prompts/:type/versions/:version/:action", requireAdmin("a
   res.json({ prompt: updated, action });
 });
 
+router.get("/admin/ai/prompts/:type/compare", requireAdmin("ai.prompts.read"), (req, res) => {
+  const type = req.params.type as QuestGenerationType;
+  const left = Number(req.query.left);
+  const right = Number(req.query.right);
+  if (!questGenerationTypes.includes(type) || !Number.isInteger(left) || !Number.isInteger(right)) {
+    res.status(400).json({ error: "Two valid prompt versions are required." });
+    return;
+  }
+  const comparison = comparePromptVersions(type, left, right);
+  if (!comparison) { res.status(404).json({ error: "Prompt version not found." }); return; }
+  res.json(comparison);
+});
+
 router.post("/admin/ai/prompts/:type/preview", requireAdmin("ai.prompts.read"), (req, res) => {
   const input = z.object({ template: z.string(), variables: z.record(z.string(), z.string()) }).safeParse(req.body);
   if (!input.success) {
@@ -475,6 +491,7 @@ router.post("/admin/ai/generate", requireAdmin("ai.generate"), async (req, res) 
   const requestedBy = req.adminPrincipal?.userId ?? "staff";
   const quota = consumeGenerationQuota(requestedBy, input.data.quantity);
   if (!quota.allowed) {
+    recordRateLimitedGeneration(requestedBy, input.data.type, input.data.quantity, quota.retryAfterSeconds);
     res.setHeader("Retry-After", String(quota.retryAfterSeconds));
     res.status(429).json({ error: "AI generation rate limit reached.", ...quota });
     return;
@@ -501,10 +518,15 @@ router.post("/admin/ai/candidates/draft", requireAdmin("admin.quests.manage"), a
     res.status(400).json({ error: "This candidate must be fixed before it can enter review.", diagnostics: review.diagnostics });
     return;
   }
-  if (!supabaseAdminConfigured()) {
-    res.status(503).json({ error: "Saving AI drafts requires trusted Supabase access." });
-    return;
-  }
+   if (!supabaseAdminConfigured() && process.env.NODE_ENV !== "production") {
+     const draft = createLocalCandidateDraft(candidate.data, req.adminPrincipal?.userId ?? "staff");
+     res.status(201).json({ draft: { id: draft.id, status: draft.status, createdAt: draft.createdAt, reviewRequired: true }, persistence: "local-development-only", message: "AI candidate saved to local development review storage. It is not a published Quest." });
+     return;
+   }
+   if (!supabaseAdminConfigured()) {
+     res.status(503).json({ error: "Saving AI drafts requires trusted Supabase access." });
+     return;
+   }
   try {
     const rows = await supabaseAdminRequest<Array<{ id: string; approval_status: string; created_at: string }>>("ai_generated_content", {
       method: "POST",

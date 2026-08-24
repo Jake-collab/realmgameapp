@@ -375,6 +375,34 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AdminAiPromptPage" }
+  /admin/ai/prompts/{type}/compare:
+    get:
+      operationId: compareAdminAiPromptVersions
+      tags: [admin]
+      summary: Compare two immutable Quest prompt versions
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema: { type: string, enum: [daily, monthly, geo] }
+        - name: left
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - name: right
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        "200":
+          description: Prompt comparison
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        "400": { description: Invalid comparison request }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "404": { description: Prompt version not found }
   /admin/ai/prompts/{type}/versions/{version}/{action}:
     post:
       operationId: changeAdminAiPromptVersionState

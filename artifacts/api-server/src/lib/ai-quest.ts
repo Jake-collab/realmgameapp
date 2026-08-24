@@ -119,8 +119,17 @@ export type GenerationHistoryItem = {
   estimatedInputTokens: number;
   estimatedOutputTokens: number;
   estimatedCostUsd: number;
+  auditOutcome: "not_run" | "passed" | "failed" | "rate_limited";
   reason?: string;
   diagnostics?: string[];
+};
+export type LocalCandidateDraft = {
+  id: string;
+  candidate: GeneratedQuest;
+  status: "pending_review";
+  createdAt: string;
+  createdBy: string;
+  reviewRequired: true;
 };
 
 const defaultText = (type: QuestGenerationType) =>
@@ -149,12 +158,14 @@ const defaultPrompt = (type: QuestGenerationType): PromptVersion => ({
 type LocalState = {
   templates: Record<QuestGenerationType, PromptVersion[]>;
   history: GenerationHistoryItem[];
+  drafts: LocalCandidateDraft[];
 };
 
 const statePath = process.env.AI_LOCAL_STATE_PATH ?? path.join(process.cwd(), ".local", "admin-ai-state.json");
 const freshState = (): LocalState => ({
   templates: { daily: [defaultPrompt("daily")], monthly: [defaultPrompt("monthly")], geo: [defaultPrompt("geo")] },
   history: [],
+  drafts: [],
 });
 
 function loadState(): LocalState {
@@ -168,6 +179,7 @@ function loadState(): LocalState {
         geo: parsed.templates?.geo?.length ? parsed.templates.geo : initial.templates.geo,
       },
       history: Array.isArray(parsed.history) ? parsed.history.slice(-500) : [],
+      drafts: Array.isArray(parsed.drafts) ? parsed.drafts.slice(-200) : [],
     };
   } catch {
     return freshState();
@@ -231,6 +243,20 @@ export function changePromptState(
   return target;
 }
 
+export function comparePromptVersions(type: QuestGenerationType, leftVersion: number, rightVersion: number) {
+  const versions = state.templates[type];
+  const left = versions.find((item) => item.version === leftVersion);
+  const right = versions.find((item) => item.version === rightVersion);
+  if (!left || !right) return null;
+  const fields = (Object.keys(promptFields.shape) as Array<keyof typeof promptFields.shape>).map((field) => ({
+    field,
+    changed: left[field] !== right[field],
+    left: left[field],
+    right: right[field],
+  }));
+  return { type, leftVersion, rightVersion, changedFields: fields.filter((item) => item.changed).map((item) => item.field), fields };
+}
+
 export function getActivePrompt(type: QuestGenerationType) {
   return state.templates[type].find((item) => item.active) ?? null;
 }
@@ -252,7 +278,7 @@ const allowedVariables = new Set([
 export function validatePromptVariables(template: string, supplied: Record<string, string>) {
   const variables = [...new Set([...template.matchAll(/\{\{([a-z0-9_]+)\}\}/g)].map((match) => match[1]))];
   const missing = variables.filter((name) => !(name in supplied) || !supplied[name].trim());
-  const unknown = Object.keys(supplied).filter((name) => !allowedVariables.has(name));
+  const unknown = [...new Set([...variables, ...Object.keys(supplied)].filter((name) => !allowedVariables.has(name)))];
   const rendered = template.replace(/\{\{([a-z0-9_]+)\}\}/g, (_, name: string) => supplied[name] ?? `{{${name}}}`);
   return { variables, missing, unknown, valid: missing.length === 0 && unknown.length === 0, rendered };
 }
@@ -261,7 +287,16 @@ export function validateGenerationInputs(type: QuestGenerationType, variables: R
   const required = type === "daily" ? ["interest_bubble_ids"] : type === "monthly" ? ["theme", "target_month"] : ["public_location_context", "approximate_area"];
   const missing = required.filter((key) => !variables[key]?.trim());
   const unknown = Object.keys(variables).filter((key) => !allowedVariables.has(key));
-  return { valid: missing.length === 0 && unknown.length === 0, missing, unknown };
+  const invalid: string[] = [];
+  if (variables.interest_bubble_ids?.trim()) {
+    let ids: unknown;
+    try { ids = JSON.parse(variables.interest_bubble_ids); } catch { ids = null; }
+    if (!Array.isArray(ids) || ids.length < 1 || ids.length > 10 || ids.some((id) => typeof id !== "string" || !z.string().uuid().safeParse(id).success)) invalid.push("interest_bubble_ids");
+  }
+  if (type === "monthly" && variables.target_month && !/^\d{4}-(0[1-9]|1[0-2])$/.test(variables.target_month)) invalid.push("target_month");
+  if (type === "geo" && variables.public_location_context && variables.public_location_context.length > 500) invalid.push("public_location_context");
+  if (type === "geo" && variables.approximate_area && variables.approximate_area.length > 200) invalid.push("approximate_area");
+  return { valid: missing.length === 0 && unknown.length === 0 && invalid.length === 0, missing, unknown, invalid };
 }
 
 function fingerprint(candidate: GeneratedQuest) {
@@ -277,6 +312,7 @@ export function inspectCandidate(candidate: GeneratedQuest, type: QuestGeneratio
   }
   if (candidate.safety_notes.length === 0) diagnostics.push("Candidate has no explicit safety notes.");
   if (candidate.quest_type === "geo" && candidate.location_requirement === "none") diagnostics.push("Geo Quests must require staff-verified approximate or precise location context.");
+  if (candidate.quest_type === "geo" && !/\b(public|park|library|museum|trail|plaza|district|neighborhood|street|community)\b/i.test(`${candidate.title} ${candidate.summary} ${candidate.description} ${candidate.category}`)) diagnostics.push("Geo candidate is not grounded in recognizable public location context.");
   if (candidate.quest_type !== "geo" && candidate.location_requirement === "precise") diagnostics.push("Only staff-reviewed Geo Quests may request precise location.");
   if (candidate.proof_type === "none" && candidate.proof_instructions.trim()) diagnostics.push("No-proof candidates must not contain proof instructions.");
   if (candidate.interest_bubble_ids.length === 0) diagnostics.push("Candidate must include at least one approved Interest Bubble.");
@@ -291,6 +327,14 @@ export function listGenerationHistory() {
   return [...state.history].reverse();
 }
 
+export function createLocalCandidateDraft(candidate: GeneratedQuest, createdBy: string) {
+  const draft: LocalCandidateDraft = { id: randomUUID(), candidate, status: "pending_review", createdAt: new Date().toISOString(), createdBy, reviewRequired: true };
+  state.drafts.push(draft);
+  state.drafts.splice(0, Math.max(0, state.drafts.length - 200));
+  persistState();
+  return draft;
+}
+
 function recordHistory(item: GenerationHistoryItem) {
   state.history.push(item);
   state.history.splice(0, Math.max(0, state.history.length - 500));
@@ -303,7 +347,12 @@ export function getGenerationPlan(type: QuestGenerationType, quantity: number, v
     : type === "monthly"
       ? [`Monthly theme: ${variables.theme ?? "unassigned"}`, `Target month: ${variables.target_month ?? "unassigned"}`, "Balance difficulty and points across the staged batch."]
       : [`Grounding area: ${variables.approximate_area ?? "unassigned"}`, "Claim verification and exact-coordinate validation remain a human review step."];
-  return { type, quantity, diagnostics, replacementAllowed: true, publishRequiresReview: true };
+  return {
+    type, quantity, diagnostics, replacementAllowed: true, publishRequiresReview: true,
+    coverage: type === "daily" ? { requestedInterests: (() => { try { const ids = JSON.parse(variables.interest_bubble_ids ?? "[]"); return Array.isArray(ids) ? ids.length : 0; } catch { return 0; } })(), fallback: "approved general-interest pool" } : null,
+    balancing: type === "monthly" ? { difficulty: "balanced across canonical tiers", points: "canonical point totals" } : null,
+    grounding: type === "geo" ? { contextRequired: true, exactCoordinates: "staff verification only" } : null,
+  };
 }
 
 export function consumeGenerationQuota(requestedBy: string, quantity: number) {
@@ -318,6 +367,16 @@ export function consumeGenerationQuota(requestedBy: string, quantity: number) {
   window.count += quantity;
   requestWindows.set(requestedBy, window);
   return { allowed: true, remaining: limit - window.count, retryAfterSeconds: 0 };
+}
+
+export function recordRateLimitedGeneration(requestedBy: string, type: QuestGenerationType, quantity: number, retryAfterSeconds: number) {
+  recordHistory({
+    id: randomUUID(), type, status: "rate_limited", createdAt: new Date().toISOString(), requestedBy,
+    quantity, attemptCount: 0, promptVersion: getActivePrompt(type)?.version ?? null,
+    inputFingerprint: createHash("sha256").update(`${requestedBy}:${type}:${quantity}`).digest("hex"),
+    estimatedInputTokens: 0, estimatedOutputTokens: 0, estimatedCostUsd: 0,
+    auditOutcome: "rate_limited", reason: `Rate limit reached; retry after ${retryAfterSeconds} seconds.`,
+  });
 }
 
 export async function generateQuest(type: QuestGenerationType, variables: Record<string, string>, requestedBy = "staff") {
@@ -336,12 +395,12 @@ export async function generateQuest(type: QuestGenerationType, variables: Record
     estimatedCostUsd: 0,
   };
   if (!inputCheck.valid) {
-    recordHistory({ ...base, status: "invalid", attemptCount: 0, reason: `Missing: ${inputCheck.missing.join(", ") || "none"}; unknown: ${inputCheck.unknown.join(", ") || "none"}` });
+    recordHistory({ ...base, status: "invalid", attemptCount: 0, auditOutcome: "failed", reason: `Missing: ${inputCheck.missing.join(", ") || "none"}; unknown: ${inputCheck.unknown.join(", ") || "none"}; invalid: ${inputCheck.invalid.join(", ") || "none"}` });
     return { ok: false as const, status: "invalid" as const, reason: "Generation inputs failed lane validation.", missing: inputCheck.missing, unknown: inputCheck.unknown };
   }
   const config = aiConfiguration();
   if (!config.configured || !prompt) {
-    recordHistory({ ...base, status: "unavailable", attemptCount: 0, reason: "AI provider configuration is unavailable." });
+    recordHistory({ ...base, status: "unavailable", attemptCount: 0, auditOutcome: "not_run", reason: "AI provider configuration is unavailable." });
     return { ok: false as const, status: "unavailable" as const, reason: "AI provider configuration is unavailable." };
   }
   const assembled = `${immutableSafetyRules}\n${prompt.systemInstructions}\n${prompt.contentInstructions}\n${prompt.safetyInstructions}\n${prompt.pointInstructions}\n${prompt.proofInstructions}\n${prompt.outputFormat}\nTrusted variables only: ${JSON.stringify(variables)}`;
@@ -361,7 +420,7 @@ export async function generateQuest(type: QuestGenerationType, variables: Record
       if (!completion.retryable) break;
     }
     if (!completion?.content) {
-      const item = { ...base, status: "failed" as const, attemptCount: Math.max(1, attemptCount), reason: "The AI provider rejected the request.", estimatedInputTokens: Math.ceil(assembled.length / 4) };
+        const item = { ...base, status: "failed" as const, attemptCount: Math.max(1, attemptCount), auditOutcome: "failed" as const, reason: "The AI provider rejected the request.", estimatedInputTokens: Math.ceil(assembled.length / 4) };
       recordHistory(item);
       return { ok: false as const, status: "failed" as const, reason: item.reason };
     }
@@ -369,18 +428,18 @@ export async function generateQuest(type: QuestGenerationType, variables: Record
     try { rawCandidate = JSON.parse(completion.content); } catch { /* recorded as invalid below */ }
     const parsed = generatedQuestSchema.safeParse(rawCandidate);
     if (!parsed.success || parsed.data.quest_type !== type) {
-      recordHistory({ ...base, status: "invalid", attemptCount: Math.max(1, attemptCount), reason: "Provider output failed Quest validation.", estimatedInputTokens: Math.ceil(assembled.length / 4) });
+       recordHistory({ ...base, status: "invalid", attemptCount: Math.max(1, attemptCount), auditOutcome: "failed", reason: "Provider output failed Quest validation.", estimatedInputTokens: Math.ceil(assembled.length / 4) });
       return { ok: false as const, status: "invalid" as const, reason: "The provider returned content that failed Quest validation." };
     }
     const review = inspectCandidate(parsed.data, type);
     if (!review.valid) {
-      recordHistory({ ...base, status: "invalid", attemptCount: Math.max(1, attemptCount), inputFingerprint: fingerprint(parsed.data), estimatedInputTokens: Math.ceil(assembled.length / 4), diagnostics: review.diagnostics, reason: "Candidate failed deterministic safety validation." });
+      recordHistory({ ...base, status: "invalid", attemptCount: Math.max(1, attemptCount), auditOutcome: "failed", inputFingerprint: fingerprint(parsed.data), estimatedInputTokens: Math.ceil(assembled.length / 4), diagnostics: review.diagnostics, reason: "Candidate failed deterministic safety validation." });
       return { ok: false as const, status: "invalid" as const, reason: "The provider candidate failed Worlds safety validation.", review };
     }
-    recordHistory({ ...base, status: "candidate", attemptCount: Math.max(1, attemptCount), inputFingerprint: fingerprint(parsed.data), estimatedInputTokens: completion.promptTokens ?? Math.ceil(assembled.length / 4), estimatedOutputTokens: completion.completionTokens ?? Math.ceil(JSON.stringify(parsed.data).length / 4), estimatedCostUsd: 0, diagnostics: review.diagnostics });
+    recordHistory({ ...base, status: "candidate", attemptCount: Math.max(1, attemptCount), auditOutcome: "passed", inputFingerprint: fingerprint(parsed.data), estimatedInputTokens: completion.promptTokens ?? Math.ceil(assembled.length / 4), estimatedOutputTokens: completion.completionTokens ?? Math.ceil(JSON.stringify(parsed.data).length / 4), estimatedCostUsd: 0, diagnostics: review.diagnostics });
     return { ok: true as const, status: "candidate" as const, candidate: parsed.data, review };
   } catch {
-    recordHistory({ ...base, status: "failed", attemptCount: Math.max(1, attemptCount), reason: "The AI provider could not be reached." });
+    recordHistory({ ...base, status: "failed", attemptCount: Math.max(1, attemptCount), auditOutcome: "failed", reason: "The AI provider could not be reached." });
     return { ok: false as const, status: "failed" as const, reason: "The AI provider could not be reached." };
   } finally {}
 }

@@ -7,6 +7,8 @@ export type AdminDiagnostic = any;
 
 type QueryOptions = { query?: Record<string, unknown> };
 type Params = Record<string, string | number | boolean | undefined>;
+export type ResolveAdminModerationCaseBody = { decision: string; reason: string; confirmed: boolean; expectedUpdatedAt?: string; idempotencyKey?: string };
+export type ResolveAdminModerationCaseResponse = Record<string, unknown>;
 
 const toQuery = (params?: Params) => {
   const query = new URLSearchParams();
@@ -38,3 +40,14 @@ export const useGetAdminDiagnostics = (options?: QueryOptions) => useQuery({ que
 export const useListAdminUsers = (params?: Params, options?: QueryOptions) => useQuery({ queryKey: getListAdminUsersQueryKey(params), queryFn: () => get<any>(`/admin/users${toQuery(params)}`), ...(options?.query ?? {}) });
 export const useListAdminQuests = (params?: Params, options?: QueryOptions) => useQuery({ queryKey: getListAdminQuestsQueryKey(params), queryFn: () => get<any>(`/admin/quests${toQuery(params)}`), ...(options?.query ?? {}) });
 export const useListAdminAuditLogs = (params?: Params, options?: QueryOptions) => useQuery({ queryKey: getListAdminAuditLogsQueryKey(params), queryFn: () => get<any>(`/admin/audit${toQuery(params)}`), ...(options?.query ?? {}) });
+
+export async function resolveAdminModerationCase(id: string, body: ResolveAdminModerationCaseBody): Promise<ResolveAdminModerationCaseResponse> {
+  const response = await fetch(`/api/admin/moderation/cases/${encodeURIComponent(id)}/resolve`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error(`Admin request failed (${response.status}).`);
+  return response.json() as Promise<ResolveAdminModerationCaseResponse>;
+}
