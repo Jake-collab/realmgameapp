@@ -1,0 +1,2880 @@
+# Worlds — Build 1, Prompt 23
+
+## Full Integration Audit, End-to-End Testing, Security Review, and Launch Readiness
+
+Continue from the current **Worlds** project.
+
+Treat Prompts 1–22, the current source code, database schema, migrations, Edge Functions/server functions, tests, and all project documentation as authoritative.
+
+The application is:
+
+**Worlds**
+
+The only supported gameplay modes in Build 1 are:
+
+* **Quest**
+* **Hunt**
+
+Explicitly exclude:
+
+* Game Zones
+* Outbreak
+
+This prompt is **not a feature-expansion prompt**.
+
+Do not invent new product features.
+
+Do not redesign the approved UI/UX.
+
+Do not add new navigation.
+
+Do not add monetization.
+
+The purpose of this prompt is to audit, connect, repair, test, and harden everything already implemented so Build 1 behaves as one complete application.
+
+---
+
+# Primary Objective
+
+Perform a full application audit and repair pass covering:
+
+1. Application architecture
+2. Authentication
+3. Onboarding
+4. Interest Bubbles
+5. Quest UI
+6. Quest game logic
+7. Daily Quests
+8. Monthly Quest Drops
+9. Geo-Quests
+10. Quest proof
+11. Quest points
+12. Quest Progress
+13. Quest leaderboards
+14. Hunt Map
+15. Hunt joining
+16. Hunt invitations
+17. Active Hunt gameplay
+18. Hunt clues
+19. Hunt riddles
+20. Hunt proof
+21. Hunt completion
+22. Hunt Progress
+23. Hunt leaderboards
+24. Custom Hunt creation
+25. Creator management
+26. Public profiles
+27. Friends/social
+28. Achievements/progression
+29. Notifications
+30. Moderation
+31. Anti-cheat
+32. Offline/sync
+33. Admin Panel
+34. AI Quest generation
+35. Mapbox integration
+36. Supabase integration readiness
+37. Storage
+38. RLS
+39. Edge/server functions
+40. Scheduled jobs
+41. Deep links
+42. Performance
+43. Accessibility
+44. Error handling
+45. Security
+46. Privacy
+47. Production configuration readiness
+48. Automated tests
+49. End-to-end test scenarios
+50. Remaining third-party configuration checklist
+
+The goal is:
+
+**No hidden broken pathways.**
+
+---
+
+# 1. Stop Adding Features
+
+Before doing anything else:
+
+Audit the current implementation and classify all existing work into:
+
+* Complete
+* Present but disconnected
+* Present but incomplete
+* Duplicate
+* Contradictory
+* Placeholder
+* Development-only
+* Broken
+* Missing from approved Build 1 scope
+
+Do not add unrelated functionality.
+
+Only implement something new if it is necessary to satisfy functionality already approved in Prompts 1–22.
+
+---
+
+# 2. Build 1 Product Contract
+
+The application must remain exactly:
+
+## Quest mode
+
+Bottom navigation:
+
+1. Home
+2. Quests
+3. Map
+4. Progress
+5. Profile
+
+## Hunt mode
+
+Bottom navigation:
+
+1. Map
+2. My Hunts
+3. Progress
+4. Profile
+
+The Quest/Hunt selector remains at the top-level game shell.
+
+Profile remains shared.
+
+Notifications remain shared.
+
+Do not introduce:
+
+* Discover tab
+* Geo bottom tab
+* Monthly bottom tab
+* Friends bottom tab
+* Creator bottom tab
+* Admin bottom tab
+* Game Zones
+* Outbreak
+
+Fix any implementation that violates this.
+
+---
+
+# 3. Route Audit
+
+Enumerate every route in the application.
+
+Classify each route as:
+
+* Required Build 1
+* Admin
+* Development-only
+* Obsolete
+* Duplicate
+* Broken
+* Future
+
+Remove or disable obsolete accidental routes.
+
+Do not delete future architecture that is intentionally documented, but prevent unfinished future routes from appearing in production navigation.
+
+Verify route protection.
+
+---
+
+# 4. Navigation Audit
+
+Test every consumer navigation path.
+
+Quest:
+
+```text
+Launch
+→ Authentication
+→ Onboarding
+→ Quest Home
+→ Quests
+→ Quest Detail
+→ Start Quest
+→ In Action
+→ Proof
+→ Complete
+→ Progress
+```
+
+Hunt:
+
+```text
+Quest/Hunt selector
+→ Hunt Map
+→ Hunt preview
+→ Hunt Detail
+→ Join
+→ Ready
+→ Start
+→ Active Hunt
+→ Stops
+→ Proof
+→ Complete
+→ Hunt Progress
+```
+
+Custom Hunt:
+
+```text
+My Hunts
+→ Create
+→ Draft
+→ Stops
+→ Preview
+→ Submit
+→ Moderation status
+→ Approved
+→ Published
+```
+
+Social:
+
+```text
+Profile
+→ Find People
+→ Public Profile
+→ Friend Request
+→ Accept
+→ Friends
+→ Hunt Invite eligibility
+```
+
+Admin:
+
+```text
+Admin auth
+→ Dashboard
+→ Operational modules
+```
+
+No screen should strand the user.
+
+---
+
+# 5. Authentication Audit
+
+Verify real architecture for:
+
+* Signup
+* Login
+* Logout
+* Session restoration
+* Password reset
+* Email verification if enabled
+* Auth error handling
+* Auth loading state
+* Protected routes
+* Account switching
+* Deleted/deactivated users
+* Restricted users
+* Admin authorization
+
+Remove fake-auth pathways.
+
+The old:
+
+**authentication is not connected**
+
+condition must not exist in production behavior once Supabase Auth is connected.
+
+If Supabase credentials are not yet present, use an explicit integration-required state rather than fake success.
+
+---
+
+# 6. Onboarding Audit
+
+Verify onboarding includes:
+
+* Account creation
+* Username/display name
+* Avatar optionality
+* Interest Bubble selection
+* Privacy defaults
+* Notification explanation
+* Completion status
+
+Interest Bubble selection must be persisted and usable by Daily Quest personalization.
+
+Do not allow onboarding to complete with required fields missing.
+
+---
+
+# 7. Interest Bubble Audit
+
+Verify:
+
+* Global Interest Bubble pool exists.
+* Admin can manage it.
+* User selects active bubbles.
+* Invalid/deactivated bubbles are handled.
+* Daily Quest assignment uses them.
+* AI Daily generation uses aggregate/current bubble taxonomy.
+* Privacy is respected.
+* Unknown AI tags are not auto-created.
+
+---
+
+# 8. Quest UI Audit
+
+Verify the approved simplified Quests screen contains exactly the intended conceptual headings:
+
+* Daily Quest
+* Monthly Quest Drop
+* Geo-Quest
+
+Do not reintroduce excessive Geo categories.
+
+Geo-Quest item should clearly show:
+
+* Pin/location
+* Quest
+* Points
+
+Keep it simple.
+
+---
+
+# 9. Quest Home Audit
+
+Verify Home shows the prioritized active Quest in expanded form.
+
+It should contain useful information such as:
+
+* Quest title
+* Current objective
+* Points
+* Relevant deadline
+* Progress/status
+* Primary action
+
+The difference between Home and Progress must remain clear:
+
+## Home
+
+Expanded immediate gameplay.
+
+## Progress
+
+Lists and tracking.
+
+Do not duplicate the same full screen twice.
+
+---
+
+# 10. Start Quest Audit
+
+Verify the initiation action uses consistent wording:
+
+**Start Quest**
+
+Test:
+
+* Eligible Quest
+* Already started
+* Already completed
+* Expired Quest
+* Restricted user
+* Offline
+* Geo prerequisite
+* Duplicate tap
+
+Starting must be idempotent.
+
+Do not award points on start.
+
+---
+
+# 11. Daily Quest End-to-End Audit
+
+Test:
+
+```text
+Interest selection
+→ Daily candidate matching
+→ Stable assignment
+→ Daily Quest shown
+→ Optional reroll if enabled
+→ Start
+→ Proof
+→ Review if required
+→ Completion
+→ Points
+→ Progress
+→ Leaderboard
+```
+
+Verify assignment does not change just because the user refreshes.
+
+Verify AI API is not called from consumer Daily loading.
+
+---
+
+# 12. Daily Reroll Audit
+
+Determine from canonical project configuration whether rerolls remain enabled.
+
+If enabled:
+
+* Admin configurable maximum
+* Counter works
+* Assignment stable after reroll
+* Cannot exceed limit
+* Does not duplicate completion
+* Does not spam notifications
+
+If later project rules disabled rerolls:
+
+Remove stale UI/code.
+
+There must be one canonical rule.
+
+---
+
+# 13. Monthly Quest Drop Audit
+
+Verify Monthly is treated as a first-class Quest category.
+
+Test:
+
+* Monthly set creation
+* Count validation
+* Point total validation
+* Schedule
+* Activation
+* Consumer display
+* Individual Quest initiation
+* Completion
+* Monthly Progress
+* Expiration/archive
+
+If the canonical rule remains:
+
+* 100 Quests
+* 10,000 total points
+
+verify every layer agrees.
+
+If configuration replaced fixed constants, use configuration.
+
+Do not retain conflicting hardcoded values.
+
+---
+
+# 14. Monthly AI Audit
+
+Verify:
+
+* Separate Monthly AI prompt
+* Batch generation
+* Structured output
+* Validation
+* Duplicate detection
+* Point balancing
+* Admin editing
+* Save as draft
+* Human review
+* Publication guard
+
+AI must never publish directly.
+
+---
+
+# 15. Geo-Quest End-to-End Audit
+
+Test:
+
+```text
+Admin selects location in Mapbox
+→ Geo Quest created
+→ Public display geometry
+→ Private validation geometry
+→ Quest Map marker
+→ Player opens
+→ Start
+→ GPS validation
+→ Proof if needed
+→ Completion
+→ Points
+```
+
+Verify:
+
+* Private validation geometry never enters normal consumer payload.
+* Mapbox marker works.
+* Location permission flow works.
+* `0,0` placeholders cannot survive.
+* Validation is server-authoritative.
+* No background location tracking was introduced.
+
+---
+
+# 16. Quest Proof Type Audit
+
+Audit actual supported proof types.
+
+Canonical supported types must agree across:
+
+* Database
+* Shared types
+* Admin
+* AI output
+* Consumer UI
+* Edge/server functions
+
+Potential approved types:
+
+* `photo`
+* `text`
+* `check_in`
+* `geo`
+* manual confirmation where domain permits
+
+QR must only exist if real scanner/token validation is implemented.
+
+If QR remains fake text input:
+
+Disable/remove it from production Build 1.
+
+Do not leave misleading functionality.
+
+---
+
+# 17. QR Audit
+
+Search entire project for:
+
+* `qr_scan`
+* QR input
+* QR camera
+* QR validation
+
+Classify current state.
+
+If proper QR scanning and secure validation do not exist:
+
+* Remove from active consumer/admin proof options.
+* Preserve future-ready schema only if harmless.
+* Document as future work.
+
+No fake QR.
+
+---
+
+# 18. Difficulty Audit
+
+Search entire project for all difficulty enums and strings.
+
+Ensure exactly one canonical set.
+
+Repair:
+
+* Database constraints
+* TypeScript types
+* Zod schemas
+* AI schema
+* Admin editor
+* Consumer UI
+* Point calibration
+* Seed data
+* Tests
+
+Remove the historic `Extreme` mismatch unless it is now deliberately canonical.
+
+No mismatched enum may remain.
+
+---
+
+# 19. Quest Points Audit
+
+Verify:
+
+* Points configured server-side
+* Client cannot choose amount
+* Completion awards once
+* Append-only ledger
+* Reversal works
+* Quarantine works
+* Leaderboards exclude invalid/quarantined value
+* Monthly totals use authoritative values
+* AI only recommends points
+
+Test concurrency.
+
+---
+
+# 20. Quest Progress Audit
+
+Confirm Progress includes:
+
+* Leaderboards with personal point total
+* In Action
+* Completed
+
+Do not add unnecessary separate primary sections.
+
+Verify:
+
+* Active initiated Quests appear
+* Completion/progress bar is accurate
+* Completed list is authoritative
+* Proof states route correctly
+
+---
+
+# 21. Quest Leaderboard Audit
+
+Verify:
+
+* Quest points only
+* Periods work
+* Privacy works
+* Anonymous users work
+* Hidden users excluded
+* Ties deterministic
+* Current-user rank works
+* Automatic refresh job exists
+* Manual recalculation is recovery-only
+
+---
+
+# 22. Hunt Map Audit
+
+This is a core gameplay screen.
+
+Verify Hunt mode opens to one large Mapbox-connected map.
+
+The map must support:
+
+* Public Hunt markers
+* Custom Hunts
+* Clustering
+* Search area
+* Search location
+* Filters
+* Marker preview
+* Hunt Detail navigation
+* User location where permission granted
+
+Do not create a separate Discover screen.
+
+---
+
+# 23. Hunt Map Content Audit
+
+Verify the map displays only appropriate content.
+
+Public:
+
+* Published Hunts
+* Published Custom Hunts
+
+Exclude:
+
+* Draft
+* Pending review
+* Private
+* Invite-only public leakage
+* Expired unless intentionally shown
+* Cancelled
+* Invalid active window
+
+Ensure backend filtering, not just UI filtering.
+
+---
+
+# 24. Hunt Join Audit
+
+Test:
+
+* Public Hunt join
+* Invite-only Hunt
+* Unlisted Hunt
+* Private Hunt
+* Hunt full
+* Upcoming Hunt
+* Cancelled Hunt
+* Existing participant
+* Double tap
+* Offline
+
+Capacity must be enforced transactionally.
+
+---
+
+# 25. Hunt Invitation Audit
+
+Verify:
+
+* Invitation creation
+* Friend/social eligibility
+* Block enforcement
+* Capacity
+* Accept
+* Decline
+* Expiration
+* Revocation
+* Deep links
+* Notifications
+
+No duplicate participation.
+
+---
+
+# 26. Ready Hunt Audit
+
+Verify:
+
+* Individual start
+* Scheduled start
+* Host-controlled start
+* Minimum participant requirement
+* Waiting for host
+* Starts soon
+* No early clue leakage
+
+---
+
+# 27. Active Hunt Audit
+
+Test:
+
+* Ordered Hunt
+* Unordered Hunt
+* Solo
+* Group-ready architecture
+* App restart
+* Multi-device refresh
+* Expiration
+* Pause
+* Cancellation
+* Removal
+* Withdrawal
+
+The current authorized clue remains the primary experience.
+
+---
+
+# 28. Hunt Clue Security Audit
+
+Search all APIs and caches.
+
+Future locked clues must never be sent prematurely.
+
+Verify:
+
+* API response
+* React Query cache
+* Offline cache
+* Deep links
+* Notifications
+* Analytics
+* Logs
+
+contain no unauthorized future clue content.
+
+---
+
+# 29. Hunt Riddle Audit
+
+Test:
+
+* Riddle appears
+* Input exists
+* Correct normalized answer succeeds
+* Incorrect answer fails safely
+* Rate limit works
+* Correct answers remain server-private
+* No accepted-answer data in client bundle/cache/API
+
+This specifically repairs the old incomplete riddle flow.
+
+---
+
+# 30. Hunt Geographic Stop Audit
+
+Verify:
+
+* Coordinates required where needed
+* Invalid coordinates rejected
+* `0,0` not silently accepted
+* Public/private geometry separated
+* Active window enforced
+* Stop validation uses shared Geo engine
+
+---
+
+# 31. Hunt Proof Audit
+
+Test:
+
+* Text
+* Image
+* Location
+* Image + location
+* Other approved combinations
+* Under review
+* Needs resubmission
+* Rejection
+* Offline draft
+* Moderation
+
+Proof safety moderation and proof correctness remain separate.
+
+---
+
+# 32. Hunt Completion Audit
+
+Verify:
+
+* Required stops complete
+* Optional stops do not block
+* Proof approved
+* Geo validated
+* Completion transaction atomic
+* Reward awarded once
+* Duplicate completion safe
+* Offline cannot complete authoritatively
+
+---
+
+# 33. Hunt Progress Audit
+
+Verify exactly:
+
+* Leaderboards
+* In Action
+* Completed
+
+In Action should handle:
+
+* Active
+* Ready
+* Awaiting proof
+* Under review
+* Needs resubmission
+
+Completed must contain only authoritative completion.
+
+---
+
+# 34. Hunt Leaderboard Audit
+
+Verify:
+
+* Hunt points only
+* Quest points excluded
+* Reversals applied
+* Quarantine excluded
+* Privacy
+* Ties
+* Current rank
+* Automatic refresh
+
+---
+
+# 35. Custom Hunt Creator Audit
+
+Test complete flow:
+
+```text
+My Hunts
+→ + Create
+→ Basic Details
+→ Privacy/Schedule
+→ Start Location
+→ Stops
+→ Clues/Proof
+→ Invitees
+→ Preview
+→ Validate
+→ Submit
+→ Moderation
+→ Changes Requested
+→ Resubmit
+→ Approval
+→ Publication
+```
+
+No dead buttons.
+
+---
+
+# 36. Hunt Draft Persistence Audit
+
+Verify:
+
+* Autosave
+* App restart
+* Offline local save
+* Server sync
+* Conflict resolution
+* Versioning
+* Draft ownership
+* Image upload recovery
+
+---
+
+# 37. Custom Hunt Versioning Audit
+
+Verify active players never have rules changed underneath them.
+
+Published edits must:
+
+* Create new version where required
+* Preserve previous participant snapshot
+* Preserve approved points
+* Preserve clue/stop structure
+* Preserve Geo validation version
+
+---
+
+# 38. Creator Moderation Audit
+
+Verify:
+
+* Submitted snapshot immutable
+* Admin sees correct version
+* Creator-safe vs internal notes separated
+* Approval
+* Changes Requested
+* Rejection
+* Publication
+
+Creator cannot approve own Hunt.
+
+---
+
+# 39. Custom Hunt Analytics Audit
+
+If analytics data is not actually captured:
+
+Show correct empty state.
+
+Do not fabricate:
+
+* Views
+* Completion rate
+* Popularity
+
+If events exist, verify aggregation.
+
+---
+
+# 40. Social Audit
+
+Test:
+
+* Public profile
+* Private profile
+* Friends-only
+* Search by username
+* Friend request
+* Accept
+* Decline
+* Cancel
+* Remove
+* Block
+* Unblock
+* Privacy settings
+* Hunt invitation integration
+
+No email discovery.
+
+No exact location exposure.
+
+---
+
+# 41. Block Audit
+
+Blocking must:
+
+* Remove friendship
+* Cancel pending requests
+* Prevent search
+* Prevent new friend request
+* Prevent Hunt invite
+* Restrict profile access
+* Revalidate old deep links
+
+Unblock must not restore friendship automatically.
+
+---
+
+# 42. Progression Audit
+
+Verify:
+
+* Achievements
+* Milestones
+* Titles
+* Badges
+* Combined statistics
+* Profile display
+* Privacy
+* Server-side award
+* Duplicate prevention
+
+Do not award fake achievements from client state.
+
+---
+
+# 43. Notification Audit
+
+Test:
+
+* Notification Center
+* Unread count
+* Preferences
+* Push registration architecture
+* Daily Quest
+* Monthly Drop
+* Hunt invitation
+* Hunt starts
+* Proof approved
+* Needs resubmission
+* Achievement
+* Moderation result
+* Account event
+* Deep links
+* Quiet hours
+* Time zones
+* Duplicate prevention
+
+If external push provider is not yet configured:
+
+The application must clearly report:
+
+**Push provider not configured**
+
+while in-app notifications continue functioning.
+
+---
+
+# 44. Moderation Audit
+
+Test:
+
+* Avatar
+* Public Hunt media
+* Quest media
+* Proof image
+* Creator text
+* AI Quest output
+* Report integration
+
+If external moderation provider is not connected:
+
+Manual moderation must still function.
+
+Do not claim automated scan succeeded.
+
+---
+
+# 45. Anti-Cheat Audit
+
+Verify one canonical engine.
+
+Test:
+
+* Mock location
+* Poor accuracy
+* Impossible movement
+* Burst submission
+* Duplicate submission
+* Media reuse
+* VPN weak signal
+* Repeated Geo failure
+* Riddle guess abuse
+
+VPN alone must not sanction user.
+
+No permanent auto-ban.
+
+---
+
+# 46. Offline Audit
+
+Perform end-to-end offline scenarios.
+
+Quest:
+
+* Cached read
+* Proof draft
+* Image preserved
+* Queue
+* Reconnect
+* Submit
+* No offline points
+
+Hunt:
+
+* Current clue
+* Future clue protected
+* Proof draft
+* Ordered stop remains locked
+* Reconnect
+* Continue
+
+Creator:
+
+* Draft edit
+* Saved on device
+* Reconnect
+* Sync
+
+---
+
+# 47. Supabase Schema Audit
+
+Inspect entire schema.
+
+Find:
+
+* Duplicate tables
+* Old unused tables
+* Naming mismatches
+* Missing FKs
+* Missing indexes
+* Invalid nullable fields
+* Enum mismatches
+* Conflicting status models
+* Orphan records
+* Duplicate uniqueness logic
+
+Pay special attention to historic known mismatch:
+
+```text
+custom_hunts
+vs
+custom_hunt_games
+```
+
+There must be one canonical model.
+
+Migrate references safely.
+
+Do not leave two competing tables unless they intentionally represent different entities and are documented.
+
+---
+
+# 48. Schema Naming Audit
+
+Standardize naming conventions across:
+
+* Tables
+* Columns
+* RPCs
+* Edge Functions
+* Types
+* Hooks
+* Query keys
+
+Do not rename stable production-facing entities without migrations.
+
+Eliminate accidental duplicate concepts.
+
+---
+
+# 49. RLS Audit
+
+Audit every table containing user/staff/private data.
+
+Verify RLS for:
+
+* Profiles
+* Interests
+* Quest participation
+* Quest submissions
+* Hunt participation
+* Hunt invitations
+* Proof
+* Media
+* Friends
+* Blocks
+* Achievements
+* Notifications
+* Creator drafts
+* Reports
+* Anti-cheat
+* Points
+* Admin
+* AI generation
+* Moderation
+
+No broad authenticated-user access.
+
+---
+
+# 50. Storage Audit
+
+Audit Supabase Storage or current storage architecture.
+
+Buckets/paths should distinguish:
+
+* Public approved media
+* Pending creator media
+* Private proof media
+* Avatars
+* Moderation quarantine
+
+Verify:
+
+* Signed URLs
+* Access policies
+* Upload ownership
+* Cleanup
+* No proof media public exposure
+
+---
+
+# 51. Edge Function / Server Function Audit
+
+Enumerate every function.
+
+For each:
+
+* Purpose
+* Caller
+* Auth requirement
+* Input validation
+* Idempotency
+* RLS/security
+* Error shape
+* Current use
+* Test coverage
+
+Remove or archive unused conflicting functions only when safe.
+
+Pay attention to old duplicate implementations.
+
+---
+
+# 52. Raw Client Supabase Audit
+
+Search screens/components for raw sensitive mutations.
+
+Move business logic into:
+
+* Service
+* Repository
+* Trusted RPC
+* Edge Function
+
+where already required by architecture.
+
+Client must not directly:
+
+* Award points
+* Approve proof
+* Publish Hunts
+* Change moderation state
+* Set leaderboard rank
+* Change admin role
+
+---
+
+# 53. Mapbox Integration Audit
+
+Verify actual map layer wiring.
+
+Check:
+
+* Map provider initialization
+* Token/config
+* Quest markers
+* Hunt markers
+* Clustering
+* Search/geocoding
+* Camera
+* Recenter
+* Location permission
+* Selected marker
+* Map/list coordination
+* Error handling
+* Offline fallback
+
+No placeholder map must remain in production.
+
+If token is absent:
+
+Show integration-required state.
+
+Do not fake Mapbox data.
+
+---
+
+# 54. Map Performance Audit
+
+Test with:
+
+* 10 markers
+* 100 markers
+* Dense cluster
+* Rapid camera movement
+* Filter changes
+* Search
+* Poor network
+
+Use viewport queries.
+
+Do not query entire world dataset.
+
+Cancel stale requests.
+
+---
+
+# 55. Scheduled Job Audit
+
+Enumerate scheduled jobs.
+
+Verify:
+
+* Daily Quest assignment
+* Monthly activation
+* Hunt lifecycle
+* Invitation expiration
+* Friend request expiration
+* Leaderboard refresh
+* Notification scheduling
+* Moderation retry
+* Data retention
+* Cleanup
+
+Each should have:
+
+* Idempotency
+* Run logs
+* Health
+* Failure handling
+
+No critical process should rely on an Admin remembering to click a button.
+
+---
+
+# 56. AI Quest Generation Audit
+
+Verify:
+
+* Provider abstraction
+* Server-side only
+* API key protected
+* Separate Daily prompt
+* Separate Monthly prompt
+* Separate Geo prompt
+* Prompt customization
+* Prompt history
+* Prompt test
+* Structured output
+* Safety layer
+* Interest personalization
+* Cost limits
+* Rate limiting
+* Draft-only output
+* Human review
+
+Manual Quest creation must still work if AI unavailable.
+
+---
+
+# 57. Third-Party Configuration Inventory
+
+Create one canonical file:
+
+```text
+/docs/THIRD_PARTY_CONFIGURATION.md
+```
+
+List every external integration and its current status.
+
+Examples:
+
+## Required
+
+* Supabase project URL
+* Supabase anon/publishable client key
+* Backend service credentials where appropriate
+* Mapbox token
+* AI API provider/key
+* Push notification provider configuration
+* Moderation provider configuration
+
+## Optional/Future
+
+* Production analytics provider
+* Crash reporting
+* Email provider if needed
+
+For each record:
+
+* Purpose
+* Required environment variable
+* Client/server scope
+* Where configured
+* How to test
+* Current status
+
+Do not include secret values.
+
+---
+
+# 58. Environment Variable Audit
+
+Create canonical environment documentation.
+
+Classify:
+
+## Client safe
+
+Example:
+
+* Supabase public project URL
+* Supabase publishable/anon key
+* Mapbox public token where appropriate
+
+## Server secret
+
+* Service-role key
+* AI API secret
+* Moderation API secret
+* Push credentials
+* Any privileged secret
+
+Verify server secrets cannot enter frontend bundle.
+
+---
+
+# 59. Environment Validation
+
+Create startup/config validators.
+
+Development may show helpful missing-config status.
+
+Production must fail safely when a critical required service is missing.
+
+Do not display secrets.
+
+Examples:
+
+```text
+Supabase: configured
+Mapbox: missing
+AI generation: disabled
+Push: not configured
+Moderation: manual mode
+```
+
+---
+
+# 60. Development Fixture Audit
+
+Search entire project for:
+
+* hardcoded sample users
+* fake Quests
+* fake Hunts
+* fake map points
+* fake leaderboard rows
+* fixture notifications
+* dummy moderation
+* stub AI output
+
+Ensure they are gated behind:
+
+* development environment
+* explicit fixture flag
+
+They must never appear in production.
+
+---
+
+# 61. Placeholder Audit
+
+Search for:
+
+* TODO
+* FIXME
+* placeholder
+* mock
+* stub
+* fake
+* not implemented
+* coming soon
+* console-only action
+
+Classify each.
+
+Fix all that belong to Build 1.
+
+Document legitimate future ones.
+
+Do not leave Build 1 buttons that do nothing.
+
+---
+
+# 62. Dead Button Audit
+
+Programmatically/manual audit all buttons/actions.
+
+Every production control must:
+
+* Work
+* Be intentionally disabled with explanation
+* Or be removed
+
+No silent no-op.
+
+---
+
+# 63. Empty State Audit
+
+Verify useful empty states across:
+
+* Quest
+* Hunt
+* Progress
+* Friends
+* Notifications
+* Creator
+* Admin
+* AI
+* Moderation
+
+No fake content used just to avoid empty screen.
+
+---
+
+# 64. Error State Audit
+
+Verify every major feature handles:
+
+* Network
+* Permission denied
+* Missing entity
+* Expired entity
+* Restricted account
+* Server error
+* Offline
+* Configuration missing
+
+No raw stack traces.
+
+No SQL errors.
+
+No Supabase internal messages.
+
+---
+
+# 65. Loading State Audit
+
+Eliminate:
+
+* Infinite spinners
+* Blank screens
+* Entire-screen refresh for small action
+
+Use contextual skeletons/loaders.
+
+Add timeouts and recovery where necessary.
+
+---
+
+# 66. Accessibility Audit
+
+Review every major consumer screen.
+
+Verify:
+
+* Screen-reader labels
+* Dynamic text
+* Touch targets
+* Keyboard behavior where applicable
+* Contrast
+* Status not color-only
+* Reduced motion
+* Map control accessibility
+* Modal focus
+* Form labels
+* Error association
+
+Admin Panel must also be keyboard-accessible.
+
+---
+
+# 67. Responsive Layout Audit
+
+Test:
+
+* Small phone
+* Large phone
+* Tablet
+* Desktop Admin
+
+No clipping.
+
+No unreachable actions.
+
+No map hidden under navigation.
+
+No bottom sheet blocking primary action permanently.
+
+---
+
+# 68. Performance Audit
+
+Inspect:
+
+* Excessive rerenders
+* Large flat lists
+* Non-virtualized data
+* Giant queries
+* Duplicate network requests
+* Map redraws
+* Image sizes
+* Query cache
+* Offline cache
+* Large JSON payloads
+
+Optimize only evidence-based issues.
+
+Do not prematurely rewrite working architecture.
+
+---
+
+# 69. Image Optimization Audit
+
+Verify:
+
+* Compression
+* Resizing
+* Appropriate formats
+* Thumbnails
+* Lazy loading
+* Upload limits
+* Proof privacy
+
+Do not download original giant media when thumbnail is enough.
+
+---
+
+# 70. Security Audit
+
+Search for:
+
+* Client-side service-role key
+* Hardcoded API secrets
+* Privileged environment variables
+* Unsafe direct SQL
+* Broad RLS
+* IDOR vulnerabilities
+* Unvalidated route IDs
+* Arbitrary URL navigation
+* Unrestricted file upload
+* Unsafe HTML rendering
+* Prompt injection surfaces
+* Admin route bypass
+* Mass assignment
+* Client-controlled authoritative fields
+
+Repair all Build 1 findings.
+
+---
+
+# 71. Authentication Authorization Matrix
+
+Create:
+
+```text
+/docs/AUTHORIZATION_MATRIX.md
+```
+
+Cover roles:
+
+* Guest
+* User
+* Creator
+* Moderator
+* Admin
+* Super Admin
+
+Entities/actions:
+
+* Quest
+* Hunt
+* Proof
+* Creator draft
+* Friends
+* Reports
+* Admin
+* AI
+* Moderation
+* Points
+
+Verify code matches documentation.
+
+---
+
+# 72. Privacy Audit
+
+Verify no unintended exposure of:
+
+* Exact location
+* Validation geometry
+* Proof
+* Friend blocks
+* Reports
+* Moderation
+* Anti-cheat
+* Admin notes
+* AI prompts
+* User email
+* Phone
+* Tokens
+
+Map and notifications deserve specific review.
+
+---
+
+# 73. Logging Audit
+
+Production logs must not contain:
+
+* Passwords
+* Access tokens
+* Refresh tokens
+* API keys
+* Proof content
+* Secret riddle answers
+* Full private coordinates
+* Sensitive moderation notes
+
+Use structured safe error logs.
+
+---
+
+# 74. Crash Recovery Audit
+
+Test app restart during:
+
+* Login
+* Proof draft
+* Proof upload
+* Hunt active
+* Creator draft
+* Notification deep link
+* Offline queue sync
+
+State should recover safely.
+
+---
+
+# 75. Concurrency Audit
+
+Test double/concurrent operations:
+
+* Start Quest twice
+* Submit proof twice
+* Complete Quest twice
+* Join Hunt twice
+* Accept invitation twice
+* Complete Hunt twice
+* Award achievement twice
+* Send friend request twice
+* AI generation double click
+* Admin proof approval by two moderators
+
+All must be safe.
+
+---
+
+# 76. Time and Time-Zone Audit
+
+Verify:
+
+* UTC storage
+* Local rendering
+* DST
+* Daily assignment day boundary
+* Monthly activation
+* Hunt schedules
+* Notification quiet hours
+* Expiration
+* Offline deadline behavior
+
+No naive local-date bugs.
+
+---
+
+# 77. Data Integrity Audit
+
+Add/verify database constraints for:
+
+* One daily assignment per user/day
+* Unique participation
+* Unique completion reward
+* Unique active friend request pair
+* Canonical friendship
+* Unique Hunt invitation where appropriate
+* Unique achievement award
+* Proof submission state
+* Stop progress uniqueness
+* Ledger idempotency
+* Moderation idempotency
+
+Prefer DB constraints in addition to application checks.
+
+---
+
+# 78. Migration Audit
+
+Enumerate migrations in order.
+
+Verify:
+
+* Reproducible clean database
+* No dependency on manual DB edits
+* No duplicate migration numbers
+* No incompatible enum migration
+* Seed data optional and environment-safe
+
+Run migrations against a clean development database if current environment supports it.
+
+---
+
+# 79. Fresh Install Test
+
+Simulate a new user.
+
+Test:
+
+```text
+Install
+→ Signup
+→ Onboarding
+→ Interest selection
+→ Quest mode
+→ Daily Quest
+→ Start
+→ Complete
+→ Progress
+→ Hunt mode
+→ Map
+```
+
+No developer setup assumptions should leak into consumer UX.
+
+---
+
+# 80. Returning User Test
+
+Test:
+
+* Session restored
+* Existing active Quest shown
+* Existing active Hunt shown
+* Notification badge restored
+* Progress correct
+* Offline cache reconciled
+
+---
+
+# 81. Quest E2E Scenario
+
+Create automated/manual test scenario:
+
+```text
+Create Quest
+→ Publish
+→ Assign
+→ User starts
+→ User submits proof
+→ Moderator approves
+→ Quest completes
+→ Points ledger updates
+→ Notification generated
+→ Progress updates
+→ Leaderboard updates
+```
+
+Verify all layers.
+
+---
+
+# 82. Geo Quest E2E Scenario
+
+Test:
+
+```text
+Admin creates Geo Quest
+→ Mapbox location
+→ Publish
+→ Marker appears
+→ User starts
+→ GPS validates
+→ Proof submitted
+→ Complete
+→ Points
+→ Progress
+```
+
+---
+
+# 83. Monthly E2E Scenario
+
+Test:
+
+```text
+Create Monthly Set
+→ Validate count/points
+→ Schedule
+→ Activate job
+→ Consumer sees Monthly Drop
+→ Start Quest
+→ Complete
+→ Progress updates
+```
+
+---
+
+# 84. Hunt E2E Scenario
+
+Test:
+
+```text
+Published Hunt
+→ Map marker
+→ View
+→ Join
+→ Ready
+→ Start
+→ Clue
+→ Stop
+→ Proof
+→ Next clue
+→ Final stop
+→ Complete Hunt
+→ Points
+→ Progress
+→ Leaderboard
+```
+
+---
+
+# 85. Riddle Hunt E2E Scenario
+
+Test:
+
+```text
+Create riddle stop
+→ Publish
+→ Player receives clue
+→ Wrong answer
+→ Correct normalized answer
+→ Stop completes
+→ Next clue unlocks
+```
+
+No GPS fallback unless configured.
+
+---
+
+# 86. Custom Hunt E2E Scenario
+
+Test:
+
+```text
+Creator creates draft
+→ Adds map stop
+→ Adds riddle
+→ Adds proof
+→ Preview
+→ Submit
+→ Admin requests changes
+→ Creator revises
+→ Admin approves
+→ Publish
+→ Player discovers/joins
+→ Completes
+```
+
+---
+
+# 87. Social E2E Scenario
+
+Test:
+
+```text
+User A search User B
+→ Request
+→ B accepts
+→ Friends
+→ A creates Invite-only Hunt
+→ A selects B
+→ B receives invitation
+→ B accepts
+```
+
+Block path:
+
+```text
+B blocks A
+→ friendship removed
+→ no search
+→ no future Hunt invite
+```
+
+---
+
+# 88. Offline E2E Scenario
+
+Test:
+
+```text
+Start Quest online
+→ Lose connection
+→ Capture proof
+→ Queue
+→ Kill app
+→ Restart offline
+→ Proof remains
+→ Reconnect
+→ Upload
+→ Submit
+→ Server confirms
+```
+
+---
+
+# 89. Moderation E2E Scenario
+
+Test:
+
+```text
+Creator uploads public media
+→ Pending
+→ Automated/manual moderation
+→ Approved
+→ Published
+```
+
+Rejected:
+
+```text
+Upload
+→ Rejected
+→ Never public
+→ Creator receives safe feedback
+```
+
+---
+
+# 90. Anti-Cheat E2E Scenario
+
+Test:
+
+```text
+Valid completion
+→ Low risk
+→ Normal flow
+```
+
+and:
+
+```text
+Suspicious signals
+→ Risk
+→ Quarantine
+→ Moderator review
+→ Release or reversal
+→ Ledger/leaderboard correct
+```
+
+No permanent auto-ban.
+
+---
+
+# 91. Notification E2E Scenario
+
+Test:
+
+```text
+Domain event
+→ Outbox
+→ Notification record
+→ Push queue
+→ Provider
+→ User tap
+→ Auth
+→ Deep link
+→ Correct game mode/screen
+```
+
+If provider not configured:
+
+Validate in-app notification path independently.
+
+---
+
+# 92. AI E2E Scenario
+
+Test:
+
+```text
+Admin edits Daily prompt
+→ Test
+→ Generate candidate
+→ Validate
+→ Edit
+→ Save Draft
+→ Approve/publish manually
+→ Consumer receives normal Quest
+```
+
+Repeat for:
+
+* Monthly
+* Geo
+
+---
+
+# 93. Admin E2E Scenario
+
+Test:
+
+* Moderator
+* Admin
+* Super Admin
+
+Ensure permissions differ correctly.
+
+Attempt unauthorized high-risk actions and confirm rejection.
+
+---
+
+# 94. Unit Test Audit
+
+Enumerate unit tests.
+
+Identify missing coverage for critical pure logic:
+
+* Point calculations
+* Difficulty
+* Daily matching
+* Monthly balancing
+* Riddle normalization
+* Geo calculations
+* Risk scoring
+* Notification scheduling
+* Offline queue
+* Privacy action resolver
+
+Add missing tests.
+
+---
+
+# 95. Integration Test Audit
+
+Ensure integration coverage for:
+
+* Supabase functions
+* RLS
+* Storage
+* Edge Functions
+* Scheduled jobs
+* Points ledger
+* Hunt capacity
+* Proof workflow
+
+---
+
+# 96. E2E Automation Strategy
+
+If current environment supports an automated UI framework:
+
+Use appropriate existing tool.
+
+If not:
+
+Create documented reproducible manual E2E scripts.
+
+Do not introduce a huge testing framework solely for this prompt if it destabilizes project.
+
+---
+
+# 97. Test Data Isolation
+
+Tests must not alter production data.
+
+Use:
+
+* Local Supabase
+* Test project
+* Transaction rollback
+* Development fixtures
+
+No production tokens.
+
+---
+
+# 98. Lint and Type Audit
+
+Run:
+
+* TypeScript
+* Lint
+* Formatting if configured
+* Tests
+* Build
+
+Fix all Build 1 errors.
+
+Do not suppress errors globally merely to pass.
+
+Avoid `any` for important domain data.
+
+---
+
+# 99. Dependency Audit
+
+Check:
+
+* Duplicate libraries
+* Deprecated dependencies
+* Unused packages
+* Vulnerable packages where tooling reports them
+* Conflicting map libraries
+* Conflicting state libraries
+
+Do not indiscriminately upgrade major versions.
+
+Make safe changes only.
+
+---
+
+# 100. Console Audit
+
+Remove production:
+
+* Debug logs
+* `console.log` with private data
+* Temporary error prints
+* Test output
+
+Keep structured production-safe logging where needed.
+
+---
+
+# 101. Feature Flag Audit
+
+Verify production defaults.
+
+Build 1 should expose only completed approved features.
+
+Future features must remain disabled.
+
+Check:
+
+* Game Zones
+* Outbreak
+* Payments
+* AI Hunt generation
+* Chat
+* Background location
+* Paid Hunts
+
+No accidental unfinished entry points.
+
+---
+
+# 102. Production Build Audit
+
+Verify configuration for:
+
+* Development
+* Preview/staging if supported
+* Production
+
+No development fixture/stub should automatically activate in production.
+
+Check:
+
+* Auth stub
+* Moderation stub
+* AI stub
+* Fake Mapbox
+* Fake data
+* Debug Admin bypass
+
+All must be production-safe.
+
+---
+
+# 103. Error Boundary
+
+Implement or verify top-level error boundary.
+
+Consumer:
+
+Show branded safe recovery.
+
+Admin:
+
+Show operational error with retry.
+
+Do not expose stack traces to ordinary users.
+
+---
+
+# 104. App Version Handling
+
+Prepare:
+
+* App version
+* Build number
+* Minimum supported version readiness
+* Database schema compatibility
+
+Do not force an upgrade system unless needed.
+
+Admin Diagnostics should show current backend/app compatibility if available.
+
+---
+
+# 105. Observability Readiness
+
+Prepare interfaces for future:
+
+* Crash reporting
+* Performance monitoring
+* Server error monitoring
+
+Do not add a third-party vendor unless already selected.
+
+Structured internal logs and diagnostics should be sufficient for Build 1 readiness.
+
+---
+
+# 106. Terms and Policies Entry Points
+
+Verify UI entry points exist for:
+
+* Terms of Service
+* Privacy Policy
+* Community/Safety Guidelines where applicable
+
+Onboarding/profile/settings should make them reachable.
+
+Do not draft legal policy in this prompt unless files are missing and project explicitly requires placeholders.
+
+Mark legal-content review as external launch requirement where applicable.
+
+---
+
+# 107. Account Deletion Audit
+
+Verify:
+
+* User can request/delete account according to current product design
+* Auth disabled/deleted
+* Public profile removed appropriately
+* Push tokens disabled
+* Pending scheduled notifications cancelled
+* Local cache cleared
+* Historical transaction retention follows policy
+* Friends/social cleaned appropriately
+
+Do not delete immutable audit/legal records incorrectly.
+
+---
+
+# 108. Support Audit
+
+Verify consumer can access:
+
+* Report Problem
+* Support
+* Safety report
+
+No dead support buttons.
+
+If external support destination is not configured:
+
+Use a safe integration-required placeholder documented for launch.
+
+---
+
+# 109. Production Configuration Screen
+
+Admin Diagnostics should provide a launch checklist.
+
+Display only configured state.
+
+Example:
+
+```text
+Supabase              READY
+Mapbox                 READY
+AI Quest Generation    NOT CONFIGURED
+Push Notifications     NOT CONFIGURED
+Moderation Automation  MANUAL MODE
+Scheduled Jobs         READY
+Storage                READY
+RLS                     PASS
+```
+
+Never display secrets.
+
+---
+
+# 110. Build 1 Launch Checklist
+
+Create:
+
+```text
+/docs/BUILD1_LAUNCH_CHECKLIST.md
+```
+
+Separate:
+
+## Code Complete
+
+Things Replit AI can verify.
+
+## Requires External Configuration
+
+Examples:
+
+* Supabase credentials/project
+* Mapbox token
+* AI API key/provider
+* Push provider/native app credentials
+* Automated moderation provider if desired
+* Production domains/URLs if needed
+* Mobile store credentials later
+
+## Requires Human Review
+
+* Legal
+* Safety policy
+* Privacy policy
+* App-store copy
+* Production data policies
+
+Do not mix code defects with configuration work.
+
+---
+
+# 111. Remaining Work Classification
+
+At the end, classify every remaining issue as:
+
+### A — Code bug
+
+Must fix now.
+
+### B — Missing third-party credential/configuration
+
+Do not fake.
+
+### C — Human/business/legal decision
+
+Document.
+
+### D — Deliberately deferred future feature
+
+No Build 1 blocker.
+
+There should be no ambiguous "TODO" remaining without classification.
+
+---
+
+# 112. Documentation Index
+
+Create/update:
+
+```text
+/docs/README.md
+```
+
+or equivalent documentation index.
+
+Organize documentation by:
+
+* Architecture
+* Quest
+* Hunt
+* Creator
+* Social
+* Progression
+* Notifications
+* Moderation
+* Offline
+* Admin
+* AI
+* Security
+* Production
+* Testing
+
+Do not require future developers to guess which document is canonical.
+
+---
+
+# 113. Canonical Source Audit
+
+Where documents conflict:
+
+Determine current approved behavior from:
+
+1. Project Constitution
+2. Latest completed prompt/document
+3. Current intentional implementation
+
+Resolve contradictions.
+
+Update old docs rather than leaving conflicting instructions.
+
+Do not preserve contradictory design simply because old code exists.
+
+---
+
+# 114. Final Build Test
+
+Run the complete available verification stack.
+
+At minimum:
+
+```text
+Type check
+Lint
+Unit tests
+Integration tests
+Production build
+```
+
+Also run applicable:
+
+* Supabase tests
+* Edge Function tests
+* E2E tests
+* Migration validation
+
+Fix failures within Build 1 scope.
+
+---
+
+# 115. Do Not Hide Failures
+
+Do not:
+
+* Disable tests just to make suite green
+* Comment out broken code
+* Add `@ts-ignore` broadly
+* Convert everything to `any`
+* Disable RLS
+* Remove important validation
+* Hardcode fake success
+
+If a test requires an unavailable third-party credential:
+
+Mark it:
+
+**BLOCKED — EXTERNAL CONFIGURATION**
+
+with exact requirement.
+
+---
+
+# 116. Final Security Verification
+
+Before finishing, confirm:
+
+* No service-role credentials in frontend
+* No AI secret in frontend
+* No moderation secret in frontend
+* No private proof publicly accessible
+* No private Hunt geometry exposed
+* No accepted riddle answers exposed
+* No Admin route bypass
+* No client point award
+* No client proof approval
+* No client publication
+* No fake QR
+* No background-location surveillance
+* No block information leakage
+* No report identity leakage
+* No AI prompt exposure to consumers
+
+---
+
+# 117. Final Gameplay Verification
+
+Confirm the actual Build 1 product feels like:
+
+## Quest
+
+Simple, clear Quest game:
+
+**Home / Quests / Map / Progress / Profile**
+
+with:
+
+* Daily Quest
+* Monthly Quest Drop
+* Geo-Quest
+* Points
+* Proof
+* Map
+* Progress
+* Leaderboards
+
+## Hunt
+
+Map-centered Hunt game:
+
+**Map / My Hunts / Progress / Profile**
+
+with:
+
+* Public Hunts
+* Custom Hunts
+* Join
+* Invitations
+* Stops
+* Clues
+* Riddles
+* Proof
+* Completion
+* Leaderboards
+* Creator flow
+
+Do not allow architecture work to make either game feel more complicated than this.
+
+---
+
+# 118. Final Report
+
+When all fixes are complete, produce:
+
+## A. Build 1 Status
+
+For each major system:
+
+* PASS
+* PASS — external configuration required
+* FAIL — remaining code issue
+
+## B. Fixed During Prompt 23
+
+List actual repairs.
+
+## C. External Configuration Required
+
+Exact integrations/credentials still needed.
+
+## D. Human Decisions Required
+
+Only genuine decisions.
+
+## E. Deferred Build 2 Features
+
+Explicitly separate them.
+
+## F. Test Results
+
+* TypeScript
+* Lint
+* Unit
+* Integration
+* E2E
+* Production build
+
+## G. Production Blockers
+
+List only actual launch blockers.
+
+Do not inflate the blocker list with optional future features.
+
+---
+
+# 119. Out of Scope
+
+Do NOT implement:
+
+* Stripe
+* Revenue model
+* Paid Hunts
+* Creator payouts
+* Subscriptions
+* Game Zones
+* Outbreak
+* Direct messaging
+* Hunt chat
+* Live participant tracking
+* Continuous background location
+* AI Hunt creation
+* AI proof approval
+* New gameplay modes
+* Large social feed
+* Full production app-store deployment
+
+Do not redesign approved UI.
+
+---
+
+# 120. Final Verification Before Stopping
+
+Confirm:
+
+* Quest navigation is correct.
+* Hunt navigation is correct.
+* Quest/Hunt selector works.
+* Profile is shared.
+* Daily Quest works.
+* Monthly Quest Drop works.
+* Geo-Quest works.
+* Mapbox architecture is properly connected.
+* Quest points work.
+* Quest Progress works.
+* Quest leaderboard works.
+* Hunt Map works.
+* Hunt join works.
+* Hunt invitations work.
+* Hunt riddles actually validate.
+* Invalid remote coordinates cannot save.
+* Hunt active windows are enforced.
+* Hunt points work.
+* Hunt Progress works.
+* Hunt leaderboard works.
+* Custom Hunt creation works.
+* Creator moderation works.
+* Social/friends works.
+* Blocking works.
+* Achievements work.
+* Notifications work in-app.
+* Push architecture is ready/configured accurately.
+* AI Quest generation works when configured.
+* Daily AI prompt is customizable.
+* Monthly AI prompt is customizable.
+* Geo AI prompt is customizable.
+* Daily AI uses Interest Bubbles appropriately.
+* Moderation works manually and automation is accurately reported.
+* Anti-cheat uses one canonical engine.
+* Offline/sync works.
+* Admin Panel is protected.
+* Leaderboards auto-refresh.
+* Scheduled jobs exist.
+* RLS is audited.
+* Storage privacy is audited.
+* Environment variables are classified.
+* Development fixtures cannot leak into production.
+* No fake functionality remains.
+* All dead buttons are removed or repaired.
+* Build succeeds.
+* Tests pass or external blockers are explicitly documented.
+* No Game Zones code was introduced.
+* No Outbreak code was introduced.
+* No revenue system was introduced.
+
+Resolve all code-level Build 1 failures before stopping.
+
+---
+
+# Deliverables
+
+When complete provide:
+
+1. Full route audit
+2. Navigation audit
+3. Authentication audit
+4. Onboarding audit
+5. Interest Bubble audit
+6. Quest UI audit
+7. Daily Quest E2E result
+8. Monthly Quest E2E result
+9. Geo-Quest E2E result
+10. Proof-type audit
+11. QR status/fix
+12. Difficulty enum audit/fix
+13. Quest points audit
+14. Quest Progress audit
+15. Quest leaderboard audit
+16. Hunt Map audit
+17. Hunt join audit
+18. Hunt invitation audit
+19. Hunt clue security audit
+20. Hunt riddle E2E result
+21. Geographic-stop audit
+22. Hunt proof audit
+23. Hunt completion audit
+24. Hunt Progress audit
+25. Hunt leaderboard audit
+26. Custom Hunt creator E2E result
+27. Creator versioning audit
+28. Creator moderation audit
+29. Social/friend/block audit
+30. Progression audit
+31. Notifications audit
+32. Moderation audit
+33. Anti-cheat audit
+34. Offline audit
+35. Supabase schema audit
+36. `custom_hunts` / `custom_hunt_games` resolution
+37. RLS audit
+38. Storage audit
+39. Edge/server function inventory
+40. Raw client mutation audit
+41. Mapbox audit
+42. Scheduled job audit
+43. AI Quest generation audit
+44. Third-party configuration inventory
+45. Environment variable audit
+46. Fixture/stub audit
+47. Placeholder/TODO audit
+48. Dead button audit
+49. Accessibility audit
+50. Performance audit
+51. Security audit
+52. Privacy audit
+53. Concurrency audit
+54. Migration audit
+55. Fresh-install test
+56. Returning-user test
+57. Quest E2E test
+58. Geo E2E test
+59. Monthly E2E test
+60. Hunt E2E test
+61. Riddle E2E test
+62. Custom Hunt E2E test
+63. Social E2E test
+64. Offline E2E test
+65. Moderation E2E test
+66. Anti-cheat E2E test
+67. Notification E2E test
+68. AI E2E test
+69. Admin E2E test
+70. Unit/integration/E2E test results
+71. Production build result
+72. Build 1 launch checklist
+73. Authorization matrix
+74. Third-party configuration document
+75. Documentation index
+76. Build 1 PASS/FAIL report
+77. Code issues fixed
+78. Exact external configuration still required
+79. Exact human/legal decisions still required
+80. Build 2 deferred features
+81. Exact remaining work for Prompt 24
+
+Do not begin Prompt 24.
+
+Do not add features beyond approved Build 1.
+
+Create checkpoint:
+
+**Build 1 — Prompt 23 — Full Integration Audit and Launch Readiness**
