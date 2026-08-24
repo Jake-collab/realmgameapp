@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { authService } from '@/services/auth.service';
+import { isSupabaseConfigured } from '@/lib/supabase/client';
 import { connectivityService } from '../connectivity/connectivity.service';
 import { getPendingQueue, enqueueOfflineMutation } from '../queue/mutationQueue';
 import { executeRegisteredMutation } from '../sync/mutationRegistry';
@@ -36,18 +38,31 @@ export function useSyncStatus() {
   const queue = useOfflineQueue();
   const [isSyncing, setSyncing] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
+  const syncLock = useRef(false);
   const syncNow = useCallback(async () => {
-    if (!user?.id || !['online', 'recovering'].includes(connectivity.state) || isSyncing) return [];
+    if (!user?.id || !isSupabaseConfigured() || !['online', 'recovering'].includes(connectivity.state) || syncLock.current) return [];
+    const activeSession = await authService.getSession();
+    if (!activeSession.session?.user || activeSession.session.user.id !== user.id) return [];
+    syncLock.current = true;
     setSyncing(true);
     try {
-      const result = await syncOfflineQueue(user.id, executeRegisteredMutation);
+      const result = await syncOfflineQueue(user.id, async item => {
+        // The identity can change while a long upload or reconnect cycle is
+        // underway. Check again before every protected server operation.
+        const current = await authService.getSession();
+        if (!current.session?.user || current.session.user.id !== user.id) {
+          return { status: 'needs_attention', errorCode: 'AUTH_EXPIRED', message: 'Sign in again to continue syncing.' };
+        }
+        return executeRegisteredMutation(item);
+      });
       setLastSyncAt(new Date().toISOString());
       await queue.refresh();
       return result;
     } finally {
+      syncLock.current = false;
       setSyncing(false);
     }
-  }, [connectivity.state, isSyncing, queue.refresh, user?.id]);
+  }, [connectivity.state, queue.refresh, user?.id]);
   return { ...connectivity, ...queue, isSyncing, lastSyncAt, syncNow };
 }
 

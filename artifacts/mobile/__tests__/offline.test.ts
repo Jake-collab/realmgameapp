@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { canQueueOffline, enqueueOfflineMutation, makeIdempotencyKey, classifySyncFailure, nextRetryAt } from '@/features/offline/queue/mutationQueue';
+import { canQueueOffline, enqueueOfflineMutation, makeIdempotencyKey, classifySyncFailure, nextRetryAt, retryQueueItem } from '@/features/offline/queue/mutationQueue';
 import { offlineStorage } from '@/features/offline/storage/offlineStorage';
 import { syncOfflineQueue } from '@/features/offline/sync/syncEngine';
 import { setOfflineFailureSimulation } from '@/features/offline/sync/failureSimulation';
@@ -63,5 +63,21 @@ describe('offline queue boundaries', () => {
     expect(failed[0]?.result.status).toBe('retryable');
     const recovered = await syncOfflineQueue('user-1', async () => ({ status: 'completed' }), { now: 2000 });
     expect(recovered[0]?.result.status).toBe('completed');
+  });
+
+  it('makes attention items recoverable without changing their idempotency key', async () => {
+    const item = await enqueueOfflineMutation({ userId: 'user-1', mutationType: 'notification_read', entityType: 'notification', entityId: 'n-attention', payload: { notificationId: 'n-attention' } });
+    await syncOfflineQueue('user-1', async () => ({ status: 'needs_attention', errorCode: 'VERSION_CONFLICT', message: 'Changed elsewhere' }));
+    const retried = await retryQueueItem('user-1', item.id);
+    expect(retried).toMatchObject({ status: 'pending', errorCode: null, idempotencyKey: item.idempotencyKey });
+  });
+
+  it('does not leak malformed cached records across user boundaries', async () => {
+    await offlineStorage.saveQueue('user-1', [{
+      id: 'foreign', userId: 'user-2', mutationType: 'notification_read', entityType: 'notification', entityId: 'n-foreign',
+      payload: {}, idempotencyKey: 'foreign', createdAt: '', lastAttemptedAt: null, nextAttemptAt: null, attemptCount: 0,
+      status: 'pending', dependencyIds: [], localAssetRefs: [], conflictStrategy: 'server_wins', errorCode: null, errorMessage: null,
+    }]);
+    expect(await offlineStorage.loadQueue('user-1')).toEqual([]);
   });
 });

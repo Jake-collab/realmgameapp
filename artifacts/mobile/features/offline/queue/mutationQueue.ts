@@ -43,14 +43,23 @@ export async function enqueueOfflineMutation<TPayload extends Record<string, unk
 }
 
 export async function updateQueueItem(userId: string, id: string, patch: Partial<OfflineQueueItem>) {
-  const items = await offlineStorage.loadQueue(userId);
-  const next = items.map(item => item.id === id ? { ...item, ...patch } : item);
-  await offlineStorage.saveQueue(userId, next);
-  return next.find(item => item.id === id) ?? null;
+  return withQueueLock(userId, async () => {
+    const items = await offlineStorage.loadQueue(userId);
+    const next = items.map(item => item.id === id ? { ...item, ...patch } : item);
+    await offlineStorage.saveQueue(userId, next);
+    return next.find(item => item.id === id) ?? null;
+  });
 }
 
 export async function cancelQueueItem(userId: string, id: string) {
   return updateQueueItem(userId, id, { status: 'cancelled' });
+}
+
+/** Returns an attention item to the safe pending state after the user fixes it. */
+export async function retryQueueItem(userId: string, id: string) {
+  return updateQueueItem(userId, id, {
+    status: 'pending', nextAttemptAt: null, errorCode: null, errorMessage: null,
+  });
 }
 
 export async function getPendingQueue(userId: string) {

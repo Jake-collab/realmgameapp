@@ -17,16 +17,20 @@ async function read<T>(storageKey: string, fallback: T): Promise<T> {
   }
 }
 
+function belongsToUser<T extends { userId?: string }>(value: T, userId: string) {
+  return !value.userId || value.userId === userId;
+}
+
 async function write<T>(storageKey: string, value: T) {
   await AsyncStorage.setItem(storageKey, JSON.stringify(value));
 }
 
 export const offlineStorage = {
-  loadQueue: (userId: string) => read<OfflineQueueItem[]>(queueKey(userId), []),
+  loadQueue: async (userId: string) => (await read<OfflineQueueItem[]>(queueKey(userId), [])).filter(item => belongsToUser(item, userId)),
   saveQueue: (userId: string, items: OfflineQueueItem[]) => write(queueKey(userId), items),
   loadCache: (userId: string) => read<Record<string, CachedRecord>>(cacheKey(userId), {}),
   saveCache: (userId: string, cache: Record<string, CachedRecord>) => write(cacheKey(userId), cache),
-  loadAssets: (userId: string) => read<LocalAsset[]>(assetsKey(userId), []),
+  loadAssets: async (userId: string) => (await read<LocalAsset[]>(assetsKey(userId), [])).filter(item => belongsToUser(item, userId)),
   saveAssets: (userId: string, assets: LocalAsset[]) => write(assetsKey(userId), assets),
   loadQueryCache: (userId: string) => read<unknown>(queryCacheKey(userId), null),
   saveQueryCache: (userId: string, cache: unknown) => write(queryCacheKey(userId), cache),
@@ -48,7 +52,7 @@ export async function saveCachedRecord<T>(userId: string, cacheId: string, value
 export async function loadCachedRecord<T>(userId: string, cacheId: string): Promise<CachedRecord<T> | null> {
   const cache = await offlineStorage.loadCache(userId);
   const record = cache[cacheId] as CachedRecord<T> | undefined;
-  return record?.userId === userId ? record : null;
+  return record?.userId === userId && record.schemaVersion === OFFLINE_SCHEMA_VERSION ? record : null;
 }
 
 export function isCachedRecordStale(record: CachedRecord): boolean {

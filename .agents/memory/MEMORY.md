@@ -17,3 +17,4 @@
 - [Moderation and integrity boundary](moderation-integrity-boundary.md) — safety automation is server-only, conservative, provider-neutral, and separate from proof validity.
 - [Canonical Hunt Drops](canonical-hunt-drops.md) — public search zones, private collection geometry, online sessions, and placement policy must remain separate.
 - [Notification delivery boundary](notification-delivery-boundary.md) — in-app history is authoritative and independent from push provider outcomes.
+- [Offline sync boundary](offline-sync-boundary.md) — queue only safe client intents; require the active account again before each protected replay.
