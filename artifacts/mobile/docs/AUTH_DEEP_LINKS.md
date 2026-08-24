@@ -22,7 +22,7 @@ The app is registered for the `worlds://` URL scheme in `app.json`:
 { "scheme": "worlds" }
 ```
 
-On iOS, universal links (`https://YOUR_PRODUCTION_DOMAIN/...`) are also supported via `associatedDomains` (placeholder until a production domain is set).
+On iOS, universal links (`https://matterrealm.com/...`) are also supported via `associatedDomains`.
 
 On Android, explicit intent filters handle both the `worlds://` scheme and the HTTPS universal link fallback.
 
@@ -66,8 +66,8 @@ Add the following URLs:
 # Development
 worlds://auth-callback
 
-# Production (update when domain is assigned)
-https://YOUR_PRODUCTION_DOMAIN/auth/callback
+# Production
+https://matterrealm.com/auth/callback
 ```
 
 > **Note**: Without these registered redirect URLs, Supabase will reject deep link callbacks with a 400 error. This is a server-side security allowlist.
@@ -115,25 +115,25 @@ adb shell am start -W -a android.intent.action.VIEW -d "worlds://auth-callback#a
 
 ## Production Setup
 
-When the production domain is assigned:
+For the production domain `matterrealm.com`:
 
 1. Update `ios.associatedDomains` in `app.json`:
    ```json
-   "associatedDomains": ["applinks:YOUR_DOMAIN"]
+   "associatedDomains": ["applinks:matterrealm.com"]
    ```
 
 2. Update `android.intentFilters` HTTPS host:
    ```json
-   "host": "YOUR_DOMAIN"
+   "host": "matterrealm.com"
    ```
 
-3. Add `https://YOUR_DOMAIN/auth/callback` to Supabase redirect URL allowlist
+3. Add `https://matterrealm.com/auth/callback` to Supabase redirect URL allowlist
 
 4. Serve `/.well-known/apple-app-site-association` (for iOS universal links) and `/.well-known/assetlinks.json` (for Android App Links) from your production server
 
-5. Update the `REDIRECT_URL` constant in `verify-email.tsx` and `forgot-password.tsx`:
+5. Use the production redirect URL in `verify-email.tsx` and `forgot-password.tsx`:
    ```typescript
-   const REDIRECT_URL = 'https://YOUR_DOMAIN/auth/callback';
+   const REDIRECT_URL = 'https://matterrealm.com/auth/callback';
    ```
 
 ---

@@ -13,7 +13,7 @@
  *
  * Required Supabase redirect URLs (see docs/AUTH_DEEP_LINKS.md):
  *   Development:  worlds://auth-callback
- *   Production:   https://YOUR_DOMAIN/auth/callback (universal link)
+ *   Production:   https://matterrealm.com/auth/callback (universal link)
  *
  * Security:
  *   - Tokens are parsed from the URL fragment only — never from query params

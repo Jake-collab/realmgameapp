@@ -11,6 +11,7 @@ This checklist records actions that cannot be completed from the repository. Do 
 - [ ] Create all private storage buckets and apply the policies in `artifacts/mobile/docs/STORAGE_ARCHITECTURE.md`.
 - [ ] Configure Auth email, redirect allowlists, rate limits, and the owner-assigned HTTPS domain.
 - [ ] Configure a trusted scheduler/worker for due notifications and document its retry/alerting policy.
+- [ ] Set `SCHEDULER_ENABLED=true` and run `pnpm --filter @workspace/api-server run worker` as a separate trusted process; do not run multiple workers until shared claim/lock behavior is enabled.
 - [ ] Enable backups and test a restore before launch.
 
 ## Mapbox and native builds
@@ -32,4 +33,5 @@ This checklist records actions that cannot be completed from the repository. Do 
 - [ ] Configure the Expo project identity, iOS push credentials, Android FCM credentials, and `EXPO_ACCESS_TOKEN`.
 - [ ] Test token registration, permission denial, invalid-token handling, receipts, and deep-link navigation on physical devices.
 - [ ] Set exact `CORS_ORIGINS` for deployed admin origins; do not use wildcard CORS in production.
+- [ ] Follow `docs/DEPLOYMENT_CONTRACT.md` for separate API, admin, and worker processes.
 - [ ] Deploy API and admin with separate environment values, then verify `/api/healthz` and `/api/readiness`.

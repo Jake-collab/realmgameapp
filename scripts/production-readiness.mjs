@@ -25,11 +25,12 @@ const commands = [
   ["admin typecheck", ["--filter", "@workspace/worlds-admin", "run", "typecheck"]],
   ["api typecheck", ["--filter", "@workspace/api-server", "run", "typecheck"]],
   ["api build", ["--filter", "@workspace/api-server", "run", "build"]],
+  ["worker artifact", ["--filter", "@workspace/api-server", "exec", "test", "-e", "dist/worker.mjs"]],
   ["admin build", ["--filter", "@workspace/worlds-admin", "run", "build"]],
 ];
 for (const [label, args] of commands) {
   try {
-    execFileSync("pnpm", args, { stdio: "inherit", env: { ...process.env, NODE_ENV: "test", PORT: process.env.PORT ?? "3000", BASE_PATH: process.env.BASE_PATH ?? "/", EXPO_METRO_PORT: process.env.EXPO_METRO_PORT ?? "8082" } });
+    execFileSync("pnpm", args, { stdio: "inherit", env: { ...process.env, NODE_ENV: "test", PORT: process.env.PORT ?? "3000", BASE_PATH: process.env.BASE_PATH ?? "/", EXPO_METRO_PORT: process.env.EXPO_METRO_PORT ?? "8099" } });
     console.log(`PASS ${label}`);
   } catch {
     failures.push(`${label}: command failed`);

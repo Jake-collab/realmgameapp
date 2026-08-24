@@ -18,6 +18,8 @@ const serverEnvironmentSchema = z.object({
   MODERATION_AUTO_APPROVAL_MODE: z.enum(["manual_only", "low_risk", "mixed"]).default("manual_only"),
   EXPO_ACCESS_TOKEN: z.string().min(1).optional(),
   CORS_ORIGINS: z.string().optional(),
+  SCHEDULER_ENABLED: z.enum(["true", "false"]).default("false"),
+  SCHEDULER_INTERVAL_SECONDS: z.coerce.number().int().positive().default(60),
 });
 
 export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema>;
@@ -69,7 +71,13 @@ export function serverReadiness(raw: NodeJS.ProcessEnv = process.env): {
     { name: "AI generation", ...configured(ai, ai ? "Provider credentials are configured; generation is still draft-only." : "AI is disabled until AI_API_KEY and AI_MODEL are configured.") },
     { name: "Automated moderation", ...configured(moderation, moderation ? "Automation is configured; human review remains authoritative." : env.MODERATION_AUTOMATION_ENABLED === "true" ? "Automation is enabled but provider credentials are incomplete." : "Manual moderation mode is active.") },
     { name: "Push delivery", ...configured(push, push ? "Expo server credentials are configured; device delivery requires a native build." : "Push delivery is disabled until EXPO_ACCESS_TOKEN is configured.") },
-    { name: "Scheduled jobs", status: "missing_config", summary: "A trusted production scheduler/worker is not configured in this artifact." },
+    {
+      name: "Scheduled jobs",
+      status: env.SCHEDULER_ENABLED === "true" && supabase ? "ready" : "missing_config",
+      summary: env.SCHEDULER_ENABLED === "true" && supabase
+        ? `Worker contract enabled; due jobs run every ${env.SCHEDULER_INTERVAL_SECONDS}s.`
+        : "Set SCHEDULER_ENABLED=true with trusted Supabase credentials and run the worker command.",
+    },
   ];
   const requiredMissing = checks.some((check) => check.status === "missing_config");
   return {

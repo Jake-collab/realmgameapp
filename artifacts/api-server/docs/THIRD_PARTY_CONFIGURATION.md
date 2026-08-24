@@ -14,6 +14,21 @@ The API readiness endpoint reports `ready`, `degraded`, `disabled`, `missing_con
 
 AI and automated moderation are optional for consumer startup. Missing required Supabase server configuration is a failed production readiness state. Notification delivery never grants gameplay authority.
 
+## Moderation clarification
+
+Automated moderation is an optional server-side policy-analysis provider for
+submitted text/media. It is not required to run the app and it is not the same
+as Quest-generation AI. Without a moderation provider, the API stays in
+`manual_only` mode and routes content to human review; it does not auto-approve
+or irreversibly enforce actions.
+
+## Push clarification
+
+Push delivery uses Expo's push gateway from the API and requires an Expo access
+token plus iOS/Android native push credentials in the mobile build. It is an
+external delivery service, but it is optional: in-app notification rows remain
+the authoritative experience when push is disabled.
+
 ## Release commands
 
 ```bash
