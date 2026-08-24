@@ -77,6 +77,17 @@ BEGIN
           )
       )
     ORDER BY
+      CASE
+        WHEN EXISTS (
+          SELECT 1 FROM quest_interest_tags tag
+          JOIN user_interests ui ON ui.interest_id = tag.interest_id
+          WHERE tag.quest_id = q.id AND ui.user_id = p_user_id
+        ) THEN 2
+        WHEN NOT EXISTS (
+          SELECT 1 FROM quest_interest_tags tag WHERE tag.quest_id = q.id
+        ) THEN 1
+        ELSE 0
+      END DESC,
       (SELECT COUNT(*) FROM quest_interest_tags tag
        JOIN user_interests ui ON ui.interest_id = tag.interest_id
        WHERE tag.quest_id = q.id AND ui.user_id = p_user_id) DESC,
@@ -89,6 +100,9 @@ BEGIN
       SELECT q.id INTO assigned
       FROM quests q
       WHERE q.quest_type = 'daily' AND q.status = 'published'
+        AND NOT EXISTS (
+          SELECT 1 FROM quest_interest_tags tag WHERE tag.quest_id = q.id
+        )
       ORDER BY q.home_priority DESC, q.published_at DESC NULLS LAST, q.id
       LIMIT 1;
     END IF;

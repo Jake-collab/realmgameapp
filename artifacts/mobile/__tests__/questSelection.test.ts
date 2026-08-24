@@ -34,4 +34,12 @@ describe('canonical Daily Quest targeting', () => {
     expect(rankDailyQuestCandidates(candidates, ['music']).map((item) => item.id))
       .toEqual(rankDailyQuestCandidates(candidates, ['music']).map((item) => item.id));
   });
+
+  it('uses an untargeted Quest before an unrelated tagged Quest as fallback', () => {
+    const ranked = rankDailyQuestCandidates([
+      quest('unrelated', ['music'], { home_priority: 100 }),
+      quest('fallback', [], { home_priority: 1 }),
+    ], ['art']);
+    expect(ranked[0].id).toBe('fallback');
+  });
 });

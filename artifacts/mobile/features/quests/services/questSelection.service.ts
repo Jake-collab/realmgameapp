@@ -50,11 +50,13 @@ export function rankDailyQuestCandidates(
     const mode = quest.interest_targeting_mode ?? 'ANY_MATCH';
     const excluded = mode === 'REQUIRE_COMBINATION' && !allMatch;
     const combinationBonus = mode === 'PREFER_COMBINATION' && allMatch ? 1000 : 0;
+    // Matching tagged content wins, then an untagged fallback, then unrelated tagged content.
+    const targetingTier = matches > 0 ? 10000 : tags.length === 0 ? 1000 : 0;
     const matchScore = tags.length === 0 ? 0 : (matches / tags.length) * 100;
     return {
       quest,
       excluded,
-      score: combinationBonus + matchScore + (quest.home_priority ?? 0),
+      score: targetingTier + combinationBonus + matchScore + (quest.home_priority ?? 0),
       index,
     };
   });
@@ -111,7 +113,7 @@ export async function selectDailyQuest(
   const candidates = notCompleted.length > 0 ? notCompleted : available;
 
   const ranked = rankDailyQuestCandidates(candidates, input.userInterestIds ?? []);
-  return (ranked[0] ?? candidates.sort((a, b) => (b.home_priority ?? 0) - (a.home_priority ?? 0))[0]) ?? null;
+  return ranked[0] ?? null;
 }
 
 // ─── Monthly quest drop selection ─────────────────────────────────────────────
