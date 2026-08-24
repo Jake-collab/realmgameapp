@@ -26,6 +26,7 @@ export type NotificationAdminData = {
   metrics: { notificationsCreatedToday: number; pushAttempts: number; successfulPushes: number; failedSends: number; invalidTokens: number; pendingScheduled: number; queueBacklog: number; averageDeliveryLatencyMs: number | null };
   provider: { configured: boolean; reachable: boolean; reason?: string };
   persistence: string;
+  delivery: Array<{ id: string; notificationId: string; channel: 'in_app' | 'push'; status: string; attemptCount: number; failureCategory: string | null; lastAttemptAt: string | null; createdAt: string }>;
 };
 
 export function useNotificationAdminData(enabled = true) {

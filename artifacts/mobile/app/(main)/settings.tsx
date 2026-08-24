@@ -8,6 +8,10 @@ import { fontFamily, fontSize } from '@/constants/typography';
 import { useUserSettings, useUpdateUserSettings, defaultUserSettings } from '@/features/profile/hooks/useUserSettings';
 import type { UserSettingsRow } from '@/lib/supabase/database.types';
 import { usePushPermission } from '@/features/notifications/usePushPermission';
+import { getPushInstallationId, registerCurrentDevice } from '@/features/notifications/push.service';
+import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useNotificationPreferences, useUpdateNotificationPreferences } from '@/features/notifications/hooks';
+import { defaultNotificationPreferences } from '@/features/notifications/notification.service';
 
 function ToggleRow({ label, description, value, onChange }: { label: string; description?: string; value: boolean; onChange: (value: boolean) => void }) {
   const colors = useColors();
@@ -25,8 +29,16 @@ function ChoiceRow<T extends string>({ label, options, value, onChange }: { labe
 export default function SettingsScreen() {
   const colors = useColors(); const query = useUserSettings(); const update = useUpdateUserSettings();
   const push = usePushPermission();
+  const { user } = useAuth();
+  const notificationQuery = useNotificationPreferences();
+  const updateNotifications = useUpdateNotificationPreferences();
   const settings: UserSettingsRow = query.data ?? defaultUserSettings;
   const save = (payload: Partial<UserSettingsRow>) => { if (!query.data) { Alert.alert('Settings unavailable', 'Connect your account to save settings.'); return; } update.mutate(payload); };
+  const notificationPreferences = notificationQuery.data ?? defaultNotificationPreferences;
+  const saveNotification = (payload: Partial<typeof notificationPreferences>) => {
+    if (!notificationQuery.data) { Alert.alert('Notifications unavailable', 'Connect your account to save notification preferences.'); return; }
+    updateNotifications.mutate(payload);
+  };
   return <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={styles.content}>
     <View style={styles.header}><Pressable onPress={() => router.back()} accessibilityLabel="Go back"><Feather name="arrow-left" size={22} color={colors.foreground} /></Pressable><Text style={[styles.title, { color: colors.foreground }]}>Settings</Text><View style={{ width: 22 }} /></View>
     {query.isLoading && <ActivityIndicator color={colors.primary} />}
@@ -37,8 +49,15 @@ export default function SettingsScreen() {
       <Text style={[styles.description, { color: colors.mutedForeground }]}>
         {push.status === 'granted' || push.status === 'provisional' ? 'Enabled on this device.' : push.status === 'denied' ? 'Disabled by your device settings.' : 'Get timely updates about Quests, Hunts, and progress.'}
       </Text>
-      {push.status === 'denied' ? <Pressable onPress={() => void push.openSettings()}><Text style={{ color: colors.primary, fontFamily: fontFamily.medium }}>Open Settings</Text></Pressable> : push.status === 'not_asked' ? <Pressable onPress={() => void push.request()}><Text style={{ color: colors.primary, fontFamily: fontFamily.medium }}>Enable Notifications</Text></Pressable> : null}
+      {push.status === 'denied' ? <Pressable onPress={() => void push.openSettings()}><Text style={{ color: colors.primary, fontFamily: fontFamily.medium }}>Open Settings</Text></Pressable> : push.status === 'not_asked' ? <Pressable onPress={() => void push.request().then(async status => { if ((status === 'granted' || status === 'provisional') && user?.id) await registerCurrentDevice(user.id, await getPushInstallationId()); })}><Text style={{ color: colors.primary, fontFamily: fontFamily.medium }}>Enable Notifications</Text></Pressable> : null}
     </View>
+    <ToggleRow label="Allow push delivery" description="In-app history is always available; this controls device alerts." value={notificationPreferences.pushEnabled} onChange={v => saveNotification({ pushEnabled: v })} />
+    <ToggleRow label="Quest notifications" value={notificationPreferences.questEnabled} onChange={v => saveNotification({ questEnabled: v })} />
+    <ToggleRow label="Hunt notifications" value={notificationPreferences.huntEnabled} onChange={v => saveNotification({ huntEnabled: v })} />
+    <ToggleRow label="Progress and achievements" value={notificationPreferences.progressEnabled} onChange={v => saveNotification({ progressEnabled: v })} />
+    <ToggleRow label="Friend activity" value={notificationPreferences.socialEnabled} onChange={v => saveNotification({ socialEnabled: v })} />
+    <ToggleRow label="Quiet hours" description={`Pause non-urgent alerts from ${notificationPreferences.quietHoursStart} to ${notificationPreferences.quietHoursEnd} in ${notificationPreferences.timezone}.`} value={notificationPreferences.quietHoursEnabled} onChange={v => saveNotification({ quietHoursEnabled: v })} />
+    <ToggleRow label="Show notification details" description="Hide sensitive details from device alerts when you prefer." value={notificationPreferences.showDetails} onChange={v => saveNotification({ showDetails: v })} />
     <ToggleRow label="Quest availability" value={settings.notify_quest_available} onChange={v => save({ notify_quest_available: v })} />
     <ToggleRow label="Monthly drops" value={settings.notify_monthly_drop} onChange={v => save({ notify_monthly_drop: v })} />
     <ToggleRow label="Hunt invitations" value={settings.notify_hunt_invitation} onChange={v => save({ notify_hunt_invitation: v })} />
@@ -51,6 +70,7 @@ export default function SettingsScreen() {
     <ToggleRow label="Reduce motion" description="Use fewer animations throughout the app." value={settings.reduce_motion} onChange={v => save({ reduce_motion: v })} />
     <ToggleRow label="Share location" description="Allow location-based Hunt features to use your position." value={settings.location_sharing_enabled} onChange={v => save({ location_sharing_enabled: v })} />
     {!!update.isError && <Text style={{ color: colors.destructive }}>Couldn't save that setting. Please try again.</Text>}
+    {!!updateNotifications.isError && <Text style={{ color: colors.destructive }}>Couldn't save notification preferences. Please try again.</Text>}
     {!!update.isPending && <Text style={{ color: colors.mutedForeground }}>Saving…</Text>}
   </ScrollView>;
 }

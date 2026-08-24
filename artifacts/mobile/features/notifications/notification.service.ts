@@ -3,6 +3,28 @@ import type { AppNotification, NotificationPreferences } from './notification.ty
 import { enqueueOfflineMutation } from '@/features/offline/queue/mutationQueue';
 import { isTransientNetworkError } from '@/lib/errors/normalizeError';
 
+export const defaultNotificationPreferences: NotificationPreferences = {
+  pushEnabled: true, questEnabled: true, huntEnabled: true, progressEnabled: true, socialEnabled: true,
+  quietHoursEnabled: false, quietHoursStart: '22:00', quietHoursEnd: '07:00',
+  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', showDetails: true,
+};
+
+function normalizePreferences(raw: any): NotificationPreferences {
+  if (!raw) return defaultNotificationPreferences;
+  return {
+    pushEnabled: raw.pushEnabled ?? raw.push_enabled ?? true,
+    questEnabled: raw.questEnabled ?? raw.quest_enabled ?? true,
+    huntEnabled: raw.huntEnabled ?? raw.hunt_enabled ?? true,
+    progressEnabled: raw.progressEnabled ?? raw.progress_enabled ?? true,
+    socialEnabled: raw.socialEnabled ?? raw.social_enabled ?? true,
+    quietHoursEnabled: raw.quietHoursEnabled ?? raw.quiet_hours_enabled ?? false,
+    quietHoursStart: raw.quietHoursStart ?? raw.quiet_hours_start ?? '22:00',
+    quietHoursEnd: raw.quietHoursEnd ?? raw.quiet_hours_end ?? '07:00',
+    timezone: raw.timezone ?? defaultNotificationPreferences.timezone,
+    showDetails: raw.showDetails ?? raw.show_details ?? true,
+  };
+}
+
 export function isInQuietHours(now: Date, preferences: Pick<NotificationPreferences, 'quietHoursEnabled' | 'quietHoursStart' | 'quietHoursEnd' | 'timezone'>) {
   if (!preferences.quietHoursEnabled) return false;
   const parts = new Intl.DateTimeFormat('en-US', { timeZone: preferences.timezone, hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(now);
@@ -61,7 +83,7 @@ export async function getNotificationPreferences(userId: string): Promise<Notifi
   if (!isSupabaseConfigured()) return null;
   const { data, error } = await requireSupabase().from('notification_preferences').select('*').eq('user_id', userId).maybeSingle();
   if (error) throw error;
-  return data as NotificationPreferences | null;
+  return data ? normalizePreferences(data) : null;
 }
 export async function updateNotificationPreferences(userId: string, patch: Partial<NotificationPreferences>, queueOnFailure = true) {
   if (!isSupabaseConfigured()) {
@@ -71,7 +93,7 @@ export async function updateNotificationPreferences(userId: string, patch: Parti
   try {
     const { data, error } = await requireSupabase().rpc('update_notification_preferences', { p_preferences: patch });
     if (error) throw error;
-    return data;
+    return normalizePreferences(data);
   } catch (error) {
     if (queueOnFailure && isTransientNetworkError(error)) {
       await enqueueOfflineMutation({ userId, mutationType: 'profile_preference_save', entityType: 'notification_preferences', entityId: userId, payload: patch as Record<string, unknown> });

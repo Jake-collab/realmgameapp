@@ -16,3 +16,4 @@
 - [Admin AI boundary](admin-ai-boundary.md) — AI credentials and generation stay server-side, fail closed without configuration, and always enter human Quest review.
 - [Moderation and integrity boundary](moderation-integrity-boundary.md) — safety automation is server-only, conservative, provider-neutral, and separate from proof validity.
 - [Canonical Hunt Drops](canonical-hunt-drops.md) — public search zones, private collection geometry, online sessions, and placement policy must remain separate.
+- [Notification delivery boundary](notification-delivery-boundary.md) — in-app history is authoritative and independent from push provider outcomes.

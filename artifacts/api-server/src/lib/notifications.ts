@@ -195,13 +195,14 @@ export class NotificationStore {
     try {
       const raw = JSON.parse(fs.readFileSync(this.statePath, "utf8")) as {
         notifications?: NotificationRecord[]; idempotency?: string[]; preferences?: Array<[string, NotificationPreferences]>;
-        deliveries?: NotificationDeliveryRecord[]; scheduled?: ScheduledNotification[];
+        deliveries?: NotificationDeliveryRecord[]; scheduled?: ScheduledNotification[]; devices?: PushDevice[];
       };
       raw.notifications?.forEach(item => this.notifications.set(item.id, item));
       raw.idempotency?.forEach(item => this.idempotency.add(item));
       raw.preferences?.forEach(([userId, preferences]) => this.preferences.set(userId, preferences));
       raw.deliveries?.forEach(item => this.deliveries.set(item.id, item));
       raw.scheduled?.forEach(item => this.scheduled.set(item.id, item));
+      raw.devices?.forEach(item => this.devices.set(item.id, item));
     } catch { /* first run or an incomplete local file */ }
   }
   private persist() {
@@ -212,7 +213,7 @@ export class NotificationStore {
       fs.writeFileSync(temporary, JSON.stringify({
         notifications: this.all().slice(-2000), idempotency: [...this.idempotency].slice(-5000),
         preferences: [...this.preferences.entries()], deliveries: [...this.deliveries.values()].slice(-5000),
-        scheduled: [...this.scheduled.values()].slice(-2000),
+        scheduled: [...this.scheduled.values()].slice(-2000), devices: [...this.devices.values()].slice(-1000),
       }, null, 2), { mode: 0o600 });
       fs.renameSync(temporary, this.statePath);
     } catch { /* local diagnostics must not bring down the API */ }
@@ -248,6 +249,8 @@ export class NotificationStore {
   setPreferences(userId: string, patch: Partial<NotificationPreferences>) { const value = { ...this.getPreferences(userId), ...patch }; this.preferences.set(userId, value); this.persist(); return value; }
   devicesFor(userId: string) { return [...this.devices.values()].filter(d => d.userId === userId && d.enabled); }
   deliveryRecords() { return [...this.deliveries.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)); }
+  queuedDeliveryCount() { return [...this.deliveries.values()].filter(item => item.channel === "push" && item.status === "queued").length; }
+  scheduledCount() { return [...this.scheduled.values()].filter(item => item.status === "scheduled").length; }
   schedule(input: Omit<ScheduledNotification, "id" | "status" | "attempts" | "lastError">) {
     const existing = [...this.scheduled.values()].find(item => item.event.idempotencyKey === input.event.idempotencyKey);
     if (existing) return existing;
@@ -259,10 +262,54 @@ export class NotificationStore {
     const results = this.due(now).map(job => {
       job.status = "queued"; job.attempts += 1;
       const result = this.process(job.event);
-      job.status = result ? "sent" : "sent";
+      job.status = result ? "queued" : "suppressed";
       return { job, notification: result };
     });
     this.persist(); return results;
+  }
+
+  /**
+   * Attempts queued push deliveries. In-app history is already persisted by
+   * process(), so a provider failure never removes the user's notification.
+   */
+  async flushQueued(provider: PushNotificationProvider, maxAttempts = 3) {
+    const now = new Date().toISOString();
+    const queued = [...this.deliveries.values()].filter(item => item.channel === "push" && item.status === "queued");
+    const summary = { attempted: 0, sent: 0, failed: 0, invalidated: 0, deferred: 0 };
+    for (const delivery of queued) {
+      const notification = this.notifications.get(delivery.notificationId);
+      const device = delivery.deviceId ? this.devices.get(delivery.deviceId) : null;
+      if (!notification || !device || !device.enabled) {
+        delivery.status = "suppressed"; delivery.failureCategory = "device_unavailable"; summary.deferred++; continue;
+      }
+      delivery.status = "sending"; delivery.attemptCount += 1; delivery.lastAttemptAt = now; summary.attempted++;
+      try {
+        const valid = await provider.validateToken(device.token);
+        if (!valid) {
+          device.enabled = false; device.invalidatedAt = now;
+          delivery.status = "failed"; delivery.failureCategory = "invalid_token"; summary.invalidated++; summary.failed++;
+          continue;
+        }
+        const result = await provider.send({
+          token: device.token, title: notification.title, body: notification.body,
+          data: notification.deepLink ? { deepLink: notification.deepLink } : undefined,
+        });
+        delivery.status = "sent"; delivery.providerMessageId = result.providerMessageId ?? null; delivery.failureCategory = null; summary.sent++;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "push_failed";
+        const permanent = /DeviceNotRegistered|invalid.?token|not.?registered/i.test(message);
+        if (permanent) {
+          device.enabled = false; device.invalidatedAt = now;
+          delivery.status = "failed"; delivery.failureCategory = "invalid_token"; summary.invalidated++; summary.failed++;
+        } else if (delivery.attemptCount >= maxAttempts) {
+          delivery.status = "failed"; delivery.failureCategory = "provider_error"; summary.failed++;
+        } else {
+          delivery.status = "queued"; delivery.failureCategory = "retry_pending"; summary.deferred++;
+        }
+      }
+    }
+    this.persist();
+    return summary;
   }
 }
 

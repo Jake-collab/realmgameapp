@@ -1,5 +1,5 @@
 import { logger } from "./lib/logger";
-import { notificationStore } from "./lib/notifications";
+import { ExpoPushProvider, NoopPushProvider, notificationStore } from "./lib/notifications";
 import { readServerEnvironment } from "./lib/config";
 
 const environment = readServerEnvironment();
@@ -14,13 +14,15 @@ if (!environment.SUPABASE_URL || !environment.SUPABASE_SERVICE_ROLE_KEY) {
   process.exit(1);
 }
 
-const run = () => {
+const provider = process.env.EXPO_ACCESS_TOKEN ? new ExpoPushProvider() : new NoopPushProvider();
+const run = async () => {
   const results = notificationStore.runDue();
-  logger.info({ processed: results.length }, "Scheduled notification cycle complete");
+  const delivery = await notificationStore.flushQueued(provider);
+  logger.info({ processed: results.length, delivery }, "Scheduled notification cycle complete");
 };
 
-run();
-const timer = setInterval(run, environment.SCHEDULER_INTERVAL_SECONDS * 1000);
+void run();
+const timer = setInterval(() => { void run(); }, environment.SCHEDULER_INTERVAL_SECONDS * 1000);
 
 const shutdown = (signal: string) => {
   clearInterval(timer);

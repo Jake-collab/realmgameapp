@@ -1,4 +1,5 @@
 import { Linking, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { requireSupabase, isSupabaseConfigured } from '@/lib/supabase/client';
 
 export type PushPermissionStatus = 'not_asked' | 'granted' | 'denied' | 'provisional';
@@ -8,6 +9,15 @@ type ExpoNotificationsModule = {
   requestPermissionsAsync: () => Promise<{ status: string; ios?: { status: string } }>;
   getExpoPushTokenAsync: () => Promise<{ data: string }>;
 };
+const INSTALLATION_ID_KEY = 'worlds:push-installation-id';
+
+export async function getPushInstallationId(): Promise<string> {
+  const existing = await AsyncStorage.getItem(INSTALLATION_ID_KEY);
+  if (existing) return existing;
+  const id = `installation-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+  await AsyncStorage.setItem(INSTALLATION_ID_KEY, id);
+  return id;
+}
 
 function notificationsModule(): ExpoNotificationsModule | null {
   try {

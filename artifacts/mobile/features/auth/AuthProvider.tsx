@@ -38,6 +38,7 @@ import { analytics } from '@/lib/auth/analyticsHooks';
 import { queryClient } from '@/lib/queryClient';
 import { useAppStore } from '@/lib/store';
 import { offlineStorage } from '@/features/offline/storage/offlineStorage';
+import { getPushInstallationId, unregisterCurrentDevice } from '@/features/notifications/push.service';
 import type { AuthUser } from '@/types/auth.types';
 import type { ProfileRow } from '@/lib/supabase/database.types';
 
@@ -410,6 +411,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     const signedOutUserId = user?.id;
+    if (signedOutUserId) {
+      // Must happen before the session is cleared: the device RPC is owner-scoped.
+      await getPushInstallationId().then(unregisterCurrentDevice).catch(() => undefined);
+    }
 
     // Clear local state before attempting the network request. This keeps a
     // failed or unavailable remote sign-out from leaving private data visible.

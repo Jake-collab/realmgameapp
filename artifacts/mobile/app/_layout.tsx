@@ -25,6 +25,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AuthProvider, useAuthContext, type AuthStartupState } from '@/features/auth/AuthProvider';
+import { usePushDeviceLifecycle } from '@/features/notifications/usePushDeviceLifecycle';
 import { queryClient } from '@/lib/queryClient';
 import { useAppStore } from '@/lib/store';
 import {
@@ -119,6 +120,8 @@ function NavigationGuard() {
 function RootLayoutNav() {
   const router = useRouter();
   useOfflineLifecycle();
+  const { user } = useAuthContext();
+  usePushDeviceLifecycle(user?.id);
 
   useEffect(() => {
     let removeListener: (() => void) | undefined;

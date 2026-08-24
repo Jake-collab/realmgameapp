@@ -51,7 +51,7 @@ import {
   updateModerationSettings,
 } from "../lib/moderation-state";
 import { persistIntegritySnapshot, persistModerationResult } from "../lib/supabase-moderation";
-import { notificationStore, renderNotification, type NotificationEvent } from "../lib/notifications";
+import { ExpoPushProvider, NoopPushProvider, notificationStore, renderNotification, type NotificationEvent } from "../lib/notifications";
 import { supabaseAdminConfigured, supabaseAdminRequest } from "../lib/supabase-admin";
 import { evaluateHuntPlacement, type HuntPlacementSignals } from "../lib/hunt-placement";
 
@@ -112,9 +112,12 @@ router.get("/admin/session", async (req, res) => {
   }));
 });
 
-router.get("/admin/notifications", requireAdmin("admin.read"), (_req, res) => {
+const pushProvider = process.env.EXPO_ACCESS_TOKEN ? new ExpoPushProvider() : new NoopPushProvider();
+
+router.get("/admin/notifications", requireAdmin("admin.read"), async (_req, res) => {
   const items = notificationStore.all();
   const delivery = notificationStore.deliveryRecords();
+  const health = await pushProvider.healthCheck();
   res.json({
     metrics: {
       notificationsCreatedToday: items.filter(item => item.createdAt.slice(0, 10) === new Date().toISOString().slice(0, 10)).length,
@@ -122,36 +125,39 @@ router.get("/admin/notifications", requireAdmin("admin.read"), (_req, res) => {
       successfulPushes: delivery.filter(item => item.channel === "push" && ["sent", "delivered"].includes(item.status)).length,
       failedSends: delivery.filter(item => item.status === "failed").length,
       invalidTokens: delivery.filter(item => item.failureCategory === "invalid_token").length,
-      pendingScheduled: 0,
-      queueBacklog: 0,
+      pendingScheduled: notificationStore.scheduledCount(),
+      queueBacklog: notificationStore.queuedDeliveryCount(),
       averageDeliveryLatencyMs: null,
     },
-    provider: { configured: Boolean(process.env.EXPO_ACCESS_TOKEN), reachable: false, reason: "Provider health checks require configured server credentials." },
+    provider: { ...health, reason: health.configured ? "Provider configured; receipts require provider receipt processing." : "Configure Expo access before push delivery can begin." },
     delivery: delivery.slice(0, 100),
     persistence: "local_restart_safe",
   });
 });
 
-router.post("/admin/notifications/run-due", requireAdmin("admin.diagnostics.read"), (_req, res) => {
+router.post("/admin/notifications/run-due", requireAdmin("admin.diagnostics.read"), async (_req, res) => {
   const results = notificationStore.runDue();
-  res.json({ processed: results.length, results: results.map(result => ({ jobId: result.job.id, status: result.job.status, notificationId: result.notification?.id ?? null })) });
+  const delivery = await notificationStore.flushQueued(pushProvider);
+  res.json({ processed: results.length, delivery, results: results.map(result => ({ jobId: result.job.id, status: result.job.status, notificationId: result.notification?.id ?? null })) });
 });
 
-router.get("/admin/notifications/diagnostics", requireAdmin("admin.diagnostics.read"), (_req, res) => {
+router.get("/admin/notifications/diagnostics", requireAdmin("admin.diagnostics.read"), async (_req, res) => {
+  const health = await pushProvider.healthCheck();
+  const delivery = notificationStore.deliveryRecords();
   res.json({
-    providerConfigured: Boolean(process.env.EXPO_ACCESS_TOKEN),
-    providerReachable: false,
-    queueHealth: "unavailable_without_scheduler",
+    providerConfigured: health.configured,
+    providerReachable: health.reachable,
+    queueHealth: notificationStore.queuedDeliveryCount() ? "queued" : "clear",
     oldestQueuedJob: null,
-    invalidTokenCount: 0,
-    lastSuccessfulSend: null,
-    lastFailedSend: null,
+    invalidTokenCount: delivery.filter(item => item.failureCategory === "invalid_token").length,
+    lastSuccessfulSend: delivery.find(item => ["sent", "delivered"].includes(item.status))?.lastAttemptAt ?? null,
+    lastFailedSend: delivery.find(item => item.status === "failed")?.lastAttemptAt ?? null,
     receiptProcessing: "not_configured",
     fanoutHealth: "not_configured",
   });
 });
 
-router.post("/admin/notifications/test", requireAdmin("admin.read"), (req, res) => {
+router.post("/admin/notifications/test", requireAdmin("admin.read"), async (req, res) => {
   const principal = req.adminPrincipal;
   if (!principal) { res.status(403).json({ error: "Staff authorization required." }); return; }
   const event: NotificationEvent = {
@@ -164,7 +170,8 @@ router.post("/admin/notifications/test", requireAdmin("admin.read"), (req, res) 
     deepLink: "worlds://notifications",
   };
   const record = notificationStore.process(event);
-  res.status(201).json({ test: true, notification: record ?? renderNotification(event) });
+  const delivery = await notificationStore.flushQueued(pushProvider);
+  res.status(201).json({ test: true, notification: record ?? renderNotification(event), delivery });
 });
 
 router.get("/admin/dashboard", requireAdmin("admin.read"), (_req, res) => {

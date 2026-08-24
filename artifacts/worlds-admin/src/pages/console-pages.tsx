@@ -401,6 +401,8 @@ function InterestOperationsPage({ data }: { data: AdminData }) {
 function NotificationOperationsPage({ data }: { data: AdminData }) {
   const overview = data.notifications.overview.data;
   const metrics = overview?.metrics;
+  const delivery = overview?.delivery ?? [];
+  const diagnostics = data.notifications.diagnostics.data as { queueHealth?: string; lastSuccessfulSend?: string | null; lastFailedSend?: string | null; invalidTokenCount?: number } | undefined;
   return <div className="page-wrap">
     <PageHeader eyebrow="Platform / communication" title="Administrative notifications" description="Monitor delivery infrastructure without exposing push tokens or provider credentials." actions={<RefreshButton onClick={() => { void data.notifications.overview.refetch(); void data.notifications.diagnostics.refetch(); }} loading={data.notifications.overview.isFetching} />} />
     <div className="metrics-grid" style={{ marginTop: 26 }}>
@@ -413,6 +415,19 @@ function NotificationOperationsPage({ data }: { data: AdminData }) {
       <section className="panel"><div className="panel-header"><div><div className="panel-title">Provider and queue</div><div className="panel-kicker">Server-side delivery status</div></div><StatusBadge status={overview?.provider.configured ? 'configured' : 'unavailable'} /></div>{overview ? <div className="empty-state"><strong>{overview.provider.configured ? 'Provider configured' : 'Push provider unavailable'}</strong><p>{overview.provider.reason ?? 'Delivery health is ready for inspection.'}</p><p className="identity-handle">Persistence: {overview.persistence}</p></div> : <UnavailableState onRetry={() => void data.notifications.overview.refetch()} />}</section>
       <section className="panel"><div className="panel-header"><div><div className="panel-title">Self-test</div><div className="panel-kicker">Only sends to your own registered device</div></div></div><button className="btn btn-primary" onClick={() => data.notifications.test.mutate()} disabled={data.notifications.test.isPending || !data.session.data?.authorized}>Send test notification</button>{data.notifications.test.isSuccess && <p className="identity-handle" style={{ marginTop: 12 }}>Test notification queued for your account.</p>}<div className="notice" style={{ marginTop: 18 }}><LockKeyhole /><span>Provider secrets and raw push tokens are never shown in the Admin Panel.</span></div></section>
     </div>
+      <section className="panel" style={{ marginTop: 22 }}>
+        <div className="panel-header"><div><div className="panel-title">Recent delivery activity</div><div className="panel-kicker">Safe operational state only · never includes recipient tokens or message content</div></div><StatusBadge status={diagnostics?.queueHealth ?? 'unavailable'} /></div>
+        {!delivery.length ? <UnavailableState message="No notification deliveries have been recorded yet." /> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Channel</th><th>Status</th><th>Attempts</th><th>Failure category</th><th>Last attempt</th></tr></thead><tbody>{delivery.slice(0, 25).map((item) => <tr key={item.id}><td>{item.channel === 'push' ? 'Push' : 'In-app'}</td><td><StatusBadge status={item.status} /></td><td className="mono">{item.attemptCount}</td><td>{item.failureCategory ?? '—'}</td><td>{fmtDateTime(item.lastAttemptAt ?? item.createdAt)}</td></tr>)}</tbody></table></div>}
+      </section>
+      <section className="panel" style={{ marginTop: 22 }}>
+        <div className="panel-header"><div><div className="panel-title">Delivery diagnostics</div><div className="panel-kicker">Provider health and retry visibility</div></div></div>
+        <div className="metrics-grid">
+          <div className="metric-card"><div className="metric-label">Queue health</div><div className="metric-value">{diagnostics?.queueHealth ?? '—'}</div><div className="metric-detail">Live server state</div></div>
+          <div className="metric-card"><div className="metric-label">Invalid tokens</div><div className="metric-value">{diagnostics?.invalidTokenCount ?? '—'}</div><div className="metric-detail">Disabled after permanent provider failure</div></div>
+          <div className="metric-card"><div className="metric-label">Last success</div><div className="metric-value" style={{ fontSize: 16 }}>{fmtDateTime(diagnostics?.lastSuccessfulSend)}</div><div className="metric-detail">Provider accepted push</div></div>
+          <div className="metric-card"><div className="metric-label">Last failure</div><div className="metric-value" style={{ fontSize: 16 }}>{fmtDateTime(diagnostics?.lastFailedSend)}</div><div className="metric-detail">Retries stay visible here</div></div>
+        </div>
+      </section>
     <div className="notice" style={{ marginTop: 18 }}><AlertTriangle /><span>Notification records remain independent from push delivery. A failed push never removes in-app history.</span></div>
   </div>;
 }
