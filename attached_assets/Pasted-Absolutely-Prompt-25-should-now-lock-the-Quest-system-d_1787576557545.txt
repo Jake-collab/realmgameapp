@@ -1,0 +1,2665 @@
+Absolutely. Prompt 25 should now **lock the Quest system down as the canonical implementation** and correct any conflicting behavior from earlier prompts. It specifically covers the areas we just clarified: personalized Daily Quests, Interest Bubbles, all three AI prompt editors, proof/verification, live camera capture, GPS applicability beyond Geo-Quests, points, Geo discovery, and exactly what the Quest Map does.
+
+```text
+# Worlds — Build 1, Prompt 25
+# Canonical Quest System: Personalization, AI Generation, Verification, Points, Geo-Quests & Map Gameplay
+
+Continue from the existing Worlds project.
+
+Treat Prompts 1–24 and the existing implementation as the foundation.
+
+However, THIS PROMPT is the canonical source of truth for Quest behavior wherever an earlier prompt, schema, UI, documentation, or implementation conflicts with the rules below.
+
+Do not redesign the approved simplified Quest UI.
+
+Do not add another game mode.
+
+Do not implement Hunt changes from the next prompt yet.
+
+The application remains:
+
+WORLDs / Worlds
+
+Supported games:
+
+- Quest
+- Hunt
+
+Explicitly exclude:
+
+- Game Zones
+- Outbreak
+
+This prompt is specifically for finalizing the complete Quest system.
+
+---
+
+# PRIMARY OBJECTIVE
+
+Audit, repair, implement, connect, and test the entire Quest system so that it has one coherent model for:
+
+1. Interest Bubble onboarding
+2. Personalized Daily Quests
+3. Daily Quest assignment
+4. Monthly Quest Drops
+5. Geo-Quests
+6. Admin AI prompt customization
+7. AI-generated Quest candidates
+8. Interest-based AI targeting
+9. Quest difficulty
+10. Quest points
+11. Quest initiation
+12. Quest proof requirements
+13. Live in-app camera verification
+14. Live video verification
+15. GPS verification
+16. GPS verification for non-Geo Quests
+17. Quest completion
+18. Proof review
+19. Anti-cheat
+20. Quest Map
+21. Geo-Quest discovery
+22. Geo-Quest completion
+23. Quest Progress
+24. Quest leaderboard
+25. Notifications
+26. Admin Quest management
+27. Manual Quest creation
+28. AI failure fallback
+29. Privacy
+30. Offline behavior
+
+Do not merely add another implementation beside older implementations.
+
+Find conflicting implementations and migrate them to this canonical model.
+
+---
+
+# 1. APPROVED QUEST NAVIGATION
+
+Quest mode bottom navigation remains exactly:
+
+1. Home
+2. Quests
+3. Map
+4. Progress
+5. Profile
+
+The Quest/Hunt game selector remains above the game-specific navigation at the app-shell level.
+
+Profile remains shared between games.
+
+Do NOT add:
+
+- Daily tab
+- Monthly tab
+- Geo bottom tab
+- Discover tab
+- Leaderboard bottom tab
+- AI bottom tab
+
+---
+
+# 2. QUESTS SCREEN
+
+The primary Quests screen remains deliberately simple.
+
+It should have exactly these conceptual sections:
+
+## Daily Quest
+
+Show the player's currently assigned personalized Daily Quest.
+
+## Monthly Quest Drop
+
+Show the current Monthly Quest collection/set.
+
+## Geo-Quest
+
+Show nearby/relevant Geo-Quests.
+
+Geo-Quest list items should remain concise.
+
+Example conceptual presentation:
+
+[pin] Riverwalk Photo Quest
+Curtis Hixon Waterfront Park
+300 pts
+
+Do not add excessive Geo categories or complicated filtering to the primary Quests screen.
+
+---
+
+# 3. DAILY QUEST = PERSONALIZED QUEST
+
+There is NOT a separate consumer-facing "Personal Quest" category.
+
+The Daily Quest IS the personalized Quest.
+
+Canonical terminology:
+
+Consumer:
+"Daily Quest"
+
+Admin AI configuration:
+"Personalized Daily Quest AI Prompt"
+
+The Daily Quest assignment system should use the user's selected Interest Bubbles.
+
+Update old documentation/UI that makes Personal Quest appear to be a separate fourth Quest type.
+
+---
+
+# 4. INTEREST BUBBLE ONBOARDING
+
+During initial user onboarding, after account/profile creation, include a dedicated Interest Bubble selection step.
+
+Conceptual heading:
+
+"What are you interested in?"
+
+Supporting text should briefly explain that selections help Worlds personalize Daily Quests.
+
+Display selectable bubbles/chips.
+
+Examples might include:
+
+- Nature
+- Photography
+- Fitness
+- Art
+- History
+- Food
+- Technology
+- Exploration
+- Music
+- Learning
+- Sports
+- Animals
+- Creativity
+- Community
+- Science
+
+These are examples only.
+
+The actual global Interest Bubble pool must come from the database and be manageable by Admin.
+
+Do not hardcode the production taxonomy solely into the mobile client.
+
+---
+
+# 5. INTEREST SELECTION RULES
+
+Allow multiple interests.
+
+Create configuration for sensible:
+
+- minimum selection
+- recommended selection
+- maximum selection
+
+Use safe platform defaults if configuration does not yet exist.
+
+Do not force the user to select dozens of interests.
+
+Persist selections to the user's profile/account.
+
+The user must later be able to modify their Interest Bubbles from Profile/Settings.
+
+Changes should affect future Daily assignments, not retroactively replace today's already assigned Quest.
+
+---
+
+# 6. INTEREST BUBBLE ADMIN
+
+Admin must have a real Interest Bubble management interface.
+
+Admin capabilities:
+
+- Create bubble
+- Rename
+- Description
+- Activate/deactivate
+- Sort/order
+- Optional icon
+- Optional category/group for Admin organization
+- View approximate usage count
+- Prevent destructive deletion where referenced
+
+Deactivating a Bubble should not corrupt historical Quest/user data.
+
+Unknown AI-generated tags must NOT automatically become new Interest Bubbles.
+
+---
+
+# 7. DAILY QUEST MATCHING MODEL
+
+Daily assignment must be server-authoritative.
+
+Conceptual matching:
+
+User Interest Bubble IDs
+        ↓
+Approved Daily Quest candidates
+        ↓
+Quest Interest Bubble tags
+        ↓
+Matching/ranking engine
+        ↓
+One stable Daily Quest assignment
+
+Do not call the AI provider when the consumer opens Daily Quest.
+
+Do not generate a completely new Quest every time the user refreshes.
+
+Once assigned for the day, the Quest remains stable unless a legitimate reroll mechanism changes it.
+
+---
+
+# 8. DAILY QUEST TARGETING
+
+Each Daily Quest candidate can contain:
+
+- primary interest tags
+- secondary interest tags
+- targeting mode
+- difficulty
+- points
+- proof requirements
+- optional location requirement
+- safety metadata
+
+Support targeting modes such as:
+
+ANY_MATCH
+PREFER_COMBINATION
+REQUIRE_COMBINATION
+
+Example:
+
+Quest:
+"Photograph three different leaf shapes during a walk."
+
+Tags:
+Nature
+Photography
+
+Targeting:
+PREFER_COMBINATION
+
+A player with both interests should rank higher than a player with only one.
+
+Do not require every Daily Quest to combine multiple interests.
+
+Natural Quest quality is more important than artificially combining unrelated interests.
+
+---
+
+# 9. DAILY FALLBACK MATCHING
+
+The assignment engine needs graceful fallback.
+
+Conceptual ranking:
+
+1. Strong multi-interest match
+2. Strong single-interest match
+3. Secondary-interest match
+4. Broad/general approved Daily Quest
+
+A player must not receive no Daily Quest simply because the inventory lacks an exact combination.
+
+Do not assign an inappropriate Quest solely to satisfy tag matching.
+
+---
+
+# 10. DAILY ASSIGNMENT STABILITY
+
+Persist:
+
+- user_id
+- local assignment date / canonical day
+- quest_id
+- assignment reason/match score where useful
+- assignment timestamp
+- reroll count if enabled
+
+Use database uniqueness/idempotency.
+
+Refreshing the screen must not change the assignment.
+
+Multiple devices must resolve to the same assignment.
+
+---
+
+# 11. DAILY REROLLS
+
+Audit the existing reroll implementation.
+
+If rerolls remain enabled, preserve the existing configurable architecture.
+
+Default existing concept:
+
+max_daily_rerolls
+
+Admin controls maximum.
+
+Reroll must:
+
+- Exclude already rejected/used Daily candidate
+- Respect interest matching
+- Persist new assignment
+- Increment count atomically
+- Prevent unlimited refresh abuse
+
+If current canonical project configuration has rerolls disabled, hide the control.
+
+Do not maintain two contradictory rules.
+
+---
+
+# 12. ADMIN AI QUEST CENTER
+
+Create or finalize a dedicated Admin area for AI Quest generation.
+
+It must clearly separate THREE generators:
+
+1. Personalized Daily
+2. Monthly
+3. Geo-Quest
+
+Do not combine all three into one ambiguous prompt box.
+
+Suggested navigation:
+
+AI Quest Generation
+
+[ Personalized Daily ]
+[ Monthly ]
+[ Geo-Quest ]
+
+---
+
+# 13. PERSONALIZED DAILY QUEST AI PROMPT
+
+Admin must have a persistent editable prompt field labeled clearly:
+
+"Personalized Daily Quest AI Prompt"
+
+Supporting explanation:
+
+"This prompt controls AI-generated Daily Quest candidates. Candidates are tagged with Interest Bubbles and later matched to players based on the interests selected during onboarding."
+
+Admin can:
+
+- Edit prompt
+- Save draft/version
+- Activate version
+- View current active version
+- Test prompt
+- Generate candidates
+- Review generated output
+- Edit generated Quest
+- Reject
+- Save as Draft
+- Approve/publish into Daily inventory
+
+AI output must NEVER directly become consumer-visible without passing validation and the approved publication workflow.
+
+---
+
+# 14. DAILY AI INTEREST TARGETING CONTROLS
+
+The Admin must be able to tell the generator which Interest Bubbles a generation batch should target.
+
+Provide structured controls in addition to the free-form prompt.
+
+Example:
+
+Target Interests:
+
+[✓] Photography
+[✓] Nature
+[ ] Fitness
+[ ] History
+
+Targeting:
+
+○ Any Match
+● Prefer Combination
+○ Require Combination
+
+Generation count:
+[ 10 ]
+
+Difficulty mix:
+[ configurable ]
+
+The Admin should not have to manually type canonical Interest Bubble names into the prompt.
+
+Pass stable IDs/names to the server-side AI generation system.
+
+---
+
+# 15. DAILY AI INPUT
+
+The server-side generator should conceptually receive:
+
+- Active Admin prompt
+- Selected Interest Bubbles
+- Targeting mode
+- Allowed proof methods
+- Difficulty rules
+- Point rules
+- Safety constraints
+- Quest schema
+- Current generation context
+- Duplicate-avoidance context where practical
+
+Do NOT send private individual-user profiles to OpenAI simply to create the candidate inventory.
+
+Personalization happens through Interest Bubble targeting and assignment.
+
+---
+
+# 16. DAILY AI STRUCTURED OUTPUT
+
+Require structured output.
+
+A candidate should include fields conceptually such as:
+
+title
+description
+instructions
+difficulty
+recommended_points
+interest_bubble_ids
+targeting_mode
+proof_requirement
+location_requirement
+estimated_duration
+safety_notes
+age/safety classification if architecture uses it
+generation metadata
+
+Validate output server-side.
+
+Reject malformed output.
+
+Do not trust AI enums blindly.
+
+---
+
+# 17. MONTHLY AI PROMPT
+
+Admin must have a separate persistent field:
+
+"Monthly Quest AI Prompt"
+
+It controls Monthly Quest candidate/set generation.
+
+Admin can:
+
+- Edit
+- Version
+- Activate
+- Test
+- Generate
+- Review
+- Modify
+- Reject
+- Save Draft
+- Approve
+
+Monthly generation does not use an individual player's interests as the primary personalization mechanism.
+
+Monthly Quests are shared content.
+
+They may still be tagged by interests for display/analytics if useful.
+
+---
+
+# 18. MONTHLY QUEST DROP
+
+Preserve the established Monthly Quest Drop model.
+
+If the canonical existing rule remains:
+
+- 100 Quests per Monthly set
+- 10,000 total available points
+
+keep those rules.
+
+Audit the project and ensure the rule is consistent everywhere.
+
+Admin publication must validate:
+
+- Quest count
+- Point total
+- Valid proof configurations
+- No invalid difficulty
+- No broken references
+- Publication date
+- Month uniqueness
+
+If previous code provides an auto-balance/suggestion tool, preserve it.
+
+If absent, implement a non-destructive Admin helper that suggests point adjustments needed to reach the configured total.
+
+Admin retains final control.
+
+---
+
+# 19. GEO-QUEST AI PROMPT
+
+Admin must have a separate persistent field:
+
+"Geo-Quest AI Prompt"
+
+This controls AI-assisted creation of location-specific Quests.
+
+AI must NOT invent arbitrary authoritative coordinates.
+
+The location must originate from:
+
+- Admin Mapbox selection
+- approved geographic dataset
+- another trusted location source already supported
+
+Then the AI receives location context.
+
+Example conceptual input:
+
+Place:
+Curtis Hixon Waterfront Park
+
+City:
+Tampa
+
+Place type:
+Public park
+
+Public location context:
+Waterfront urban park
+
+Then AI can suggest a Quest appropriate to that location.
+
+---
+
+# 20. GEO-QUEST ADMIN CREATION
+
+Geo-Quest creation should support:
+
+1. Search location
+2. Mapbox result
+3. Select location
+4. Display map
+5. Confirm public location
+6. Set public discovery geometry
+7. Set private verification geometry/radius
+8. Generate Quest with AI OR create manually
+9. Select difficulty
+10. Configure proof
+11. Review
+12. Publish
+
+AI remains optional.
+
+Manual Geo-Quest creation must always work.
+
+---
+
+# 21. GEO-QUESTS ARE NOT CITY POOLS
+
+Do NOT implement Geo-Quests as separate hardcoded:
+
+- Tampa Quests
+- Chicago Quests
+- New York Quests
+- etc.
+
+Geo-Quests are coordinate/geography-based records.
+
+The application queries relevant Quests geographically.
+
+A Geo-Quest may exist:
+
+- In a major city
+- Small town
+- Park
+- Trail
+- Museum
+- Public attraction
+- Commercial public venue
+- Other appropriate accessible location
+
+No artificial city-size requirement.
+
+---
+
+# 22. GEO DISCOVERY RADIUS
+
+Separate discovery from completion verification.
+
+Default Nearby discovery behavior:
+
+approximately 15 miles / 24 km around the player's current location.
+
+Make this a centrally configurable default.
+
+This is a discovery convenience, NOT a hard limit on what the player can browse.
+
+If the user:
+
+- pans the map
+- searches another location
+- selects another map area
+
+load Geo-Quests for that viewport/search area.
+
+Use viewport/geospatial queries rather than downloading every Geo-Quest.
+
+---
+
+# 23. GEO LOCATION PERMISSION
+
+If location permission is granted:
+
+- Center initial Quest Map around player where appropriate.
+- Show nearby Geo-Quests.
+- Calculate approximate distance.
+
+If permission is denied:
+
+The Quest Map must still function.
+
+Allow:
+
+- map browsing
+- place search
+- city/place search
+- manual viewport exploration
+
+Do not require continuous/background location.
+
+---
+
+# 24. GEO COMPLETION RADIUS
+
+Canonical default Geo-Quest verification radius:
+
+50 meters.
+
+Make it Admin configurable per Quest within sensible system bounds.
+
+Conceptual supported range:
+
+20–150 meters
+
+Do not hardcode this in multiple clients.
+
+Store authoritative value server-side.
+
+Admin UI should make the radius visible on the creation/edit map.
+
+---
+
+# 25. GEO VERIFICATION GEOMETRY PRIVACY
+
+Consumer payload should expose only enough location information to play the Quest.
+
+Do not expose internal anti-cheat or hidden verification geometry unnecessarily.
+
+If public destination equals exact location and it is intentionally public, that is fine.
+
+If the Quest uses broader public area + hidden verification geometry, keep private validation information server-side.
+
+---
+
+# 26. INDOOR GEO-QUESTS ARE ALLOWED
+
+Do NOT implement:
+
+indoor = invalid
+
+Geo means location-dependent, not outdoor-only.
+
+Potential valid Geo locations include:
+
+- Public library
+- Museum
+- Mall common area
+- Public attraction
+- Publicly accessible commercial venue
+- Transit concourse where safe/appropriate
+- Indoor public market
+- Community center
+- Other appropriate public-access location
+
+Use safety/accessibility policy rather than indoor/outdoor alone.
+
+---
+
+# 27. GEO LOCATION RISK
+
+For Admin-created Geo-Quests, provide basic location-safety validation.
+
+Do not automatically approve a location solely because Mapbox returns it.
+
+Allow:
+
+PASS
+REVIEW
+REJECT
+
+Potential risk signals:
+
+- Roadway
+- Highway
+- Restricted infrastructure
+- Clearly private residential location
+- Unsafe inaccessible area
+- Invalid coordinate
+- Water body without legitimate public location
+- Location-data mismatch
+
+Admin retains review authority.
+
+Do not claim GPS/geocoding proves legal access.
+
+---
+
+# 28. QUEST DIFFICULTY — CANONICAL MODEL
+
+Remove historic difficulty mismatches.
+
+Canonical consumer Quest difficulty:
+
+EASY
+MEDIUM
+HARD
+EPIC
+
+Remove/deprecate:
+
+EXTREME
+LEGENDARY
+
+unless migration compatibility requires preserving old values internally.
+
+New production Quest creation must use only the canonical four values.
+
+Update:
+
+- DB constraints/enums
+- shared types
+- validation
+- AI schema
+- Admin
+- mobile
+- seeds
+- tests
+- documentation
+
+Migrate old data safely.
+
+---
+
+# 29. QUEST POINTS — CANONICAL BASE SCALE
+
+Use this canonical base scale:
+
+EASY = 100 Quest Points
+MEDIUM = 200 Quest Points
+HARD = 300 Quest Points
+EPIC = 500 Quest Points
+
+This is the default base system.
+
+Do not allow consumer clients to choose point values.
+
+---
+
+# 30. ADMIN POINT OVERRIDE
+
+Allow authorized Admins to adjust Quest points when genuinely necessary.
+
+But constrain values through platform validation.
+
+AI may recommend points.
+
+AI does not have final authority.
+
+Record:
+
+- base difficulty
+- canonical base points
+- final points
+- override reason if materially different
+- actor
+- timestamp
+
+Do not permit arbitrary client-side point manipulation.
+
+---
+
+# 31. QUEST POINT CURRENCY
+
+Quest Points are their own authoritative score.
+
+Track at minimum:
+
+quest_points
+
+Hunt will use:
+
+hunt_points
+
+Do NOT mix them when calculating game-specific leaderboards.
+
+Shared Profile may display:
+
+Quest Points
+Hunt Points
+Total Worlds Points
+
+If Total Worlds Points exists:
+
+total_worlds_points =
+valid Quest Points + valid Hunt Points
+
+It is a derived/display total.
+
+Do not use Total Worlds Points to replace separate game leaderboards.
+
+---
+
+# 32. QUEST POINT LEDGER
+
+All point changes must use the canonical server-side points ledger.
+
+Events include:
+
+QUEST_COMPLETION
+QUEST_REVERSAL
+QUEST_QUARANTINE
+QUEST_QUARANTINE_RELEASE
+ADMIN_ADJUSTMENT
+
+Use idempotency keys.
+
+A Quest completion must never award twice.
+
+Do not trust client point totals.
+
+---
+
+# 33. QUEST LEADERBOARD
+
+Quest leaderboard uses only valid Quest Points.
+
+Exclude:
+
+- Hunt Points
+- Quarantined points
+- Reversed points
+- Invalidated submissions
+
+Support established periods.
+
+Show player's personal Quest Point total prominently in Progress.
+
+Automatic refresh/materialization remains server-controlled.
+
+---
+
+# 34. QUEST VERIFICATION MODEL
+
+Replace fragmented proof behavior with one canonical verification model.
+
+A Quest can specify one or more required verification methods.
+
+Supported canonical methods:
+
+NONE
+LIVE_PHOTO
+LIVE_VIDEO
+GPS_CHECK
+LIVE_PHOTO_PLUS_GPS
+LIVE_VIDEO_PLUS_GPS
+TEXT_RESPONSE
+MANUAL_REVIEW
+
+Internally, combinations may be represented structurally instead of enum explosion if architecture is cleaner.
+
+Do not allow ambiguous proof configuration.
+
+---
+
+# 35. LIVE CAMERA IS THE DEFAULT FOR VISUAL PROOF
+
+For Quest verification requiring a photo:
+
+Do NOT use ordinary gallery upload as the normal completion pathway.
+
+User taps:
+
+"Verify Quest"
+
+Then Worlds opens the in-app camera.
+
+The image is captured during that verification session.
+
+For Quest video proof:
+
+Open in-app camera directly into short-video capture.
+
+Do not present:
+
+"Upload from Photos"
+
+for authoritative visual Quest verification.
+
+This is intentional anti-cheat architecture.
+
+---
+
+# 36. ONE-TIME VERIFICATION SESSION
+
+Before live capture, create a server-authorized verification session.
+
+Conceptual:
+
+Player taps Verify Quest
+        ↓
+Server validates active Quest
+        ↓
+Creates short-lived verification_session
+        ↓
+Returns session/challenge ID
+        ↓
+Camera opens
+        ↓
+Capture
+        ↓
+Proof uploaded with session
+        ↓
+Server validates
+        ↓
+Session consumed
+
+The session should contain:
+
+- user
+- quest participation
+- Quest
+- allowed proof type
+- creation time
+- expiration
+- nonce/challenge
+- consumed state
+
+Prevent reuse.
+
+---
+
+# 37. LIVE PHOTO METADATA
+
+Capture useful non-authoritative signals where available:
+
+- server verification session
+- capture timestamp
+- device timestamp
+- upload timestamp
+- GPS if requested/permission granted and required
+- device/app version
+- basic media metadata
+- duplicate media hash
+
+Do not depend solely on EXIF because it can be manipulated.
+
+Server session is authoritative for capture flow.
+
+---
+
+# 38. LIVE VIDEO
+
+Support short in-app Quest verification video where configured.
+
+Keep duration bounded.
+
+Admin Quest configuration should define reasonable maximum duration.
+
+Compress appropriately before upload.
+
+Do not create unlimited large video uploads.
+
+Video proof remains private unless product rules explicitly make it public.
+
+---
+
+# 39. GPS IS NOT LIMITED TO GEO-QUESTS
+
+This is critical.
+
+Any Quest category may require GPS verification.
+
+Examples:
+
+Daily:
+"Take a walk through a local park and photograph something interesting."
+
+Could use:
+LIVE_PHOTO_PLUS_GPS
+
+Monthly:
+"Visit a public art space."
+
+Could use:
+LIVE_PHOTO_PLUS_GPS
+
+Geo:
+"Find the sculpture at this park."
+
+Could use:
+GPS_CHECK
+or
+LIVE_PHOTO_PLUS_GPS
+
+Therefore:
+
+Quest category and verification method are separate concepts.
+
+Do not hardcode GPS verification only to Geo-Quests.
+
+---
+
+# 40. GPS VERIFICATION MODES
+
+Support different GPS semantics.
+
+## TARGET_LOCATION
+
+Player must be within configured radius of predetermined location.
+
+Typical Geo-Quest.
+
+## CAPTURE_LOCATION
+
+Record where live proof was captured without requiring one predetermined coordinate.
+
+Useful for a Daily Quest like visiting any local park.
+
+## ALLOWED_AREA
+
+Player must be within approved geometry/area.
+
+## NONE
+
+No GPS.
+
+Store mode explicitly.
+
+Do not infer solely from Quest type.
+
+---
+
+# 41. GPS PRIVACY
+
+Only request location when needed.
+
+Do not continuously track.
+
+Do not request background location.
+
+For a GPS-required Quest:
+
+Explain:
+
+"This Quest uses your location when you verify completion."
+
+Capture only required point/check data.
+
+Follow existing retention/privacy rules.
+
+---
+
+# 42. GPS FAILURE
+
+If a Quest requires GPS and permission is denied:
+
+Explain that location verification is required for this particular Quest.
+
+Offer appropriate actions such as:
+
+- Open Settings
+- Cancel verification
+
+Do not silently bypass GPS.
+
+If Quest policy permits an Admin/manual alternative, route to it explicitly.
+
+---
+
+# 43. GPS ACCURACY
+
+Use accuracy threshold as part of validation.
+
+Poor accuracy should not automatically accuse user of cheating.
+
+Possible result:
+
+RETRY_LOCATION
+
+If clearly suspicious signals exist:
+
+FLAG_FOR_REVIEW
+
+Do not award completion merely because coordinates technically fall within radius if accuracy is unusable.
+
+---
+
+# 44. PHOTO/VIDEO SAFETY MODERATION
+
+Visual Quest proof should pass through the moderation architecture where configured.
+
+Safety moderation asks:
+
+"Is this content appropriate/safe?"
+
+Proof validation asks:
+
+"Does this demonstrate completion?"
+
+These are different decisions.
+
+Do not conflate them.
+
+---
+
+# 45. PROOF CORRECTNESS
+
+Build 1 should NOT depend on AI automatically deciding that every visual Quest was completed correctly.
+
+Use Quest configuration to determine completion pathway.
+
+Possible:
+
+## AUTO-GEO
+
+Server GPS rule sufficient.
+
+## MODERATOR_REVIEW
+
+Human reviews proof.
+
+## TEXT_MANUAL
+
+Human reviews text.
+
+## HYBRID
+
+Geo validation succeeds but visual proof still needs review.
+
+AI vision may later assist, but should not silently become authoritative unless explicitly approved.
+
+---
+
+# 46. PROOF STATES
+
+Use one canonical lifecycle such as:
+
+NOT_REQUIRED
+READY
+CAPTURING
+UPLOADING
+SUBMITTED
+UNDER_REVIEW
+APPROVED
+NEEDS_RESUBMISSION
+REJECTED
+
+Quest participation/completion state should be separate from media upload state where necessary.
+
+Do not award points while proof is merely uploading.
+
+---
+
+# 47. COMPLETION TRANSACTION
+
+Quest completion must be server-authoritative and atomic.
+
+Conceptually:
+
+Validate participation
+Validate proof requirements
+Validate GPS
+Validate proof approval where required
+Validate anti-cheat
+Mark Quest completed
+Write point ledger
+Update aggregate
+Emit notification/outbox event
+
+All in an idempotent transaction/workflow.
+
+No client:
+
+points += 300
+
+logic.
+
+---
+
+# 48. ANTI-AI / ANTI-UPLOAD PROTECTION
+
+Because authoritative visual proof uses live in-app capture:
+
+- Disable gallery import for completion proof.
+- Require current verification session.
+- Use short expiration.
+- Hash media.
+- Detect duplicate proof reuse.
+- Record capture/upload timing.
+- Attach GPS where required.
+- Maintain anti-cheat signals.
+
+Do not claim this makes AI-generated fraud impossible.
+
+It makes normal pre-generated image upload substantially harder.
+
+---
+
+# 49. DUPLICATE MEDIA
+
+Generate a server-side cryptographic hash and, where existing architecture supports it, perceptual similarity signal.
+
+Flag suspicious reuse across:
+
+- Same Quest
+- Different Quests
+- Different accounts
+
+Do not automatically ban solely from similarity.
+
+Route suspicious cases into anti-cheat review.
+
+---
+
+# 50. TEXT PROOF
+
+Text proof remains available only where appropriate.
+
+It must not be used for a Quest requiring live physical verification.
+
+Text proof should generally require manual review unless Quest logic provides a deterministic safe validator.
+
+Do not ask AI to automatically award leaderboard points from arbitrary free text.
+
+---
+
+# 51. QR PROOF
+
+Audit existing QR code.
+
+The historic implementation treated QR as plain text.
+
+That is NOT acceptable as a secure QR verification method.
+
+For Build 1:
+
+If a proper camera scanner + server-generated/validated token architecture has NOT been implemented:
+
+Disable QR as an active proof method.
+
+Do not show a fake text-field QR workflow.
+
+Preserve future schema only if harmless.
+
+---
+
+# 52. START QUEST
+
+Primary initiation button:
+
+"Start Quest"
+
+On successful initiation:
+
+- Create authoritative participation record.
+- Add Quest to Progress → In Action.
+- Update Home prioritized active Quest where appropriate.
+- Preserve start timestamp.
+- Initialize proof state.
+
+Starting does not award points.
+
+---
+
+# 53. QUEST HOME
+
+Home remains the expanded immediate gameplay view.
+
+Show prioritized active Quest with:
+
+- Title
+- Objective
+- Difficulty
+- Points
+- Relevant location if applicable
+- Deadline if applicable
+- Verification requirement
+- Current status
+- Primary action
+
+Possible primary actions:
+
+Start Quest
+Continue Quest
+Verify Quest
+View Submission
+View Result
+
+Do not turn Home into another giant Quest catalog.
+
+---
+
+# 54. PROGRESS
+
+Quest Progress contains:
+
+## Leaderboards
+
+- Personal Quest Point total
+- Ranking
+
+## In Action
+
+List initiated unfinished Quests.
+
+Show concise status/progress.
+
+## Completed
+
+Completed Quest history.
+
+Do not add unnecessary major sections.
+
+---
+
+# 55. DAILY QUEST HISTORY
+
+The previous audit identified missing Daily history.
+
+Completed Daily Quests should naturally appear in Completed history.
+
+Do not create a redundant giant separate screen unless useful.
+
+If streaks exist in current approved scope, show them compactly.
+
+Do not invent complex streak rewards.
+
+---
+
+# 56. QUEST MAP — PURPOSE
+
+The Quest Map has TWO primary responsibilities:
+
+1. Geo-Quest discovery
+2. Active Quest location support
+
+Do not turn it into Hunt.
+
+Quest Map uses pins/locations.
+
+Hunt will use search zones/blobs in Prompt 26.
+
+Keep the visual/gameplay distinction.
+
+---
+
+# 57. QUEST MAP — GEO DISCOVERY
+
+Display relevant Geo-Quest markers.
+
+Marker/list data may show:
+
+- Quest title
+- Location name
+- Points
+- Distance
+- Difficulty
+
+Tap marker:
+
+Show concise Quest preview.
+
+Actions:
+
+View Quest
+Start Quest where eligible
+
+Use clustering where density requires it.
+
+---
+
+# 58. QUEST MAP — ACTIVE QUEST
+
+If an active Daily/Monthly/Geo Quest has a relevant location:
+
+Highlight it on the Map.
+
+Show:
+
+- Destination or allowed area
+- Player position if permission granted
+- Quest card
+- Points
+- Status
+- Directions action
+
+If a Quest has no location component:
+
+Do not fabricate map content for it.
+
+---
+
+# 59. DIRECTIONS
+
+Provide a Directions action for relevant location-based Quests.
+
+Use safe external/native map navigation or existing supported routing architecture.
+
+Worlds does not need to become a full turn-by-turn navigation system.
+
+Do not expose hidden verification geometry to the navigation provider unnecessarily.
+
+---
+
+# 60. QUEST MAP SEARCH
+
+Allow location/place search.
+
+Player can search:
+
+- City
+- Neighborhood
+- Landmark
+- Public venue
+
+Use Mapbox geocoding/search.
+
+Then reposition map and query Geo-Quests in that area.
+
+This allows Geo discovery without location permission.
+
+---
+
+# 61. QUEST MAP PRIVACY
+
+Do not display:
+
+- Other players' exact locations
+- Submission coordinates
+- Private proof locations
+- Anti-cheat geometry
+- Hidden Admin validation data
+
+Quest Map is about Quest locations, not people tracking.
+
+---
+
+# 62. GEO-QUEST COMPLETION FLOW
+
+Canonical example:
+
+Player discovers Geo-Quest
+        ↓
+Views Quest
+        ↓
+Start Quest
+        ↓
+Travels there
+        ↓
+Verify Quest
+        ↓
+Worlds requests current location
+        ↓
+Server validates distance/area
+        ↓
+If visual proof required:
+    live camera opens
+        ↓
+Submit
+        ↓
+Review if configured
+        ↓
+Completion
+        ↓
+Quest Points
+        ↓
+Progress + Leaderboard
+
+---
+
+# 63. NON-GEO LOCATION QUEST FLOW
+
+Example Personalized Daily:
+
+"Take a walk through a local park and photograph something interesting."
+
+This does NOT have to be a formal Geo-Quest.
+
+Configuration:
+
+category:
+DAILY
+
+gps_mode:
+CAPTURE_LOCATION
+
+proof:
+LIVE_PHOTO_PLUS_GPS
+
+Flow:
+
+Start
+↓
+Player chooses where to complete it
+↓
+Verify
+↓
+Live photo
+↓
+GPS captured
+↓
+Submission
+↓
+Review
+↓
+Points
+
+Do not force predetermined coordinates when the Quest intentionally allows player choice.
+
+---
+
+# 64. MONTHLY LOCATION QUEST
+
+Monthly Quests may also use any verification configuration.
+
+A Monthly Quest can be:
+
+- Non-location
+- Any-location GPS capture
+- Predetermined location
+- Allowed geographic area
+- Live photo
+- Live video
+- Text/manual
+
+Monthly is a content grouping, not a proof type.
+
+---
+
+# 65. QUEST SCHEMA SEPARATION
+
+Ensure schema separates:
+
+QUEST CATEGORY
+
+DAILY
+MONTHLY
+GEO
+
+from:
+
+DIFFICULTY
+
+EASY
+MEDIUM
+HARD
+EPIC
+
+from:
+
+VERIFICATION REQUIREMENTS
+
+photo/video/GPS/text/etc.
+
+from:
+
+GPS MODE
+
+TARGET_LOCATION
+CAPTURE_LOCATION
+ALLOWED_AREA
+NONE
+
+Do not overload one enum to represent multiple concepts.
+
+---
+
+# 66. QUEST ADMIN EDITOR
+
+Manual and AI-generated Quest editor must support:
+
+- Title
+- Description
+- Instructions
+- Category
+- Difficulty
+- Points
+- Interest Bubbles
+- Targeting mode where applicable
+- Verification method
+- GPS mode
+- Public location
+- Validation radius/area
+- Deadline/window
+- Bonus if approved architecture uses one
+- Safety notes
+- Draft/publish state
+
+Hide irrelevant fields conditionally.
+
+Example:
+
+GPS mode NONE
+
+→ hide radius.
+
+---
+
+# 67. AI CANNOT OVERRIDE SAFETY RULES
+
+AI may suggest:
+
+- Difficulty
+- Points
+- Proof method
+- Location-specific activity
+
+Server validation must reject:
+
+- Unknown enum
+- Invalid points
+- Impossible location configuration
+- Unsafe proof requirement
+- Unknown Interest Bubble
+- Missing required location
+- Invalid radius
+
+AI output is untrusted structured input.
+
+---
+
+# 68. AI GENERATION PROVENANCE
+
+Persist:
+
+- Provider
+- Model
+- Prompt type
+- Prompt version
+- Generation timestamp
+- Admin initiator
+- Interest targeting input
+- Original structured output where appropriate
+- Final edited version
+
+Do not expose internal Admin prompts to consumers.
+
+---
+
+# 69. AI FAILURE
+
+If OpenAI/provider is unavailable:
+
+Admin sees:
+
+"AI Quest generation is currently unavailable."
+
+Manual creation continues.
+
+Existing Daily assignment continues.
+
+Existing Monthly continues.
+
+Existing Geo-Quests continue.
+
+Consumer gameplay must not depend on real-time AI availability.
+
+---
+
+# 70. DAILY INVENTORY HEALTH
+
+Admin should see useful Daily inventory health.
+
+Examples:
+
+- Number of approved candidates
+- Interest Bubble coverage
+- Combination coverage
+- Difficulty distribution
+- Upcoming inventory shortage
+
+Do not create an overly complicated analytics suite.
+
+Purpose:
+
+Help Admin know what AI batches to generate.
+
+---
+
+# 71. INTEREST COVERAGE WARNING
+
+If an Interest Bubble has little/no Daily inventory:
+
+Admin can see:
+
+"Low Daily Quest coverage"
+
+This can suggest generating candidates for that interest.
+
+Do not generate automatically without configured/authorized workflow.
+
+---
+
+# 72. MONTHLY SET HEALTH
+
+Admin should see:
+
+- Quest count
+- Total points
+- Required count
+- Required total
+- Validation errors
+- Publish readiness
+
+If canonical rule is 100 / 10,000:
+
+display:
+
+87 / 100 Quests
+8,900 / 10,000 points
+
+Provide suggestions but no silent point mutation.
+
+---
+
+# 73. GEO INVENTORY MAP
+
+Admin Geo management should have a Mapbox view of published/draft Geo-Quests.
+
+Purpose:
+
+- See coverage
+- Avoid duplicate locations
+- Select new areas
+- Review geographic distribution
+
+Do not use consumer private location history.
+
+---
+
+# 74. GEO DUPLICATE CHECK
+
+When creating a Geo-Quest:
+
+Check nearby existing Geo-Quests.
+
+Warn if same/similar Quest already exists at nearly same location.
+
+Admin can override with reason if legitimately distinct.
+
+---
+
+# 75. QUEST NOTIFICATIONS
+
+Ensure established notifications work for:
+
+- Daily Quest available
+- Monthly Drop live
+- Started Quest approaching deadline where appropriate
+- Proof approved
+- Needs resubmission
+- Quest completed
+- Points awarded
+
+Do not spam users.
+
+Respect notification preferences.
+
+---
+
+# 76. DAILY NOTIFICATION PERSONALIZATION
+
+Daily notification may reference assigned Quest only after assignment exists.
+
+Do not call AI from push job.
+
+Notification should deep link to the assigned Daily Quest.
+
+---
+
+# 77. MONTHLY NOTIFICATION
+
+When new Monthly Quest Drop activates:
+
+Notify according to preferences.
+
+Deep link:
+
+Quest mode → Quests → Monthly Quest Drop
+
+---
+
+# 78. GEO NOTIFICATIONS
+
+Do NOT continuously monitor users in background to send "Quest nearby" notifications.
+
+No background location.
+
+If future proximity notifications are desired, defer.
+
+Build 1 Geo discovery occurs when user actively uses location/map.
+
+---
+
+# 79. QUEST ANTI-CHEAT
+
+Integrate with existing canonical anti-cheat system.
+
+Signals may include:
+
+- Mock location
+- Impossible movement
+- Poor GPS accuracy
+- Duplicate media
+- Burst submissions
+- Duplicate completion
+- Verification session misuse
+- Capture/upload timing anomaly
+- GPS/proof mismatch
+- VPN as weak signal only
+
+Use graduated risk.
+
+No permanent automatic ban.
+
+---
+
+# 80. LOCATION SPEED CHECK
+
+When enough trusted samples exist during active verification:
+
+Calculate plausible movement.
+
+Do not continuously track user.
+
+Do not treat a single noisy GPS jump as definitive cheating.
+
+Use risk score.
+
+---
+
+# 81. QUEST QUARANTINE
+
+Suspicious completion may result in:
+
+- Submission retained
+- Quest completion under review
+- Points quarantined
+- Leaderboard excludes quarantined points
+
+Admin resolves:
+
+Release
+Reverse
+Request resubmission
+Apply account action if independently justified
+
+---
+
+# 82. ADMIN QUEST SUBMISSION REVIEW
+
+Admin queue should clearly show:
+
+- Player
+- Quest
+- Category
+- Difficulty
+- Points
+- Proof type
+- Media
+- Relevant GPS validation result
+- Anti-cheat risk
+- Moderation result
+- Submission time
+
+Actions:
+
+Approve
+Reject
+Needs Resubmission
+Escalate/Flag
+
+Do not expose unnecessary private data to lower staff roles.
+
+---
+
+# 83. VISUAL PROOF REVIEW
+
+For visual proof:
+
+Show media securely using signed/private access.
+
+Show relevant verification context.
+
+Do not make proof media publicly accessible.
+
+Review UI should distinguish:
+
+CONTENT SAFETY
+
+from:
+
+QUEST COMPLETION VALIDITY
+
+---
+
+# 84. POINT AWARD TIMING
+
+If Quest requires review:
+
+Do not award final leaderboard points until approved.
+
+If Quest is deterministic and auto-verifiable:
+
+Award after trusted server validation succeeds.
+
+Do not optimistically award authoritative points in client.
+
+---
+
+# 85. OFFLINE START
+
+If player is offline and Quest details are already cached:
+
+Allow viewing.
+
+Starting a Quest may be locally queued only if current architecture can safely reconcile it.
+
+Do not pretend authoritative start occurred until server confirms.
+
+---
+
+# 86. OFFLINE VISUAL PROOF
+
+If an active Quest allows offline capture:
+
+Create/store local proof draft safely.
+
+Preserve:
+
+- verification context
+- capture time
+- media
+- location sample where required
+
+However:
+
+No completion
+No points
+
+until reconnect + server verification.
+
+If one-time verification sessions require online start, explain clearly before capture.
+
+---
+
+# 87. OFFLINE GEO
+
+Do not claim GPS proof has been server-validated while offline.
+
+Allow local capture where supported.
+
+Server decides validity after reconnect.
+
+---
+
+# 88. ACCOUNT SWITCHING
+
+Quest caches, proof drafts, and active verification sessions must be scoped to account.
+
+On logout:
+
+- Clear private query caches
+- Clear invalid verification sessions
+- Protect/remove local proof appropriately
+- Do not submit old account proof under new account
+
+---
+
+# 89. QUEST PRIVACY
+
+Audit Quest-related privacy.
+
+Never expose:
+
+- User exact proof location publicly
+- Private proof media
+- Anti-cheat details
+- Moderation notes
+- Admin notes
+- Internal AI prompt
+- Private validation geometry
+- User Interest Bubble data beyond approved profile visibility
+
+Interest selections are primarily personalization data.
+
+Do not automatically display all interests publicly unless privacy design explicitly allows it.
+
+---
+
+# 90. ANALYTICS
+
+Capture product events without sensitive payloads.
+
+Examples:
+
+quest_viewed
+quest_started
+quest_verification_started
+quest_proof_submitted
+quest_completed
+daily_rerolled
+geo_quest_viewed
+quest_map_opened
+
+Do not log:
+
+- full proof
+- exact private coordinates
+- AI secrets
+- moderation private notes
+
+---
+
+# 91. PERFORMANCE
+
+Quest Map:
+
+- viewport query
+- marker clustering
+- stale request cancellation
+- bounded result count
+
+Quest lists:
+
+- pagination/virtualization where necessary
+
+Media:
+
+- compression
+- thumbnailing
+- bounded video
+
+Do not preload huge Monthly sets unnecessarily if pagination is appropriate.
+
+---
+
+# 92. ACCESSIBILITY
+
+Quest UI must support:
+
+- Screen readers
+- Accessible camera controls
+- Accessible proof instructions
+- Large text
+- Proper touch targets
+- Map fallback/list access
+- Status not communicated solely by color
+- Clear GPS permission explanation
+
+A user who cannot effectively interact with the map should still be able to browse Geo-Quest list information.
+
+---
+
+# 93. DATABASE MIGRATION
+
+Audit existing Quest schema.
+
+Create safe migrations for this canonical model.
+
+Do not drop historical data unnecessarily.
+
+Resolve:
+
+- Extreme/Legendary difficulty mismatch
+- Old proof enums
+- Fake QR
+- Interest Bubble relations
+- GPS mode
+- Verification requirements
+- Point fields
+- Daily targeting
+- AI prompt versioning
+
+Document migration.
+
+---
+
+# 94. SHARED TYPES
+
+Create one canonical Quest domain type source.
+
+All layers should import/use aligned definitions.
+
+Do not maintain separate contradictory:
+
+- mobile enum
+- Admin enum
+- database enum
+- Edge Function string literals
+
+Where DB-generated types exist, integrate appropriately.
+
+---
+
+# 95. TEST — INTEREST ONBOARDING
+
+Test:
+
+New user
+→ signup
+→ Interest Bubble screen
+→ select interests
+→ save
+→ finish onboarding
+→ reopen app
+→ interests persist
+
+Change interests later.
+
+Verify today's Daily Quest remains stable.
+
+---
+
+# 96. TEST — DAILY PERSONALIZATION
+
+Create test users:
+
+User A:
+Nature + Photography
+
+User B:
+Fitness + Sports
+
+Create candidates for both interest groups.
+
+Run Daily assignment.
+
+Verify each receives appropriate match.
+
+Test fallback inventory.
+
+Test stable refresh.
+
+---
+
+# 97. TEST — DAILY AI
+
+Admin:
+
+- Opens Personalized Daily AI Prompt
+- Edits prompt
+- Selects Nature + Photography
+- Chooses Prefer Combination
+- Generates candidate
+- Structured validation succeeds
+- Candidate appears Draft
+- Admin edits
+- Admin approves
+- Candidate enters Daily inventory
+
+No direct consumer publication from raw AI output.
+
+---
+
+# 98. TEST — MONTHLY AI
+
+Admin:
+
+- Opens Monthly AI Prompt
+- Generates test batch
+- Reviews
+- Adds to Monthly Draft
+- Validates count/points
+- Publishes/schedules
+
+Consumer:
+
+- Monthly Drop appears at correct time.
+
+---
+
+# 99. TEST — GEO AI
+
+Admin:
+
+- Opens Geo creator
+- Searches Mapbox
+- Selects legitimate location
+- Configures radius
+- Opens Geo AI generation
+- AI receives location context
+- Candidate generated
+- Admin reviews
+- Publishes
+
+Consumer:
+
+- Geo marker appears in relevant viewport.
+
+---
+
+# 100. TEST — LIVE PHOTO QUEST
+
+Quest requires:
+
+LIVE_PHOTO
+
+Flow:
+
+Start Quest
+→ Verify Quest
+→ server verification session
+→ in-app camera
+→ live capture
+→ upload
+→ review
+→ approve
+→ completion
+→ 100/200/300/500 points according to Quest
+
+Verify gallery upload unavailable.
+
+---
+
+# 101. TEST — LIVE VIDEO QUEST
+
+Quest requires:
+
+LIVE_VIDEO
+
+Verify:
+
+- Camera opens
+- Short video capture
+- Duration bound
+- Compression
+- Private upload
+- Review
+- Completion
+
+---
+
+# 102. TEST — DAILY + GPS
+
+Create:
+
+Daily Quest
+GPS mode:
+CAPTURE_LOCATION
+
+Proof:
+LIVE_PHOTO_PLUS_GPS
+
+Verify:
+
+- No predetermined Geo coordinate required.
+- GPS captured during proof.
+- Quest remains category DAILY.
+- Submission stores validation result.
+- Completion works.
+
+This is a critical regression test.
+
+---
+
+# 103. TEST — GEO + GPS
+
+Geo Quest:
+
+TARGET_LOCATION
+50 m radius
+LIVE_PHOTO_PLUS_GPS
+
+Test:
+
+Inside radius:
+PASS
+
+Outside radius:
+FAIL / NOT CLOSE ENOUGH
+
+Poor accuracy:
+RETRY
+
+Mock location:
+FLAG
+
+No automatic permanent ban.
+
+---
+
+# 104. TEST — INDOOR GEO
+
+Create development Geo-Quest at a legitimate indoor public venue.
+
+Verify system does not reject merely because venue is indoors.
+
+Location policy should evaluate appropriateness/accessibility rather than outdoor status.
+
+---
+
+# 105. TEST — QUEST POINTS
+
+Test:
+
+Easy → 100
+Medium → 200
+Hard → 300
+Epic → 500
+
+Verify:
+
+- Award once
+- Quest leaderboard changes
+- Hunt leaderboard does not
+- Total Worlds Points reflects derived combined score if implemented
+- Reversal works
+- Quarantine works
+
+---
+
+# 106. TEST — QUEST MAP
+
+Test:
+
+- Location allowed
+- Location denied
+- Nearby Geo-Quests
+- Pan elsewhere
+- Search another city
+- Marker clustering
+- Marker preview
+- Active Geo Quest
+- Active Daily Quest with location
+- Daily Quest without location
+
+No irrelevant map content should appear.
+
+---
+
+# 107. TEST — PROOF FRAUD PATHS
+
+Attempt:
+
+- Gallery upload
+- Reuse verification session
+- Expired session
+- Duplicate media
+- Submit same Quest twice
+- Fake client points
+- Fake completion state
+- GPS missing when required
+- Invalid proof type
+
+Server must reject or appropriately flag.
+
+---
+
+# 108. ADMIN DIAGNOSTICS
+
+Add Quest diagnostics:
+
+Interest Bubbles
+Daily inventory
+Daily assignment job
+Monthly set
+Geo inventory
+Mapbox
+AI provider
+Proof storage
+Moderation
+Leaderboard refresh
+
+Use:
+
+READY
+DEGRADED
+DISABLED
+MISSING_CONFIG
+FAILED
+
+Do not expose secrets.
+
+---
+
+# 109. DOCUMENTATION
+
+Create/update canonical Quest documentation.
+
+Suggested:
+
+/docs/QUEST_SYSTEM.md
+/docs/QUEST_PERSONALIZATION.md
+/docs/QUEST_VERIFICATION.md
+/docs/QUEST_POINTS.md
+/docs/GEO_QUESTS.md
+/docs/QUEST_AI_GENERATION.md
+
+Update documentation index.
+
+Mark older contradictory Quest rules as superseded.
+
+---
+
+# 110. DO NOT IMPLEMENT HUNT CHANGES YET
+
+Prompt 26 will separately handle:
+
+- Hunt search zones/blobs
+- Clue reveal radius
+- Hunt collection radius
+- Camera Search/Collect
+- Drop point budgets
+- 360-degree creator placement scan
+- GPS/Mapbox placement analysis
+- OpenAI vision environment analysis
+- Uploaded Drop image moderation
+- Indoor public placement policy
+- Road/private residence restrictions
+- PASS/REVIEW/REJECT placement decisions
+
+Do not partially implement those here.
+
+---
+
+# 111. OUT OF SCOPE
+
+Do not implement:
+
+- Stripe
+- Paid membership
+- Paid Hunt drops
+- Creator payouts
+- Game Zones
+- Outbreak
+- Direct messaging
+- Hunt chat
+- Continuous location
+- Background location
+- AI Hunt creation
+- Full AR world anchoring
+- Social feed
+
+---
+
+# 112. FINAL AUDIT
+
+Before stopping verify all of the following:
+
+- Daily Quest is the personalized Quest.
+- No separate consumer Personal Quest category exists.
+- User selects Interest Bubbles during onboarding.
+- User can modify interests later.
+- Admin can manage Interest Bubbles.
+- Daily assignment uses Interest Bubbles.
+- Assignment is stable for the day.
+- Daily AI prompt is independently editable.
+- Daily AI generation can target one or multiple Interest Bubbles.
+- Targeting supports combination behavior.
+- Monthly AI prompt is independently editable.
+- Geo AI prompt is independently editable.
+- AI output is structured.
+- AI output never auto-publishes.
+- Manual Quest creation always works.
+- Geo AI receives trusted location context.
+- Geo AI does not invent authoritative coordinates.
+- Geo-Quests are coordinate-based, not city-pool based.
+- Default nearby discovery is approximately 15 miles.
+- Map panning/search can discover elsewhere.
+- Default Geo verification radius is 50 m.
+- Geo radius is configurable.
+- Indoor public Geo-Quests are allowed.
+- Quest difficulty is canonical.
+- Easy = 100.
+- Medium = 200.
+- Hard = 300.
+- Epic = 500.
+- Quest Points are separate from Hunt Points.
+- Points are server-authoritative.
+- Visual Quest proof uses live in-app camera.
+- Gallery upload is unavailable for authoritative visual proof.
+- Live photo works.
+- Live short video works.
+- One-time verification sessions work.
+- GPS can be required for ANY Quest category.
+- GPS modes are explicit.
+- Daily Quest can use GPS without becoming Geo-Quest.
+- Monthly Quest can use GPS.
+- Geo-Quest can use GPS.
+- No background location exists.
+- Proof media remains private.
+- Moderation and proof correctness are separate.
+- QR is disabled unless truly implemented.
+- Duplicate media is flagged.
+- Completion is atomic/idempotent.
+- Quest Home shows expanded active gameplay.
+- Quests screen remains Daily / Monthly / Geo.
+- Progress remains Leaderboards / In Action / Completed.
+- Quest Map uses pins, not Hunt search blobs.
+- Quest Map discovers Geo-Quests.
+- Quest Map supports active location-based Quests.
+- Quest Map does not fabricate locations for non-location Quests.
+- Quest leaderboard uses Quest Points only.
+- Anti-cheat integrates with verification.
+- Quarantined points stay off leaderboard.
+- Offline proof never awards offline points.
+- Private locations/proof are not exposed.
+- Typecheck passes.
+- Lint passes.
+- Tests pass.
+
+Fix any code-level failure before stopping.
+
+---
+
+# FINAL REPORT
+
+When complete return:
+
+## 1. Quest Architecture Status
+
+PASS / FAIL for:
+
+- Interest Bubbles
+- Daily personalization
+- Daily assignment
+- Daily AI
+- Monthly
+- Monthly AI
+- Geo
+- Geo AI
+- Quest verification
+- Live photo
+- Live video
+- GPS
+- Points
+- Map
+- Progress
+- Leaderboard
+- Anti-cheat
+
+## 2. Conflicts Resolved
+
+List every earlier implementation/documentation conflict corrected.
+
+## 3. Database Changes
+
+List migrations/schema changes.
+
+## 4. UI Changes
+
+List consumer and Admin changes.
+
+## 5. AI Generation
+
+Explain final Daily/Monthly/Geo generation architecture.
+
+## 6. Verification
+
+Explain final live camera/GPS model.
+
+## 7. Point System
+
+Confirm canonical values.
+
+## 8. Geo Rules
+
+Confirm discovery, verification and indoor-public behavior.
+
+## 9. Tests
+
+Provide exact test results.
+
+## 10. External Configuration
+
+List anything still requiring:
+
+- Supabase
+- Mapbox
+- OpenAI/API provider
+- Moderation provider
+- Native camera/location configuration
+
+Do not include secret values.
+
+## 11. Remaining Code Issues
+
+There should be none within Prompt 25 scope.
+
+If one genuinely cannot be completed, state exactly why.
+
+## 12. Prompt 26 Readiness
+
+Confirm the Quest changes are stable before Hunt placement/search mechanics are modified.
+
+Do NOT begin Prompt 26.
+
+Create checkpoint:
+
+Worlds — Build 1 — Prompt 25 — Canonical Quest System
+```
