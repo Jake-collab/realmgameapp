@@ -1,0 +1,2506 @@
+Prompt 24 should be the **production integration and configuration pass**. Prompt 23 was supposed to find any remaining code problems; Prompt 24 should now take the systems that are already built and make sure the real external services—especially **Supabase/Auth, Mapbox, AI generation, push notifications, and moderation**—can actually be plugged in without rewriting the app.
+
+This should still **exclude Stripe/revenue**, Game Zones, and Outbreak. The goal is to finish Build 1's real infrastructure wiring and leave you with an exact checklist of any credentials/actions you personally still need to provide.
+
+````text
+# Worlds — Build 1, Prompt 24
+# Production Integrations, Supabase, Mapbox, Auth, AI, Push, Moderation, and Deployment Readiness
+
+Continue from the existing Worlds project.
+
+Treat Prompts 1–23, the existing project documentation, codebase, database schema, migrations, Edge Functions/server functions, tests, and Prompt 23 audit results as authoritative.
+
+The application is:
+
+Worlds
+
+Supported game modes remain ONLY:
+
+- Quest
+- Hunt
+
+Explicitly exclude:
+
+- Game Zones
+- Outbreak
+
+This prompt is NOT for adding product features.
+
+This prompt is NOT for redesigning UI.
+
+This prompt is NOT for adding revenue.
+
+Do NOT implement:
+
+- Stripe
+- Paid Hunts
+- Creator payouts
+- Subscriptions
+- Premium memberships
+
+The purpose of this prompt is to finish the real production-integration layer for Build 1.
+
+Prompt 23 should have identified any remaining external configuration requirements.
+
+Use those findings as the starting point.
+
+---
+
+# PRIMARY OBJECTIVE
+
+Make the existing Worlds architecture genuinely ready to connect to real production services.
+
+Audit, repair, and finalize integration for:
+
+1. Supabase project configuration
+2. Supabase Auth
+3. Supabase database
+4. Supabase RLS
+5. Supabase Storage
+6. Supabase Edge Functions / trusted backend
+7. Supabase scheduled jobs
+8. Mapbox
+9. AI Quest-generation provider
+10. Automated moderation provider
+11. Push-notification provider
+12. Environment-variable architecture
+13. Development / preview / production separation
+14. Mobile app configuration
+15. Deep links
+16. Production URLs
+17. CORS / allowed origins where relevant
+18. Logging and diagnostics
+19. Service health checks
+20. Deployment scripts
+21. Database migration deployment
+22. Secrets management
+23. Build configuration
+24. Production readiness validation
+25. Exact human setup instructions
+
+Do not create fake successful integrations.
+
+If credentials are unavailable, configure the code correctly and clearly report what the project owner must supply.
+
+---
+
+# 1. START FROM PROMPT 23 AUDIT
+
+Read the Prompt 23 final report and classify every remaining issue as:
+
+A. Code issue
+B. Missing external credential
+C. External dashboard configuration
+D. Production deployment configuration
+E. Human/legal decision
+F. Future Build 2 feature
+
+Fix every remaining A issue first.
+
+Do not continue hiding code problems behind missing credentials.
+
+Then handle B–D in this prompt.
+
+Do not implement F.
+
+---
+
+# 2. CANONICAL ENVIRONMENT ARCHITECTURE
+
+Create one authoritative environment-variable system.
+
+Support environments such as:
+
+- Development
+- Preview / staging where supported
+- Production
+
+Do not scatter environment reads throughout arbitrary components.
+
+Create a typed configuration layer.
+
+Example conceptual structure:
+
+/config/
+  env.ts
+  publicEnv.ts
+  serverEnv.ts
+  featureFlags.ts
+
+Use actual project conventions.
+
+---
+
+# 3. PUBLIC VS SECRET VARIABLES
+
+Classify every environment variable.
+
+## CLIENT-SAFE
+
+Potential examples:
+
+SUPABASE_URL
+SUPABASE_PUBLISHABLE_KEY
+MAPBOX_PUBLIC_TOKEN
+APP_ENV
+PUBLIC_APP_URL
+
+Use actual framework prefixes where required.
+
+## SERVER-ONLY
+
+Potential examples:
+
+SUPABASE_SERVICE_ROLE_KEY
+AI_API_KEY
+MODERATION_API_KEY
+PUSH_PROVIDER_SECRET
+DATABASE_URL if privileged
+CRON_SECRET
+INTERNAL_WEBHOOK_SECRET
+
+Server-only variables must never reach:
+
+- Expo client
+- Web client bundle
+- source maps exposed publicly
+- consumer diagnostics
+- logs
+
+---
+
+# 4. ENVIRONMENT VALIDATION
+
+Create typed startup validation.
+
+Each variable should have:
+
+- Name
+- Scope
+- Required environment(s)
+- Validation
+- Description
+- Missing-state behavior
+
+Production must fail safely if a critical dependency is required but missing.
+
+Example diagnostics:
+
+Supabase Auth        READY
+Supabase Database    READY
+Supabase Storage     READY
+Mapbox               NOT CONFIGURED
+AI Quest Generation  DISABLED — NO API KEY
+Push Notifications   NOT CONFIGURED
+Moderation            MANUAL MODE
+
+Do not print secret values.
+
+---
+
+# 5. .ENV SAFETY
+
+Audit:
+
+- `.env`
+- `.env.local`
+- `.env.production`
+- Replit Secrets usage
+- Expo environment configuration
+- Git ignore
+- build configuration
+
+Ensure secret files are ignored.
+
+Search Git history/current tracked files where tooling permits for accidental credentials.
+
+If a secret appears committed:
+
+- Do not display it in the final report.
+- Mark it as requiring rotation.
+- Remove the tracked secret from current files.
+- Document credential rotation requirement.
+
+Do not attempt to rewrite shared Git history unless explicitly requested.
+
+---
+
+# 6. SUPABASE CLIENT CONFIGURATION
+
+Create exactly one consumer Supabase client.
+
+Use:
+
+- Project URL
+- Publishable/anon client credential
+- Session persistence appropriate to Expo/web architecture
+- Correct secure storage integration where required
+
+Do not create multiple independently configured Supabase clients.
+
+Do not put service-role credentials in this client.
+
+---
+
+# 7. SUPABASE AUTH — REMOVE FAKE AUTH
+
+Prompt 23 should have verified authentication architecture.
+
+Now ensure real Supabase Auth wiring is production-ready.
+
+The former red message:
+
+"authentication is not connected"
+
+must not exist when valid Supabase configuration is present.
+
+Test:
+
+- Signup
+- Login
+- Logout
+- Session restore
+- Invalid credentials
+- Duplicate email
+- Password reset
+- Email confirmation if enabled
+- Expired session
+- Account switching
+
+No development fake-auth fallback may activate in production.
+
+---
+
+# 8. AUTH SESSION STORAGE
+
+Audit session persistence on:
+
+- iOS
+- Android
+- Web if supported
+
+Use appropriate secure storage/session architecture.
+
+Do not accidentally store service credentials.
+
+Verify:
+
+- Session restored after app restart
+- Logout clears auth state
+- Account switching clears private caches
+- Offline queue stays account-isolated
+
+---
+
+# 9. AUTH REDIRECT URLS
+
+Configure auth redirect/deep-link architecture.
+
+Support flows such as:
+
+- Email verification
+- Password reset
+- OAuth later if supported
+
+Use approved app scheme/domain.
+
+Document exact URLs that must be added to Supabase Auth dashboard.
+
+Do not invent a production domain if one has not been selected.
+
+Use placeholders in configuration documentation, not runtime fake values.
+
+---
+
+# 10. SUPABASE DATABASE CONFIGURATION
+
+Audit database connection assumptions.
+
+Consumer app should communicate using:
+
+- Supabase client
+- RLS-safe queries
+- trusted RPCs
+- Edge Functions
+
+Do not require direct privileged PostgreSQL credentials in mobile client.
+
+If server-side components require a PostgreSQL connection:
+
+Document exact connection method.
+
+Prefer project-established Supabase architecture.
+
+---
+
+# 11. MIGRATION DEPLOYMENT
+
+Ensure migrations are complete and ordered.
+
+Create reliable commands/scripts for:
+
+- Fresh local database
+- Apply migrations
+- Reset development database
+- Deploy migrations to linked Supabase project
+- Verify migration status
+
+Do not require undocumented manual SQL edits.
+
+If the project uses Supabase CLI, configure scripts appropriately.
+
+---
+
+# 12. DATABASE CLEAN INSTALL TEST
+
+Starting from a clean development database:
+
+1. Apply all migrations.
+2. Load only development-safe seed data where appropriate.
+3. Start application.
+4. Verify schema.
+5. Run integration tests.
+
+Fix migration dependencies.
+
+A fresh database must not require historical manual patches.
+
+---
+
+# 13. SUPABASE RLS DEPLOYMENT
+
+Re-run Prompt 23 RLS audit against deployable migrations.
+
+Verify RLS policies exist through migrations rather than dashboard-only manual changes.
+
+Critical entities include:
+
+- Profiles
+- Interests
+- Quest participation
+- Quest submissions
+- Hunt participation
+- Hunt invitations
+- Creator drafts
+- Proof media
+- Friends
+- Blocks
+- Achievements
+- Notifications
+- Reports
+- Anti-cheat
+- Points ledger
+- AI admin tables
+- Moderation
+- Admin configuration
+
+Document every intentional service-role bypass.
+
+---
+
+# 14. SUPABASE STORAGE
+
+Finalize bucket architecture.
+
+Example conceptual buckets:
+
+public-media
+pending-media
+proof-media
+avatars
+moderation-quarantine
+
+Use current project architecture rather than creating duplicates.
+
+For each bucket document:
+
+- Public/private
+- Upload permission
+- Read permission
+- Signed URL behavior
+- File size limit
+- MIME types
+- Retention
+- Moderation requirement
+
+Proof must not become public.
+
+---
+
+# 15. STORAGE POLICIES
+
+Verify storage policies enforce:
+
+- User uploads only to permitted path
+- User cannot overwrite another user's assets
+- Pending creator media not publicly readable
+- Approved public media accessible appropriately
+- Proof media owner/staff authorization
+- Moderation quarantine protected
+
+Do not rely on client naming convention for authorization.
+
+---
+
+# 16. EDGE FUNCTIONS
+
+Inventory every Supabase Edge Function or trusted backend handler.
+
+For each document:
+
+- Function name
+- Purpose
+- Auth required
+- Staff permission required
+- Environment secrets
+- Database access
+- Idempotency behavior
+- Used by which screen/domain
+- Deployment command
+
+Remove unused accidental duplicate functions where safe.
+
+---
+
+# 17. EDGE FUNCTION CONFIGURATION
+
+Ensure functions that require anonymous webhooks or scheduled access explicitly configure auth appropriately.
+
+Consumer functions should verify JWT/user where required.
+
+Do not globally disable JWT validation.
+
+Only disable/replace it for endpoints with another intentional authentication mechanism.
+
+---
+
+# 18. EDGE FUNCTION SECRETS
+
+Create exact list of server secrets required.
+
+Examples may include:
+
+SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
+AI_API_KEY
+MODERATION_API_KEY
+PUSH_PROVIDER_SECRET
+
+Use actual names from project.
+
+Create documentation showing commands/UI destination for adding secrets.
+
+Do not print actual values.
+
+---
+
+# 19. SERVER AUTHORIZATION
+
+Service-role access must not become authorization.
+
+A server function using service-role still must validate:
+
+- Authenticated caller where appropriate
+- User ID
+- Role
+- Permission
+- Ownership
+- Entity state
+
+Audit all privileged functions.
+
+---
+
+# 20. SCHEDULED JOBS
+
+Finalize production scheduler for:
+
+- Daily Quest assignment
+- Monthly Quest activation
+- Hunt lifecycle transitions
+- Invitation expiration
+- Friend-request expiration
+- Leaderboard refresh
+- Notification scheduling
+- Moderation retry
+- Location-data cleanup
+- Media cleanup
+- AI draft generation if enabled
+
+Use Supabase Cron / pg_cron / scheduled Edge Functions or the established architecture.
+
+Do not depend on an open browser.
+
+---
+
+# 21. CRON JOB SECURITY
+
+Scheduled jobs requiring privileged access must use secure credentials or internal execution.
+
+Do not expose privileged cron URLs publicly without protection.
+
+Use:
+
+- Internal database functions
+- Secure scheduler
+- Signed/secret request where needed
+
+Document exact setup.
+
+---
+
+# 22. JOB HEALTH
+
+Admin Diagnostics must display:
+
+- Job
+- Enabled
+- Schedule
+- Last run
+- Last success
+- Last failure
+- Duration
+- Records processed
+
+Add **Run Now** only where safe and permission-protected.
+
+Do not use Run Now as normal production operation.
+
+---
+
+# 23. MAPBOX REAL INTEGRATION
+
+Verify actual Mapbox configuration.
+
+Required:
+
+- Token read from correct client-safe configuration
+- Native/web configuration if needed
+- Map style
+- Geocoding
+- Quest Map
+- Hunt Map
+- Creator location editor
+- Geo Admin editor
+- Marker clustering
+- Viewport queries
+
+No placeholder map.
+
+---
+
+# 24. MAPBOX TOKEN SAFETY
+
+Use a restricted public Mapbox token when appropriate.
+
+Document recommended token restrictions such as:
+
+- URL restrictions for web where applicable
+- Allowed scopes
+- No unnecessary secret scopes
+
+Do not place a private management token in client app.
+
+---
+
+# 25. MAPBOX MISSING-CONFIG STATE
+
+If Mapbox token is absent in development:
+
+Show a clear development integration state.
+
+Example:
+
+"Mapbox is not configured."
+
+Do not show a fake map.
+
+Production validation should mark Mapbox as a launch blocker if core map gameplay requires it.
+
+---
+
+# 26. MAPBOX HEALTH TEST
+
+Create diagnostics/test for:
+
+- Map load
+- Geocoding query
+- Quest marker source
+- Hunt marker source
+- Creator location selection
+- Geo Quest location selection
+
+Do not expose hidden validation geometry through diagnostics.
+
+---
+
+# 27. AI PROVIDER REAL INTEGRATION
+
+Prompt 19 created the provider abstraction.
+
+Now ensure a real provider can be configured by secret.
+
+Do not hardcode provider-specific implementation across app.
+
+Verify:
+
+- Provider selection
+- Model
+- API secret
+- Request timeout
+- Structured output
+- Retry
+- Rate limit
+- Cost tracking
+- Health check
+
+AI remains Admin-only authoring infrastructure.
+
+---
+
+# 28. AI FAILURE IS NONCRITICAL
+
+If AI provider is unavailable:
+
+- Manual Daily Quest creation works
+- Manual Monthly Quest creation works
+- Manual Geo-Quest creation works
+- Existing approved Quests work
+- Consumer app works
+
+Admin diagnostics should show degraded AI state.
+
+Do not make AI key a requirement for consumer startup.
+
+---
+
+# 29. REAL AI GENERATION TEST
+
+When credentials are available, run a controlled test:
+
+Daily:
+
+- One candidate for one Interest Bubble cluster
+
+Monthly:
+
+- Small development batch, not full costly production generation unless requested
+
+Geo:
+
+- One candidate using Mapbox-selected location
+
+Verify:
+
+- Structured schema
+- Prompt version
+- Safety validation
+- Draft-only save
+- No direct publication
+
+If credentials are not available:
+
+Mark test:
+
+BLOCKED — AI API CREDENTIAL REQUIRED
+
+Do not fake PASS.
+
+---
+
+# 30. MODERATION PROVIDER REAL INTEGRATION
+
+Prompt 20 built provider abstraction.
+
+Finalize configuration for real provider.
+
+Support:
+
+- Image moderation
+- Text moderation where provider supports
+- Provider health
+- Timeout/retry
+- Normalized policy mapping
+
+Manual-only moderation remains valid fallback.
+
+---
+
+# 31. MODERATION MODE
+
+Support explicit production configuration:
+
+manual
+automated
+mixed
+
+Do not silently choose development stub.
+
+If automated mode is selected but provider is missing:
+
+Production diagnostics should fail that integration.
+
+If manual mode intentionally selected:
+
+Mark:
+
+MODERATION — MANUAL MODE
+
+not Failed.
+
+---
+
+# 32. MODERATION TEST
+
+When provider credentials exist:
+
+Test safe development fixtures:
+
+- Safe image
+- Warning fixture where appropriate
+- Safe text
+
+Do not deliberately upload prohibited real-world harmful content merely to test.
+
+Use development-safe fixtures/provider test mechanisms.
+
+---
+
+# 33. PUSH NOTIFICATION INTEGRATION
+
+Prompt 21 created provider abstraction.
+
+Finalize real provider wiring appropriate to the Expo/mobile architecture.
+
+If using Expo Push:
+
+Verify:
+
+- Expo project configuration
+- Push token acquisition
+- Device registration
+- Server send
+- Receipt processing
+
+If native APNs/FCM configuration is needed:
+
+Document exact remaining dashboard setup.
+
+---
+
+# 34. PUSH PROJECT CONFIGURATION
+
+Audit:
+
+- Expo project ID
+- Application identifier
+- iOS bundle identifier
+- Android package identifier
+- EAS/project configuration where applicable
+
+Do not invent IDs that conflict with current project.
+
+Create placeholders only in documentation where owner action is required.
+
+---
+
+# 35. PUSH PHYSICAL DEVICE TEST
+
+Push notifications generally require a real device.
+
+Document exact test:
+
+1. Install development/preview build.
+2. Login.
+3. Grant notifications.
+4. Register token.
+5. Admin sends self-test notification.
+6. Receive notification.
+7. Tap.
+8. Deep link works.
+
+If physical/native credentials unavailable:
+
+Mark external blocker.
+
+Do not fake emulator success.
+
+---
+
+# 36. DEEP LINK PRODUCTION CONFIGURATION
+
+Finalize:
+
+- App scheme
+- Expo Router paths
+- Universal links/app links readiness where applicable
+- Auth redirects
+- Push destinations
+
+Ensure routes work for:
+
+- Daily Quest
+- Monthly
+- Geo
+- Hunt
+- Invitation
+- Active Hunt
+- Proof
+- Progress
+- Profile
+
+No secret content in URLs.
+
+---
+
+# 37. WEB URL CONFIGURATION
+
+If web build exists:
+
+Document production base URL.
+
+Use configuration variable.
+
+Do not hardcode localhost in production links.
+
+Search project for:
+
+localhost
+127.0.0.1
+replit.dev
+temporary preview URLs
+
+Classify and repair production usage.
+
+---
+
+# 38. CORS
+
+Audit backend/Edge Function CORS.
+
+Allow only appropriate origins for browser-accessed endpoints.
+
+Mobile native requests require different handling.
+
+Do not use permissive `*` where credentials/security make it inappropriate.
+
+Do not break required mobile operation.
+
+---
+
+# 39. SUPABASE AUTH SITE URLS
+
+Document exact Supabase Auth dashboard settings required:
+
+- Site URL
+- Additional redirect URLs
+- Mobile scheme callback
+- Password-reset callback
+
+Do not hardcode old Replit preview URLs as production values.
+
+---
+
+# 40. PRODUCTION DOMAIN READINESS
+
+If no production web domain has been selected:
+
+Do not invent one.
+
+Create configuration placeholder:
+
+PUBLIC_WEB_URL
+
+Document it as owner-supplied.
+
+Mobile Build 1 should not be blocked on unnecessary website domain if not required.
+
+---
+
+# 41. MOBILE APPLICATION IDENTITY
+
+Verify application metadata:
+
+Name:
+Worlds
+
+Check:
+
+- App display name
+- App slug
+- iOS bundle ID
+- Android package
+- Scheme
+- Version
+- Build number
+- Icons/splash references
+
+Do not rename application.
+
+---
+
+# 42. SPLASH / AUTH ENTRY
+
+Verify production launch:
+
+```text
+Open Worlds
+→ Splash/loading
+→ Restore session
+→ Login/Signup if needed
+→ Onboarding if incomplete
+→ Correct game shell
+````
+
+No developer dashboard should appear.
+
+No "auth not connected" warning when configured.
+
+---
+
+# 43. IOS PERMISSIONS
+
+Audit Info.plist / Expo config for permissions actually used.
+
+Potential:
+
+* Location When In Use
+* Camera
+* Photo Library
+* Notifications
+
+Do not request:
+
+* Background location
+* Contacts
+* Bluetooth
+* Microphone
+
+unless existing approved functionality genuinely uses them.
+
+Descriptions must clearly explain purpose.
+
+---
+
+# 44. ANDROID PERMISSIONS
+
+Audit Android manifest/generated Expo permissions.
+
+Only request necessary capabilities.
+
+Do not include background location.
+
+Remove unused permissions introduced by libraries where practical/configurable.
+
+---
+
+# 45. MAP LOCATION PERMISSION COPY
+
+Use concise purpose language.
+
+Example concept:
+
+"Worlds uses your location when you choose location-based Quests or Hunt stops."
+
+Do not imply continuous tracking.
+
+---
+
+# 46. CAMERA PERMISSION COPY
+
+Example concept:
+
+"Worlds uses your camera when you choose to submit photo proof."
+
+Do not request camera during app startup.
+
+---
+
+# 47. PHOTO LIBRARY PERMISSION
+
+Request only after image-selection action.
+
+Do not require full-library permission when platform supports a safer picker architecture.
+
+---
+
+# 48. NOTIFICATION PERMISSION
+
+Use Prompt 21 contextual prompt.
+
+Do not trigger OS prompt before explanation.
+
+---
+
+# 49. BUILD CONFIGURATION
+
+Audit build configuration.
+
+If Expo/EAS:
+
+Verify:
+
+* app.json/app.config.*
+* eas.json
+* environment selection
+* bundle/package IDs
+* versioning
+* secrets references
+* development profile
+* preview profile
+* production profile
+
+Do not include secrets directly in committed config.
+
+---
+
+# 50. DEVELOPMENT BUILD
+
+Ensure a development build can be generated that supports required native modules.
+
+Document exact command.
+
+Do not assume Expo Go supports every production integration if it does not.
+
+If Mapbox or push functionality requires development build rather than Expo Go:
+
+Clearly document this.
+
+---
+
+# 51. PREVIEW BUILD
+
+Create/verify preview build profile where useful.
+
+Purpose:
+
+* Test Supabase production-like auth
+* Mapbox
+* Push
+* Deep links
+* Native permissions
+
+Do not point preview at production database unless intentionally configured.
+
+---
+
+# 52. PRODUCTION BUILD
+
+Ensure production build configuration exists.
+
+Do not submit to app stores in this prompt.
+
+Validate that build configuration can resolve environment variables correctly.
+
+---
+
+# 53. DEVELOPMENT / STAGING / PRODUCTION DATA
+
+Do not accidentally use production data during ordinary development.
+
+Where practical define:
+
+Development:
+
+* Local/test Supabase
+
+Preview:
+
+* Staging Supabase if available
+
+Production:
+
+* Production Supabase
+
+If user currently has only one Supabase project:
+
+Document this limitation rather than inventing a staging project.
+
+---
+
+# 54. FEATURE FLAGS BY ENVIRONMENT
+
+Verify future features stay disabled in production Build 1:
+
+* Game Zones
+* Outbreak
+* Payments
+* Paid Hunts
+* Creator payouts
+* Chat
+* Background location
+* AI Hunt generation
+
+Feature flags do not replace authorization.
+
+---
+
+# 55. API TIMEOUTS
+
+Set sane timeout behavior for external providers:
+
+* AI
+* Moderation
+* Push
+* Mapbox geocoding where applicable
+
+Do not allow indefinite pending actions.
+
+Core gameplay should degrade appropriately.
+
+---
+
+# 56. PROVIDER RETRY POLICY
+
+Implement correct retry policy:
+
+AI:
+
+* Temporary provider errors only
+* Expensive calls limited
+
+Moderation:
+
+* Retry temporary failure
+* Preserve manual fallback
+
+Push:
+
+* Retry transient send
+* Disable invalid token
+
+Mapbox:
+
+* UI retry/manual refresh
+
+Do not retry permanent 4xx endlessly.
+
+---
+
+# 57. SERVICE HEALTH MODEL
+
+Create one normalized health model.
+
+Statuses:
+
+READY
+DEGRADED
+DISABLED
+MISSING_CONFIG
+FAILED
+
+Services:
+
+* Supabase Auth
+* Supabase DB
+* Storage
+* Edge Functions
+* Jobs
+* Mapbox
+* AI
+* Moderation
+* Push
+
+Admin Diagnostics should use this.
+
+---
+
+# 58. CRITICAL VS OPTIONAL SERVICES
+
+Classify:
+
+## BUILD 1 CRITICAL
+
+Likely:
+
+* Supabase Auth
+* Supabase DB
+* Storage
+* Mapbox
+
+depending on actual functionality.
+
+## OPTIONAL / DEGRADABLE
+
+Potential:
+
+* AI generation
+* Automated moderation if manual mode exists
+* Push if in-app notifications exist
+
+Document accurately.
+
+Do not call optional provider absence a consumer app crash condition.
+
+---
+
+# 59. DATABASE BACKUP READINESS
+
+Document Supabase backup/recovery capabilities used.
+
+Do not claim backups exist unless configured.
+
+Create:
+
+/docs/DATABASE_BACKUP_AND_RECOVERY.md
+
+Include:
+
+* Production backup expectation
+* Migration backups
+* Restore testing recommendation
+* Critical tables
+
+Do not implement a custom database backup system unnecessarily.
+
+---
+
+# 60. STORAGE BACKUP / RETENTION
+
+Document what media requires long-term retention.
+
+Differentiate:
+
+* Public content
+* Proof
+* Pending uploads
+* Moderation evidence
+
+Do not promise indefinite retention.
+
+---
+
+# 61. LOGGING
+
+Implement standardized environment-aware logging.
+
+Development:
+
+* Useful diagnostics
+
+Production:
+
+* Safe structured logs
+
+Never log:
+
+* Tokens
+* Keys
+* Passwords
+* Proof content
+* Private clue answers
+* Full private coordinates
+* Sensitive moderation data
+
+---
+
+# 62. ERROR MONITORING READINESS
+
+Prepare adapter/interface for future crash/error provider.
+
+Do not require a third-party service now.
+
+Important server errors should still be recorded safely.
+
+---
+
+# 63. RELEASE HEALTH CHECK
+
+Create a command/script or documented checklist that verifies:
+
+* Env validation
+* Database migrations
+* Required functions
+* Required storage buckets
+* RLS enabled
+* Scheduled jobs
+* Mapbox config
+* AI config
+* Moderation mode
+* Push config
+
+Output no secrets.
+
+---
+
+# 64. PRODUCTION READINESS SCRIPT
+
+Create something conceptually like:
+
+npm run verify:production
+
+or equivalent project command.
+
+It should run safe checks such as:
+
+* TypeScript
+* Lint
+* Unit tests
+* Environment schema
+* Migration status where possible
+* Build configuration
+* Accidental dev-stub check
+
+Do not connect to production destructively.
+
+---
+
+# 65. DEV STUB GUARD
+
+Production verification must detect enabled development stubs.
+
+Check:
+
+* Fake Auth
+* Fake Map
+* Fake AI
+* Moderation stub
+* Fixture users
+* Fixture Quests/Hunts
+* Mock push
+* Admin bypass
+* Debug-only RLS bypass
+
+Fail verification when production would use them unintentionally.
+
+---
+
+# 66. THIRD-PARTY CONFIGURATION DOCUMENT
+
+Update Prompt 23:
+
+/docs/THIRD_PARTY_CONFIGURATION.md
+
+For each provider include:
+
+### Supabase
+
+Required values
+Where to find them
+Where to enter them
+Client/server classification
+How to test
+
+### Mapbox
+
+Required token
+Required scopes
+Where to enter it
+How to test
+
+### AI Provider
+
+API key
+Model
+Server secret location
+Admin health test
+
+### Push
+
+Project/native credentials
+Device testing
+Receipt testing
+
+### Moderation
+
+Provider key
+Mode
+Health test
+Manual fallback
+
+Do not include actual secrets.
+
+---
+
+# 67. OWNER SETUP CHECKLIST
+
+Create:
+
+/docs/OWNER_SETUP_CHECKLIST.md
+
+This is extremely important.
+
+Write exact nontechnical/semi-technical steps the project owner must perform.
+
+Separate by provider.
+
+Use checkboxes.
+
+Example:
+
+## Supabase
+
+[ ] Create/open Supabase project
+[ ] Copy Project URL
+[ ] Copy publishable/anon key
+[ ] Add client values to Replit/Expo environment
+[ ] Add server service-role key as secret
+[ ] Link Supabase CLI
+[ ] Deploy migrations
+[ ] Deploy Edge Functions
+[ ] Configure Auth redirect URLs
+[ ] Verify storage buckets
+[ ] Verify cron jobs
+
+Continue similarly for Mapbox, AI, Push, Moderation.
+
+Do not tell owner to paste secrets into source files.
+
+---
+
+# 68. EXACT CONFIG STATUS
+
+Create machine-readable or documentation status:
+
+Configured
+Missing
+Needs Dashboard Setup
+Needs Physical Device Test
+Optional
+Disabled
+
+Do not use vague:
+
+"probably configured"
+
+---
+
+# 69. SUPABASE OWNER SETUP
+
+Provide exact required owner actions.
+
+Include:
+
+* Project creation if not yet created
+* URL
+* client key
+* service-role secret
+* CLI linking
+* migration push
+* functions deploy
+* secrets set
+* Auth URLs
+* Storage
+* Cron
+
+If current code expects specific Supabase resources, name them.
+
+---
+
+# 70. MAPBOX OWNER SETUP
+
+Include:
+
+* Create Mapbox account
+* Create/retrieve public token
+* Restrict appropriately
+* Add to environment
+* Native configuration if required
+* Run map health check
+
+Do not require a paid Mapbox subscription unless actual account usage requires one.
+
+---
+
+# 71. AI OWNER SETUP
+
+Include:
+
+* Choose supported provider from implemented adapters
+* Obtain API credential
+* Add server secret
+* Select model
+* Run Admin health check
+* Test Daily candidate
+* Test Monthly small batch
+* Test Geo candidate
+
+Do not require AI for consumer gameplay.
+
+---
+
+# 72. MODERATION OWNER SETUP
+
+Include two valid paths:
+
+## Option A — Manual launch mode
+
+No automation provider required.
+
+## Option B — Automated/mixed
+
+* Create provider account
+* API key
+* Configure server secret
+* Enable mode
+* Run safe health test
+
+This should reflect Prompt 20 architecture.
+
+---
+
+# 73. PUSH OWNER SETUP
+
+Include exact platform-dependent steps.
+
+For Expo/EAS where relevant:
+
+* Expo project linkage
+* iOS push credentials
+* Android notification configuration
+* Physical development/preview build
+* Device token registration
+* Admin self-test
+
+Mark any Apple/Google developer account requirements clearly.
+
+Do not pretend browser testing proves mobile push.
+
+---
+
+# 74. AUTH PRODUCTION TEST
+
+Once Supabase configuration exists, run:
+
+1. New account signup
+2. Email verification if enabled
+3. Login
+4. Onboarding
+5. Logout
+6. Login again
+7. Password reset
+8. Session restore after restart
+
+Record PASS/FAIL.
+
+---
+
+# 75. MAPBOX PRODUCTION-LIKE TEST
+
+Test:
+
+Quest:
+
+* Map loads
+* Geo markers load
+* Search works
+
+Hunt:
+
+* Map loads
+* Markers
+* Clusters
+* Custom Hunt
+* Search area
+
+Creator/Admin:
+
+* Location editor
+* Public/private geometry editor
+
+---
+
+# 76. STORAGE PRODUCTION-LIKE TEST
+
+Test:
+
+* Avatar
+* Quest proof
+* Hunt proof
+* Custom Hunt cover
+* Clue image
+
+Verify:
+
+* Public/pending/private separation
+* Signed URL expiration
+* Unauthorized user access denied
+
+---
+
+# 77. AI PRODUCTION-LIKE TEST
+
+When configured:
+
+Generate one development candidate for:
+
+* Daily
+* Monthly
+* Geo
+
+Verify provenance and draft workflow.
+
+Do not publish automatically.
+
+---
+
+# 78. MODERATION PRODUCTION-LIKE TEST
+
+If automated mode:
+
+Test safe media/text through full flow.
+
+If manual mode:
+
+Verify:
+
+* Pending item enters manual queue
+* Moderator approves
+* Public content updates
+
+Both are valid launch configurations if product policy permits.
+
+---
+
+# 79. PUSH PRODUCTION-LIKE TEST
+
+On real device when available:
+
+Test:
+
+* Permission
+* Device registration
+* Self-test
+* App closed
+* App foreground
+* Deep link Quest
+* Deep link Hunt
+* Logout invalidation
+
+If not possible in current Replit environment:
+
+Document exact test steps and mark:
+
+EXTERNAL PHYSICAL DEVICE TEST REQUIRED
+
+---
+
+# 80. DEEP LINK TEST
+
+Test internal route resolver even if physical push unavailable.
+
+Deep links must:
+
+* Authenticate
+* Revalidate permissions
+* Switch Quest/Hunt mode
+* Navigate correctly
+
+Test invalid/expired targets.
+
+---
+
+# 81. JOB DEPLOYMENT TEST
+
+Verify every scheduled job is actually registered or provide exact deploy command.
+
+Do not consider cron complete merely because function exists.
+
+Document schedule.
+
+---
+
+# 82. LEADERBOARD JOB
+
+Specifically verify Quest/Hunt leaderboard automatic update is deployed.
+
+The old manual-only recalculate gap must remain fixed.
+
+Manual Recalculate may exist only for recovery.
+
+---
+
+# 83. MONTHLY PUBLICATION JOB
+
+Verify next Monthly Quest Drop can activate without an Admin browser being open.
+
+Use authoritative server schedule.
+
+---
+
+# 84. DAILY ASSIGNMENT JOB
+
+Verify Daily assignment process works without AI runtime dependency.
+
+AI may populate candidate pool.
+
+Assignment uses stored approved content.
+
+---
+
+# 85. RETENTION JOBS
+
+Verify scheduled cleanup for:
+
+* Exact location
+* Expired push delivery metadata
+* Temporary media
+* Old completed offline-related server state where applicable
+
+Do not delete required audit records.
+
+---
+
+# 86. PRODUCTION CORS / NETWORK TEST
+
+Test server endpoints from the actual client environment.
+
+Repair CORS only where needed.
+
+Do not expose privileged endpoints broadly just to make a test pass.
+
+---
+
+# 87. RATE LIMIT DEPLOYMENT
+
+Verify server-side rate limits are active for:
+
+* Auth-sensitive flows where implemented
+* Friend requests
+* Reports
+* Riddle guesses
+* Geo validation
+* AI generation
+* Moderation calls
+* Admin high-risk actions where applicable
+
+Do not rely only on UI cooldown.
+
+---
+
+# 88. PRODUCTION RLS TEST
+
+Run integration tests against a clean or safe project.
+
+Test two normal users and one staff user.
+
+Verify cross-account access denied.
+
+Do not test by disabling RLS.
+
+---
+
+# 89. PRODUCTION SEED POLICY
+
+Do not automatically seed fake production users/content.
+
+Define:
+
+Development seed:
+Allowed
+
+Production seed:
+Only intentional baseline configuration such as Interest Bubbles, approved system settings, or initial Admin/bootstrap mechanism if required.
+
+Document how the first Super Admin is provisioned securely.
+
+---
+
+# 90. FIRST SUPER ADMIN
+
+Create a secure bootstrap process.
+
+Do NOT:
+
+* Hardcode Admin email in client
+* Give first registered user Super Admin
+* Allow a query parameter to grant Admin
+
+Possible secure method:
+
+* Database-admin/manual server-side role assignment
+* Controlled migration/SQL performed by owner
+* Secure bootstrap script requiring service credentials
+
+Document exact step.
+
+After bootstrap:
+
+Admin role management from Prompt 18 applies.
+
+---
+
+# 91. DEFAULT INTEREST BUBBLES
+
+Verify baseline active Interest Bubble data exists or document how to seed it.
+
+Do not auto-create arbitrary AI tags.
+
+Consumer onboarding needs real Bubble options.
+
+---
+
+# 92. DEFAULT ADMIN SETTINGS
+
+Verify safe defaults exist for:
+
+* Daily Quest behavior
+* Monthly targets
+* Geo validation
+* Hunt creation
+* Social limits
+* Notification preferences
+* Anti-cheat
+* Moderation
+* AI disabled/enabled
+* Feature flags
+
+Do not leave required configuration NULL when app assumes values.
+
+---
+
+# 93. PRODUCTION DATA CONSTRAINTS
+
+Run validation query/test for:
+
+* Missing required Quest types
+* Broken enums
+* Duplicate canonical tables
+* Missing config rows
+* Invalid point values
+* Invalid coordinates
+* Orphaned relations
+
+Do not mutate production automatically unless this is a migration-safe fix.
+
+---
+
+# 94. CLIENT BUNDLE SECURITY TEST
+
+Inspect built client artifacts/configuration.
+
+Ensure absent:
+
+* Service-role key
+* AI secret
+* Moderation secret
+* Cron secret
+* Admin secret
+* Private database password
+
+Public Supabase/Mapbox credentials are acceptable only when designed as client-safe and protected through RLS/scopes.
+
+---
+
+# 95. SERVER SECRET ROTATION READINESS
+
+Document how to rotate:
+
+* Supabase service role if needed
+* AI API key
+* Moderation key
+* Push credentials
+
+Do not create automated rotation unless provider supports and project needs it.
+
+---
+
+# 96. DEPLOYMENT DOCUMENT
+
+Create:
+
+/docs/DEPLOYMENT.md
+
+Include:
+
+1. Prerequisites
+2. Environment variables
+3. Supabase setup
+4. Migrations
+5. Edge Functions
+6. Secrets
+7. Cron jobs
+8. Client build
+9. Preview build
+10. Production build
+11. Smoke tests
+12. Rollback
+
+Use exact project commands.
+
+---
+
+# 97. ROLLBACK PLAN
+
+Document safe rollback for:
+
+* Client release
+* Edge Function deployment
+* Prompt/config changes
+* Database migrations where reversible
+
+Do not claim all DB migrations can be trivially rolled back.
+
+For destructive migrations:
+
+Require backup/forward-fix strategy.
+
+---
+
+# 98. RELEASE CHECKLIST
+
+Create/update:
+
+/docs/BUILD1_LAUNCH_CHECKLIST.md
+
+Final categories:
+
+## CODE
+
+Must all pass.
+
+## SUPABASE
+
+Configuration steps.
+
+## MAPBOX
+
+Configuration steps.
+
+## AI
+
+Optional/required status.
+
+## MODERATION
+
+Manual or automated.
+
+## PUSH
+
+Native/provider setup.
+
+## MOBILE BUILD
+
+Preview/production.
+
+## HUMAN REVIEW
+
+Legal/safety/store.
+
+---
+
+# 99. APP STORE READINESS — TECHNICAL ONLY
+
+Prepare technical metadata/configuration readiness.
+
+Do not write marketing copy unless already present.
+
+Check:
+
+* App name
+* Bundle/package IDs
+* Version
+* Icons
+* Splash
+* Permission strings
+* Privacy-related capability declarations
+* Deep links
+
+Do not submit app.
+
+---
+
+# 100. PRIVACY MANIFEST / PLATFORM REQUIREMENTS
+
+Where current Expo/native platform requires privacy declarations:
+
+Prepare code/config accurately based on actual APIs used.
+
+Do not claim data is not collected if app stores:
+
+* account data
+* proof media
+* location validation events
+* user-generated content
+
+Do not make legal conclusions.
+
+Flag owner/legal review.
+
+---
+
+# 101. EXTERNAL LEGAL ITEMS
+
+Do not draft final legal language.
+
+List external launch requirements such as:
+
+* Terms of Service review
+* Privacy Policy review
+* Community/Safety Guidelines review
+* App-store privacy disclosures
+* Location-data disclosure
+* User-generated-content moderation disclosure where necessary
+
+Classify as:
+
+HUMAN/LEGAL REVIEW REQUIRED
+
+---
+
+# 102. SUPPORT DESTINATION
+
+Verify real support entry point.
+
+If no support destination exists:
+
+Make it configuration-driven.
+
+Examples:
+
+SUPPORT_EMAIL
+SUPPORT_URL
+
+Do not hardcode a fake email.
+
+Document setup.
+
+---
+
+# 103. ADMIN CONTACT / SAFETY CONTACT
+
+If moderation/safety flow requires staff contact, make destination/configuration explicit.
+
+Do not expose private Admin personal email addresses to users.
+
+---
+
+# 104. BUILD 1 SMOKE TEST SCRIPT
+
+Create:
+
+/docs/BUILD1_SMOKE_TEST.md
+
+Keep it short enough to run before every release.
+
+Include:
+
+### Auth
+
+* Sign in
+
+### Quest
+
+* Open Daily
+* Start
+* Verify Quest pages
+
+### Geo
+
+* Open Map
+
+### Hunt
+
+* Map
+* Hunt Detail
+
+### Creator
+
+* Open/create Draft
+
+### Profile
+
+* Friends/Progress
+
+### Admin
+
+* Authorized Admin dashboard
+
+### Services
+
+* Storage
+* Mapbox
+* Notifications
+
+This complements full E2E suite.
+
+---
+
+# 105. FULL PRODUCTION-READINESS COMMAND
+
+If practical, add command:
+
+npm run release:check
+
+or project equivalent.
+
+It should run:
+
+* env schema validation
+* typecheck
+* lint
+* unit tests
+* safe integration checks
+* production build
+* stub/fixture guard
+
+Do not run paid AI/moderation calls automatically from every release check.
+
+---
+
+# 106. FINAL BLOCKER CLASSIFICATION
+
+At completion produce exactly these categories:
+
+## BLOCKER — CODE
+
+There should ideally be none.
+
+## BLOCKER — OWNER CONFIGURATION
+
+For example:
+
+* Supabase URL missing
+* Mapbox token missing
+
+## BLOCKER — EXTERNAL PLATFORM ACTION
+
+For example:
+
+* Apple push credentials
+* Expo project linkage
+
+## OPTIONAL INTEGRATION
+
+For example:
+
+* AI generation
+* Automated moderation if manual mode is allowed
+
+## HUMAN/LEGAL
+
+## DEFERRED BUILD 2
+
+Do not mix categories.
+
+---
+
+# 107. DO NOT REDESIGN
+
+Throughout this prompt preserve:
+
+## Quest
+
+Home / Quests / Map / Progress / Profile
+
+Quests page:
+
+* Daily Quest
+* Monthly Quest Drop
+* Geo-Quest
+
+## Hunt
+
+Map / My Hunts / Progress / Profile
+
+One large Hunt Map.
+
+No Discover tab.
+
+Top Quest/Hunt toggle remains.
+
+Profile shared.
+
+---
+
+# 108. DO NOT ADD BUILD 2 FEATURES
+
+Do not implement:
+
+* Revenue
+* Stripe
+* Paid Hunts
+* Creator payouts
+* Premium memberships
+* Game Zones
+* Outbreak
+* Chat
+* Direct messaging
+* Live location
+* Background location
+* AI Hunt generation
+* Marketplace
+* Social feed
+
+---
+
+# 109. FINAL INTEGRATION AUDIT
+
+Before stopping confirm:
+
+### Supabase
+
+* Real client architecture
+* Auth connected
+* Session persistence
+* Migrations complete
+* RLS deployed
+* Storage policies
+* Edge Functions
+* Secrets architecture
+* Cron/jobs
+
+### Mapbox
+
+* Real map provider
+* Quest map
+* Hunt map
+* Search
+* Creator/admin editors
+* Token config
+
+### AI
+
+* Server-side
+* Separate Daily/Monthly/Geo prompts
+* Secret protected
+* Draft-only
+* Manual fallback
+
+### Moderation
+
+* Manual mode works
+* Automated mode configurable
+* Secrets protected
+
+### Push
+
+* Provider architecture
+* Device registration
+* Deep linking
+* Physical-device setup documented
+
+### Mobile
+
+* Permissions
+* App identifiers
+* build profiles
+* scheme
+
+### Production
+
+* Client secrets clean
+* Dev stubs disabled
+* Release check
+* Deployment docs
+* Owner setup checklist
+
+Fix every code-level problem discovered.
+
+---
+
+# 110. FINAL REPORT
+
+When complete return:
+
+## 1. Code Integration Status
+
+For each:
+
+* Supabase
+* Auth
+* Database
+* RLS
+* Storage
+* Edge Functions
+* Jobs
+* Mapbox
+* AI
+* Moderation
+* Push
+* Mobile build
+
+Use:
+
+PASS
+PASS — CONFIGURATION REQUIRED
+FAIL
+
+## 2. Code Fixed During Prompt 24
+
+List actual fixes.
+
+## 3. Owner Actions Required
+
+Give exact numbered steps.
+
+## 4. Secrets Required
+
+List variable names only.
+
+Never values.
+
+## 5. Dashboard Configuration Required
+
+List exact service/dashboard tasks.
+
+## 6. Physical Device Tests Required
+
+List.
+
+## 7. Human/Legal Tasks
+
+List separately.
+
+## 8. Deferred Build 2
+
+List separately.
+
+## 9. Test Results
+
+* TypeScript
+* Lint
+* Unit
+* Integration
+* RLS
+* Build
+* Release check
+
+## 10. Launch Blockers
+
+Only real blockers.
+
+---
+
+# 111. DOCUMENTATION DELIVERABLES
+
+Create/update:
+
+* `/docs/DEPLOYMENT.md`
+* `/docs/ENVIRONMENT_VARIABLES.md`
+* `/docs/THIRD_PARTY_CONFIGURATION.md`
+* `/docs/OWNER_SETUP_CHECKLIST.md`
+* `/docs/SUPABASE_PRODUCTION_SETUP.md`
+* `/docs/MAPBOX_SETUP.md`
+* `/docs/AI_PROVIDER_SETUP.md`
+* `/docs/MODERATION_PROVIDER_SETUP.md`
+* `/docs/PUSH_NOTIFICATION_SETUP.md`
+* `/docs/MOBILE_BUILD_SETUP.md`
+* `/docs/DATABASE_BACKUP_AND_RECOVERY.md`
+* `/docs/BUILD1_SMOKE_TEST.md`
+* `/docs/BUILD1_LAUNCH_CHECKLIST.md`
+
+Update `/docs/README.md` documentation index.
+
+---
+
+# 112. FINAL VERIFICATION BEFORE STOPPING
+
+Confirm:
+
+* No fake authentication.
+* Supabase architecture is production-ready.
+* Supabase client contains no privileged secret.
+* Auth works when credentials are supplied.
+* Database can be created from migrations.
+* RLS is migration-controlled.
+* Storage policies protect private proof.
+* Edge Functions are deployable.
+* Scheduled jobs are deployable.
+* Mapbox uses real configuration.
+* Mapbox missing state is honest.
+* AI is server-side.
+* AI remains optional to core gameplay.
+* Daily/Monthly/Geo AI prompt customization remains intact.
+* Moderation supports real provider or intentional manual mode.
+* Push architecture is production-ready.
+* Push physical-device requirements are documented.
+* Native permissions are minimal.
+* No background-location permission exists.
+* Deep links work.
+* Secrets do not enter client bundle.
+* Development fixtures/stubs are production-blocked.
+* Owner configuration checklist is exact.
+* Deployment procedure is documented.
+* Release-check command exists where practical.
+* Build 1 smoke test exists.
+* Quest UI remains approved.
+* Hunt UI remains approved.
+* No Discover tab exists.
+* No Game Zones exists.
+* No Outbreak exists.
+* No Stripe/revenue code was added.
+* Typecheck passes.
+* Lint passes.
+* Tests pass or external tests are explicitly marked blocked.
+* Production build passes when required external configuration is available.
+
+Fix all code-level Build 1 failures before stopping.
+
+---
+
+# DELIVERABLES
+
+When complete provide:
+
+1. Environment architecture
+2. Public/secret variable classification
+3. Environment validation
+4. Secret leak audit
+5. Canonical Supabase client
+6. Real Auth integration readiness
+7. Session storage verification
+8. Auth redirect configuration
+9. Database deployment scripts
+10. Clean migration test
+11. RLS deployment verification
+12. Storage bucket/policy verification
+13. Edge Function inventory/deployment readiness
+14. Edge Function secret inventory
+15. Scheduled-job deployment
+16. Job-security verification
+17. Mapbox real integration verification
+18. Mapbox health test
+19. AI provider production configuration
+20. AI health/integration test status
+21. Moderation provider configuration
+22. Manual moderation fallback verification
+23. Push provider production configuration
+24. Push physical-device test instructions
+25. Deep-link production configuration
+26. CORS audit
+27. Supabase Auth dashboard setup requirements
+28. Production URL configuration
+29. iOS permissions
+30. Android permissions
+31. Expo/EAS build configuration
+32. Development build instructions
+33. Preview build instructions
+34. Production build readiness
+35. Environment/data separation
+36. Feature flag production audit
+37. External-provider timeout/retry policy
+38. Service health architecture
+39. Database backup/recovery documentation
+40. Logging audit
+41. Release-health script
+42. Production stub guard
+43. Third-party configuration document
+44. Owner Setup Checklist
+45. First Super Admin bootstrap procedure
+46. Default Interest Bubble verification
+47. Default platform-setting verification
+48. Client-bundle secret audit
+49. Deployment guide
+50. Rollback guide
+51. Build 1 Smoke Test
+52. Build 1 Launch Checklist
+53. Release-check command
+54. Final blocker classification
+55. Test results
+56. Exact owner actions still required
+57. Exact external dashboard actions still required
+58. Exact physical-device tests still required
+59. Human/legal tasks
+60. Deferred Build 2 features
+
+Do not begin another feature prompt.
+
+Create checkpoint:
+
+Build 1 — Prompt 24 — Production Integrations and Deployment Readiness
+
+```
+
+Once Replit finishes this one, I would **not automatically keep adding numbered build prompts**. At that point we should read its Prompt 24 report and use the remaining blockers to make a short, targeted sequence for actually connecting your Supabase, Mapbox, AI API, push, etc., rather than continuing to add architecture that may already be finished.
+```
