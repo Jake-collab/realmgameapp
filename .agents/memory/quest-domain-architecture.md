@@ -52,11 +52,18 @@ This keeps `database.types.ts` as the hand-authored canonical file without dupli
 The extended interfaces inherit from the base row types.
 
 ## Canonical Daily assignment
-Daily Quest personalization is Interest Bubble based, but the selected Quest must be persisted per user and UTC occurrence date by a server-side assignment function. Client ranking is only a compatibility path for environments that have not applied the canonical migration.
+Daily Quest personalization is Interest Bubble based, but the selected Quest must be persisted per user and UTC occurrence date by a server-side assignment function. A configured client must show an unavailable state—not locally rank a substitute—when that authority cannot be reached.
 
 **Why:** Refresh-time client selection can reshuffle a user's Daily Quest and cannot be trusted as an authority.
 
-**How to apply:** Keep Interest Bubble IDs and targeting mode separate from public Quest content; never use raw interest labels or client-only randomness for assignment.
+**How to apply:** Keep Interest Bubble IDs and targeting mode separate from public Quest content; never use raw interest labels or client-only randomness for assignment. Preference changes guide future UTC assignments only; they never reroll an already persisted Daily.
+
+## Canonical Quest catalog rewards
+Quest catalog content uses EASY=100, MEDIUM=200, HARD=300, and EPIC=500 at the database boundary. The shared historical `very_easy` enum value remains read-compatible for non-Quest content, but is normalized to `easy` for every Quest write.
+
+**Why:** The shared enum is also used outside Quest, so removing or renaming it globally would risk changing Hunt semantics. Existing participation reward snapshots remain the authority for active history.
+
+**How to apply:** Keep Quest reward enforcement in Quest-specific triggers/functions, not shared enum changes. Never apply Quest point tables to Hunt rewards.
 
 ## One-time proof verification
 Quest photo, video, and location submissions require a short-lived server-issued verification session; the database validates ownership/expiry and consumes the session on submission.
