@@ -17,7 +17,8 @@ credentials, or CI secrets are required.
 
 The release gate is pinned to **Supabase CLI `2.115.0`**. The local harness uses
 the same version by default and refuses to run with a different installed CLI,
-so a local pass exercises the same CLI contract as CI.
+so a local pass exercises the same CLI contract as CI. The release gate never
+uses `latest`.
 
 For a manually managed disposable Supabase project, apply the complete
 migration set first, including `039_quest_integrity.sql`. The suite creates two
@@ -43,13 +44,26 @@ pnpm test:quest-database
 
 Do not replace the pin with `latest`. To deliberately update it:
 
-1. Set `SUPABASE_CLI_VERSION` to the candidate version and run
-   `pnpm test:quest-database` from `artifacts/mobile` (or install that exact
-   CLI so the harness validates it).
-2. Confirm a fresh local database applies every checked-in migration.
-3. Confirm the complete Quest RPC/RLS integration suite passes.
-4. Change both the workflow pin and the harness default to the candidate, then
-   update this documented version in the same change and rerun the check.
+1. Use the **Candidate Supabase CLI compatibility** job from
+   `.github/workflows/quest-database.yml`. It runs every Monday against
+   `latest`, or run the workflow manually with an exact candidate such as
+   `2.116.0` in the `supabase_cli_version` input.
+2. Confirm the job's fresh disposable database applies every checked-in
+   migration and that the complete Quest RPC/RLS integration suite passes.
+   The job prints the concrete version resolved from `latest`; a failed
+   migration or test produces a failed candidate check.
+3. For a local candidate check, set `SUPABASE_CLI_VERSION` to an exact
+   candidate and run `pnpm test:quest-database` from `artifacts/mobile`.
+   `SUPABASE_CLI_VERSION=latest` is also supported when the locally installed
+   CLI is the candidate you want to exercise.
+4. Only after the candidate check passes, change both the release workflow pin
+   and the harness default to that exact version, update this documented
+   version, and rerun the pinned check. Do not promote `latest` as the release
+   pin.
+
+The candidate job is advisory rather than a release gate. It intentionally
+does not modify the pinned `quest-database` job, so a new CLI can be evaluated
+early and promoted in a separate reviewed change.
 
 The update is only ready when migrations and the Quest suite pass with the
 candidate. This keeps a CLI or container change from being mistaken for a

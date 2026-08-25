@@ -26,10 +26,19 @@ run_supabase() {
 }
 
 CLI_VERSION="$(run_supabase --version | tail -n 1 | sed -E 's/^supabase version //; s/^[[:space:]]+//; s/[[:space:]]+$//')"
-if [[ "$CLI_VERSION" != "$SUPABASE_CLI_VERSION" ]]; then
+if [[ -z "$CLI_VERSION" || "$CLI_VERSION" == "supabase version" ]]; then
+  echo "Unable to determine the installed Supabase CLI version." >&2
+  exit 1
+fi
+if [[ "$SUPABASE_CLI_VERSION" != "latest" && "$CLI_VERSION" != "$SUPABASE_CLI_VERSION" ]]; then
   echo "Quest database check requires Supabase CLI ${SUPABASE_CLI_VERSION}; found ${CLI_VERSION}." >&2
   echo "Install the pinned version or set SUPABASE_CLI_VERSION when deliberately testing an update." >&2
   exit 1
+fi
+if [[ "$SUPABASE_CLI_VERSION" == "latest" ]]; then
+  echo "Testing candidate Supabase CLI ${CLI_VERSION} (resolved from latest)."
+else
+  echo "Testing Supabase CLI ${CLI_VERSION}."
 fi
 
 cleanup() {
