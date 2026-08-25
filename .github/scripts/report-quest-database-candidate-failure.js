@@ -23,11 +23,24 @@ async function reportQuestDatabaseCandidateFailure({
     `Last updated by workflow run ${context.runId}.`,
   ].join("\n");
 
-  const { data: existing } = await github.rest.search.issuesAndPullRequests({
-    q: `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${COMPATIBILITY_ALERT_TITLE}"`,
-    per_page: 100,
-  });
-  const alerts = existing.items
+  const searchQuery = `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${COMPATIBILITY_ALERT_TITLE}"`;
+  const searchPageSize = 100;
+  const matchingIssues = [];
+  let page = 1;
+
+  while (true) {
+    const { data: existing } = await github.rest.search.issuesAndPullRequests({
+      q: searchQuery,
+      per_page: searchPageSize,
+      page,
+    });
+    matchingIssues.push(...existing.items);
+
+    if (existing.items.length < searchPageSize) break;
+    page += 1;
+  }
+
+  const alerts = matchingIssues
     .filter(
       (issue) =>
         issue.title === COMPATIBILITY_ALERT_TITLE && !issue.pull_request,
