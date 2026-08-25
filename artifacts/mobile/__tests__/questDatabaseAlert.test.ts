@@ -87,6 +87,40 @@ function getReusableWorkflowCalls(job) {
   ].map((match) => match[1]);
 }
 
+function getMissingReusableWorkflowTargets(
+  workflowFiles,
+  {
+    workflowExists = (filePath) => fs.existsSync(filePath),
+  } = {},
+) {
+  const missingTargets = [];
+
+  for (const workflow of workflowFiles) {
+    for (const callerJob of getWorkflowJobs(
+      workflow.source,
+      workflow.fileName,
+    )) {
+      for (const reference of getReusableWorkflowCalls(callerJob)) {
+        const referencedPath = path.resolve(repositoryDirectory, reference);
+        if (
+          referencedPath.startsWith(`${repositoryDirectory}${path.sep}`) &&
+          workflowExists(referencedPath)
+        ) {
+          continue;
+        }
+
+        missingTargets.push({
+          callerFileName: workflow.fileName,
+          callerJobName: callerJob.name,
+          target: reference,
+        });
+      }
+    }
+  }
+
+  return missingTargets;
+}
+
 function getReusableReportingJobs(
   workflowFiles,
   {
@@ -144,6 +178,62 @@ function getReusableReportingJobs(
 }
 
 describe("Supabase CLI candidate compatibility alert", () => {
+  it("identifies missing local reusable workflow targets with their caller location", () => {
+    const missingTargets = getMissingReusableWorkflowTargets(
+      [
+        {
+          fileName: ".github/workflows/caller.yml",
+          source: `jobs:
+  publish-report:
+    uses: ./.github/workflows/renamed-report.yml
+`,
+        },
+      ],
+      {
+        workflowExists: () => false,
+      },
+    );
+
+    expect(missingTargets).toEqual([
+      {
+        callerFileName: ".github/workflows/caller.yml",
+        callerJobName: "publish-report",
+        target: "./.github/workflows/renamed-report.yml",
+      },
+    ]);
+
+    expect(() => {
+      for (const missingTarget of missingTargets) {
+        assertCompatibilityContract(
+          false,
+          `${missingTarget.callerFileName}:${missingTarget.callerJobName} references missing local reusable workflow target ${missingTarget.target}.`,
+        );
+      }
+    }).toThrow(
+      "Compatibility alert contract failed: .github/workflows/caller.yml:publish-report references missing local reusable workflow target ./.github/workflows/renamed-report.yml.",
+    );
+  });
+
+  it("guards every checked-in local reusable workflow call against missing targets", () => {
+    const workflowFiles = fs
+      .readdirSync(workflowDirectory)
+      .filter((fileName) => /\.(?:yml|yaml)$/.test(fileName))
+      .map((fileName) => ({
+        fileName: path.join(".github/workflows", fileName),
+        source: fs.readFileSync(
+          path.join(workflowDirectory, fileName),
+          "utf8",
+        ),
+      }));
+
+    for (const missingTarget of getMissingReusableWorkflowTargets(workflowFiles)) {
+      assertCompatibilityContract(
+        false,
+        `${missingTarget.callerFileName}:${missingTarget.callerJobName} references missing local reusable workflow target ${missingTarget.target}.`,
+      );
+    }
+  });
+
   it("discovers issue reporters nested in local reusable workflows", () => {
     const reusableWorkflowPath = path.resolve(
       repositoryDirectory,
