@@ -65,6 +65,16 @@ The candidate job is advisory rather than a release gate. It intentionally
 does not modify the pinned `quest-database` job, so a new CLI can be evaluated
 early and promoted in a separate reviewed change.
 
+If the scheduled candidate check fails, the workflow creates or updates one
+open GitHub issue titled **[CI Alert] Supabase CLI candidate compatibility
+failure**. The issue is owned by the Quest database and release maintainers,
+links to the failed workflow run, and links back to this promotion guide.
+Repeated failures update that same issue instead of creating a new issue for
+each weekly run. Investigate the latest run, keep the pinned release CLI
+unchanged, and close the issue only after a candidate passes the disposable
+database and Quest contract checks (or the candidate has been intentionally
+replaced).
+
 The update is only ready when migrations and the Quest suite pass with the
 candidate. This keeps a CLI or container change from being mistaken for a
 Quest behavior regression.
