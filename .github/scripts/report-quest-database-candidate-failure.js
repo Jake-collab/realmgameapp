@@ -25,11 +25,20 @@ async function reportQuestDatabaseCandidateFailure({
 
   const { data: existing } = await github.rest.search.issuesAndPullRequests({
     q: `repo:${context.repo.owner}/${context.repo.repo} is:issue is:open in:title "${COMPATIBILITY_ALERT_TITLE}"`,
-    per_page: 10,
+    per_page: 100,
   });
-  const alert = existing.items.find(
-    (issue) => issue.title === COMPATIBILITY_ALERT_TITLE,
-  );
+  const alerts = existing.items
+    .filter(
+      (issue) =>
+        issue.title === COMPATIBILITY_ALERT_TITLE && !issue.pull_request,
+    )
+    .sort((left, right) => {
+      const leftCreated = left.created_at ? Date.parse(left.created_at) : 0;
+      const rightCreated = right.created_at ? Date.parse(right.created_at) : 0;
+
+      return rightCreated - leftCreated || right.number - left.number;
+    });
+  const alert = alerts[0];
 
   if (alert) {
     await github.rest.issues.update({
@@ -38,8 +47,35 @@ async function reportQuestDatabaseCandidateFailure({
       issue_number: alert.number,
       body,
     });
-    core.info(`Updated compatibility alert #${alert.number}.`);
-    return { action: "updated", issueNumber: alert.number, body };
+
+    const supersededIssueNumbers = [];
+    for (const duplicate of alerts.slice(1)) {
+      await github.rest.issues.update({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        issue_number: duplicate.number,
+        state: "closed",
+        state_reason: "not planned",
+      });
+      supersededIssueNumbers.push(duplicate.number);
+      core.info(
+        `Closed duplicate compatibility alert #${duplicate.number}; canonical alert is #${alert.number}.`,
+      );
+    }
+
+    core.info(
+      `Updated compatibility alert #${alert.number}${
+        supersededIssueNumbers.length
+          ? ` and closed ${supersededIssueNumbers.length} duplicate(s)`
+          : ""
+      }.`,
+    );
+    return {
+      action: "updated",
+      issueNumber: alert.number,
+      body,
+      supersededIssueNumbers,
+    };
   }
 
   const { data: created } = await github.rest.issues.create({
