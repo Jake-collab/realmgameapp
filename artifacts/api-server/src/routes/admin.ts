@@ -147,6 +147,7 @@ router.get("/admin/notifications", requireAdmin("admin.read"), async (_req, res)
   const items = notificationStore.all();
   const delivery = notificationStore.deliveryRecords();
   const health = await pushProvider.healthCheck();
+  const persistence = notificationStore.persistenceDiagnostics();
   res.json({
     metrics: {
       notificationsCreatedToday: items.filter(item => item.createdAt.slice(0, 10) === new Date().toISOString().slice(0, 10)).length,
@@ -160,7 +161,7 @@ router.get("/admin/notifications", requireAdmin("admin.read"), async (_req, res)
     },
     provider: { ...health, reason: health.configured ? "Provider configured; receipts require provider receipt processing." : "Configure Expo access before push delivery can begin." },
     delivery: delivery.slice(0, 100),
-    persistence: "local_restart_safe",
+    persistence: `${persistence.mode}_not_production_durable`,
   });
 });
 
@@ -824,7 +825,11 @@ router.post("/admin/moderation/cases/:id/resolve", requireAdmin("moderation.case
     recordAuditEvent({ actorId: req.adminPrincipal?.userId ?? null, action: "moderation_decision", entityType: "moderation_case", entityId: String(req.params.id), result: "rejected", metadata: { validation: "confirmation_reason_or_decision_missing" } });
     res.status(400).json({ error: "Explicit confirmation, a decision, and a reason are required." }); return;
   }
-  const actionPermission = input.data.decision === "account_restricted" ? "moderation.manage" : input.data.decision === "account_suspended" ? "moderation.manage" : "moderation.case.resolve";
+  const actionPermission = input.data.decision === "account_restricted"
+    ? "moderation.manage"
+    : input.data.decision === "account_suspended"
+      ? "moderation.account.suspend"
+      : "moderation.case.resolve";
   if (!req.adminPrincipal?.permissions.includes(actionPermission)) {
     recordAuditEvent({ actorId: req.adminPrincipal?.userId ?? null, action: "moderation_decision", entityType: "moderation_case", entityId: String(req.params.id), result: "rejected", reason: input.data.reason, metadata: { decision: input.data.decision, permission: actionPermission } });
     res.status(403).json({ error: "You do not have permission for this moderation action." }); return;

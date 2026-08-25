@@ -18,6 +18,7 @@ export type AdminPermission =
   | "moderation.manage"
   | "moderation.case.claim"
   | "moderation.case.resolve"
+  | "moderation.account.suspend"
   | "moderation.report.resolve"
   | "integrity.read"
   | "integrity.manage"
@@ -64,6 +65,7 @@ const rolePermissions: Record<AdminRole, AdminPermission[]> = {
     "moderation.manage",
     "moderation.case.claim",
     "moderation.case.resolve",
+    "moderation.account.suspend",
     "moderation.report.resolve",
     "integrity.read",
     "integrity.manage",
@@ -89,6 +91,7 @@ const rolePermissions: Record<AdminRole, AdminPermission[]> = {
     "moderation.manage",
     "moderation.case.claim",
     "moderation.case.resolve",
+    "moderation.account.suspend",
     "moderation.report.resolve",
     "integrity.read",
     "integrity.manage",

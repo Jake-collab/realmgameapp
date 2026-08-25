@@ -9,16 +9,22 @@ if (environment.SCHEDULER_ENABLED !== "true") {
   process.exit(0);
 }
 
-if (!environment.SUPABASE_URL || !environment.SUPABASE_SERVICE_ROLE_KEY) {
-  logger.error("Scheduler cannot start without trusted Supabase configuration.");
+try {
+  notificationStore.assertReliableWorkerStorage();
+} catch (error) {
+  logger.error(
+    { persistence: notificationStore.persistenceDiagnostics(), error: error instanceof Error ? error.message : "notification_worker_storage_unavailable" },
+    "Scheduler cannot start without a durable notification queue; local state is diagnostics-only",
+  );
   process.exit(1);
 }
 
 const provider = process.env.EXPO_ACCESS_TOKEN ? new ExpoPushProvider() : new NoopPushProvider();
 const run = async () => {
+  const recovered = notificationStore.recoverInterruptedWork();
   const results = notificationStore.runDue();
   const delivery = await notificationStore.flushQueued(provider);
-  logger.info({ processed: results.length, delivery }, "Scheduled notification cycle complete");
+  logger.info({ processed: results.length, recovered, delivery }, "Scheduled notification cycle complete");
 };
 
 void run();

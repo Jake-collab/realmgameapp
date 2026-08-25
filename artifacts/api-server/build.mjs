@@ -18,6 +18,9 @@ async function buildAll() {
     entryPoints: [
       path.resolve(artifactDir, "src/index.ts"),
       path.resolve(artifactDir, "src/worker.ts"),
+      path.resolve(artifactDir, "src/lib/ai-quest.test.ts"),
+      path.resolve(artifactDir, "src/lib/notifications.test.ts"),
+      path.resolve(artifactDir, "src/routes/admin.authorization.test.ts"),
     ],
     platform: "node",
     bundle: true,

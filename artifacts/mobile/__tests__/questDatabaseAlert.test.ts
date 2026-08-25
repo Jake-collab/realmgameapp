@@ -1,3 +1,7 @@
+// @ts-nocheck
+// This is a Node-only contract test for GitHub workflow scripts. It exercises
+// dynamic Octokit fixtures and YAML-like text rather than mobile application
+// code, so its JavaScript-shaped mocks are intentionally outside app typecheck.
 const fs = require("node:fs");
 const path = require("node:path");
 

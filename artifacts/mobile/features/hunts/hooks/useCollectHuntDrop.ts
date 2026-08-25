@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForegroundLocation } from '@/features/maps/hooks/useForegroundLocation';
 import { collectHuntDrop, issueHuntDropCollectionSession } from '../repositories/huntDrop.repository';
@@ -7,6 +7,9 @@ import { huntKeys } from '../queries/huntKeys';
 export function useCollectHuntDrop(input: { participationId: string; userId: string; huntId: string }) {
   const location = useForegroundLocation();
   const queryClient = useQueryClient();
+  // A second tap can happen before React has rendered mutation.isPending. Keep
+  // this per-hook lock outside render state; SQL remains the final authority.
+  const collectingStopIds = useRef(new Set<string>());
 
   const mutation = useMutation({
     mutationFn: async (stopId: string) => {
@@ -32,5 +35,17 @@ export function useCollectHuntDrop(input: { participationId: string; userId: str
     },
   });
 
-  return { ...mutation, collect: useCallback((stopId: string) => mutation.mutateAsync(stopId), [mutation]) };
+  const collect = useCallback(async (stopId: string) => {
+    if (collectingStopIds.current.has(stopId)) {
+      throw new Error('Collection is already in progress for this Drop.');
+    }
+    collectingStopIds.current.add(stopId);
+    try {
+      return await mutation.mutateAsync(stopId);
+    } finally {
+      collectingStopIds.current.delete(stopId);
+    }
+  }, [mutation]);
+
+  return { ...mutation, collect };
 }

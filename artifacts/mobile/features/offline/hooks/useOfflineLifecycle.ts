@@ -45,8 +45,20 @@ export function useOfflineLifecycle() {
     const removeCreatorDraft = registerOfflineMutationExecutor('creator_draft_save', async item => {
       const payload = item.payload as { draftId?: string; payload?: unknown; revision?: number };
       if (!payload.draftId || !payload.payload || payload.revision == null) return { status: 'needs_attention', errorCode: 'INVALID_PAYLOAD', message: 'This draft needs attention before syncing.' };
-      await updateCreatorDraft(payload.draftId, payload.payload as Parameters<typeof updateCreatorDraft>[1], payload.revision);
-      return { status: 'completed' };
+      try {
+        await updateCreatorDraft(payload.draftId, payload.payload as Parameters<typeof updateCreatorDraft>[1], payload.revision);
+        return { status: 'completed' };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (/(revision|version|conflict)/i.test(message)) {
+          return {
+            status: 'needs_attention',
+            errorCode: 'DRAFT_REVISION_CONFLICT',
+            message: 'This draft changed elsewhere. Open it and resolve the latest version before submitting.',
+          };
+        }
+        throw error;
+      }
     });
     const removeProof = registerOfflineMutationExecutor('proof_submission_intent', async item => {
       const payload = item.payload as {

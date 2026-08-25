@@ -129,6 +129,18 @@ export interface NotificationPreferences {
   showDetails: boolean;
 }
 
+export interface NotificationStoreOptions {
+  /** Intended for tests and local diagnostics. This is not a production queue backend. */
+  statePath?: string;
+  localPersistence?: boolean;
+}
+
+export interface NotificationPersistenceDiagnostics {
+  mode: "memory_only" | "local_file";
+  restartRecoveryAvailable: boolean;
+  productionDurability: "not_configured";
+}
+
 const COPY: Record<string, { title: string; body: (v: Record<string, string | number>) => string }> = {
   DAILY_QUEST_READY: { title: "Your Daily Quest is ready", body: v => String(v.questTitle ?? "A new adventure is waiting.") },
   MONTHLY_DROP_LIVE: { title: "The new Monthly Quest Drop is live", body: v => String(v.questTitle ?? "Explore the latest Quest collection.") },
@@ -187,10 +199,12 @@ export class NotificationStore {
   private preferences = new Map<string, NotificationPreferences>();
   private deliveries = new Map<string, NotificationDeliveryRecord>();
   private scheduled = new Map<string, ScheduledNotification>();
-  private readonly statePath = process.env.NOTIFICATION_LOCAL_STATE_PATH ?? path.join(process.cwd(), ".local", "notifications-state.json");
-  private readonly localPersistence = process.env.NODE_ENV !== "production" || Boolean(process.env.NOTIFICATION_LOCAL_STATE_PATH);
+  private readonly statePath: string;
+  private readonly localPersistence: boolean;
 
-  constructor() {
+  constructor(options: NotificationStoreOptions = {}) {
+    this.statePath = options.statePath ?? process.env.NOTIFICATION_LOCAL_STATE_PATH ?? path.join(process.cwd(), ".local", "notifications-state.json");
+    this.localPersistence = options.localPersistence ?? (process.env.NODE_ENV !== "production" || Boolean(process.env.NOTIFICATION_LOCAL_STATE_PATH));
     if (!this.localPersistence) return;
     try {
       const raw = JSON.parse(fs.readFileSync(this.statePath, "utf8")) as {
@@ -217,6 +231,29 @@ export class NotificationStore {
       }, null, 2), { mode: 0o600 });
       fs.renameSync(temporary, this.statePath);
     } catch { /* local diagnostics must not bring down the API */ }
+  }
+
+  /**
+   * The local JSON file is useful for development and restart-recovery tests,
+   * but is not a shared, durable production queue. Production workers must
+   * refuse to run until a durable backend is supplied.
+   */
+  persistenceDiagnostics(): NotificationPersistenceDiagnostics {
+    return {
+      mode: this.localPersistence ? "local_file" : "memory_only",
+      restartRecoveryAvailable: this.localPersistence,
+      productionDurability: "not_configured",
+    };
+  }
+
+  canRunReliableWorker() {
+    return this.localPersistence && process.env.NODE_ENV !== "production";
+  }
+
+  assertReliableWorkerStorage() {
+    if (!this.canRunReliableWorker()) {
+      throw new Error("Reliable notification worker storage is not configured; local notification state is not a production-durable queue");
+    }
   }
 
   process(event: NotificationEvent): NotificationRecord | null {
@@ -258,14 +295,68 @@ export class NotificationStore {
     this.scheduled.set(job.id, job); this.persist(); return job;
   }
   due(now = new Date()) { return [...this.scheduled.values()].filter(job => job.status === "scheduled" && new Date(job.scheduledFor) <= now); }
+
+  /**
+   * Reclaims work which was persisted as in-progress before a process died.
+   * Push delivery is at-least-once: a crash after the provider accepts a send
+   * but before its result is saved can result in a retry.
+   */
+  recoverInterruptedWork(now = new Date(), staleAfterMs = 5 * 60 * 1000, maxDeliveryAttempts = 3) {
+    const cutoff = now.getTime() - staleAfterMs;
+    let deliveriesRequeued = 0;
+    let deliveriesFailed = 0;
+    let scheduledRequeued = 0;
+
+    for (const delivery of this.deliveries.values()) {
+      if (delivery.channel !== "push" || delivery.status !== "sending") continue;
+      const attemptedAt = delivery.lastAttemptAt ? new Date(delivery.lastAttemptAt).getTime() : Number.NaN;
+      if (Number.isFinite(attemptedAt) && attemptedAt > cutoff) continue;
+      if (delivery.attemptCount >= maxDeliveryAttempts) {
+        delivery.status = "failed";
+        delivery.failureCategory = "retry_exhausted_after_restart";
+        deliveriesFailed++;
+      } else {
+        delivery.status = "queued";
+        delivery.failureCategory = "retry_pending_after_restart";
+        deliveriesRequeued++;
+      }
+    }
+
+    for (const job of this.scheduled.values()) {
+      if (job.status !== "queued") continue;
+      job.status = "scheduled";
+      job.lastError = "requeued_after_restart";
+      scheduledRequeued++;
+    }
+    if (deliveriesRequeued || deliveriesFailed || scheduledRequeued) this.persist();
+    return { deliveriesRequeued, deliveriesFailed, scheduledRequeued };
+  }
+
   runDue(now = new Date()) {
-    const results = this.due(now).map(job => {
-      job.status = "queued"; job.attempts += 1;
-      const result = this.process(job.event);
-      job.status = result ? "queued" : "suppressed";
-      return { job, notification: result };
-    });
-    this.persist(); return results;
+    this.recoverInterruptedWork(now);
+    const results: Array<{ job: ScheduledNotification; notification: NotificationRecord | null }> = [];
+    for (const job of this.due(now)) {
+      // Persist the claim before processing. If the process exits here, the
+      // next worker reclaims this queued job without losing its attempt count.
+      job.status = "queued";
+      job.attempts += 1;
+      job.lastError = null;
+      this.persist();
+      try {
+        const result = this.process(job.event);
+        // A recovered job may have completed process() just before a crash.
+        // Its idempotency key makes that rerun safe.
+        job.status = result ? "sent" : "suppressed";
+        this.persist();
+        results.push({ job, notification: result });
+      } catch (error) {
+        job.status = "scheduled";
+        job.lastError = error instanceof Error ? error.message : "notification_processing_failed";
+        this.persist();
+        results.push({ job, notification: null });
+      }
+    }
+    return results;
   }
 
   /**
@@ -283,6 +374,9 @@ export class NotificationStore {
         delivery.status = "suppressed"; delivery.failureCategory = "device_unavailable"; summary.deferred++; continue;
       }
       delivery.status = "sending"; delivery.attemptCount += 1; delivery.lastAttemptAt = now; summary.attempted++;
+      // Save the lease before calling the provider so restart recovery can
+      // safely reclaim a request interrupted by a process crash.
+      this.persist();
       try {
         const valid = await provider.validateToken(device.token);
         if (!valid) {

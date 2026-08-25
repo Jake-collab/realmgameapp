@@ -26,6 +26,8 @@ export interface CreatorStop {
   safetyNote: string;
   accessibilityNote: string;
   estimatedMinutes: number;
+  /** Server-registered live camera sweep for the current Hunt revision. */
+  sweepEvidenceMediaId?: string | null;
 }
 
 export interface HuntCreatorPayload {
@@ -92,7 +94,7 @@ export function makeCreatorStop(order: number): CreatorStop {
     title: '', instruction: '', type: 'mixed', required: true,
     completionMethod: 'manual_confirmation', clueText: '', hintText: '',
     riddleAnswer: '', location: null, safetyNote: '', accessibilityNote: '',
-    estimatedMinutes: 10,
+    estimatedMinutes: 10, sweepEvidenceMediaId: null,
   };
 }
 
@@ -130,6 +132,8 @@ export function validateCreatorDraft(payload: HuntCreatorPayload): DraftValidati
       issues.push({ step:'stops', code:`clue_${index}`, message:`Add a clue or instruction for stop ${index + 1}.` });
     if (stop.completionMethod === 'trusted_code')
       issues.push({ step:'stops', code:`qr_${index}`, message:'QR/code validation is not available yet.' });
+    if (stop.completionMethod !== 'manual_confirmation' && !stop.sweepEvidenceMediaId)
+      issues.push({ step:'stops', code:`sweep_${index}`, message:`Capture a live camera safety sweep for stop ${index + 1}.` });
   });
   return { valid: issues.length === 0, issues };
 }

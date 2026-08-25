@@ -7,7 +7,9 @@
  *
  * Run with SOCIAL_TEST_* variables (see docs/SOCIAL_TESTING.md). The suite is
  * skipped when those variables are not present so the normal unit-test command
- * remains useful in disconnected development environments.
+ * remains useful in disconnected development environments. The missing-session
+ * suite needs only live public credentials; it deliberately does not require a
+ * service-role key because it must run wherever the mobile client can connect.
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
@@ -26,6 +28,10 @@ const testAnonKey = process.env.SOCIAL_TEST_SUPABASE_ANON_KEY ?? '';
 const testServiceRoleKey = process.env.SOCIAL_TEST_SUPABASE_SERVICE_ROLE_KEY ?? '';
 const integrationConfigured = Boolean(testUrl && testAnonKey && testServiceRoleKey);
 const describeIntegration = integrationConfigured ? describe : describe.skip;
+const liveMobileUrl = testUrl || process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+const liveMobileAnonKey = testAnonKey || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+const liveMobileConfigured = Boolean(liveMobileUrl && liveMobileAnonKey);
+const describeLiveMobile = liveMobileConfigured ? describe : describe.skip;
 
 let social: SocialRepository;
 let mobileClient: SupabaseClient;
@@ -198,5 +204,54 @@ describeIntegration('Social RPC contracts', () => {
     });
     // A blocked user is excluded from public search in the other direction.
     await expect(social.searchPublicUsers(viewer.username)).resolves.toEqual([]);
+  });
+});
+
+describeLiveMobile('Social RPC missing-session boundary', () => {
+  let unauthenticatedSocial: SocialRepository;
+  let unauthenticatedMobileClient: SupabaseClient;
+
+  beforeAll(async () => {
+    // This suite must exercise the production repository, not a privileged
+    // client. It has no fixture setup and therefore remains runnable without
+    // service-role credentials.
+    process.env.EXPO_PUBLIC_SUPABASE_URL = liveMobileUrl;
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = liveMobileAnonKey;
+    unauthenticatedSocial = await import('../features/social/repositories/social.repository');
+    const { requireSupabase } = await import('../lib/supabase/client');
+    unauthenticatedMobileClient = requireSupabase();
+    const { error } = await unauthenticatedMobileClient.auth.signOut();
+    if (error) throw error;
+  });
+
+  afterAll(async () => {
+    await unauthenticatedMobileClient?.auth.signOut();
+  });
+
+  test('does not return account-scoped reads or permit social writes without a session', async () => {
+    const protectedReads = [
+      () => unauthenticatedSocial.fetchFriends(),
+      () => unauthenticatedSocial.fetchReceivedFriendRequests(),
+      () => unauthenticatedSocial.fetchSentFriendRequests(),
+      () => unauthenticatedSocial.fetchBlockedUsers(),
+      () => unauthenticatedSocial.fetchSocialPrivacySettings(),
+    ];
+    const writes = [
+      () => unauthenticatedSocial.sendFriendRequest('missing-session-target'),
+      () => unauthenticatedSocial.acceptFriendRequest('00000000-0000-0000-0000-000000000000'),
+      () => unauthenticatedSocial.declineFriendRequest('00000000-0000-0000-0000-000000000000'),
+      () => unauthenticatedSocial.cancelFriendRequest('00000000-0000-0000-0000-000000000000'),
+      () => unauthenticatedSocial.removeFriend('missing-session-target'),
+      () => unauthenticatedSocial.blockUser('missing-session-target'),
+      () => unauthenticatedSocial.unblockUser('missing-session-target'),
+      () => unauthenticatedSocial.updateSocialPrivacySettings({ profileVisibility: 'private' }),
+    ];
+
+    for (const read of protectedReads) {
+      await expect(read()).rejects.toBeTruthy();
+    }
+    for (const write of writes) {
+      await expect(write()).rejects.toBeTruthy();
+    }
   });
 });

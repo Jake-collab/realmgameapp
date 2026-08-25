@@ -55,10 +55,15 @@ export function useAutosaveHuntDraft(
 ) {
   const mutation = useUpdateHuntDraft(userId);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'saved_local' | 'unsynced' | 'error'>('idle');
+  const [conflictMessage, setConflictMessage] = useState<string | null>(null);
   const payloadJson = useMemo(() => JSON.stringify(payload), [payload]);
   useEffect(() => {
     if (!draft || !userId || draft.status === 'pending_review') return;
+    // Never send two writes against the same expected revision. The next
+    // query revision causes this effect to persist the newest editor payload.
+    if (mutation.isPending) return;
     setSaveState('saving');
+    setConflictMessage(null);
     const timer = setTimeout(() => {
       if (!isSupabaseConfigured()) {
         void enqueueOfflineMutation({
@@ -69,7 +74,16 @@ export function useAutosaveHuntDraft(
       } else {
         mutation.mutate({ draftId: draft.id, payload: JSON.parse(payloadJson) as HuntCreatorPayload, revision: draft.revision }, {
           onSuccess: () => setSaveState('saved'),
-          onError: () => {
+          onError: (error: unknown) => {
+            const message = error instanceof Error ? error.message : String(error);
+            // Do not queue an optimistic overwrite after the server says a
+            // newer revision exists. Surface it and keep the local editor
+            // intact so the creator can reload/reconcile deliberately.
+            if (/(revision|version|conflict)/i.test(message)) {
+              setConflictMessage('This draft changed elsewhere. Reload it before submitting so no stop or proof setting is lost.');
+              setSaveState('error');
+              return;
+            }
             void enqueueOfflineMutation({
               userId, mutationType: 'creator_draft_save', entityType: 'hunt_draft', entityId: draft.id,
               payload: { draftId: draft.id, payload: JSON.parse(payloadJson), revision: draft.revision },
@@ -80,8 +94,13 @@ export function useAutosaveHuntDraft(
       }
     }, 700);
     return () => clearTimeout(timer);
-  }, [draft?.id, draft?.revision, payloadJson]);
-  return { ...mutation, saveState };
+  }, [draft?.id, draft?.revision, payloadJson, mutation.isPending, userId]);
+  return {
+    ...mutation,
+    saveState,
+    conflictMessage,
+    hasUnsavedChanges: mutation.isPending || saveState === 'saving' || saveState === 'saved_local' || saveState === 'unsynced' || saveState === 'error',
+  };
 }
 
 export function useValidateHuntDraft() {
