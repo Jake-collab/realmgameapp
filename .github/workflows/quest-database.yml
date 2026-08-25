@@ -6,6 +6,7 @@ on:
     - cron: "17 7 * * 1"
   pull_request:
     paths:
+      - ".github/workflows/**"
       - ".github/workflows/quest-database.yml"
       - ".github/scripts/report-quest-database-candidate-failure.js"
       - "artifacts/mobile/__tests__/questDatabaseAlert.test.ts"
@@ -21,6 +22,7 @@ on:
     branches:
       - main
     paths:
+      - ".github/workflows/**"
       - ".github/workflows/quest-database.yml"
       - ".github/scripts/report-quest-database-candidate-failure.js"
       - "artifacts/mobile/__tests__/questDatabaseAlert.test.ts"

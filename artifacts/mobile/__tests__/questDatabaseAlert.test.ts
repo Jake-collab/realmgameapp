@@ -10,6 +10,7 @@ const workflowSource = fs.readFileSync(
   path.resolve(__dirname, "../../../.github/workflows/quest-database.yml"),
   "utf8",
 );
+const workflowDirectory = path.resolve(__dirname, "../../../.github/workflows");
 const reporterSource = fs.readFileSync(
   path.resolve(
     __dirname,
@@ -36,7 +37,78 @@ function assertCompatibilityContract(condition, message) {
   }
 }
 
+function getWorkflowJobs(source, fileName) {
+  const jobsSection = source.match(/^jobs:\s*\n([\s\S]*)$/m)?.[1] ?? "";
+  const jobs = [];
+  const jobMatches = [
+    ...jobsSection.matchAll(/^  ([A-Za-z0-9_-]+):\s*\n/gm),
+  ];
+
+  for (const [index, match] of jobMatches.entries()) {
+    const start = match.index;
+    const end = jobMatches[index + 1]?.index ?? jobsSection.length;
+    jobs.push({
+      fileName,
+      name: match[1],
+      source: jobsSection.slice(start, end),
+    });
+  }
+
+  return jobs;
+}
+
 describe("Supabase CLI candidate compatibility alert", () => {
+  it("guards every workflow failure reporter against permission and summary drift", () => {
+    const workflowFiles = fs
+      .readdirSync(workflowDirectory)
+      .filter((fileName) => /\.(?:yml|yaml)$/.test(fileName));
+    const jobs = workflowFiles.flatMap((fileName) =>
+      getWorkflowJobs(
+        fs.readFileSync(path.join(workflowDirectory, fileName), "utf8"),
+        fileName,
+      ),
+    );
+    const reportingJobs = jobs.filter((job) => {
+      const isFailureReporter =
+        /failure|report/i.test(job.name) ||
+        /GITHUB_STEP_SUMMARY|core\.summary|actions\/github-script|\.github\/scripts\/.*(?:failure|report)/i.test(
+          job.source,
+        );
+      const reportsIssues =
+        /issues:\s+write|gh\s+issue|issues\.(?:create|update)/i.test(job.source) ||
+        (/\.github\/scripts\/.*(?:failure|report)/i.test(job.source) &&
+          reporterSource.includes("github.rest.issues."));
+      return isFailureReporter && (reportsIssues || /summary/i.test(job.source));
+    });
+
+    assertCompatibilityContract(
+      reportingJobs.length > 0,
+      "no failure-reporting jobs were discovered; keep this check aligned with new issue or summary reporters.",
+    );
+
+    for (const job of reportingJobs) {
+      const reportsIssues =
+        /issues:\s+write|gh\s+issue|issues\.(?:create|update)/i.test(job.source) ||
+        (/\.github\/scripts\/.*(?:failure|report)/i.test(job.source) &&
+          reporterSource.includes("github.rest.issues."));
+      if (reportsIssues) {
+        assertCompatibilityContract(
+          /\n    permissions:\n(?:      [^\n]+\n)*      issues: write\n/.test(job.source),
+          `${job.fileName}:${job.name} reports GitHub issues and must grant issues: write in the job permissions.`,
+        );
+      }
+
+      if (/GITHUB_STEP_SUMMARY|core\.summary|summary/i.test(job.source)) {
+        assertCompatibilityContract(
+          /core\.summary[\s\S]*\.write\(\)|GITHUB_STEP_SUMMARY/.test(
+            job.source,
+          ),
+          `${job.fileName}:${job.name} mentions a failure summary but does not publish it with core.summary.write() or GITHUB_STEP_SUMMARY.`,
+        );
+      }
+    }
+  });
+
   it("keeps issue updates and job-summary recovery permissions wired to the reporter", () => {
     const reportingJob = getReportingJobSource();
 
