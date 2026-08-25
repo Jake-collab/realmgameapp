@@ -110,11 +110,41 @@ describeIntegration('Hunt Drop collection authorization', () => {
     if (stopError || !stops) throw stopError ?? new Error('Could not create Drop fixtures');
     rejectedStopId = stops.find(stop => stop.title === 'Rejected Drop')!.id;
     futureStopId = stops.find(stop => stop.title === 'Future Drop')!.id;
+
+    const { error: progressError } = await adminClient
+      .from('hunt_stop_progress')
+      .insert(stops.map(stop => ({
+        hunt_participant_id: participationId,
+        hunt_stop_id: stop.id,
+        status: 'in_progress',
+      })));
+    if (progressError) throw progressError;
+
+    const { error: geofenceError } = await adminClient
+      .from('hunt_stop_geofences')
+      .insert(stops.map(stop => ({
+        hunt_stop_id: stop.id,
+        validation_point: 'SRID=4326;POINT(-74.006 40.7128)',
+        collection_radius_meters: 25,
+      })));
+    if (geofenceError) throw geofenceError;
   }, 30_000);
 
   afterAll(async () => {
     await playerClient?.auth.signOut();
     if (huntId) {
+      const { error: participantError } = await adminClient
+        .from('hunt_participants')
+        .delete()
+        .eq('hunt_id', huntId);
+      if (participantError) throw participantError;
+
+      const { error: stopError } = await adminClient
+        .from('hunt_stops')
+        .delete()
+        .eq('hunt_id', huntId);
+      if (stopError) throw stopError;
+
       const { error } = await adminClient.from('hunts').delete().eq('id', huntId);
       if (error) throw error;
     }
