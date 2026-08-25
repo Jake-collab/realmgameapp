@@ -1,9 +1,74 @@
+const fs = require("node:fs");
+const path = require("node:path");
+
 const {
   COMPATIBILITY_ALERT_TITLE,
   reportQuestDatabaseCandidateFailure,
 } = require("../../../.github/scripts/report-quest-database-candidate-failure.js");
 
+const workflowSource = fs.readFileSync(
+  path.resolve(__dirname, "../../../.github/workflows/quest-database.yml"),
+  "utf8",
+);
+const reporterSource = fs.readFileSync(
+  path.resolve(
+    __dirname,
+    "../../../.github/scripts/report-quest-database-candidate-failure.js",
+  ),
+  "utf8",
+);
+
+function getReportingJobSource() {
+  const match = workflowSource.match(
+    /^  report-quest-database-candidate-failure:[\s\S]*$/m,
+  );
+  if (!match) {
+    throw new Error(
+      "Compatibility alert contract is missing: restore the report-quest-database-candidate-failure job in .github/workflows/quest-database.yml.",
+    );
+  }
+  return match[0];
+}
+
+function assertCompatibilityContract(condition, message) {
+  if (!condition) {
+    throw new Error(`Compatibility alert contract failed: ${message}`);
+  }
+}
+
 describe("Supabase CLI candidate compatibility alert", () => {
+  it("keeps issue updates and job-summary recovery permissions wired to the reporter", () => {
+    const reportingJob = getReportingJobSource();
+
+    assertCompatibilityContract(
+      /\n    permissions:\n      contents: read\n      issues: write\n/.test(
+        reportingJob,
+      ),
+      "the reporting job must grant issues: write (keep contents: read alongside it) so it can create, update, and close compatibility alerts.",
+    );
+    assertCompatibilityContract(
+      reportingJob.includes("await core.summary") &&
+        reportingJob.includes(".write();"),
+      "the reporting job must publish its GitHub Actions summary with core.summary.write() when alert reporting fails.",
+    );
+    assertCompatibilityContract(
+      reportingJob.includes(
+        "require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/report-quest-database-candidate-failure.js`)",
+      ) &&
+        reportingJob.includes("reportQuestDatabaseCandidateFailure({") &&
+        reportingJob.includes("github,") &&
+        reportingJob.includes("context,") &&
+        reportingJob.includes("core,"),
+      "the reporting job must load and invoke reportQuestDatabaseCandidateFailure with github, context, and core.",
+    );
+    assertCompatibilityContract(
+      reporterSource.includes(
+        "module.exports = {\n  COMPATIBILITY_ALERT_TITLE,\n  MAX_TRANSIENT_RETRIES,\n  reportQuestDatabaseCandidateFailure,",
+      ) && typeof reportQuestDatabaseCandidateFailure === "function",
+      "the reporter script must export reportQuestDatabaseCandidateFailure for the workflow wiring.",
+    );
+  });
+
   it("creates once, then updates the same open issue with the latest failure links", async () => {
     const issues = [];
     let nextIssueNumber = 41;
