@@ -1,0 +1,640 @@
+# Worlds — Supabase Complete Integration Audit & Setup
+
+Before we move on to Mapbox, I want to completely finish the Supabase integration for Worlds.
+
+IMPORTANT:
+
+Replit has an internal Supabase integration/connection that I am using. It may already be able to sync, deploy, or configure parts of Supabase automatically.
+
+DO NOT assume I need to manually paste SQL, create tables, create buckets, deploy functions, or configure things in the Supabase dashboard if the Replit Supabase integration can safely do those things for me.
+
+First audit the ACTUAL current project and ACTUAL connected Supabase state.
+
+Then:
+
+1. Automatically complete everything you are capable of safely completing through the existing Replit/Supabase connection.
+2. Do NOT ask me to manually perform something that Replit can do itself.
+3. For anything requiring information, credentials, dashboard configuration, or owner action from me, tell me EXACTLY what you need and where I obtain it.
+4. Do not expose privileged credentials in client-side code.
+5. Do not redesign or add gameplay features during this task.
+6. Do not implement Build 2 monetization/Stripe.
+
+The objective is to leave Supabase completely configured for Worlds Build 1, except for clearly identified owner/external actions that Replit cannot perform.
+
+==================================================
+PART 1 — IDENTIFY THE CURRENT SUPABASE CONNECTION
+==================================================
+
+First determine exactly how this project is connected to Supabase.
+
+Report:
+
+- Whether Replit's native/internal Supabase integration is connected.
+- Which Supabase project it is connected to.
+- Whether the connection can read/write the database.
+- Whether it can apply migrations.
+- Whether it can execute SQL.
+- Whether it can create/configure Storage buckets.
+- Whether it can create RLS policies.
+- Whether it can deploy Edge Functions.
+- Whether it can configure Edge Function secrets.
+- Whether it can create scheduled jobs/cron.
+- Whether it can configure Supabase Auth.
+- Whether it can configure Auth redirect URLs.
+- Whether it can seed initial data.
+- Whether it can bootstrap an Admin user.
+
+Do not guess.
+
+Determine what the existing integration actually supports.
+
+==================================================
+PART 2 — REQUIRED CONNECTION INFORMATION
+==================================================
+
+Audit every Supabase environment variable/credential currently expected by the Worlds codebase.
+
+Examples may include:
+
+SUPABASE_URL
+EXPO_PUBLIC_SUPABASE_URL
+SUPABASE_ANON_KEY
+EXPO_PUBLIC_SUPABASE_ANON_KEY
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+SUPABASE_SERVICE_ROLE_KEY
+SUPABASE_PROJECT_REF
+DATABASE_URL
+
+These are EXAMPLES ONLY.
+
+Do not create duplicate variables merely because they are listed here.
+
+Determine the actual canonical variables the current project should use.
+
+For every required value report:
+
+- Exact environment-variable name
+- Purpose
+- Whether already configured
+- Whether Replit automatically provides it
+- Whether I must provide it
+- Where I obtain it in Supabase
+- Whether it is:
+  PUBLIC / CLIENT SAFE
+  or
+  PRIVATE / SERVER ONLY
+- Which code/functions use it
+
+Remove/deprecate conflicting duplicate configuration where safe.
+
+NEVER expose:
+
+- service-role key
+- database password
+- OpenAI key
+- other privileged secrets
+
+inside the Expo/mobile bundle or EXPO_PUBLIC variables.
+
+==================================================
+PART 3 — DATABASE / SQL / MIGRATIONS
+==================================================
+
+Audit ALL:
+
+- .sql files
+- Supabase migrations
+- schema files
+- seed SQL
+- database functions
+- triggers
+- indexes
+- constraints
+- enums
+- RLS migrations
+- cron SQL
+- Storage SQL
+- Admin/bootstrap SQL
+
+Determine which migrations:
+
+A. already exist in the connected Supabase database
+B. exist only locally
+C. are obsolete
+D. conflict with later canonical Worlds architecture
+E. are duplicated
+F. still need to be applied
+
+Pay particular attention to conflicts fixed by Prompts 25 and 26.
+
+Examples include:
+
+- Quest proof model
+- Quest Points
+- Hunt Points
+- point ledger
+- monthly Quest sets
+- Geo-Quests
+- Interest Bubbles
+- Hunt Drops
+- Hunt search zones
+- private Drop coordinates
+- clue/riddle system
+- Custom Hunts
+- custom_hunts vs custom_hunt_games naming
+- Hunt placement verification
+- moderation
+- anti-cheat
+- notifications
+- reports
+- leaderboard data
+- location versioning
+- idempotency
+- audit logs
+
+DO NOT blindly execute every old SQL file.
+
+Establish the canonical migration order first.
+
+If the Replit/Supabase connection CAN safely apply the required migrations:
+
+APPLY THEM.
+
+If it cannot:
+
+Tell me exactly:
+
+1. File to run
+2. Why
+3. Order
+4. Whether to use Supabase SQL Editor or another method
+5. Exact action I must perform
+
+Do not simply tell me "run the SQL."
+
+==================================================
+PART 4 — ROW LEVEL SECURITY
+==================================================
+
+Audit RLS across every user-facing table.
+
+Verify that ordinary users cannot:
+
+- change their own authoritative point balances
+- award themselves Quest Points
+- award themselves Hunt Points
+- approve their own submissions
+- read another user's private proof
+- access private 360 scans
+- read hidden true Hunt Drop coordinates
+- read accepted riddle answers
+- read anti-cheat internals
+- access Admin-only data
+- alter moderation decisions
+- impersonate creators
+- alter another user's Hunt state
+
+Verify trusted mutations happen through appropriate server-side functions.
+
+If policies are missing and Replit can safely create/apply them:
+
+DO IT.
+
+Otherwise tell me exactly what owner action is required.
+
+==================================================
+PART 5 — AUTH
+==================================================
+
+Audit real Supabase authentication.
+
+Verify:
+
+- Sign Up
+- Login
+- Logout
+- Session persistence
+- Session restoration
+- Email verification behavior
+- Password reset
+- Auth callback
+- Mobile deep linking
+- onboarding after signup
+- Interest Bubble onboarding
+- protected screens
+- Admin role protection
+- banned/restricted account handling
+
+Find and remove/replace any remaining:
+
+- fake auth
+- mock user
+- development-only auth bypass
+- "authentication is not connected" behavior
+
+ONLY remove development fallbacks where doing so will not prevent development before owner configuration is supplied.
+
+Determine whether Replit can configure required Supabase Auth settings itself.
+
+If not, tell me:
+
+- exact Supabase dashboard page
+- exact field
+- exact value expected
+
+Do not vaguely tell me to "configure Auth."
+
+==================================================
+PART 6 — STORAGE
+==================================================
+
+Audit all media storage.
+
+Worlds needs secure storage architecture for things including:
+
+- avatars
+- Quest proof photos
+- Quest proof videos
+- Hunt proof
+- Hunt Drop images
+- Hunt cover images
+- Hunt clue media
+- pending moderation media
+- 360° Hunt placement scans
+- moderation evidence
+
+Determine the actual buckets used by the current implementation.
+
+Classify media appropriately:
+
+PUBLIC / APPROVED
+
+PRIVATE
+
+PENDING MODERATION
+
+QUARANTINED / REVIEW
+
+Do NOT make:
+
+- Quest proof
+- Hunt proof
+- 360 placement scans
+- moderation evidence
+
+publicly accessible.
+
+Verify:
+
+- upload permissions
+- read permissions
+- signed URLs
+- deletion permissions
+- Admin access
+- creator access
+- moderation transitions
+
+If Replit can create/configure the buckets and policies:
+
+DO IT.
+
+Otherwise give me exact owner actions.
+
+==================================================
+PART 7 — EDGE FUNCTIONS / TRUSTED BACKEND
+==================================================
+
+Audit every Supabase Edge Function/server function.
+
+Create a complete inventory.
+
+For every function report:
+
+- Name
+- Purpose
+- Feature
+- Authentication requirement
+- Database permissions
+- Required secrets
+- Deployment status
+
+Pay special attention to:
+
+QUEST:
+- Daily Quest assignment
+- Quest generation
+- Quest proof submission
+- Quest approval/rejection
+- Geo verification
+- points
+- monthly sets
+
+HUNT:
+- nearby/search-zone discovery
+- clue/riddle unlock
+- riddle validation
+- collection
+- collection sessions
+- placement sessions
+- 360 placement processing
+- environment analysis
+- Drop image moderation
+- Hunt Points
+- Custom Hunt lifecycle
+
+SHARED:
+- anti-cheat
+- leaderboards
+- notifications
+- reports
+- moderation
+- Admin operations
+
+If functions exist locally but are not deployed and the integration CAN deploy them:
+
+DEPLOY THEM.
+
+If it cannot:
+
+Give me exact owner action/command.
+
+==================================================
+PART 8 — EDGE FUNCTION SECRETS
+==================================================
+
+Audit all server-side secrets.
+
+Do NOT ask me for OpenAI or Mapbox information yet unless Supabase itself requires the variable slot to exist.
+
+We will configure those integrations separately later.
+
+For now tell me which secret NAMES will eventually be required.
+
+For Supabase-specific secrets:
+
+Determine whether Replit already supplies them.
+
+Tell me exactly which values I personally need to provide now.
+
+For every missing secret:
+
+- exact variable name
+- where I obtain it
+- where I enter it
+- server-only/client-safe classification
+
+Never print an existing secret value.
+
+==================================================
+PART 9 — SCHEDULED JOBS / CRON
+==================================================
+
+Audit all automatic jobs.
+
+Check whether Worlds currently requires scheduled processing for:
+
+- Daily Quest assignment
+- Daily Quest lifecycle
+- Monthly Quest activation
+- Monthly Quest expiration
+- Geo-Quest lifecycle where applicable
+- leaderboard recalculation
+- Hunt start/end lifecycle
+- Custom Hunt occurrence lifecycle
+- invitation expiration
+- notification scheduling
+- moderation retries
+- retention cleanup
+- temporary media cleanup
+- stale session cleanup
+
+For every job report:
+
+- Name
+- Schedule
+- Function invoked
+- Whether currently registered
+- Whether currently operational
+
+No critical Build 1 process should depend on an Admin manually pressing a recalculation button.
+
+If Replit can configure cron automatically:
+
+DO IT.
+
+Otherwise provide exact owner action.
+
+==================================================
+PART 10 — INTEREST BUBBLES
+==================================================
+
+Verify the global Interest Bubble system is actually initialized.
+
+Confirm:
+
+- default/global Interest Bubble pool exists
+- Admin can create/edit/disable bubbles
+- signup/onboarding presents bubbles
+- user selections persist
+- Daily Quest generator receives selected interests
+- combinations of interests are supported
+- Hunt personalization can access them where appropriate
+
+If initial seed data is required:
+
+Tell me whether it already exists.
+
+If not and Replit can safely seed it:
+
+DO IT.
+
+==================================================
+PART 11 — PLATFORM DEFAULTS
+==================================================
+
+Verify database/config defaults exist for:
+
+QUEST:
+- Daily Quest settings
+- reroll limits
+- Quest point rules
+- difficulty ranges
+- Monthly Quest rules
+- Geo-Quest rules
+- proof rules
+
+HUNT:
+- default search-zone radius
+- clue reveal radius
+- collection radius
+- Hunt Point rules
+- Custom Hunt point-budget rules
+- placement verification
+- moderation
+- safety rules
+
+SHARED:
+- anti-cheat thresholds
+- moderation behavior
+- notification defaults
+- feature flags
+- retention settings
+
+These should use centralized configuration rather than scattered magic numbers.
+
+If required seed/config records are missing and Replit can safely create them:
+
+DO IT.
+
+==================================================
+PART 12 — FIRST SUPER ADMIN
+==================================================
+
+Determine how Worlds creates the first Super Admin.
+
+Requirements:
+
+- Do NOT automatically make the first registered user Admin.
+- Do NOT hardcode an Admin email into the mobile client.
+- Do NOT allow ordinary users to promote themselves.
+
+Tell me whether a Super Admin already exists.
+
+If not:
+
+Tell me exactly what I need to do.
+
+If I must first create a normal account, say so.
+
+Then tell me exactly which identifier you need from me, such as:
+
+- Supabase Auth user UUID
+- email address
+
+and what Replit can safely do afterward to assign the server-side Admin role.
+
+==================================================
+PART 13 — CONNECTED DATABASE VALIDATION
+==================================================
+
+After setup, test against the ACTUAL connected Supabase project, not mocks.
+
+Verify:
+
+- new user signup
+- profile creation
+- Interest Bubble selection
+- session restore
+- Quest read
+- Quest initiation
+- Quest proof creation
+- Quest point protection
+- Hunt discovery query
+- hidden Drop coordinate protection
+- Custom Hunt read/write permissions
+- Hunt collection
+- Hunt point protection
+- Storage upload
+- private Storage protection
+- Admin access
+- ordinary-user Admin denial
+- Edge Function access
+- RLS
+- leaderboard data
+- scheduled-job registration
+
+Do not create harmful or large amounts of production test data.
+
+Clean up disposable test records where safe.
+
+==================================================
+PART 14 — FINAL SUPABASE REPORT
+==================================================
+
+When finished, give me ONE concise report.
+
+Use these statuses:
+
+PASS — REPLIT COMPLETED
+PASS — ALREADY CONFIGURED
+OWNER ACTION REQUIRED
+BLOCKED — NEED INFORMATION
+FAIL — CODE ISSUE
+
+Report:
+
+1. Supabase Connection
+2. Required Project Credentials
+3. Database / SQL / Migrations
+4. RLS
+5. Auth
+6. Storage
+7. Edge Functions
+8. Edge Function Secrets
+9. Scheduled Jobs / Cron
+10. Interest Bubbles
+11. Platform Defaults
+12. First Super Admin
+13. Connected Database Tests
+
+Then create:
+
+## INFORMATION I NEED FROM YOU NOW
+
+This is extremely important.
+
+Give me ONE numbered list containing ONLY information or actions that you genuinely need from me before you can finish Supabase.
+
+For every item use:
+
+### Item X — [name]
+
+WHAT I NEED:
+[exact value/action]
+
+WHERE TO FIND IT:
+[exact Supabase/Replit dashboard location]
+
+WHERE TO PUT IT:
+[exact Replit/Supabase location OR tell me to give it to you]
+
+SECRET?:
+YES / NO
+
+WHY IT IS NEEDED:
+[one sentence]
+
+AFTER I GIVE IT TO YOU:
+[what you will be able to automatically complete]
+
+If you need me to run SQL manually, instead use:
+
+### Item X — Manual SQL Required
+
+WHY REPLIT CANNOT DO IT:
+[reason]
+
+FILE:
+[exact file]
+
+WHERE TO RUN:
+[exact Supabase dashboard location]
+
+WHEN:
+[order relative to other actions]
+
+Do not ask me to manually run SQL if the connected integration can safely run it itself.
+
+Finally give me:
+
+## WHAT REPLIT CAN FINISH AFTER I PROVIDE THE ABOVE
+
+and
+
+## SUPABASE REMAINING BLOCKERS
+
+If there are none, explicitly say:
+
+SUPABASE BUILD 1 INTEGRATION: COMPLETE
+
+Do not move on to Mapbox.
