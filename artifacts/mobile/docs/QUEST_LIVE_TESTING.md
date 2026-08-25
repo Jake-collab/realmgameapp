@@ -75,6 +75,12 @@ unchanged, and close the issue only after a candidate passes the disposable
 database and Quest contract checks (or the candidate has been intentionally
 replaced).
 
+The grouping behavior is covered by
+`__tests__/questDatabaseAlert.test.ts`, which simulates a first failure and a
+repeated failure. It verifies that the second failure updates the original open
+issue, preserves one alert, and refreshes both the failed-run and promotion
+guide links.
+
 The update is only ready when migrations and the Quest suite pass with the
 candidate. This keeps a CLI or container change from being mistaken for a
 Quest behavior regression.
