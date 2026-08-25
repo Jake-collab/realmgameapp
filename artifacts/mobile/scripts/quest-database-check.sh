@@ -10,11 +10,12 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 ENV_FILE="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/quest-supabase.env"
 SUPABASE_STARTED=false
+SUPABASE_CLI_VERSION="${SUPABASE_CLI_VERSION:-2.115.0}"
 
 if command -v supabase >/dev/null 2>&1; then
   SUPABASE_CMD=(supabase)
 elif command -v npx >/dev/null 2>&1; then
-  SUPABASE_CMD=(npx --yes supabase)
+  SUPABASE_CMD=(npx --yes "supabase@${SUPABASE_CLI_VERSION}")
 else
   echo "Quest database check requires the Supabase CLI." >&2
   exit 1
@@ -23,6 +24,13 @@ fi
 run_supabase() {
   "${SUPABASE_CMD[@]}" "$@"
 }
+
+CLI_VERSION="$(run_supabase --version | tail -n 1 | sed -E 's/^supabase version //; s/^[[:space:]]+//; s/[[:space:]]+$//')"
+if [[ "$CLI_VERSION" != "$SUPABASE_CLI_VERSION" ]]; then
+  echo "Quest database check requires Supabase CLI ${SUPABASE_CLI_VERSION}; found ${CLI_VERSION}." >&2
+  echo "Install the pinned version or set SUPABASE_CLI_VERSION when deliberately testing an update." >&2
+  exit 1
+fi
 
 cleanup() {
   if [[ "$SUPABASE_STARTED" == true ]]; then
