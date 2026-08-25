@@ -291,7 +291,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Session refreshed automatically — re-fetch session to stay current
         resolveStartupStateRef.current?.();
       }
-      // PASSWORD_RECOVERY is handled in auth-callback.tsx
+      // Password recovery routing and its short-lived session marker are handled
+      // by the callback screen before it opens reset-password.
     });
 
     return () => subscription.unsubscribe();

@@ -1,0 +1,129 @@
+Let's complete Supabase blocker #3: Auth redirect URLs, callback handling, and production Auth configuration.
+
+Blockers #1 and #2 are complete:
+- Database/migrations
+- Storage/security policies
+
+Now audit ONLY Supabase Auth redirect/callback configuration for Worlds.
+
+Do not modify database schema, Storage, Mapbox, OpenAI, push, or other integrations.
+
+I want you to verify the actual current app routing and determine the exact Supabase Auth URLs/deep links required for:
+
+- email verification
+- password reset
+- magic-link/callback handling if currently used
+- mobile app authentication callback
+- web authentication callback if web is supported
+- production callback URL
+- Replit development/preview callback only if actually necessary
+
+IMPORTANT:
+
+Do not assume old placeholder URLs are still correct.
+
+Search the current codebase for:
+- auth callback routes
+- Expo Router paths
+- app scheme
+- redirectTo usage
+- reset-password routes
+- verify-email routes
+- localhost URLs
+- replit.dev URLs
+- matterrealm.com or any other configured production domain
+- Supabase Auth redirect configuration references
+
+Then determine ONE canonical Auth redirect setup.
+
+If the current approved production callback is still:
+
+https://matterrealm.com/auth/callback
+
+confirm that from the code before using it.
+
+Also determine the canonical mobile deep-link scheme for Worlds.
+
+Then:
+
+1. Tell me exactly which URL(s) must be entered in:
+   Supabase Dashboard → Authentication → URL Configuration
+
+2. Separate:
+   - Site URL
+   - Additional Redirect URLs
+
+3. Tell me which URLs are:
+   - production
+   - development/preview
+   - mobile deep-link callbacks
+
+4. Remove or replace stale callback URLs in code where safe.
+
+5. Verify the app builds redirect URLs from centralized configuration rather than scattered hardcoded strings.
+
+6. Verify email verification and password reset route back into Worlds correctly.
+
+7. Verify a logged-out deep link cannot bypass authentication.
+
+OWNER ACTION:
+
+If the connected Supabase integration/CLI can configure Auth URLs automatically, do it.
+
+If Supabase requires me to change these in the dashboard manually, stop and give me ONLY:
+
+- Exact Supabase dashboard page
+- Exact field
+- Exact value(s) to paste
+- Whether each belongs in Site URL or Redirect URLs
+- Nothing else
+
+TEST AFTER CONFIGURATION:
+
+Verify:
+- signup
+- email verification callback
+- login
+- logout
+- password reset request
+- reset callback
+- session restoration
+- invalid/expired callback handling
+- mobile deep-link callback routing
+- production/web callback if applicable
+
+Do not enable or add OAuth providers in this task.
+
+When finished return only:
+
+## AUTH REDIRECT STATUS
+PASS / OWNER ACTION REQUIRED / FAIL
+
+## SITE URL
+[exact canonical value]
+
+## REDIRECT URLS
+[list exact values]
+
+## MOBILE DEEP LINK
+[exact canonical scheme/path]
+
+## TEST RESULTS
+PASS/FAIL for:
+- signup callback
+- email verification
+- password reset
+- mobile redirect
+- web/production redirect
+- expired/invalid callback handling
+
+## OWNER ACTION REQUIRED
+List only actions I still personally need to perform.
+
+If none:
+OWNER ACTION REQUIRED: NONE
+
+Then state:
+SUPABASE BLOCKER #3: COMPLETE
+
+Do not move on to blocker #4.

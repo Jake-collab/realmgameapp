@@ -14,6 +14,7 @@
  */
 
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase/client';
+import { getAuthRedirectUrl } from '@/features/auth/authRedirects';
 import type {
   AuthError,
   AuthUser,
@@ -72,6 +73,8 @@ function mapUser(sbUser: User | null): AuthUser | null {
   };
 }
 
+let passwordRecoveryAccessToken: string | null = null;
+
 // ─── Service ──────────────────────────────────────────────────────────────────
 
 export const authService = {
@@ -113,6 +116,7 @@ export const authService = {
       email: payload.email.toLowerCase().trim(),
       password: payload.password,
       options: {
+        emailRedirectTo: getAuthRedirectUrl(),
         data: {
           display_name: payload.displayName.trim(),
           username: payload.username.toLowerCase().trim(),
@@ -148,6 +152,7 @@ export const authService = {
   async signOut(): Promise<{ error: AuthError | null }> {
     const client = requireSupabase();
     const { error } = await client.auth.signOut();
+    if (!error) passwordRecoveryAccessToken = null;
     return { error: mapError(error) };
   },
 
@@ -202,6 +207,7 @@ export const authService = {
   async updatePassword(newPassword: string): Promise<{ error: AuthError | null }> {
     const client = requireSupabase();
     const { error } = await client.auth.updateUser({ password: newPassword });
+    if (!error) passwordRecoveryAccessToken = null;
     return { error: mapError(error) };
   },
 
@@ -238,6 +244,22 @@ export const authService = {
       refresh_token: refreshToken,
     });
     return { session: data.session, error: mapError(error) };
+  },
+
+  async exchangeCodeForSession(
+    code: string
+  ): Promise<{ session: Session | null; error: AuthError | null }> {
+    const client = requireSupabase();
+    const { data, error } = await client.auth.exchangeCodeForSession(code);
+    return { session: data.session, error: mapError(error) };
+  },
+
+  markPasswordRecoverySession(session: Session): void {
+    passwordRecoveryAccessToken = session.access_token;
+  },
+
+  isPasswordRecoverySession(session: Session | null): boolean {
+    return Boolean(session?.access_token && passwordRecoveryAccessToken === session.access_token);
   },
 
   // ── Profile update ────────────────────────────────────────────────────────

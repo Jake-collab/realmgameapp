@@ -1,147 +1,66 @@
-# Auth Deep Links — Worlds Mobile
+# Supabase Auth Redirects — Worlds
 
-This document covers how Worlds handles deep links from Supabase Auth emails (email verification, password reset) and how to configure them correctly for development and production.
+Worlds uses a single redirect policy for Supabase email flows:
 
----
+- **Native apps:** `worlds://auth-callback`
+- **Production web and universal links:** `https://matterrealm.com/auth/callback`
+- **Expo web preview:** the current preview origin followed by `/auth/callback`
 
-## Overview
+The native scheme, associated domain, Android App Link filter, and Expo Router
+origin are all declared in `app.json`. Both `/(auth)/auth-callback` and
+`/(auth)/auth/callback` render the same callback screen, so native and web
+links have an explicit route.
 
-Supabase Auth generates secure links for:
-- **Email verification** — sent after sign-up when email confirmation is enabled
-- **Password reset** — sent via "forgot password" flow
+## Dashboard configuration
 
-When the user taps these links from their email client, the OS opens the Worlds app via the `worlds://` URL scheme. The app handles the token exchange in `app/(auth)/auth-callback.tsx`.
+In **Supabase Dashboard → Authentication → URL Configuration**, set:
 
----
+| Field | Value |
+| --- | --- |
+| Site URL | `https://matterrealm.com` |
+| Redirect URLs | `worlds://auth-callback` |
+| Redirect URLs | `https://matterrealm.com/auth/callback` |
+| Redirect URLs (preview only) | `https://65c377b8-c26b-4a13-b633-f8b03506805a-00-3bgwekr46jl2n.spock.replit.dev/auth/callback` |
 
-## URL Scheme
+The preview URL is needed only to test the Expo web flow in this workspace.
+Do not use a broad production wildcard. If the preview domain changes, replace
+the preview entry with the current exact origin plus `/auth/callback`.
 
-The app is registered for the `worlds://` URL scheme in `app.json`:
+OAuth providers are not required and must remain disabled.
 
-```json
-{ "scheme": "worlds" }
-```
+## Callback behavior
 
-On iOS, universal links (`https://matterrealm.com/...`) are also supported via `associatedDomains`.
+The callback accepts the two Supabase formats:
 
-On Android, explicit intent filters handle both the `worlds://` scheme and the HTTPS universal link fallback.
-
----
-
-## Deep Link Format
-
-Supabase sends tokens in the **URL fragment** (`#`) — not query parameters:
-
-```
-worlds://auth-callback#access_token=<TOKEN>&refresh_token=<TOKEN>&type=signup
+```text
 worlds://auth-callback#access_token=<TOKEN>&refresh_token=<TOKEN>&type=recovery
+https://matterrealm.com/auth/callback?code=<PKCE_CODE>&type=signup
 ```
 
-The `auth-callback.tsx` screen parses the fragment, extracts tokens, and calls `supabase.auth.setSession()`.
+- Bearer tokens are accepted only from the URL fragment, not a query string.
+- PKCE authorization codes are exchanged with Supabase.
+- A recovery callback marks the resulting session as recovery-only before the
+  reset screen opens. A normal signed-in session cannot open the reset form.
+- Signup and verification callbacks are handed back to the Auth startup state
+  machine, which determines whether the user needs verification, onboarding,
+  suspension handling, or the main app.
+- Invalid, denied, and expired callbacks render a safe error state without
+  exposing provider details or creating a redirect loop.
 
-**Why fragments?** Fragments are not sent to servers on redirect — this is a security property that prevents tokens from appearing in server logs.
+## Email templates
 
----
+Keep the standard `{{ .ConfirmationURL }}` link in Supabase email templates.
+The app supplies `emailRedirectTo`/`redirectTo` for signup, verification resend,
+and password reset. If a custom template builds the URL manually, use
+`{{ .RedirectTo }}` rather than hard-coding a callback domain.
 
-## `app/(auth)/auth-callback.tsx`
+## Device-link prerequisites
 
-The callback screen:
-1. Gets the URL that launched it via `Linking.getInitialURL()`
-2. Parses the fragment for `access_token`, `refresh_token`, `type`, `error_code`
-3. Rejects malformed or expired links cleanly
-4. For `type=signup` — exchanges tokens, `onAuthStateChange(SIGNED_IN)` fires, NavigationGuard routes to onboarding
-5. For `type=recovery` — exchanges tokens, redirects to `/(auth)/reset-password`
+For `https://matterrealm.com/auth/callback` to open a signed mobile build,
+matterrealm.com must serve:
 
----
+- `/.well-known/apple-app-site-association` for iOS
+- `/.well-known/assetlinks.json` for Android
 
-## Supabase Project Configuration
-
-**Required setting in your Supabase project dashboard:**
-
-> Authentication → URL Configuration → Redirect URLs
-
-Add the following URLs:
-
-```
-# Development
-worlds://auth-callback
-
-# Production
-https://matterrealm.com/auth/callback
-```
-
-> **Note**: Without these registered redirect URLs, Supabase will reject deep link callbacks with a 400 error. This is a server-side security allowlist.
-
----
-
-## Email Templates
-
-Supabase's default email templates use `{{ .ConfirmationURL }}`. You must configure custom templates that use the `worlds://auth-callback` redirect URL.
-
-In the Supabase dashboard (Authentication → Email Templates):
-
-**Confirm signup**:
-```html
-<a href="{{ .ConfirmationURL }}">Verify your email address</a>
-```
-
-The `{{ .ConfirmationURL }}` will be set to `worlds://auth-callback#...` when you configure your redirect URL correctly.
-
-**Reset password**:
-```html
-<a href="{{ .ConfirmationURL }}">Reset your password</a>
-```
-
----
-
-## Development Setup
-
-During development (Expo Go, development builds):
-1. Ensure `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` are set
-2. Add `worlds://auth-callback` to your Supabase project's redirect URL allowlist
-3. On iOS Simulator: universal links do not work — use the `worlds://` scheme
-4. On Android Emulator: use ADB intent or deep link via `expo-linking` dev tools
-
-**Testing deep links locally**:
-```bash
-# iOS Simulator
-xcrun simctl openurl booted "worlds://auth-callback#access_token=FAKE&refresh_token=FAKE&type=signup"
-
-# Android Emulator
-adb shell am start -W -a android.intent.action.VIEW -d "worlds://auth-callback#access_token=FAKE&refresh_token=FAKE&type=signup"
-```
-
----
-
-## Production Setup
-
-For the production domain `matterrealm.com`:
-
-1. Update `ios.associatedDomains` in `app.json`:
-   ```json
-   "associatedDomains": ["applinks:matterrealm.com"]
-   ```
-
-2. Update `android.intentFilters` HTTPS host:
-   ```json
-   "host": "matterrealm.com"
-   ```
-
-3. Add `https://matterrealm.com/auth/callback` to Supabase redirect URL allowlist
-
-4. Serve `/.well-known/apple-app-site-association` (for iOS universal links) and `/.well-known/assetlinks.json` (for Android App Links) from your production server
-
-5. Use the production redirect URL in `verify-email.tsx` and `forgot-password.tsx`:
-   ```typescript
-   const REDIRECT_URL = 'https://matterrealm.com/auth/callback';
-   ```
-
----
-
-## Security Notes
-
-- Tokens in URL fragments are never logged by Supabase servers
-- `auth-callback.tsx` exchanges tokens exactly once then discards them
-- Malformed or expired tokens show an error screen — no redirect loop to self
-- The screen never navigates to itself (prevents callback loops)
-- `detectSessionInUrl: false` is set on the Supabase client — deep links are handled manually, not automatically
+The iOS associated domain and Android HTTPS intent filter are already limited
+to `matterrealm.com/auth/callback`.

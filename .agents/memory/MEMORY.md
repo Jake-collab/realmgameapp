@@ -26,3 +26,4 @@
 - [Hosted Supabase reset](hosted-supabase-schema-mismatch.md) — this project required a scoped public-schema reset; the CLI’s linked reset reaches Auth-owned objects and fails.
 - [Storage RLS policy evaluation](storage-rls-policy-evaluation.md) — anonymous policies must not invoke creator-only helpers behind a short-circuit condition.
 - [Admin media URL boundary](admin-media-url-boundary.md) — staff access to private media is ID-only and server-signed after authorization.
+- [Hosted Auth URL configuration](hosted-auth-url-configuration.md) — the installed Supabase connection can inspect provider status but cannot mutate redirect allowlists; dashboard access is required.

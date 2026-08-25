@@ -18,6 +18,7 @@ const mockResetPasswordForEmail = jest.fn();
 const mockUpdateUser = jest.fn();
 const mockResend = jest.fn();
 const mockSetSession = jest.fn();
+const mockExchangeCodeForSession = jest.fn();
 const mockOnAuthStateChange = jest.fn(() => ({
   data: { subscription: { unsubscribe: jest.fn() } },
 }));
@@ -32,6 +33,7 @@ const mockSupabase = {
     updateUser: mockUpdateUser,
     resend: mockResend,
     setSession: mockSetSession,
+    exchangeCodeForSession: mockExchangeCodeForSession,
     onAuthStateChange: mockOnAuthStateChange,
   },
 };
@@ -163,6 +165,7 @@ describe('authService.signUp', () => {
     expect(mockSignUp).toHaveBeenCalledWith(
       expect.objectContaining({
         options: expect.objectContaining({
+          emailRedirectTo: 'worlds://auth-callback',
           data: expect.objectContaining({
             display_name: 'New User',
             username: 'newuser',
@@ -189,6 +192,26 @@ describe('authService.signUp', () => {
     const result = await authService.signUp(payload);
     expect(result.error).not.toBeNull();
     expect(result.error?.code).toBe('unknown');
+  });
+});
+
+// ─── callback session exchange ───────────────────────────────────────────────
+
+describe('authService callback exchange', () => {
+  it('exchanges a PKCE authorization code for a session', async () => {
+    mockExchangeCodeForSession.mockResolvedValue({ data: { session: mockSession }, error: null });
+
+    const result = await authService.exchangeCodeForSession('pkce-code');
+
+    expect(mockExchangeCodeForSession).toHaveBeenCalledWith('pkce-code');
+    expect(result.session?.access_token).toBe('tok_access');
+  });
+
+  it('only recognizes the session that came from a recovery callback', () => {
+    authService.markPasswordRecoverySession(mockSession as any);
+
+    expect(authService.isPasswordRecoverySession(mockSession as any)).toBe(true);
+    expect(authService.isPasswordRecoverySession({ ...mockSession, access_token: 'other-token' } as any)).toBe(false);
   });
 });
 

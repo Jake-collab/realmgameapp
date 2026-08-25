@@ -123,15 +123,15 @@ AuthProvider.resolveStartupState()
 
 ## Password Recovery Flow
 
-1. **Forgot password screen**: User enters email → `authService.resetPasswordForEmail(email, redirectTo: 'worlds://auth-callback')`
+1. **Forgot password screen**: User enters email → `authService.resetPasswordForEmail(email, redirectTo: getAuthRedirectUrl())`
    - Always shows neutral success message (does not confirm registration)
    - 60-second resend cooldown
 
-2. **Email link**: Supabase sends a reset email with a link to `worlds://auth-callback#type=recovery&access_token=...`
+2. **Email link**: Supabase redirects to the native `worlds://auth-callback` or web `https://matterrealm.com/auth/callback` callback with a recovery session.
 
 3. **Auth callback screen**: Parses tokens, detects `type=recovery`, exchanges session, redirects to `/(auth)/reset-password`
 
-4. **Reset password screen**: Verifies session exists, calls `authService.updatePassword(newPassword)`, redirects to login
+4. **Reset password screen**: Verifies the session originated from a recovery callback, calls `authService.updatePassword(newPassword)`, redirects to login
 
 ---
 

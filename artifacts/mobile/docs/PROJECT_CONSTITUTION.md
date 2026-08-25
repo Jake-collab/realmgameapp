@@ -687,7 +687,7 @@ app/
 
 ### Password Recovery
 - Forgot Password → email input → "Send reset link"
-- Reset Password → new password + confirm → deep link: `worlds://reset-password?token=...`
+- Reset Password → new password + confirm → callback: `worlds://auth-callback` (native) or `https://matterrealm.com/auth/callback` (web/universal link)
 - Deep link scheme `worlds` is already configured in app.json
 
 ### First-Time Onboarding

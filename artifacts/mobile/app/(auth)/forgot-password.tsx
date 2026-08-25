@@ -30,9 +30,7 @@ import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-
-// ─── Deep link redirect URL (see docs/AUTH_DEEP_LINKS.md) ─────────────────────
-const REDIRECT_URL = 'worlds://auth-callback';
+import { getAuthRedirectUrl } from '@/features/auth/authRedirects';
 
 const RESEND_COOLDOWN = 60;
 
@@ -79,7 +77,7 @@ export default function ForgotPasswordScreen() {
 
   const onSubmit = useCallback(async (values: FormValues) => {
     setServerError(null);
-    const { error } = await requestPasswordReset(values.email, REDIRECT_URL);
+    const { error } = await requestPasswordReset(values.email, getAuthRedirectUrl());
     if (error) {
       setServerError(error);
       return;
@@ -92,7 +90,7 @@ export default function ForgotPasswordScreen() {
   const handleResend = useCallback(async () => {
     if (cooldown > 0) return;
     setServerError(null);
-    const { error } = await requestPasswordReset(sentEmail, REDIRECT_URL);
+    const { error } = await requestPasswordReset(sentEmail, getAuthRedirectUrl());
     if (error) { setServerError(error); return; }
     startCooldown();
   }, [cooldown, requestPasswordReset, sentEmail, startCooldown]);

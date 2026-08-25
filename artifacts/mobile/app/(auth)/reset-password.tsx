@@ -33,6 +33,7 @@ import { radius, spacing } from '@/constants/spacing';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { analytics } from '@/lib/auth/analyticsHooks';
+import { authService } from '@/services/auth.service';
 
 const schema = z
   .object({
@@ -67,9 +68,9 @@ export default function ResetPasswordScreen() {
       return;
     }
     const client = requireSupabase();
-    client.auth.getSession().then(({ data }) => {
-      setHasSession(!!data.session);
-    });
+    client.auth.getSession()
+      .then(({ data }) => setHasSession(authService.isPasswordRecoverySession(data.session)))
+      .catch(() => setHasSession(false));
   }, []);
 
   const {

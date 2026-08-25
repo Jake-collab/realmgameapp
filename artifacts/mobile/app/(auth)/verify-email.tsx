@@ -31,14 +31,10 @@ import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
 import { Button } from '@/components/ui/Button';
 import { isSupabaseConfigured, requireSupabase } from '@/lib/supabase/client';
+import { getAuthRedirectUrl } from '@/features/auth/authRedirects';
 
 const RESEND_COOLDOWN_SECONDS = 60;
 const POLL_INTERVAL_MS = 5_000;
-
-// ─── Deep link redirect URL ───────────────────────────────────────────────────
-// In production this should be a universal link or your deployed URL.
-// During development the app scheme handles the callback.
-const REDIRECT_URL = 'worlds://auth-callback';
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -111,7 +107,7 @@ export default function VerifyEmailScreen() {
     setResendMessage(null);
     setResendError(null);
 
-    const { error } = await resendVerification(email, REDIRECT_URL);
+    const { error } = await resendVerification(email, getAuthRedirectUrl());
     setIsResending(false);
 
     if (error) {
