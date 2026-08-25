@@ -4,24 +4,30 @@
  * Wraps Supabase Storage for file uploads and signed URL generation.
  *
  * Buckets (to be created in Supabase dashboard):
- *   - avatars    public, max 5 MB, images only
- *   - game-media public, max 20 MB, images + video
+ *   - avatars are private, max 5 MB, images only
+ *   - all approved media is served through short-lived signed URLs
  *
  * File naming convention:
- *   avatars/<userId>/<timestamp>.<ext>
- *   game-media/<mode>/<contentId>/<timestamp>.<ext>
+ *   avatars/<userId>/avatar.<ext>
  */
 
 import { requireSupabase } from './supabase';
 
 type UploadResult = { url: string | null; error: string | null };
+export type CanonicalStorageBucket =
+  | 'avatars'
+  | 'quest-media'
+  | 'hunt-media'
+  | 'custom-game-media'
+  | 'proof-submissions'
+  | 'moderation-quarantine';
 
 export const storageService = {
-  /** Upload a user avatar. Returns the public URL. */
+  /** Upload a user avatar. Returns a short-lived signed URL. */
   async uploadAvatar(userId: string, uri: string): Promise<UploadResult> {
     const client = requireSupabase();
     const ext = uri.split('.').pop() ?? 'jpg';
-    const filename = `avatars/${userId}/${Date.now()}.${ext}`;
+    const filename = `${userId}/avatar.${ext}`;
     const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
 
     const response = await fetch(uri);
@@ -35,13 +41,15 @@ export const storageService = {
 
     if (error) return { url: null, error: error.message };
 
-    const { data } = client.storage.from('avatars').getPublicUrl(filename);
+    const { data, error: signedUrlError } = await client.storage
+      .from('avatars')
+      .createSignedUrl(filename, 3600);
 
-    return { url: data.publicUrl, error: null };
+    return { url: data?.signedUrl ?? null, error: signedUrlError?.message ?? null };
   },
 
   /** Delete a file from a bucket */
-  async deleteFile(bucket: string, path: string): Promise<{ error: string | null }> {
+  async deleteFile(bucket: CanonicalStorageBucket, path: string): Promise<{ error: string | null }> {
     const client = requireSupabase();
     const { error } = await client.storage.from(bucket).remove([path]);
     return { error: error?.message ?? null };

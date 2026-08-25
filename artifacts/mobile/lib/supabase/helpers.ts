@@ -93,16 +93,6 @@ export async function getSignedUrl(
   return data.signedUrl;
 }
 
-/**
- * Returns the public URL for an approved, publicly readable storage object.
- * Only use for content confirmed safe to expose publicly (e.g. published quest images).
- */
-export function getPublicUrl(bucket: string, path: string): string | null {
-  if (!supabase) return null;
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
-}
-
 // ─── React Query key factory ───────────────────────────────────────────────────
 
 /**

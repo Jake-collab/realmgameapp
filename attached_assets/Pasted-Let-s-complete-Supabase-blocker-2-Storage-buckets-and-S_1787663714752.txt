@@ -1,0 +1,159 @@
+Let's complete Supabase blocker #2: Storage buckets and Storage security policies.
+
+Blocker #1 — canonical database migrations — is now complete.
+
+Use the CURRENT migrated database/schema as the source of truth.
+
+The previous audit found these existing Supabase buckets:
+
+- quest-proofs — PUBLIC
+- hunt-drops — PUBLIC
+- avatars — PUBLIC
+
+But the canonical Worlds architecture expects storage including:
+
+- avatars
+- quest-media
+- hunt-media
+- custom-game-media
+- proof-submissions
+- moderation-quarantine
+
+Sensitive proof, moderation, and Hunt placement media must NOT be publicly accessible.
+
+Your job is to reconcile and finish the Supabase Storage architecture.
+
+IMPORTANT:
+
+Do not blindly delete, rename, or change existing buckets because old code may still reference them.
+
+First audit the CURRENT code after the migrations and determine exactly which bucket names are actually canonical and referenced by the application.
+
+Then:
+
+1. Identify every Storage bucket currently referenced anywhere in:
+   - mobile app
+   - API/backend
+   - Admin panel
+   - database functions
+   - migrations
+
+2. Compare those references against the buckets that actually exist in the connected Supabase project.
+
+3. Establish ONE canonical bucket architecture and update conflicting/legacy code references if necessary.
+
+4. Create any missing buckets if your connected Supabase/CLI access now allows you to do so.
+
+5. Apply the required Supabase Storage RLS/security policies.
+
+6. Follow:
+   artifacts/mobile/docs/STORAGE_ARCHITECTURE.md
+   but reconcile it against the current Prompt 25/26 implementation and migrated schema rather than blindly following outdated documentation.
+
+SECURITY REQUIREMENTS:
+
+Private/protected media must include:
+- Quest proof photos/videos
+- Hunt proof media
+- 360° Hunt placement scans
+- placement verification evidence
+- moderation evidence
+- quarantined media
+- any unapproved user-uploaded media that should not yet be public
+
+These must NOT be publicly accessible through permanent public URLs.
+
+Use authenticated access and/or short-lived signed URLs where appropriate.
+
+Public media may include only media intentionally approved for public display, such as:
+- approved avatars
+- approved Hunt Drop artwork/images
+- approved Hunt cover/clue media
+
+Do not make an entire sensitive bucket public just because some media eventually becomes publicly visible.
+
+MODERATION:
+
+New public-facing user uploads should remain pending/private until their required moderation process completes.
+
+Rejected/quarantined content must remain inaccessible to ordinary users.
+
+ADMIN:
+
+Authorized Admin moderation must be able to securely view pending proof/media using protected access.
+
+Ordinary users must not gain Admin-level Storage access.
+
+USER ACCESS:
+
+Verify users cannot:
+- read another user's private proof
+- overwrite another user's media
+- delete another user's media
+- access private 360 scans
+- access moderation/quarantine evidence
+
+Users should still be able to access their own media where the product requires it.
+
+OWNER ACTION:
+
+Use the Supabase CLI/access established during blocker #1 wherever possible.
+
+If you can create the buckets, policies, migrations, or required code changes yourself, DO IT.
+
+Do not send me into the Supabase dashboard for something you can now safely perform through the linked CLI.
+
+If something genuinely requires owner action, STOP and give me ONLY:
+
+1. Exact action required.
+2. Exact Supabase dashboard location.
+3. Exact value/setting to select.
+4. Why you cannot perform it through the existing connection/CLI.
+
+TEST AFTERWARD:
+
+Test against the actual connected Supabase project:
+
+- required buckets exist
+- sensitive buckets are private
+- authenticated owner upload works
+- owner read works where allowed
+- unauthorized read fails
+- cross-user private read fails
+- unauthorized write/delete fails
+- Admin protected read works
+- pending moderation media remains private
+- approved public media works as intended
+- signed URLs work where required
+- 360 placement evidence cannot be publicly accessed
+- Quest proof cannot be publicly accessed
+
+Also search the project for references to the old bucket names and make sure no broken legacy Storage path remains.
+
+When finished return only:
+
+## STORAGE STATUS
+PASS / OWNER ACTION REQUIRED / FAIL
+
+## CANONICAL BUCKETS
+List final bucket names and whether each is PUBLIC or PRIVATE.
+
+## LEGACY BUCKETS
+Explain what happened to:
+- quest-proofs
+- hunt-drops
+- avatars
+
+## SECURITY TESTS
+PASS/FAIL for each Storage security test.
+
+## OWNER ACTION REQUIRED
+List only actions I still personally need to perform.
+
+If none, explicitly say:
+OWNER ACTION REQUIRED: NONE
+
+Then state:
+SUPABASE BLOCKER #2: COMPLETE
+
+Do not move on to Auth/blocker #3.

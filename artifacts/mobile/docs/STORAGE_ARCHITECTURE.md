@@ -6,7 +6,7 @@ All file uploads go through Supabase Storage. No direct S3 or CDN URLs in the ap
 
 ## Buckets
 
-Create these buckets in **Supabase dashboard → Storage → New bucket** (all private):
+The canonical buckets are created by the Supabase migration set. They are all private:
 
 | Bucket | Public | Purpose |
 |---|---|---|
@@ -45,75 +45,27 @@ moderation-quarantine/
 
 ## Storage RLS Policies
 
-Apply these via Supabase dashboard (Storage → Policies) or CLI after creating buckets.
+The migration set is the executable source of truth:
 
-### avatars bucket
+- `051_storage_bucket_security.sql` creates the canonical private buckets, removes
+  permanent public exposure from empty legacy buckets, and installs the core policies.
+- `052_fix_proof_storage_folder_policy.sql` matches the real
+  `{user_id}/{proof_id-or-draft}/{filename}` proof path.
+- `053_split_hunt_media_read_policies.sql` keeps anonymous approved-media reads
+  separate from creator-only Hunt-media authorization.
 
-```sql
--- INSERT: users may only upload to their own folder
-CREATE POLICY "avatars_insert_own_folder"
-ON storage.objects FOR INSERT TO authenticated
-WITH CHECK (
-  bucket_id = 'avatars'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-);
+Policy behavior:
 
--- SELECT: owner always; public URL only if profile visibility allows + moderation approved
-CREATE POLICY "avatars_select_own"
-ON storage.objects FOR SELECT TO authenticated
-USING (
-  bucket_id = 'avatars'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-);
+| Bucket | Authenticated client access | Public/anonymous access |
+|---|---|---|
+| `avatars` | Owner may upload, read, replace, and delete their folder | Only assets explicitly `public` and `approved` in `media_assets` |
+| `quest-media`, `hunt-media` | Server-side service role writes | Only assets explicitly `public` and `approved` |
+| `custom-game-media` | The Hunt creator may manage their Hunt paths | Only assets explicitly `public` and `approved` |
+| `proof-submissions` | Owner may upload and read their proof path | Never |
+| `moderation-quarantine` | None | Never |
 
--- DELETE: owner only
-CREATE POLICY "avatars_delete_own"
-ON storage.objects FOR DELETE TO authenticated
-USING (
-  bucket_id = 'avatars'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-);
-```
-
-### quest-media bucket
-
-```sql
--- INSERT/UPDATE/DELETE: service_role only (admin uploads)
--- SELECT: public for approved + published quest media
-CREATE POLICY "quest_media_public_select"
-ON storage.objects FOR SELECT TO public
-USING (
-  bucket_id = 'quest-media'
-  -- Additional check via media_assets.moderation_status = 'approved' enforced in app layer
-);
-```
-
-### proof-submissions bucket
-
-```sql
--- INSERT: authenticated users upload to their own folder
-CREATE POLICY "proof_submissions_insert_own"
-ON storage.objects FOR INSERT TO authenticated
-WITH CHECK (
-  bucket_id = 'proof-submissions'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-);
-
--- SELECT: owner only (never public)
-CREATE POLICY "proof_submissions_select_own"
-ON storage.objects FOR SELECT TO authenticated
-USING (
-  bucket_id = 'proof-submissions'
-  AND auth.uid()::text = (storage.foldername(name))[1]
-);
-```
-
-### moderation-quarantine bucket
-
-```sql
--- ALL access: service_role only (no user policies at all)
--- No INSERT/SELECT/UPDATE/DELETE policies for any user role
-```
+The service role is server-only and bypasses Storage RLS for authorized moderation and
+operational work. Do not add broad client policies to the quarantine or proof buckets.
 
 ---
 
@@ -122,8 +74,8 @@ USING (
 | Content type | Access method | TTL |
 |---|---|---|
 | User's own avatar | Signed URL | 1 hour |
-| Approved public avatar | Public URL (if profile visibility = public) | Permanent |
-| Published quest cover | Public URL | Permanent |
+| Approved public avatar | Signed URL after approval | 1 hour |
+| Published quest cover | Signed URL after approval | 1 hour |
 | Draft quest media | Signed URL | 15 minutes |
 | Proof files | Signed URL (owner/reviewer only) | 15 minutes |
 | Quarantined files | Signed URL (service_role only) | 5 minutes |
@@ -146,9 +98,9 @@ media_assets row created (moderation_status = 'pending')
 moderation_status → 'scanning' → 'approved' | 'rejected' | 'manual_review'
         ↓
 If approved + visibility = 'public':
-  getPublicUrl() returns readable URL
+  getSignedUrl() returns a readable, short-lived URL
 Otherwise:
-  getSignedUrl() with owner/reviewer auth
+  getSignedUrl() returns a URL only when the caller is authorized
         ↓
 If rejected:
   File moved to moderation-quarantine bucket

@@ -14,7 +14,7 @@
  */
 
 import { requireSupabase } from '@/lib/supabase/client';
-import { normalizeError, getSignedUrl, getPublicUrl } from '@/lib/supabase/helpers';
+import { normalizeError, getSignedUrl } from '@/lib/supabase/helpers';
 import type { MediaAssetRow, MediaType } from '@/lib/supabase/database.types';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -136,15 +136,12 @@ export async function uploadProofMediaFromUri(input: {
 
 /**
  * Resolve the URL for a media asset.
- * Returns a signed URL for private/restricted assets,
- * or a public URL for approved public assets.
+ * Returns a short-lived signed URL. Worlds buckets are private even
+ * when an approved media asset is eligible for broad display.
  */
 export async function resolveMediaUrl(
   asset: Pick<MediaAssetRow, 'bucket' | 'storage_path' | 'visibility' | 'moderation_status'>
 ): Promise<string | null> {
-  if (asset.visibility === 'public' && asset.moderation_status === 'approved') {
-    return getPublicUrl(asset.bucket, asset.storage_path);
-  }
   return getSignedUrl(asset.bucket, asset.storage_path, 3600);
 }
 

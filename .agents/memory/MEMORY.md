@@ -24,3 +24,5 @@
 - [Compatibility alert recovery](compatibility-alert-recovery.md) — retry idempotent GitHub alert operations, but never blindly retry issue creation after an ambiguous response.
 - [Reusable workflow contracts](reusable-workflow-contracts.md) — failure reporters need static checks in the reusable callee and every local caller permission handoff.
 - [Hosted Supabase reset](hosted-supabase-schema-mismatch.md) — this project required a scoped public-schema reset; the CLI’s linked reset reaches Auth-owned objects and fails.
+- [Storage RLS policy evaluation](storage-rls-policy-evaluation.md) — anonymous policies must not invoke creator-only helpers behind a short-circuit condition.
+- [Admin media URL boundary](admin-media-url-boundary.md) — staff access to private media is ID-only and server-signed after authorization.

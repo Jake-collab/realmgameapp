@@ -78,9 +78,10 @@ supabase db push
 
 ---
 
-## Step 4 — Create storage buckets
+## Step 4 — Apply Storage buckets and policies
 
-Create the following buckets in **Storage** (Supabase dashboard → Storage → New bucket):
+`supabase db push` creates and secures the canonical private buckets. Do not create
+public replacement buckets manually:
 
 | Bucket name | Public | Purpose |
 |---|---|---|
@@ -91,8 +92,10 @@ Create the following buckets in **Storage** (Supabase dashboard → Storage → 
 | `proof-submissions` | No | Quest and hunt proof files |
 | `moderation-quarantine` | No | Content under moderation review |
 
-All buckets are **private by default**. Access is controlled via Storage RLS policies
-(see `docs/STORAGE_ARCHITECTURE.md` and `supabase/migrations/004_media_and_storage.sql`).
+All buckets are **private**. Access is controlled by the migration-managed Storage RLS
+policies in `051_storage_bucket_security.sql` through
+`053_split_hunt_media_read_policies.sql`. Approved media is served with short-lived
+signed URLs, never a permanent public bucket URL.
 
 ---
 

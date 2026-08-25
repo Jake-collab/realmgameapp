@@ -58,10 +58,22 @@ import {
 } from "../lib/moderation-state";
 import { persistIntegritySnapshot, persistModerationResult } from "../lib/supabase-moderation";
 import { ExpoPushProvider, NoopPushProvider, notificationStore, renderNotification, type NotificationEvent } from "../lib/notifications";
-import { supabaseAdminConfigured, supabaseAdminRequest } from "../lib/supabase-admin";
+import {
+  createSupabaseStorageSignedUrl,
+  supabaseAdminConfigured,
+  supabaseAdminRequest,
+} from "../lib/supabase-admin";
 import { evaluateHuntPlacement, type HuntPlacementSignals } from "../lib/hunt-placement";
 
 const router: IRouter = Router();
+const canonicalStorageBuckets = new Set([
+  "avatars",
+  "quest-media",
+  "hunt-media",
+  "custom-game-media",
+  "proof-submissions",
+  "moderation-quarantine",
+]);
 
 /**
  * The API server intentionally fails closed until Supabase staff-session
@@ -385,6 +397,53 @@ router.get("/admin/diagnostics", requireAdmin("admin.diagnostics.read"), async (
     ],
     generatedAt: new Date(),
   }));
+});
+
+router.get("/admin/media/:mediaId/signed-url", requireAdmin("moderation.read"), async (req, res) => {
+  const mediaId = Array.isArray(req.params.mediaId) ? req.params.mediaId[0] : req.params.mediaId;
+  if (!z.string().uuid().safeParse(mediaId).success) {
+    res.status(400).json({ error: "A valid media ID is required." });
+    return;
+  }
+
+  try {
+    const rows = await adminRead<Array<{
+      id: string;
+      bucket: string;
+      storage_path: string;
+      deleted_at: string | null;
+    }>>(
+      `media_assets?id=eq.${encodeURIComponent(mediaId)}&deleted_at=is.null&select=id,bucket,storage_path,deleted_at&limit=1`,
+    );
+    const media = rows[0];
+    if (!media) {
+      res.status(404).json({ error: "Media was not found." });
+      return;
+    }
+    if (
+      !canonicalStorageBuckets.has(media.bucket)
+      || !media.storage_path
+      || media.storage_path.startsWith("/")
+      || media.storage_path.split("/").some((segment) => !segment || segment === "." || segment === "..")
+    ) {
+      res.status(422).json({ error: "Media storage metadata is invalid." });
+      return;
+    }
+
+    const expiresInSeconds = 300;
+    const signedUrl = await createSupabaseStorageSignedUrl(
+      media.bucket,
+      media.storage_path,
+      expiresInSeconds,
+    );
+    res.json({
+      mediaId: media.id,
+      signedUrl,
+      expiresAt: new Date(Date.now() + expiresInSeconds * 1000).toISOString(),
+    });
+  } catch (error) {
+    liveUnavailable(res, error, "Media storage");
+  }
 });
 
 router.get("/admin/ai/overview", requireAdmin("ai.read"), (_req, res) => {

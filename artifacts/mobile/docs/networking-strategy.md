@@ -23,7 +23,7 @@ Mobile App
 - The Supabase client is a singleton (`services/supabase.ts`).
 - **Never expose the `service_role` key on the client.** It goes in the API server only.
 - Row-Level Security (RLS) must be enabled on every table. The client JWT enforces access.
-- Storage buckets must have appropriate RLS policies (avatars: owner-only write, public read).
+- Storage buckets are private and use Storage RLS policies; approved media is served through short-lived signed URLs.
 
 ## Express API Rules
 

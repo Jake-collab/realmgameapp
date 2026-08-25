@@ -13,6 +13,7 @@ const identities: Record<string, { id: string; role: string }> = {
   moderator: { id: "staff-moderator", role: "moderator" },
   admin: { id: "staff-admin", role: "admin" },
 };
+const testMediaId = "11111111-1111-4111-8111-111111111111";
 
 let supabase: StartedServer;
 let api: StartedServer;
@@ -43,6 +44,31 @@ describe("admin moderation authorization", () => {
       const token = req.headers.authorization?.replace(/^Bearer\s+/, "");
       const identity = token ? identities[token] : undefined;
       res.setHeader("Content-Type", "application/json");
+      if (req.url?.startsWith("/rest/v1/media_assets")) {
+        if (token !== "test-service-key") {
+          res.statusCode = 401;
+          res.end(JSON.stringify({ error: "trusted access required" }));
+          return;
+        }
+        res.end(JSON.stringify([{
+          id: testMediaId,
+          bucket: "proof-submissions",
+          storage_path: "target-user/proof/test.png",
+          deleted_at: null,
+        }]));
+        return;
+      }
+      if (req.url?.startsWith("/storage/v1/object/sign/proof-submissions/")) {
+        if (token !== "test-service-key" || req.method !== "POST") {
+          res.statusCode = 401;
+          res.end(JSON.stringify({ error: "trusted access required" }));
+          return;
+        }
+        res.end(JSON.stringify({
+          signedURL: "/object/sign/proof-submissions/target-user/proof/test.png?token=test-only",
+        }));
+        return;
+      }
       if (!identity) {
         res.statusCode = 401;
         res.end(JSON.stringify({ error: "invalid token" }));
@@ -167,5 +193,18 @@ describe("admin moderation authorization", () => {
     assert.equal((await request("/admin/moderation/settings", { method: "PUT", body }, "moderator")).status, 403);
     assert.equal((await request("/admin/moderation/settings", { method: "PUT", body }, "admin")).status, 403);
     assert.deepEqual(moderationState.getModerationSettings(), originalSettings);
+  });
+
+  it("issues short-lived media URLs only after staff moderation authorization", async () => {
+    assert.equal((await request(`/admin/media/${testMediaId}/signed-url`)).status, 401);
+    assert.equal((await request(`/admin/media/${testMediaId}/signed-url`, {}, "user")).status, 403);
+
+    const response = await request(`/admin/media/${testMediaId}/signed-url`, {}, "moderator");
+    assert.equal(response.status, 200);
+    const body = await response.json() as { mediaId: string; signedUrl: string; expiresAt: string; storagePath?: string };
+    assert.equal(body.mediaId, testMediaId);
+    assert.match(body.signedUrl, /^http:\/\/127\.0\.0\.1:\d+\/storage\/v1\/object\/sign\/proof-submissions\//);
+    assert.ok(Date.parse(body.expiresAt) > Date.now());
+    assert.equal(body.storagePath, undefined);
   });
 });

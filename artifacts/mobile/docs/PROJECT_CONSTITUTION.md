@@ -405,7 +405,8 @@ The application will support:
 - Schema changes via Supabase CLI migrations — never manual dashboard edits in production
 
 ### Storage
-- Bucket naming: `avatars`, `game-media`, `quest-assets`, `hunt-assets`
+- Bucket naming: `avatars`, `quest-media`, `hunt-media`, `custom-game-media`, `proof-submissions`, `moderation-quarantine`
+- Every Storage bucket is private; approved media is served only through short-lived signed URLs
 - `EXPO_PUBLIC_*` client uses anon key — Storage RLS enforces access
 - The `service_role` key is used only in server-side Edge Functions or the Express API
 
