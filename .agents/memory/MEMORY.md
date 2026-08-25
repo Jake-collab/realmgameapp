@@ -22,3 +22,4 @@
 - [Disposable Supabase contract CI](supabase-contract-ci.md) — local Supabase CLI health can race Auth; gate tests on the actual Auth endpoint after fresh migration provisioning.
 - [Pinned Supabase CLI releases](supabase-cli-pinning.md) — validate a candidate against the published CLI package before updating the CI and local harness pins.
 - [Compatibility alert recovery](compatibility-alert-recovery.md) — retry idempotent GitHub alert operations, but never blindly retry issue creation after an ambiguous response.
+- [Reusable workflow contracts](reusable-workflow-contracts.md) — failure reporters need static checks in the reusable callee and every local caller permission handoff.

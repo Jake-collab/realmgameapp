@@ -11,6 +11,7 @@ const workflowSource = fs.readFileSync(
   "utf8",
 );
 const workflowDirectory = path.resolve(__dirname, "../../../.github/workflows");
+const repositoryDirectory = path.resolve(workflowDirectory, "../..");
 const reporterSource = fs.readFileSync(
   path.resolve(
     __dirname,
@@ -57,7 +58,145 @@ function getWorkflowJobs(source, fileName) {
   return jobs;
 }
 
+function isFailureReporter(job) {
+  return (
+    /failure|report/i.test(job.name) ||
+    /GITHUB_STEP_SUMMARY|core\.summary|actions\/github-script|\.github\/scripts\/.*(?:failure|report)/i.test(
+      job.source,
+    )
+  );
+}
+
+function reportsIssues(job) {
+  return (
+    /issues:\s+write|gh\s+issue|issues\.(?:create|update)/i.test(job.source) ||
+    (/\.github\/scripts\/.*(?:failure|report)/i.test(job.source) &&
+      reporterSource.includes("github.rest.issues."))
+  );
+}
+
+function reportsSummary(job) {
+  return /GITHUB_STEP_SUMMARY|core\.summary|summary/i.test(job.source);
+}
+
+function getReusableWorkflowCalls(job) {
+  return [
+    ...job.source.matchAll(
+      /^\s+uses:\s+(\.\/(?:[^\s#]+\.ya?ml))\s*(?:#.*)?$/gim,
+    ),
+  ].map((match) => match[1]);
+}
+
+function getReusableReportingJobs(
+  workflowFiles,
+  {
+    readWorkflow = (filePath) => fs.readFileSync(filePath, "utf8"),
+    workflowExists = (filePath) => fs.existsSync(filePath),
+  } = {},
+) {
+  const reportingJobs = [];
+  const visited = new Set();
+
+  function visit(fileName, source) {
+    const filePath = path.resolve(repositoryDirectory, fileName);
+    if (visited.has(filePath)) return;
+    visited.add(filePath);
+
+    for (const callerJob of getWorkflowJobs(source, fileName)) {
+      for (const reference of getReusableWorkflowCalls(callerJob)) {
+        const referencedPath = path.resolve(repositoryDirectory, reference);
+        if (
+          !referencedPath.startsWith(`${repositoryDirectory}${path.sep}`) ||
+          !workflowExists(referencedPath)
+        ) {
+          continue;
+        }
+
+        const referencedFileName = path.relative(
+          repositoryDirectory,
+          referencedPath,
+        );
+        const referencedSource = readWorkflow(referencedPath);
+        for (const reusableJob of getWorkflowJobs(
+          referencedSource,
+          referencedFileName,
+        )) {
+          if (isFailureReporter(reusableJob)) {
+            reportingJobs.push({
+              ...reusableJob,
+              callerFileName: fileName,
+              callerJobName: callerJob.name,
+              callerSource: callerJob.source,
+            });
+          }
+        }
+        if (!visited.has(referencedPath)) {
+          visit(referencedFileName, referencedSource);
+        }
+      }
+    }
+  }
+
+  for (const workflow of workflowFiles) {
+    visit(workflow.fileName, workflow.source);
+  }
+  return reportingJobs;
+}
+
 describe("Supabase CLI candidate compatibility alert", () => {
+  it("discovers issue reporters nested in local reusable workflows", () => {
+    const reusableWorkflowPath = path.resolve(
+      repositoryDirectory,
+      ".github/workflows/reusable-report.yml",
+    );
+    const reusableSource = `on:
+  workflow_call:
+jobs:
+  report-failure:
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create();
+            await core.summary.write();
+`;
+    const callerSource = `jobs:
+  call-report:
+    uses: ./.github/workflows/reusable-report.yml
+    permissions:
+      contents: read
+      issues: write
+`;
+    const reportingJobs = getReusableReportingJobs(
+      [{ fileName: ".github/workflows/caller.yml", source: callerSource }],
+      {
+        workflowExists: (filePath) => filePath === reusableWorkflowPath,
+        readWorkflow: (filePath) => {
+          if (filePath === reusableWorkflowPath) return reusableSource;
+          throw new Error(`Unexpected workflow read: ${filePath}`);
+        },
+      },
+    );
+
+    expect(reportingJobs).toHaveLength(1);
+    expect(reportingJobs[0]).toMatchObject({
+      fileName: ".github/workflows/reusable-report.yml",
+      name: "report-failure",
+      callerFileName: ".github/workflows/caller.yml",
+      callerJobName: "call-report",
+    });
+    expect(reportsIssues(reportingJobs[0])).toBe(true);
+    expect(reportsSummary(reportingJobs[0])).toBe(true);
+    expect(
+      /\n    permissions:\n(?:      [^\n]+\n)*      issues: write\n/.test(
+        reportingJobs[0].callerSource,
+      ),
+    ).toBe(true);
+  });
+
   it("guards every workflow failure reporter against permission and summary drift", () => {
     const workflowFiles = fs
       .readdirSync(workflowDirectory)
@@ -68,42 +207,47 @@ describe("Supabase CLI candidate compatibility alert", () => {
         fileName,
       ),
     );
-    const reportingJobs = jobs.filter((job) => {
-      const isFailureReporter =
-        /failure|report/i.test(job.name) ||
-        /GITHUB_STEP_SUMMARY|core\.summary|actions\/github-script|\.github\/scripts\/.*(?:failure|report)/i.test(
-          job.source,
-        );
-      const reportsIssues =
-        /issues:\s+write|gh\s+issue|issues\.(?:create|update)/i.test(job.source) ||
-        (/\.github\/scripts\/.*(?:failure|report)/i.test(job.source) &&
-          reporterSource.includes("github.rest.issues."));
-      return isFailureReporter && (reportsIssues || /summary/i.test(job.source));
-    });
+    const reportingJobs = jobs.filter(
+      (job) =>
+        isFailureReporter(job) && (reportsIssues(job) || reportsSummary(job)),
+    );
+    const reusableReportingJobs = getReusableReportingJobs(
+      workflowFiles.map((fileName) => ({
+        fileName,
+        source: fs.readFileSync(path.join(workflowDirectory, fileName), "utf8"),
+      })),
+    );
 
     assertCompatibilityContract(
-      reportingJobs.length > 0,
+      reportingJobs.length > 0 || reusableReportingJobs.length > 0,
       "no failure-reporting jobs were discovered; keep this check aligned with new issue or summary reporters.",
     );
 
-    for (const job of reportingJobs) {
-      const reportsIssues =
-        /issues:\s+write|gh\s+issue|issues\.(?:create|update)/i.test(job.source) ||
-        (/\.github\/scripts\/.*(?:failure|report)/i.test(job.source) &&
-          reporterSource.includes("github.rest.issues."));
-      if (reportsIssues) {
+    for (const job of [...reportingJobs, ...reusableReportingJobs]) {
+      if (reportsIssues(job)) {
         assertCompatibilityContract(
           /\n    permissions:\n(?:      [^\n]+\n)*      issues: write\n/.test(job.source),
-          `${job.fileName}:${job.name} reports GitHub issues and must grant issues: write in the job permissions.`,
+          `${job.fileName}:${job.name} reports GitHub issues and must grant issues: write in its job permissions.`,
         );
       }
 
-      if (/GITHUB_STEP_SUMMARY|core\.summary|summary/i.test(job.source)) {
+      if (reportsSummary(job)) {
         assertCompatibilityContract(
           /core\.summary[\s\S]*\.write\(\)|GITHUB_STEP_SUMMARY/.test(
             job.source,
           ),
           `${job.fileName}:${job.name} mentions a failure summary but does not publish it with core.summary.write() or GITHUB_STEP_SUMMARY.`,
+        );
+      }
+    }
+
+    for (const job of reusableReportingJobs) {
+      if (reportsIssues(job)) {
+        assertCompatibilityContract(
+          /\n    permissions:\n(?:      [^\n]+\n)*      issues: write\n/.test(
+            job.callerSource,
+          ),
+          `${job.callerFileName}:${job.callerJobName} calls ${job.fileName} and must pass issues: write to the reusable failure reporter.`,
         );
       }
     }
