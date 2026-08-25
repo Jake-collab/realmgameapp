@@ -264,4 +264,122 @@ describe("Supabase CLI candidate compatibility alert", () => {
     expect(github.rest.issues.create).not.toHaveBeenCalled();
     expect(github.rest.issues.update).not.toHaveBeenCalled();
   });
+
+  it("retries a transient search outage, then fails with a bounded rerun instruction", async () => {
+    const outage = Object.assign(new Error("GitHub is temporarily unavailable"), {
+      status: 503,
+    });
+    const github = {
+      rest: {
+        search: {
+          issuesAndPullRequests: jest.fn(async () => {
+            throw outage;
+          }),
+        },
+        issues: { create: jest.fn(), update: jest.fn() },
+      },
+    };
+    const core = { error: jest.fn(), warning: jest.fn(), info: jest.fn() };
+
+    await expect(
+      reportQuestDatabaseCandidateFailure({
+        github,
+        context: {
+          serverUrl: "https://github.com",
+          repo: { owner: "questworld", repo: "matterrealm" },
+          runId: "1006",
+        },
+        core,
+        candidate: "2.121.0",
+      }),
+    ).rejects.toThrow(
+      "GitHub issue search failed after 3 attempt(s): GitHub is temporarily unavailable. Rerun this workflow",
+    );
+
+    expect(github.rest.search.issuesAndPullRequests).toHaveBeenCalledTimes(3);
+    expect(core.warning).toHaveBeenCalledTimes(2);
+    expect(core.error).toHaveBeenCalledWith(
+      expect.stringContaining("Rerun this workflow"),
+    );
+    expect(github.rest.issues.create).not.toHaveBeenCalled();
+  });
+
+  it("retries a transient mutation without creating a second alert", async () => {
+    const issue = {
+      number: 61,
+      title: COMPATIBILITY_ALERT_TITLE,
+      state: "open",
+      created_at: "2026-08-25T07:00:00Z",
+    };
+    let updateAttempts = 0;
+    const github = {
+      rest: {
+        search: {
+          issuesAndPullRequests: jest.fn(async () => ({
+            data: { items: [issue] },
+          })),
+        },
+        issues: {
+          create: jest.fn(),
+          update: jest.fn(async () => {
+            updateAttempts += 1;
+            if (updateAttempts === 1) {
+              throw Object.assign(new Error("GitHub timed out"), { status: 504 });
+            }
+            return { data: issue };
+          }),
+        },
+      },
+    };
+    const core = { error: jest.fn(), warning: jest.fn(), info: jest.fn() };
+
+    const result = await reportQuestDatabaseCandidateFailure({
+      github,
+      context: {
+        serverUrl: "https://github.com",
+        repo: { owner: "questworld", repo: "matterrealm" },
+        runId: "1007",
+      },
+      core,
+      candidate: "2.122.0",
+    });
+
+    expect(result.action).toBe("updated");
+    expect(github.rest.issues.update).toHaveBeenCalledTimes(2);
+    expect(github.rest.issues.create).not.toHaveBeenCalled();
+    expect(core.warning).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry issue creation after an ambiguous GitHub response", async () => {
+    const github = {
+      rest: {
+        search: {
+          issuesAndPullRequests: jest.fn(async () => ({ data: { items: [] } })),
+        },
+        issues: {
+          create: jest.fn(async () => {
+            throw Object.assign(new Error("GitHub connection reset"), { status: 502 });
+          }),
+          update: jest.fn(),
+        },
+      },
+    };
+    const core = { error: jest.fn(), warning: jest.fn(), info: jest.fn() };
+
+    await expect(
+      reportQuestDatabaseCandidateFailure({
+        github,
+        context: {
+          serverUrl: "https://github.com",
+          repo: { owner: "questworld", repo: "matterrealm" },
+          runId: "1008",
+        },
+        core,
+        candidate: "2.123.0",
+      }),
+    ).rejects.toThrow();
+
+    expect(github.rest.issues.create).toHaveBeenCalledTimes(1);
+    expect(core.warning).not.toHaveBeenCalled();
+  });
 });

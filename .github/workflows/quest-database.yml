@@ -136,9 +136,24 @@ jobs:
         with:
           script: |
             const { reportQuestDatabaseCandidateFailure } = require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/report-quest-database-candidate-failure.js`);
-            await reportQuestDatabaseCandidateFailure({
-              github,
-              context,
-              core,
-              candidate: process.env.CANDIDATE_VERSION,
-            });
+            try {
+              await reportQuestDatabaseCandidateFailure({
+                github,
+                context,
+                core,
+                candidate: process.env.CANDIDATE_VERSION,
+              });
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              const rerunUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/workflows/quest-database.yml`;
+              await core.summary
+                .addHeading("Compatibility alert could not be updated", 2)
+                .addRaw("The candidate check failed, but GitHub did not accept the alert search or mutation.")
+                .addList([
+                  message,
+                  `Rerun this workflow from the Actions page after the GitHub API recovers: ${rerunUrl}`,
+                  "Issue creation is deliberately not retried after an ambiguous response, so a rerun will search for the existing alert before creating anything.",
+                ])
+                .write();
+              core.setFailed(message);
+            }

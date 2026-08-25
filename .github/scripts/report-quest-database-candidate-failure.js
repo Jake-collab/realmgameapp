@@ -1,6 +1,38 @@
 const COMPATIBILITY_ALERT_TITLE =
   "[CI Alert] Supabase CLI candidate compatibility failure";
 const GITHUB_SEARCH_RESULT_LIMIT = 1_000;
+const MAX_TRANSIENT_RETRIES = 2;
+
+function isTransientGitHubError(error) {
+  const status = error?.status ?? error?.response?.status;
+  return (
+    status === 408 ||
+    status === 429 ||
+    (typeof status === "number" && status >= 500) ||
+    status === undefined
+  );
+}
+
+async function callWithTransientRetries(operation, description, core) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (!isTransientGitHubError(error) || attempt >= MAX_TRANSIENT_RETRIES) {
+        const detail = error instanceof Error ? error.message : String(error);
+        const message =
+          `GitHub ${description} failed after ${attempt + 1} attempt(s): ${detail}. ` +
+          "Rerun this workflow after the GitHub API recovers.";
+        core.error(message);
+        throw new Error(message, { cause: error });
+      }
+      core.warning(
+        `GitHub ${description} failed transiently; retrying ` +
+          `(${attempt + 1}/${MAX_TRANSIENT_RETRIES}).`,
+      );
+    }
+  }
+}
 
 async function reportQuestDatabaseCandidateFailure({
   github,
@@ -30,11 +62,16 @@ async function reportQuestDatabaseCandidateFailure({
   let page = 1;
 
   while (true) {
-    const { data: existing } = await github.rest.search.issuesAndPullRequests({
-      q: searchQuery,
-      per_page: searchPageSize,
-      page,
-    });
+    const { data: existing } = await callWithTransientRetries(
+      () =>
+        github.rest.search.issuesAndPullRequests({
+          q: searchQuery,
+          per_page: searchPageSize,
+          page,
+        }),
+      "issue search",
+      core,
+    );
 
     const totalCount =
       typeof existing.total_count === "number" ? existing.total_count : null;
@@ -78,22 +115,32 @@ async function reportQuestDatabaseCandidateFailure({
   const alert = alerts[0];
 
   if (alert) {
-    await github.rest.issues.update({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      issue_number: alert.number,
-      body,
-    });
+    await callWithTransientRetries(
+      () =>
+        github.rest.issues.update({
+          owner: context.repo.owner,
+          repo: context.repo.repo,
+          issue_number: alert.number,
+          body,
+        }),
+      `update of compatibility alert #${alert.number}`,
+      core,
+    );
 
     const supersededIssueNumbers = [];
     for (const duplicate of alerts.slice(1)) {
-      await github.rest.issues.update({
-        owner: context.repo.owner,
-        repo: context.repo.repo,
-        issue_number: duplicate.number,
-        state: "closed",
-        state_reason: "not planned",
-      });
+      await callWithTransientRetries(
+        () =>
+          github.rest.issues.update({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: duplicate.number,
+            state: "closed",
+            state_reason: "not planned",
+          }),
+        `closure of duplicate compatibility alert #${duplicate.number}`,
+        core,
+      );
       supersededIssueNumbers.push(duplicate.number);
       core.info(
         `Closed duplicate compatibility alert #${duplicate.number}; canonical alert is #${alert.number}.`,
@@ -127,5 +174,6 @@ async function reportQuestDatabaseCandidateFailure({
 
 module.exports = {
   COMPATIBILITY_ALERT_TITLE,
+  MAX_TRANSIENT_RETRIES,
   reportQuestDatabaseCandidateFailure,
 };
