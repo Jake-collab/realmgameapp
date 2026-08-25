@@ -218,4 +218,50 @@ describe("Supabase CLI candidate compatibility alert", () => {
     expect(issues.find((issue) => issue.number === 41).state).toBe("closed");
     expect(issues.find((issue) => issue.number === 200).state).toBe("open");
   });
+
+  it("fails visibly instead of consolidating when GitHub caps the search results", async () => {
+    const github = {
+      rest: {
+        search: {
+          issuesAndPullRequests: jest.fn(async () => ({
+            data: {
+              incomplete_results: false,
+              total_count: 1_001,
+              items: Array.from({ length: 100 }, (_, index) => ({
+                number: index + 1,
+                title: COMPATIBILITY_ALERT_TITLE,
+                state: "open",
+              })),
+            },
+          })),
+        },
+        issues: {
+          create: jest.fn(),
+          update: jest.fn(),
+        },
+      },
+    };
+    const core = { error: jest.fn(), info: jest.fn() };
+
+    await expect(
+      reportQuestDatabaseCandidateFailure({
+        github,
+        context: {
+          serverUrl: "https://github.com",
+          repo: { owner: "questworld", repo: "matterrealm" },
+          runId: "1005",
+        },
+        core,
+        candidate: "2.120.0",
+      }),
+    ).rejects.toThrow(
+      "GitHub reports 1001 matching results, beyond its 1000-result search limit",
+    );
+
+    expect(core.error).toHaveBeenCalledWith(
+      expect.stringContaining("Cannot safely consolidate compatibility alerts"),
+    );
+    expect(github.rest.issues.create).not.toHaveBeenCalled();
+    expect(github.rest.issues.update).not.toHaveBeenCalled();
+  });
 });

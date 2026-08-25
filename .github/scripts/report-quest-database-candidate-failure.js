@@ -1,5 +1,6 @@
 const COMPATIBILITY_ALERT_TITLE =
   "[CI Alert] Supabase CLI candidate compatibility failure";
+const GITHUB_SEARCH_RESULT_LIMIT = 1_000;
 
 async function reportQuestDatabaseCandidateFailure({
   github,
@@ -34,9 +35,32 @@ async function reportQuestDatabaseCandidateFailure({
       per_page: searchPageSize,
       page,
     });
+
+    const totalCount =
+      typeof existing.total_count === "number" ? existing.total_count : null;
+    if (
+      existing.incomplete_results === true ||
+      totalCount > GITHUB_SEARCH_RESULT_LIMIT
+    ) {
+      const reason =
+        existing.incomplete_results === true
+          ? "GitHub marked the search results as incomplete."
+          : `GitHub reports ${totalCount} matching results, beyond its ${GITHUB_SEARCH_RESULT_LIMIT}-result search limit.`;
+      const message = `Cannot safely consolidate compatibility alerts: ${reason}`;
+      core.error(message);
+      throw new Error(message);
+    }
+
     matchingIssues.push(...existing.items);
 
-    if (existing.items.length < searchPageSize) break;
+    if (existing.items.length < searchPageSize) {
+      if (totalCount !== null && matchingIssues.length < totalCount) {
+        const message = `Cannot safely consolidate compatibility alerts: GitHub returned ${matchingIssues.length} of ${totalCount} matching search results.`;
+        core.error(message);
+        throw new Error(message);
+      }
+      break;
+    }
     page += 1;
   }
 
