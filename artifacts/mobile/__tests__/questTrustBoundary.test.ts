@@ -39,7 +39,13 @@ const objective: QuestObjectiveRow = {
   updated_at: '2026-01-01T00:00:00.000Z',
 };
 
-describe('Quest trust boundary without Supabase', () => {
+const describeWithoutSupabase = (
+  process.env.EXPO_PUBLIC_SUPABASE_URL && process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY
+)
+  ? describe.skip
+  : describe;
+
+describeWithoutSupabase('Quest trust boundary without Supabase', () => {
   it.each([
     ['complete', () => completeQuest({ participationId: 'participation-1', userId: 'user-1' })],
     ['abandon', () => abandonQuest({ participationId: 'participation-1', userId: 'user-1' })],

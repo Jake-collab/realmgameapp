@@ -81,9 +81,9 @@ describeIntegration('Social RPC contracts', () => {
     // Keep the test-only names explicit while still exercising that client.
     process.env.EXPO_PUBLIC_SUPABASE_URL = testUrl;
     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = testAnonKey;
-    social = await import('../features/social/repositories/social.repository');
+    social = jest.requireActual('../features/social/repositories/social.repository') as SocialRepository;
 
-    const { requireSupabase } = await import('../lib/supabase/client');
+    const { requireSupabase } = jest.requireActual('../lib/supabase/client') as typeof import('../lib/supabase/client');
     mobileClient = requireSupabase();
     adminClient = createClient(testUrl, testServiceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -217,8 +217,8 @@ describeLiveMobile('Social RPC missing-session boundary', () => {
     // service-role credentials.
     process.env.EXPO_PUBLIC_SUPABASE_URL = liveMobileUrl;
     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = liveMobileAnonKey;
-    unauthenticatedSocial = await import('../features/social/repositories/social.repository');
-    const { requireSupabase } = await import('../lib/supabase/client');
+    unauthenticatedSocial = jest.requireActual('../features/social/repositories/social.repository') as SocialRepository;
+    const { requireSupabase } = jest.requireActual('../lib/supabase/client') as typeof import('../lib/supabase/client');
     unauthenticatedMobileClient = requireSupabase();
     const { error } = await unauthenticatedMobileClient.auth.signOut();
     if (error) throw error;
