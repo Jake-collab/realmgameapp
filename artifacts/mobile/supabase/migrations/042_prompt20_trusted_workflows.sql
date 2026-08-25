@@ -1,5 +1,5 @@
 -- ============================================================
--- Migration 029 — Prompt 20 trusted moderation workflows
+-- Migration 042 — Prompt 20 trusted moderation workflows
 -- Worlds — Build 1
 -- ============================================================
 -- All writes in this migration are service-role RPCs. Ordinary clients

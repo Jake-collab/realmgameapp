@@ -1,5 +1,5 @@
 -- ============================================================
--- Migration 030 — Prompt 20 publication gates and retention
+-- Migration 043 — Prompt 20 publication gates and retention
 -- Worlds — Build 1
 -- ============================================================
 

@@ -74,6 +74,43 @@ CREATE TABLE IF NOT EXISTS user_achievements (
   UNIQUE (user_id, achievement_id)  -- prevents duplicate awards
 );
 
+-- user_achievements existed before the progression catalog. Reconcile the
+-- legacy earned_at shape before creating the new history indexes and RPCs.
+ALTER TABLE user_achievements
+  ADD COLUMN IF NOT EXISTS awarded_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS awarded_by TEXT NOT NULL DEFAULT 'engine'
+    CHECK (awarded_by IN ('engine','admin','system')),
+  ADD COLUMN IF NOT EXISTS trigger_event TEXT,
+  ADD COLUMN IF NOT EXISTS trigger_reference_id UUID,
+  ADD COLUMN IF NOT EXISTS progress_snapshot JSONB,
+  ADD COLUMN IF NOT EXISTS notification_sent BOOLEAN NOT NULL DEFAULT FALSE;
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'user_achievements'
+      AND column_name = 'earned_at'
+  ) THEN
+    EXECUTE '
+      UPDATE user_achievements
+      SET awarded_at = earned_at
+      WHERE awarded_at IS NULL
+    ';
+  END IF;
+END;
+$$;
+
+UPDATE user_achievements
+SET awarded_at = NOW()
+WHERE awarded_at IS NULL;
+
+ALTER TABLE user_achievements
+  ALTER COLUMN awarded_at SET DEFAULT NOW(),
+  ALTER COLUMN awarded_at SET NOT NULL;
+
 ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "user_achievements_owner_read" ON user_achievements

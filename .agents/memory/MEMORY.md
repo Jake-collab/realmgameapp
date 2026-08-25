@@ -19,3 +19,4 @@
 - [Notification delivery boundary](notification-delivery-boundary.md) — in-app history is authoritative and independent from push provider outcomes.
 - [Offline sync boundary](offline-sync-boundary.md) — queue only safe client intents; require the active account again before each protected replay.
 - [OpenAPI codegen path](openapi-codegen-path.md) — Orval’s relative input target fails from the workspace root after cleaning generated outputs.
+- [Disposable Supabase contract CI](supabase-contract-ci.md) — local Supabase CLI health can race Auth; gate tests on the actual Auth endpoint after fresh migration provisioning.

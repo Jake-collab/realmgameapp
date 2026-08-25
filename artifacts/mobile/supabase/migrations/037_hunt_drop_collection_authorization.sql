@@ -61,7 +61,7 @@ BEGIN
     FROM hunt_stop_progress
     WHERE hunt_participant_id = p_participation_id
       AND hunt_stop_id = p_stop_id
-      AND status NOT IN ('locked', 'not_started', 'completed', 'expired', 'rejected')
+      AND status = 'in_progress'
   ) THEN
     RETURN jsonb_build_object('success', false, 'reasonCode', 'DROP_UNAVAILABLE');
   END IF;
@@ -163,7 +163,7 @@ BEGIN
         AND hp.hunt_id = v_session.hunt_id
         AND hp.status = 'active'
         AND progress.hunt_stop_id = v_session.hunt_stop_id
-        AND progress.status NOT IN ('locked', 'not_started', 'completed', 'expired', 'rejected')
+        AND progress.status = 'in_progress'
     ) THEN
     -- A stale or disallowed session must never become valid again if the
     -- placement is later changed back or the availability window reopens.
@@ -276,9 +276,9 @@ CREATE OR REPLACE FUNCTION get_hunt_drop_search_zones(
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT hs.id, hp.hunt_id, hs.drop_type, g.public_search_lat, g.public_search_lng,
     g.public_search_radius_meters, g.clue_reveal_radius_meters, g.collection_radius_meters,
-    CASE WHEN hsp.status IN ('locked','not_started') THEN 'locked' ELSE 'available' END,
+    CASE WHEN hsp.status = 'not_started' THEN 'locked' ELSE 'available' END,
     CASE WHEN c.id IS NOT NULL THEN 'COLLECTED'
-         WHEN hsp.status IN ('locked','not_started') THEN 'CLUE_LOCKED'
+         WHEN hsp.status = 'not_started' THEN 'CLUE_LOCKED'
          ELSE 'SEARCHING' END,
     hs.title, hs.final_hunt_points
   FROM hunt_participants hp

@@ -653,48 +653,43 @@ BEGIN
   IF NOT FOUND THEN
     -- No geometry configured for this validation type — treat as not required
     v_result := 'not_required';
-    GOTO record_attempt;
-  END IF;
-
-  -- ── 9. Accuracy check (using Quest-specific threshold) ─────────────────────
-  IF p_horizontal_accuracy_meters > v_geometry.required_accuracy_meters THEN
+  ELSIF p_horizontal_accuracy_meters > v_geometry.required_accuracy_meters THEN
+    -- ── 9. Accuracy check (using Quest-specific threshold) ───────────────────
     v_result := 'accuracy_insufficient';
-    GOTO record_attempt;
-  END IF;
-
-  -- ── 10. Geospatial containment check ─────────────────────────────────────
-  v_point_geography := ST_SetSRID(ST_MakePoint(p_longitude, p_latitude), 4326)::geography;
-
-  IF v_geometry.polygon IS NOT NULL THEN
-    -- Polygon containment
-    IF ST_Covers(v_geometry.polygon::geography, v_point_geography) THEN
-      v_result := 'validated';
-    ELSE
-      v_result := 'outside_region';
-    END IF;
-  ELSIF v_geometry.center_lat IS NOT NULL THEN
-    -- Point + radius distance check
-    v_geom_geography := ST_SetSRID(
-      ST_MakePoint(v_geometry.center_lng, v_geometry.center_lat), 4326
-    )::geography;
-    v_distance_meters := ST_Distance(v_point_geography, v_geom_geography);
-
-    IF v_distance_meters <= v_geometry.radius_meters THEN
-      v_result := 'validated';
-    ELSE
-      v_result := 'outside_region';
-      -- Do NOT include distance or radius in response — would reveal secret geometry
-    END IF;
   ELSE
-    v_result := 'unavailable';
+    -- ── 10. Geospatial containment check ───────────────────────────────────
+    v_point_geography := ST_SetSRID(ST_MakePoint(p_longitude, p_latitude), 4326)::geography;
+
+    IF v_geometry.polygon IS NOT NULL THEN
+      -- Polygon containment
+      IF ST_Covers(v_geometry.polygon::geography, v_point_geography) THEN
+        v_result := 'validated';
+      ELSE
+        v_result := 'outside_region';
+      END IF;
+    ELSIF v_geometry.center_lat IS NOT NULL THEN
+      -- Point + radius distance check
+      v_geom_geography := ST_SetSRID(
+        ST_MakePoint(v_geometry.center_lng, v_geometry.center_lat), 4326
+      )::geography;
+      v_distance_meters := ST_Distance(v_point_geography, v_geom_geography);
+
+      IF v_distance_meters <= v_geometry.radius_meters THEN
+        v_result := 'validated';
+      ELSE
+        v_result := 'outside_region';
+        -- Do NOT include distance or radius in response — would reveal secret geometry
+      END IF;
+    ELSE
+      v_result := 'unavailable';
+    END IF;
+
+    -- ── 11. Anti-spoofing: impossible timestamp ─────────────────────────────
+    IF v_age_seconds < 0 THEN
+      v_is_suspicious := TRUE;
+    END IF;
   END IF;
 
-  -- ── 11. Anti-spoofing: impossible timestamp ───────────────────────────────
-  IF v_age_seconds < 0 THEN
-    v_is_suspicious := TRUE;
-  END IF;
-
-  <<record_attempt>>
   -- ── 12. Record attempt ───────────────────────────────────────────────────
   INSERT INTO geo_validation_attempts (
     user_id, participation_id, quest_step_id,

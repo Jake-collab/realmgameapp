@@ -1,5 +1,5 @@
 -- ============================================================
--- Migration 028 — Moderation and Integrity Hardening
+-- Migration 041 — Moderation and Integrity Hardening
 -- Worlds — Build 1, Prompt 20
 -- ============================================================
 -- Extends the existing media, proof, reports, moderation-case, and audit

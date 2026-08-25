@@ -1,5 +1,5 @@
 -- ============================================================
--- Migration 031 — Prompt 20 reward safety gate
+-- Migration 044 — Prompt 20 reward safety gate
 -- Worlds — Build 1
 -- ============================================================
 -- Reward RPCs already validate ownership, state, and idempotency. This

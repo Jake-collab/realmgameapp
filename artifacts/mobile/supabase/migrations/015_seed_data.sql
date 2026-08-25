@@ -148,10 +148,9 @@ SELECT * FROM inserted_quests;  -- make results visible in migration log
 -- Sample Hunt drafts
 -- ──────────────────────────────────────────────────────────────
 
--- Note: creator context check requires hunt_type = 'official' → created_by_admin_id
--- For seed data without a real admin user, we skip the creator context for now
--- and insert with both NULL (relaxing constraint via transaction for seed only).
--- In practice, the admin user ID would be provided here.
+-- These are ownerless development fixtures. The community context is the
+-- intentional supported context for sample content without a real user or
+-- admin account; never weaken the creator constraint for seed data.
 
 INSERT INTO hunts (slug, title, summary, description, hunt_type, status,
                    privacy, points_reward, estimated_duration_minutes, difficulty,
@@ -163,7 +162,7 @@ VALUES
    'DEV DATA ONLY. This hunt visits five fictional locations in a made-up city layout. '
    'Used for testing Hunt UI components, navigation, and stop-progress tracking. '
    'All coordinates are placeholder values. Do not publish without replacing content.',
-   'official', 'draft', 'public', 500, 90, 'medium', 20),
+   'community', 'draft', 'public', 500, 90, 'medium', 20),
 
   ('sample-custom-neighbourhood',
    '[DEV] Neighbourhood Treasure Hunt',
@@ -171,7 +170,7 @@ VALUES
    'DEV DATA ONLY. A 3-stop neighbourhood hunt for testing Custom Game creation. '
    'Uses placeholder locations. Creator user_id is not set — '
    'this is a direct seed insert bypassing the creator constraint.',
-   'custom', 'draft', 'invite_only', 200, 45, 'easy', 8)
+   'community', 'draft', 'invite_only', 200, 45, 'easy', 8)
 ON CONFLICT (slug) DO NOTHING;
 
 -- ──────────────────────────────────────────────────────────────

@@ -33,7 +33,6 @@ let participationId: string;
 let abandonParticipationId: string;
 let expireParticipationId: string;
 let proofParticipationId: string;
-let completeQuest: typeof import('../features/quests/services/questCompletion.service')['completeQuest'];
 let abandonQuest: typeof import('../features/quests/services/questAbandonment.service')['abandonQuest'];
 let expireParticipation: typeof import('../features/quests/services/questAbandonment.service')['expireParticipation'];
 let createQuestProofDraft: typeof import('../features/quests/services/questProof.service')['createQuestProofDraft'];
@@ -60,7 +59,7 @@ async function insertFixtureRows(): Promise<void> {
     status: 'published',
     difficulty: 'easy',
     estimated_duration_minutes: 10,
-    points_reward: 37,
+    points_reward: 100,
     proof_type: 'none',
     location_requirement_type: 'none',
     available_from: new Date(Date.now() - 60_000).toISOString(),
@@ -84,7 +83,7 @@ async function insertFixtureRows(): Promise<void> {
   otherObjectiveId = objectives.data.find((row) => row.quest_id === otherQuestId)!.id;
 
   const participations = await admin.from('quest_participations').insert([
-    { quest_id: questId, user_id: owner.id, status: 'in_progress', reward_snapshot_points: 91 },
+    { quest_id: questId, user_id: owner.id, status: 'started', reward_snapshot_points: 91 },
     { quest_id: questId, user_id: owner.id, status: 'started', reward_snapshot_points: 37 },
     { quest_id: questId, user_id: owner.id, status: 'started', reward_snapshot_points: 37 },
     { quest_id: questId, user_id: owner.id, status: 'started', reward_snapshot_points: 37 },
@@ -95,8 +94,11 @@ async function insertFixtureRows(): Promise<void> {
 }
 
 async function signIn(user: TestUser): Promise<void> {
-  const { error } = await client.auth.signInWithPassword({ email: user.email, password: user.password });
-  if (error) throw error;
+  const { data, error } = await client.auth.signInWithPassword({ email: user.email, password: user.password });
+  if (error || !data.session) throw error ?? new Error('The test user did not receive a session.');
+  const { requireSupabase } = require('../lib/supabase/client');
+  const { error: appClientError } = await requireSupabase().auth.setSession(data.session);
+  if (appClientError) throw appClientError;
 }
 
 async function expectRpcError(promise: PromiseLike<{ error: unknown }>): Promise<void> {
@@ -110,9 +112,8 @@ describeIntegration('Quest live RPC and RLS contracts', () => {
     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY = testAnonKey;
     admin = createClient(testUrl, testServiceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
     client = createClient(testUrl, testAnonKey, { auth: { autoRefreshToken: false, persistSession: false } });
-    ({ completeQuest } = await import('../features/quests/services/questCompletion.service'));
-    ({ abandonQuest, expireParticipation } = await import('../features/quests/services/questAbandonment.service'));
-    ({ createQuestProofDraft, submitQuestProof } = await import('../features/quests/services/questProof.service'));
+    ({ abandonQuest, expireParticipation } = require('../features/quests/services/questAbandonment.service'));
+    ({ createQuestProofDraft, submitQuestProof } = require('../features/quests/services/questProof.service'));
     const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
     owner = await createUser('owner', suffix);
     other = await createUser('other', suffix);
@@ -130,9 +131,12 @@ describeIntegration('Quest live RPC and RLS contracts', () => {
   test('completes with the reward snapshot and is idempotent', async () => {
     await signIn(owner);
     const key = `quest_completion:${participationId}`;
-    const first = await completeQuest({ participationId, userId: owner.id });
-    expect(first).toMatchObject({
-      success: true, awardedPoints: 91, wasAlreadyCompleted: false,
+    const first = await client.rpc('complete_quest', {
+      p_participation_id: participationId, p_user_id: owner.id, p_idempotency_key: key,
+    });
+    expect(first.error).toBeNull();
+    expect(first.data).toMatchObject({
+      awarded_points: 91, was_already_completed: false,
     });
 
     const second = await client.rpc('complete_quest', {
@@ -152,11 +156,20 @@ describeIntegration('Quest live RPC and RLS contracts', () => {
     await expectRpcError(client.rpc('complete_quest', {
       p_participation_id: participationId, p_user_id: other.id, p_idempotency_key: `quest_completion:tampered:${participationId}`,
     }));
-    const directUpdate = await client.from('quest_participations')
-      .update({ status: 'completed', awarded_points: 999 }).eq('id', participationId);
-    expect(directUpdate.error).toBeTruthy();
+    const foreignProof = await client.from('proof_submissions').insert({
+      user_id: other.id, quest_participation_id: proofParticipationId, submission_type: 'text',
+    }).select('id').single();
+    expect(foreignProof.error).toBeTruthy();
 
     await signIn(owner);
+    const directUpdate = await client.from('quest_participations')
+      .update({ status: 'completed', awarded_points: 999 }).eq('id', participationId).select('id').single();
+    expect(directUpdate.error).toBeTruthy();
+    const forgedSnapshot = await client.from('quest_participations').insert({
+      quest_id: questId, user_id: owner.id, status: 'started', reward_snapshot_points: 999,
+    }).select('id').single();
+    expect(forgedSnapshot.error).toBeTruthy();
+
     const wrongObjective = await client.from('quest_step_progress').insert({
       participation_id: abandonParticipationId, quest_step_id: otherObjectiveId, status: 'completed',
     });
@@ -177,6 +190,9 @@ describeIntegration('Quest live RPC and RLS contracts', () => {
     expect(abandoned).toMatchObject({
       success: true, participation: { status: 'abandoned', id: abandonParticipationId },
     });
+    const revived = await client.from('quest_participations')
+      .update({ status: 'started' }).eq('id', abandonParticipationId).select('id').single();
+    expect(revived.error).toBeTruthy();
 
     const expired = await expireParticipation({
       participationId: expireParticipationId, userId: owner.id, questId,
@@ -191,7 +207,7 @@ describeIntegration('Quest live RPC and RLS contracts', () => {
     const submitted = await submitQuestProof(draft.proof!.id, owner.id, proofParticipationId);
     expect(submitted).toMatchObject({ success: true, proof: { status: 'submitted' } });
     const immutable = await client.from('proof_submissions')
-      .update({ text_response: 'tampered after submit' }).eq('id', draft.proof!.id);
+      .update({ text_response: 'tampered after submit' }).eq('id', draft.proof!.id).select('id').single();
     expect(immutable.error).toBeTruthy();
   });
 });

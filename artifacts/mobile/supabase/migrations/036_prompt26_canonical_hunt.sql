@@ -187,7 +187,7 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM hunt_stop_progress
     WHERE hunt_participant_id=p_participation_id AND hunt_stop_id=p_stop_id
-      AND status NOT IN ('locked','not_started','completed','expired','rejected')
+      AND status = 'in_progress'
   ) THEN RETURN jsonb_build_object('success',false,'reasonCode','DROP_UNAVAILABLE'); END IF;
   SELECT * INTO v_geo FROM hunt_stop_geofences WHERE hunt_stop_id=p_stop_id;
   IF NOT FOUND OR v_geo.validation_point IS NULL
@@ -243,7 +243,7 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM hunt_participants hp JOIN hunt_stop_progress hsp ON hsp.hunt_participant_id=hp.id
     WHERE hp.id=p_participation_id AND hp.user_id=auth.uid() AND hp.status='active'
-      AND hsp.hunt_stop_id=p_stop_id AND hsp.status IN ('available','in_progress')
+      AND hsp.hunt_stop_id=p_stop_id AND hsp.status = 'in_progress'
   ) THEN RETURN jsonb_build_object('success',false,'reasonCode','DROP_UNAVAILABLE'); END IF;
   SELECT * INTO v_answer FROM hunt_drop_riddle_answers WHERE hunt_stop_id=p_stop_id;
   IF NOT FOUND THEN RETURN jsonb_build_object('success',false,'reasonCode','RIDDLE_NOT_CONFIGURED'); END IF;
@@ -271,9 +271,9 @@ CREATE OR REPLACE FUNCTION get_hunt_drop_search_zones(
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT hs.id, hp.hunt_id, hs.drop_type, g.public_search_lat, g.public_search_lng,
     g.public_search_radius_meters, g.clue_reveal_radius_meters, g.collection_radius_meters,
-    CASE WHEN hsp.status IN ('locked','not_started') THEN 'locked' ELSE 'available' END,
+    CASE WHEN hsp.status = 'not_started' THEN 'locked' ELSE 'available' END,
     CASE WHEN c.id IS NOT NULL THEN 'COLLECTED'
-         WHEN hsp.status IN ('locked','not_started') THEN 'CLUE_LOCKED'
+         WHEN hsp.status = 'not_started' THEN 'CLUE_LOCKED'
          ELSE 'SEARCHING' END,
     hs.title, hs.final_hunt_points
   FROM hunt_participants hp

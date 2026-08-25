@@ -1,0 +1,62 @@
+name: Quest database contracts
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/quest-database.yml"
+      - "artifacts/mobile/__tests__/questRpc.integration.test.ts"
+      - "artifacts/mobile/features/quests/**"
+      - "artifacts/mobile/lib/supabase/**"
+      - "artifacts/mobile/package.json"
+      - "artifacts/mobile/scripts/quest-database-check.sh"
+      - "artifacts/mobile/supabase/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/quest-database.yml"
+      - "artifacts/mobile/__tests__/questRpc.integration.test.ts"
+      - "artifacts/mobile/features/quests/**"
+      - "artifacts/mobile/lib/supabase/**"
+      - "artifacts/mobile/package.json"
+      - "artifacts/mobile/scripts/quest-database-check.sh"
+      - "artifacts/mobile/supabase/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quest-database:
+    name: Quest RPC and RLS contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the release candidate
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install JavaScript dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Apply migrations and run Quest contracts
+        run: bash artifacts/mobile/scripts/quest-database-check.sh

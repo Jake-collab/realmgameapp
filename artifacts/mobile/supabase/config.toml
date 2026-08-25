@@ -1,0 +1,45 @@
+# Disposable local Supabase configuration used by the Quest database check.
+# This database is recreated for every CI run; it must never be linked to a
+# hosted or production Supabase project.
+project_id = "quest-database-check"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+# The existing migration set grants access through RLS policies and assumes
+# Supabase's legacy API role exposure for service-role fixture setup.
+auto_expose_new_tables = true
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 17
+
+[db.migrations]
+enabled = true
+
+[db.seed]
+enabled = false
+
+[realtime]
+enabled = false
+
+[studio]
+enabled = false
+
+[local_smtp]
+enabled = false
+
+[storage]
+enabled = false
+
+[auth]
+enabled = true
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
