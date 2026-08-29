@@ -1,0 +1,100 @@
+Let's complete Supabase blocker #5: scheduled jobs / cron / trusted worker deployment.
+
+Supabase blockers #1–#4 are complete.
+
+Audit the CURRENT Worlds codebase and connected production Supabase project for every background/scheduled task required for Build 1.
+
+The previous audit identified needs including:
+
+- notification scheduling and retries
+- Hunt invitation expiration
+- Quest/Hunt lifecycle state transitions
+- temporary verification-session cleanup
+- temporary collection/placement-session cleanup
+- temporary media cleanup
+- retention processing
+- moderation retry/recovery
+- stale-session cleanup
+- leaderboard/background recalculation if still used
+- other scheduled Build 1 jobs actually referenced by current code
+
+IMPORTANT:
+
+Do not assume Supabase Cron is automatically the correct solution.
+
+First determine how the current architecture expects these jobs to run:
+- Supabase pg_cron
+- API worker process
+- Replit scheduled deployment/workflow
+- another existing trusted worker mechanism
+
+Choose the simplest production-safe architecture that matches the CURRENT code.
+
+Do not create duplicate schedulers that could run the same job twice.
+
+Please:
+
+1. Inventory every actual scheduled/background task in the current code.
+
+2. For each task state:
+   - purpose
+   - implementation file/function
+   - required frequency
+   - whether it is currently deployed
+   - which scheduler/worker should run it
+
+3. Determine whether the existing API worker artifact is sufficient.
+
+4. If the Replit environment can deploy/configure the worker or schedules automatically, DO IT.
+
+5. If owner action is genuinely required, stop and give me ONLY:
+   - exact action
+   - exact Replit/Supabase page
+   - exact setting/value
+   - why you cannot perform it yourself
+
+6. Make all jobs idempotent or otherwise safe against retries/duplicate execution.
+
+7. Verify privileged scheduled jobs use trusted server-side credentials only.
+
+8. Verify no service-role credentials are exposed to the mobile client.
+
+9. Add logging/error handling so failed jobs are visible and retryable where appropriate.
+
+TEST:
+
+Validate against the connected production environment that:
+
+- scheduled jobs are actually registered/deployed
+- worker is running if required
+- one scheduled invocation succeeds
+- duplicate execution does not corrupt state
+- expired invitations are handled correctly
+- stale verification/collection/placement sessions are cleaned up
+- temporary/private media cleanup respects retention rules
+- notification retries work
+- moderation retries do not duplicate decisions
+- scheduled jobs cannot be invoked with ordinary-user privileges
+
+When finished return:
+
+## SCHEDULER ARCHITECTURE
+State exactly what Worlds uses.
+
+## ACTIVE JOBS
+List each production job and frequency.
+
+## TEST RESULTS
+PASS/FAIL for each scheduled-job category.
+
+## OWNER ACTION REQUIRED
+List only actions I still personally need to perform.
+
+If none:
+OWNER ACTION REQUIRED: NONE
+
+Then state:
+
+SUPABASE BLOCKER #5: COMPLETE
+
+Do not move on to Mapbox yet.
