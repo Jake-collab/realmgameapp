@@ -27,3 +27,4 @@
 - [Storage RLS policy evaluation](storage-rls-policy-evaluation.md) — anonymous policies must not invoke creator-only helpers behind a short-circuit condition.
 - [Admin media URL boundary](admin-media-url-boundary.md) — staff access to private media is ID-only and server-signed after authorization.
 - [Hosted Auth URL configuration](hosted-auth-url-configuration.md) — the installed Supabase connection can inspect provider status but cannot mutate redirect allowlists; dashboard access is required.
+- [Scheduled worker architecture](scheduled-worker-architecture.md) — one trusted API worker owns durable notifications and maintenance; do not add pg_cron duplicates.

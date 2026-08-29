@@ -20,6 +20,7 @@ const serverEnvironmentSchema = z.object({
   CORS_ORIGINS: z.string().optional(),
   SCHEDULER_ENABLED: z.enum(["true", "false"]).default("false"),
   SCHEDULER_INTERVAL_SECONDS: z.coerce.number().int().positive().default(60),
+  SCHEDULER_MAINTENANCE_INTERVAL_SECONDS: z.coerce.number().int().positive().default(3600),
 });
 
 export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema>;
@@ -75,7 +76,7 @@ export function serverReadiness(raw: NodeJS.ProcessEnv = process.env): {
       name: "Scheduled jobs",
       status: env.SCHEDULER_ENABLED === "true" && supabase ? "ready" : "missing_config",
       summary: env.SCHEDULER_ENABLED === "true" && supabase
-        ? `Worker contract enabled; due jobs run every ${env.SCHEDULER_INTERVAL_SECONDS}s.`
+        ? `Trusted worker enabled; due jobs run every ${env.SCHEDULER_INTERVAL_SECONDS}s and maintenance runs every ${env.SCHEDULER_MAINTENANCE_INTERVAL_SECONDS}s.`
         : "Set SCHEDULER_ENABLED=true with trusted Supabase credentials and run the worker command.",
     },
   ];

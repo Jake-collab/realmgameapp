@@ -31,6 +31,29 @@ export async function supabaseAdminRequest<T>(
   return (await response.json()) as T;
 }
 
+export async function supabaseAdminRpc<T>(
+  functionName: string,
+  body: Record<string, unknown> = {},
+): Promise<T> {
+  const credentials = config();
+  if (!credentials) throw new Error('Supabase trusted access is unavailable.');
+  const response = await fetch(`${credentials.url}/rest/v1/rpc/${encodeURIComponent(functionName)}`, {
+    method: 'POST',
+    headers: {
+      apikey: credentials.key,
+      authorization: `Bearer ${credentials.key}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => '');
+    throw new Error(`Supabase RPC ${functionName} failed with status ${response.status}${detail ? `: ${detail.slice(0, 300)}` : '.'}`);
+  }
+  if (response.status === 204) return undefined as T;
+  return (await response.json()) as T;
+}
+
 export async function createSupabaseStorageSignedUrl(
   bucket: string,
   objectPath: string,

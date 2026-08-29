@@ -48,19 +48,22 @@ The worker requires:
 NODE_ENV=production
 SCHEDULER_ENABLED=true
 SCHEDULER_INTERVAL_SECONDS=60
+SCHEDULER_MAINTENANCE_INTERVAL_SECONDS=3600
 SUPABASE_URL=<owner-supplied production URL>
 SUPABASE_SERVICE_ROLE_KEY=<owner-supplied server secret>
 ```
 
-The worker uses the idempotent due-notification loop and must run as one trusted
-replica unless a shared Supabase-backed claim/lock adapter is enabled. The
-current local notification store is intentionally not a production persistence
-adapter; it is safe for local diagnostics only. Before launch, the worker's
-storage operations must be wired to the production Supabase notification tables
-and verified against the live schema.
+The worker uses the Supabase-backed notification tables with atomic claims,
+five-minute leases, bounded retries, and restart recovery. It owns the
+database-native maintenance functions through one RPC entry point; do not also
+register these functions in `pg_cron` or another scheduler. Multiple trusted
+worker replicas may safely share the queue because claims use row locks and
+leases.
 
 If `SCHEDULER_ENABLED` is false, the worker exits without claiming work. If
 trusted Supabase configuration is absent, production startup fails explicitly.
+The API server and worker are separate processes. Publishing the API service
+does not by itself publish or start the worker.
 
 ## Admin and mobile
 

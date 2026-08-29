@@ -10,8 +10,8 @@ This checklist records actions that cannot be completed from the repository. Do 
 - [ ] Run `supabase db push` from the linked project after reviewing every migration; do not run seed data in production.
 - [ ] Create all private storage buckets and apply the policies in `artifacts/mobile/docs/STORAGE_ARCHITECTURE.md`.
 - [ ] Configure Auth email, redirect allowlists, rate limits, and the owner-assigned HTTPS domain.
-- [ ] Configure a trusted scheduler/worker for due notifications and document its retry/alerting policy.
-- [ ] Set `SCHEDULER_ENABLED=true` and run `pnpm --filter @workspace/api-server run worker` as a separate trusted process; do not run multiple workers until shared claim/lock behavior is enabled.
+- [ ] Publish/configure a separate always-on trusted worker process using `pnpm --filter @workspace/api-server run worker`; it must use the same production Supabase URL and server-only service-role secret as the API.
+- [ ] Set `SCHEDULER_ENABLED=true`, `SCHEDULER_INTERVAL_SECONDS=60`, and `SCHEDULER_MAINTENANCE_INTERVAL_SECONDS=3600`; do not also register these jobs in Supabase `pg_cron`.
 - [ ] Enable backups and test a restore before launch.
 
 ## Mapbox and native builds

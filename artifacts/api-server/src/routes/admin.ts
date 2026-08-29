@@ -57,7 +57,8 @@ import {
   recordAuditEvent,
 } from "../lib/moderation-state";
 import { persistIntegritySnapshot, persistModerationResult } from "../lib/supabase-moderation";
-import { ExpoPushProvider, NoopPushProvider, notificationStore, renderNotification, type NotificationEvent } from "../lib/notifications";
+import { ExpoPushProvider, NoopPushProvider, NotificationStore, renderNotification, type NotificationEvent } from "../lib/notifications";
+import { SupabaseNotificationStore } from "../lib/durable-notifications";
 import {
   createSupabaseStorageSignedUrl,
   supabaseAdminConfigured,
@@ -154,10 +155,13 @@ router.get("/admin/session", async (req, res) => {
 });
 
 const pushProvider = process.env.EXPO_ACCESS_TOKEN ? new ExpoPushProvider() : new NoopPushProvider();
+const notificationStore = process.env.NODE_ENV === "production"
+  ? new SupabaseNotificationStore()
+  : new NotificationStore();
 
 router.get("/admin/notifications", requireAdmin("admin.read"), async (_req, res) => {
-  const items = notificationStore.all();
-  const delivery = notificationStore.deliveryRecords();
+  const items = await notificationStore.all();
+  const delivery = await notificationStore.deliveryRecords();
   const health = await pushProvider.healthCheck();
   const persistence = notificationStore.persistenceDiagnostics();
   res.json({
@@ -167,8 +171,8 @@ router.get("/admin/notifications", requireAdmin("admin.read"), async (_req, res)
       successfulPushes: delivery.filter(item => item.channel === "push" && ["sent", "delivered"].includes(item.status)).length,
       failedSends: delivery.filter(item => item.status === "failed").length,
       invalidTokens: delivery.filter(item => item.failureCategory === "invalid_token").length,
-      pendingScheduled: notificationStore.scheduledCount(),
-      queueBacklog: notificationStore.queuedDeliveryCount(),
+      pendingScheduled: await notificationStore.scheduledCount(),
+      queueBacklog: await notificationStore.queuedDeliveryCount(),
       averageDeliveryLatencyMs: null,
     },
     provider: { ...health, reason: health.configured ? "Provider configured; receipts require provider receipt processing." : "Configure Expo access before push delivery can begin." },
@@ -178,18 +182,18 @@ router.get("/admin/notifications", requireAdmin("admin.read"), async (_req, res)
 });
 
 router.post("/admin/notifications/run-due", requireAdmin("admin.diagnostics.read"), async (_req, res) => {
-  const results = notificationStore.runDue();
+  const results = await notificationStore.runDue();
   const delivery = await notificationStore.flushQueued(pushProvider);
   res.json({ processed: results.length, delivery, results: results.map(result => ({ jobId: result.job.id, status: result.job.status, notificationId: result.notification?.id ?? null })) });
 });
 
 router.get("/admin/notifications/diagnostics", requireAdmin("admin.diagnostics.read"), async (_req, res) => {
   const health = await pushProvider.healthCheck();
-  const delivery = notificationStore.deliveryRecords();
+  const delivery = await notificationStore.deliveryRecords();
   res.json({
     providerConfigured: health.configured,
     providerReachable: health.reachable,
-    queueHealth: notificationStore.queuedDeliveryCount() ? "queued" : "clear",
+    queueHealth: (await notificationStore.queuedDeliveryCount()) ? "queued" : "clear",
     oldestQueuedJob: null,
     invalidTokenCount: delivery.filter(item => item.failureCategory === "invalid_token").length,
     lastSuccessfulSend: delivery.find(item => ["sent", "delivered"].includes(item.status))?.lastAttemptAt ?? null,
@@ -211,7 +215,7 @@ router.post("/admin/notifications/test", requireAdmin("admin.read"), async (req,
     variables: { message: "This is a test notification from the Worlds Admin Panel." },
     deepLink: "worlds://notifications",
   };
-  const record = notificationStore.process(event);
+  const record = await notificationStore.process(event);
   const delivery = await notificationStore.flushQueued(pushProvider);
   res.status(201).json({ test: true, notification: record ?? renderNotification(event), delivery });
 });

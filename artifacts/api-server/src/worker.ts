@@ -1,8 +1,10 @@
 import { logger } from "./lib/logger";
-import { ExpoPushProvider, NoopPushProvider, notificationStore } from "./lib/notifications";
+import { ExpoPushProvider, NoopPushProvider } from "./lib/notifications";
+import { SupabaseNotificationStore } from "./lib/durable-notifications";
 import { readServerEnvironment } from "./lib/config";
 
 const environment = readServerEnvironment();
+const notificationStore = new SupabaseNotificationStore();
 
 if (environment.SCHEDULER_ENABLED !== "true") {
   logger.warn("Scheduler is disabled; set SCHEDULER_ENABLED=true before starting the worker.");
@@ -20,11 +22,30 @@ try {
 }
 
 const provider = process.env.EXPO_ACCESS_TOKEN ? new ExpoPushProvider() : new NoopPushProvider();
+let running = false;
+let lastMaintenanceAt = 0;
 const run = async () => {
-  const recovered = notificationStore.recoverInterruptedWork();
-  const results = notificationStore.runDue();
-  const delivery = await notificationStore.flushQueued(provider);
-  logger.info({ processed: results.length, recovered, delivery }, "Scheduled notification cycle complete");
+  if (running) {
+    logger.warn("Scheduled notification cycle skipped because the previous cycle is still running");
+    return;
+  }
+  running = true;
+  try {
+    const recovered = await notificationStore.recoverInterruptedWork();
+    const results = await notificationStore.runDue();
+    const delivery = await notificationStore.flushQueued(provider);
+    let maintenance: unknown = null;
+    const maintenanceIntervalMs = environment.SCHEDULER_MAINTENANCE_INTERVAL_SECONDS * 1000;
+    if (Date.now() - lastMaintenanceAt >= maintenanceIntervalMs) {
+      maintenance = await notificationStore.runMaintenance();
+      lastMaintenanceAt = Date.now();
+    }
+    logger.info({ processed: results.length, recovered, delivery, maintenance }, "Scheduled worker cycle complete");
+  } catch (error) {
+    logger.error({ error: error instanceof Error ? error.message : "scheduled_worker_cycle_failed" }, "Scheduled worker cycle failed");
+  } finally {
+    running = false;
+  }
 };
 
 void run();
