@@ -1,0 +1,1292 @@
+WORLDS BUILD 1 — STAGE 3
+LIVE PAYMENT CONNECTIONS + SELLER PAYOUTS + STORE COMPLIANCE
+
+Stage 1 Revenue Specification: COMPLETE
+Stage 2 Revenue + Supabase Implementation: COMPLETE
+
+Current canonical revenue architecture is provider-neutral and production Supabase parity is through migration 073.
+
+Stage 3 must now connect the ACTUAL payment providers and make the payment-ready Stage 2 architecture live.
+
+IMPORTANT:
+
+DO:
+- audit current Apple, Google, Stripe, Expo/native, API, mobile, Supabase, and Admin payment readiness
+- connect the correct payment providers
+- implement trusted server-side purchase confirmation
+- implement trusted provider notifications/webhooks
+- connect Worlds Membership purchases
+- connect Extra Drop Credit purchases
+- connect paid collectible transactions
+- connect seller onboarding/payout architecture
+- connect refunds/reversals/disputes
+- preserve the canonical Stage 2 entitlement/accounting model
+- create forward-only migrations if genuinely required
+- test real provider integration paths as far as credentials/accounts/build environment allow
+
+DO NOT:
+- redesign the Stage 2 revenue architecture
+- make client payment state authoritative
+- bypass Apple/Google rules deceptively
+- disguise digital goods as physical goods
+- expose secret keys in mobile
+- modify already-applied migrations
+- start Mapbox
+- weaken QVAC/QAVS/Hunt security
+- enable pay-to-win points
+
+==================================================
+1. AUDIT BEFORE IMPLEMENTATION
+==================================================
+
+Inspect:
+
+- artifacts/mobile/docs/REVENUE_STAGE_1_SPEC.md
+- PROJECT_CONSTITUTION.md
+- migrations 001–073
+- current membership tables/RPCs
+- Drop Credit ledger
+- collectible transaction model
+- seller payable ledger
+- provider external-ID tables
+- refund/reversal model
+- Admin revenue controls
+- existing environment configuration
+- current Expo configuration
+- current iOS bundle identifiers
+- current Android application/package identifiers
+- any existing Apple StoreKit/IAP package
+- any existing Google Play Billing package
+- any existing Stripe SDK/API integration
+- any existing Stripe webhook routes/functions
+- current Supabase Edge Functions/API routes
+- current secret storage strategy
+
+Do not duplicate existing payment infrastructure unnecessarily.
+
+==================================================
+2. CURRENT STORE-RULE ASSUMPTIONS
+==================================================
+
+Do NOT hard-code legal assumptions permanently.
+
+Architect based on current rules while preserving configuration by:
+
+- platform
+- storefront/region
+- payment category
+- payment provider
+- external checkout eligibility
+
+Payment categories remain:
+
+1. Worlds Membership
+2. Extra Drop Credits
+3. User-created collectible purchase
+4. Seller payout
+
+These categories may use different payment rails.
+
+==================================================
+3. APPLE — DIGITAL PURCHASE POLICY
+==================================================
+
+Treat:
+
+- Worlds Membership
+- Extra Drop Credits
+- paid digital collectibles
+
+as digital app content/features unless a current Apple rule clearly establishes otherwise.
+
+Do not classify them as physical goods.
+
+For Apple storefronts where Apple IAP is required:
+use compliant StoreKit / In-App Purchase.
+
+For the United States storefront:
+
+Current Apple rules permit buttons, external links, or calls to action to alternative purchase methods without the normal external-purchase-link entitlement requirement.
+
+However:
+
+- still verify the current rule before final production enablement
+- account for storefront
+- preserve the ability to disable external checkout by region
+- do not assume U.S. behavior applies globally
+
+Document the exact Apple payment architecture selected.
+
+==================================================
+4. GOOGLE PLAY — DIGITAL PURCHASE POLICY
+==================================================
+
+For Google Play U.S. users:
+
+Current Google policy allows eligible developers to use alternative billing or external content links after required program enrollment.
+
+The architecture must support:
+
+- Google Play Billing
+- approved alternative billing where enrolled
+- approved external purchase links where enrolled
+
+Do not assume alternative billing eliminates Google service fees.
+
+Starting October 1, 2026, current published U.S. rules require enrolled alternative-billing/external-link developers to report transactions/downloads and pay applicable Play service fees.
+
+Implement provider/service-fee recording so Stage 2 accounting can represent this correctly.
+
+Before production launch:
+revalidate Google’s current rules.
+
+==================================================
+5. PAYMENT ROUTING CONFIG
+==================================================
+
+Implement a server-controlled routing policy.
+
+Inputs may include:
+
+- platform: ios/android/web
+- storefront/country
+- payment category
+- app-store eligibility
+- alternative billing enrollment
+- external checkout eligibility
+- provider availability
+
+Return allowed checkout route.
+
+Examples:
+
+APPLE_IAP
+GOOGLE_PLAY_BILLING
+STRIPE_CHECKOUT
+STRIPE_CONNECT_MARKETPLACE
+EXTERNAL_WEB_CHECKOUT
+UNAVAILABLE
+
+Do not allow mobile client to independently choose a cheaper unauthorized provider.
+
+==================================================
+6. WORLDS MEMBERSHIP
+==================================================
+
+Connect live membership purchases.
+
+Canonical plans remain:
+
+MONTHLY:
+$4.99
+
+YEARLY:
+$44.99
+
+Provider product identifiers must map to internal plan IDs.
+
+Support:
+
+- Apple subscription product IDs
+- Google subscription/base-plan IDs
+- Stripe recurring Price IDs where legally/architecturally appropriate
+
+Do not make provider product IDs canonical plan identifiers.
+
+==================================================
+7. MEMBERSHIP PURCHASE FLOW
+==================================================
+
+Implement:
+
+purchase initiated
+→ provider checkout
+→ provider confirmation
+→ trusted server verification
+→ internal membership entitlement update
+→ mobile refresh
+
+Mobile success UI must not grant membership by itself.
+
+Provider confirmation must be verified server-side.
+
+==================================================
+8. APPLE MEMBERSHIP VERIFICATION
+==================================================
+
+Use the current recommended Apple server-side transaction verification / notification architecture.
+
+Support:
+
+- initial purchase
+- renewal
+- expiration
+- cancellation
+- billing retry/grace state where applicable
+- refund
+- revocation
+- upgrade/downgrade where later supported
+
+Use immutable provider transaction IDs for idempotency.
+
+Implement Apple server notifications if required by the selected current StoreKit architecture.
+
+==================================================
+9. GOOGLE MEMBERSHIP VERIFICATION
+==================================================
+
+Use the current recommended Google Play server verification and notification architecture.
+
+Support:
+
+- purchase
+- renewal
+- expiration
+- cancellation
+- refund/revoke
+- billing recovery
+- duplicate notification protection
+
+Use provider purchase/order/token identity safely.
+
+Do not rely on mobile purchase acknowledgement alone.
+
+==================================================
+10. STRIPE MEMBERSHIP
+==================================================
+
+Where Stripe membership checkout is allowed:
+
+Implement:
+
+- Stripe Customer identity mapping
+- Checkout or Payment Link/Subscription flow appropriate for current architecture
+- subscription creation
+- webhook verification
+- subscription lifecycle mapping
+- cancellation
+- renewal
+- refund/reversal events
+
+Use existing internal membership state.
+
+Do not create a separate Stripe-only membership model.
+
+==================================================
+11. EXTRA DROP CREDIT PURCHASES
+==================================================
+
+Canonical packs:
+
+$1.99 → 5 credits
+$4.99 → 15 credits
+$9.99 → 35 credits
+
+Connect live purchases through the legally permitted provider for each platform/storefront.
+
+Provider product IDs must map to canonical internal pack IDs.
+
+Trusted successful purchase:
+→ append purchase/payment event
+→ grant credits once
+→ update credit ledger
+
+Refund/reversal:
+→ record reversal
+→ reverse unused credit entitlement where possible
+→ if already consumed, create appropriate negative/adjustment accounting without corrupting historical Drop creation
+
+Do not double-grant repeated provider events.
+
+==================================================
+12. APPLE DROP CREDIT PRODUCTS
+==================================================
+
+If Apple IAP is required:
+
+Create/support consumable product mapping for the three packs.
+
+Do not embed product IDs throughout business logic.
+
+Map provider ID → internal pack.
+
+Verify transaction server-side.
+
+Grant exactly once.
+
+==================================================
+13. GOOGLE DROP CREDIT PRODUCTS
+==================================================
+
+If Google Play Billing is required:
+
+Use compliant one-time product configuration.
+
+Map provider product ID → internal pack.
+
+Verify purchase server-side.
+
+Acknowledge/consume according to current Play Billing requirements.
+
+Grant exactly once.
+
+==================================================
+14. PAID COLLECTIBLE PURCHASES
+==================================================
+
+This is a creator marketplace transaction.
+
+The Stage 2 transaction architecture remains canonical.
+
+Do not create ownership until trusted payment confirmation.
+
+Flow:
+
+valid Drop find
+→ collectible available
+→ user chooses Purchase
+→ eligible payment route determined
+→ payment initiated
+→ provider confirms
+→ server verifies
+→ transaction marked confirmed
+→ collectible quantity atomically consumed
+→ ownership granted
+→ seller payable entry created
+→ Worlds fee recorded
+
+All steps must remain idempotent.
+
+==================================================
+15. CREATOR-SET COLLECTIBLE PRICES
+==================================================
+
+Current product model allows creator-selected pricing.
+
+Audit the practical implications for Apple/Google store billing before implementation.
+
+Do NOT create an unbounded number of static App Store / Play product IDs without verifying that architecture is viable.
+
+If arbitrary creator-set pricing cannot be represented directly using native-store products:
+
+Implement a compliant provider/routing model rather than silently changing the business rule.
+
+If a storefront requires native billing that makes arbitrary user-defined pricing impractical, report the exact constraint and implement the least disruptive compliant design.
+
+Do not invent a workaround that risks rejection.
+
+==================================================
+16. STRIPE CONNECT — SELLERS
+==================================================
+
+Implement Stripe Connect for eligible seller payout architecture unless a concrete technical/compliance blocker is found.
+
+Prefer Stripe-hosted or embedded onboarding rather than collecting identity/KYC data directly.
+
+Seller state must map into existing canonical values:
+
+not_onboarded
+onboarding_required
+pending
+active
+restricted
+disabled
+
+==================================================
+17. STRIPE CONNECT ACCOUNT MODEL
+==================================================
+
+Audit current Stripe Connect account types/integration patterns and select the appropriate current model.
+
+Requirements:
+
+- seller onboarding
+- KYC/identity handled by Stripe where possible
+- bank/debit payout destination handled by Stripe
+- payout eligibility
+- account restrictions
+- account requirements updates
+- seller dashboard/account-management route where appropriate
+
+Do not collect bank numbers or identity documents into Worlds if Stripe can securely handle them.
+
+==================================================
+18. SELLER AGE / ELIGIBILITY
+==================================================
+
+Do not assume every user can legally receive payouts.
+
+Implement/provider-gate paid selling based on current Stripe eligibility and applicable age/guardian requirements.
+
+Free collectible creation remains independent of seller payout onboarding.
+
+If a user's account cannot legally receive marketplace payouts:
+do not activate paid selling.
+
+Do not fabricate age/legal requirements.
+Use provider-reported eligibility/status.
+
+==================================================
+19. STRIPE MARKETPLACE CHARGE MODEL
+==================================================
+
+Determine the correct Connect charge architecture for Worlds:
+
+examples may include:
+- destination charges
+- separate charges and transfers
+- direct charges
+
+Choose based on:
+
+- 30% platform fee
+- seller payout
+- refunds
+- chargebacks
+- app-store restrictions
+- transaction reconciliation
+- platform liability
+
+Document why the selected model is correct.
+
+Do not choose solely because it is easiest to code.
+
+==================================================
+20. 30% PLATFORM FEE
+==================================================
+
+Preserve canonical fee:
+
+Worlds platform fee:
+30% of gross collectible sale price.
+
+Intended seller economic share before external fees:
+70%.
+
+Record separately:
+
+gross price
+Worlds fee
+seller gross economic share
+Stripe/payment processing fee
+Apple/Google service/store fee where applicable
+tax
+refund
+chargeback
+seller actual payable
+Worlds net revenue
+
+Do not collapse these into one fee.
+
+==================================================
+21. STRIPE CONNECT PRICING MODEL
+==================================================
+
+Do NOT hard-code an assumed Connect commercial option.
+
+Current Stripe Connect offers different models including:
+
+- Stripe handles pricing
+- platform handles pricing
+
+Audit the account's actual Connect configuration and choose the model most appropriate for Worlds.
+
+Report:
+
+- chosen model
+- account fees
+- payout fees
+- processing fees
+- who bears each fee
+- expected effect on Worlds' 30% margin
+
+Do not assume the platform necessarily pays $2/account unless its selected Connect model actually does.
+
+==================================================
+22. SMALL TRANSACTION ECONOMICS
+==================================================
+
+Because collectibles may have low prices, calculate practical economics for representative purchases.
+
+Evaluate at least:
+
+$1
+$2
+$5
+$10
+$20
+
+For each selected provider route, estimate:
+
+gross
+store/service fee
+processor fee
+Worlds intended 30%
+seller economic share
+Worlds approximate remaining net
+
+This is an implementation validation/reporting exercise.
+
+Do not silently change the 30% business rule.
+
+If $1 paid collectibles are economically unsustainable with a required payment rail:
+flag it clearly.
+
+==================================================
+23. STRIPE WEBHOOKS
+==================================================
+
+Use ONE canonical trusted Stripe event-processing path.
+
+Preserve:
+
+raw request body
+→ verify Stripe signature
+→ normalize event
+→ idempotency check
+→ transactional internal processing
+→ ledger/audit update
+
+Do not create multiple conflicting Stripe processors.
+
+==================================================
+24. STRIPE WEBHOOK EVENTS
+==================================================
+
+Subscribe only to events actually needed.
+
+Likely categories:
+
+- checkout/payment success
+- payment failure
+- refund
+- dispute
+- subscription lifecycle
+- connected account status
+- payout status
+- transfer status
+
+Determine exact current event names from the Stripe API version being used.
+
+Do not subscribe blindly to every event.
+
+==================================================
+25. CONNECTED ACCOUNT EVENTS
+==================================================
+
+Handle connected-account lifecycle:
+
+- account created
+- onboarding incomplete
+- requirements due
+- capability enabled/disabled
+- restricted
+- payout enabled/disabled
+
+Update existing seller status accordingly.
+
+==================================================
+26. SELLER PAYABLE → PAYOUT
+==================================================
+
+Connect seller payable accounting to Stripe Connect payout state.
+
+Do NOT create one bank payout for every small collectible sale.
+
+Use provider-supported balance/payout scheduling.
+
+Record:
+
+seller earnings
+available balance
+pending balance
+payout reference
+payout status
+failed payout
+reversal/adjustment
+
+==================================================
+27. REFUNDS
+==================================================
+
+Implement real provider refund flow.
+
+Full collectible refund:
+
+→ provider refund
+→ trusted refund event
+→ internal transaction refunded
+→ ownership revoked
+→ Find Badge remains
+→ seller payable reversed
+→ Worlds accounting adjusted
+
+Ensure repeated refund notifications are idempotent.
+
+==================================================
+28. CHARGEBACKS / DISPUTES
+==================================================
+
+Handle disputes:
+
+- dispute opened
+- won
+- lost
+- chargeback
+- reversal
+
+Reflect economic effect in seller/platform ledger.
+
+Do not erase transaction history.
+
+Find Badge remains historical.
+
+==================================================
+29. APPLE REFUNDS / REVOCATIONS
+==================================================
+
+Map Apple refund/revocation events into the same canonical internal model.
+
+For Membership:
+update entitlement.
+
+For Drop Credits:
+adjust credit entitlement/ledger safely.
+
+For purchases subject to Apple digital-content handling:
+update internal purchase state correctly.
+
+==================================================
+30. GOOGLE REFUNDS / REVOCATIONS
+==================================================
+
+Map Play refund/revocation events into canonical transaction/entitlement states.
+
+Ensure order/purchase-token reuse cannot duplicate grants.
+
+==================================================
+31. TAX ARCHITECTURE
+==================================================
+
+Do not build a homemade tax engine.
+
+Audit whether:
+
+- Apple acts as merchant of record for IAP
+- Google handles applicable store tax obligations for Play transactions
+- Stripe Tax or another mechanism is needed for Stripe marketplace/web transactions
+
+Record tax separately in transaction accounting.
+
+Do not assume one tax model applies to all providers.
+
+==================================================
+32. PAYMENT SECRETS
+==================================================
+
+All secrets must remain server-side.
+
+Potential secrets/config include:
+
+STRIPE_SECRET_KEY
+STRIPE_WEBHOOK_SECRET(S)
+Stripe Connect configuration
+Apple private/server credentials if required
+Google Play service-account/server credentials if required
+product IDs
+package/bundle identifiers
+
+Publishable/client-safe IDs may go in mobile only where appropriate.
+
+Never expose:
+
+Stripe secret key
+webhook signing secret
+Apple private keys
+Google service-account private key
+
+in client code.
+
+==================================================
+33. ENVIRONMENT SEPARATION
+==================================================
+
+The user intends real production configuration.
+
+Do not accidentally point production app flows at sandbox/test payment state.
+
+However, provider certification and pre-release validation may require sandbox/test accounts/builds.
+
+Keep:
+
+environment
+provider
+product ID
+webhook endpoint
+
+explicit.
+
+Do not mix test IDs with production entitlement grants.
+
+==================================================
+34. PAYMENT IDEMPOTENCY
+==================================================
+
+Every external provider event must be idempotent.
+
+Prevent:
+
+- duplicate membership grants
+- duplicate Drop Credit grants
+- duplicate collectible ownership
+- duplicate seller credits
+- duplicate refunds
+- duplicate transfers
+
+Use provider event/transaction IDs plus DB constraints.
+
+==================================================
+35. PAYMENT RECONCILIATION
+==================================================
+
+Create/administer a reconciliation mechanism.
+
+Admin should be able to identify:
+
+- provider-confirmed/internal-missing transaction
+- internal transaction missing provider confirmation
+- unmatched refunds
+- unmatched payouts
+- seller balance mismatch
+- duplicate provider event attempts
+
+Do not allow silent ledger drift.
+
+==================================================
+36. PAYMENT ADMIN UI
+==================================================
+
+Extend existing Revenue Admin as needed.
+
+Show:
+
+- payment provider
+- transaction ID
+- amount
+- fee breakdown
+- membership purchase state
+- Drop Credit purchase/grant state
+- collectible purchase state
+- refund/dispute state
+- seller account status
+- payable/payout status
+- reconciliation problems
+
+Do not expose provider secrets.
+
+==================================================
+37. PAYMENT ROUTE SECURITY
+==================================================
+
+Verify authorization on every new route.
+
+Public webhook routes:
+must authenticate via provider signatures, not user JWT.
+
+User purchase-initiation routes:
+require user authentication.
+
+Seller onboarding:
+user may only onboard/manage their own seller identity.
+
+Admin routes:
+existing Admin authorization required.
+
+==================================================
+38. APPLE CLIENT IMPLEMENTATION
+==================================================
+
+Implement the current supported Expo/native StoreKit approach.
+
+Audit whether the current Expo environment supports the necessary IAP library/config plugin.
+
+If a custom development build is required:
+state that explicitly.
+
+Do not claim Expo Go can perform native IAP if it cannot.
+
+==================================================
+39. GOOGLE CLIENT IMPLEMENTATION
+==================================================
+
+Implement current supported Android billing integration.
+
+Audit whether custom development/build configuration is required.
+
+Do not claim Play Billing is validated until running in an eligible signed Play build/test track.
+
+==================================================
+40. STRIPE CLIENT IMPLEMENTATION
+==================================================
+
+Where Stripe Checkout or PaymentSheet is allowed:
+
+use an appropriate official Stripe flow.
+
+Do not put secret API operations in mobile.
+
+Use server-created sessions/intents.
+
+==================================================
+41. EXTERNAL WEB CHECKOUT
+==================================================
+
+Where current store policy permits external checkout:
+
+Use a secure Worlds-controlled checkout domain.
+
+Payment completion must return through trusted backend verification.
+
+Do not grant an entitlement based only on a browser redirect/deep link.
+
+==================================================
+42. STORE-FRONT / REGION DETECTION
+==================================================
+
+Do not use an easily spoofable client country field as sole authority for payment-policy routing.
+
+Use available provider/storefront signals.
+
+Preserve server-controlled routing configuration.
+
+==================================================
+43. APP REVIEW COMPLIANCE
+==================================================
+
+Prepare review notes describing:
+
+- membership
+- Drop Credits
+- collectibles
+- seller marketplace
+- payment mechanisms
+- external purchase behavior if enabled
+- seller payout model
+
+Ensure reviewers can understand the business model.
+
+Do not conceal functionality from review.
+
+==================================================
+44. GOOGLE PROGRAM ENROLLMENT
+==================================================
+
+Determine whether Worlds intends to use:
+
+- Play Billing only
+- alternative billing
+- external content links
+- combination permitted by current U.S. policy
+
+If enrollment is required and cannot be performed programmatically:
+
+report exact console action.
+
+Do not falsely report it complete.
+
+==================================================
+45. APPLE ACCOUNT SETUP
+==================================================
+
+Determine the exact App Store Connect setup required:
+
+- app record
+- agreements/tax/banking if applicable
+- subscription group
+- monthly subscription product
+- annual subscription product
+- consumable Drop Credit products
+- server notification configuration
+- any required external-purchase setup
+
+Report exact identifiers the owner must create/provide.
+
+==================================================
+46. GOOGLE PLAY ACCOUNT SETUP
+==================================================
+
+Determine exact Play Console setup:
+
+- app record/package
+- payments profile
+- subscription/base plans
+- one-time Drop Credit products
+- API access/service account
+- real-time developer notifications if used
+- alternative billing enrollment if chosen
+
+Report exact owner actions.
+
+==================================================
+47. STRIPE ACCOUNT SETUP
+==================================================
+
+Determine exact Stripe setup required:
+
+- live account readiness
+- Connect activation
+- Connect branding
+- seller onboarding settings
+- webhook endpoint(s)
+- live webhook secrets
+- live API keys
+- membership products/prices if Stripe is used for membership
+- Tax settings if needed
+- payout schedule
+
+Do not request unnecessary secrets.
+
+==================================================
+48. DO NOT PRINT EXISTING SECRETS
+==================================================
+
+If a required environment variable is already configured:
+
+Report:
+
+CONFIGURED
+
+Do not echo the value.
+
+If absent:
+request it clearly.
+
+==================================================
+49. INPUT REQUEST FORMAT
+==================================================
+
+Whenever owner action/input is required, respond in this exact structure:
+
+ITEM:
+[what is needed]
+
+PROVIDER:
+Apple / Google / Stripe / Other
+
+WHERE TO GET IT:
+[exact interface path]
+
+VALUE TYPE:
+secret / non-secret / ID / configuration action
+
+WHERE IT WILL GO:
+[server env / Supabase secret / mobile config / provider dashboard]
+
+WHY:
+[short explanation]
+
+DO NOT proceed with fake placeholder production values.
+
+==================================================
+50. MIGRATIONS
+==================================================
+
+If Stage 3 requires DB changes:
+
+Use migration 074+.
+
+Never modify 001–073.
+
+Apply new forward migrations to linked production Supabase only after reviewing them.
+
+Verify local/production parity afterwards.
+
+==================================================
+51. TESTING — MEMBERSHIP
+==================================================
+
+Test:
+
+Apple pathway where available
+Google pathway where available
+Stripe pathway where applicable
+
+Verify:
+
+purchase
+trusted verification
+entitlement grant
+renewal
+expiration
+cancel
+refund
+duplicate event
+
+No client self-grant.
+
+==================================================
+52. TESTING — DROP CREDITS
+==================================================
+
+Test each pack:
+
+5
+15
+35
+
+Verify:
+
+one purchase → one grant
+duplicate provider event → no second grant
+refund adjustment
+credit consumption still follows Stage 2 rules
+
+==================================================
+53. TESTING — COLLECTIBLES
+==================================================
+
+Test:
+
+paid purchase
+seller fee
+30% Worlds fee
+ownership grant
+quantity decrement
+final-unit concurrency
+duplicate provider confirmation
+refund
+chargeback
+seller ledger
+payout linkage
+
+==================================================
+54. TESTING — SELLER ONBOARDING
+==================================================
+
+Test:
+
+not onboarded
+onboarding started
+incomplete
+active
+restricted
+payout-enabled
+payout-disabled
+
+Paid listing availability must match trusted provider status.
+
+==================================================
+55. TESTING — WEBHOOK SECURITY
+==================================================
+
+Explicitly test:
+
+invalid signature rejected
+missing signature rejected
+valid event accepted
+duplicate event idempotent
+wrong environment rejected if applicable
+
+==================================================
+56. TESTING — CROSS-USER SECURITY
+==================================================
+
+User A cannot:
+
+- access User B's payment details
+- manipulate User B's seller status
+- redirect User B's payout
+- refund User B's transaction
+- acquire seller/admin privileges
+
+==================================================
+57. TESTING — REGRESSIONS
+==================================================
+
+Run:
+
+mobile tests
+API tests
+Admin tests
+TypeScript
+QVAC
+QAVS
+Hunt security
+Stage 2 revenue regression
+connected Supabase tests
+
+Fix Stage 3 regressions.
+
+==================================================
+58. REAL PAYMENT TEST LIMITATIONS
+==================================================
+
+Clearly distinguish:
+
+PASS — implemented and locally/server verified
+
+PASS — sandbox/provider-test verified
+
+PENDING SIGNED BUILD
+
+PENDING APP STORE CONNECT
+
+PENDING PLAY CONSOLE
+
+PENDING LIVE PROVIDER CREDENTIAL
+
+PENDING PROVIDER APPROVAL
+
+Do not claim live validation when only mocked.
+
+==================================================
+59. PAYMENT ECONOMICS REPORT
+==================================================
+
+Provide a concise report for:
+
+Worlds Membership monthly
+Worlds Membership yearly
+Drop Credit packs
+$1 collectible
+$2 collectible
+$5 collectible
+$10 collectible
+$20 collectible
+
+For each applicable route show approximate:
+
+gross price
+store/service fee
+processor fee
+Worlds 30% fee
+seller economic share where applicable
+Worlds approximate net
+
+Clearly label estimates.
+
+==================================================
+60. FINAL STAGE 3 AUDIT
+==================================================
+
+At completion report:
+
+STAGE 3 PAYMENT IMPLEMENTATION STATUS:
+PASS / PARTIAL / FAIL
+
+PAYMENT ROUTING:
+PASS/FAIL
+
+APPLE ARCHITECTURE:
+PASS/FAIL/PENDING PROVIDER SETUP
+
+APPLE MEMBERSHIP:
+PASS/FAIL/PENDING
+
+APPLE DROP CREDITS:
+PASS/FAIL/PENDING
+
+APPLE COLLECTIBLE PAYMENT:
+PASS/FAIL/NOT USED
+Explain.
+
+GOOGLE ARCHITECTURE:
+PASS/FAIL/PENDING PROVIDER SETUP
+
+GOOGLE MEMBERSHIP:
+PASS/FAIL/PENDING
+
+GOOGLE DROP CREDITS:
+PASS/FAIL/PENDING
+
+GOOGLE COLLECTIBLE PAYMENT:
+PASS/FAIL/NOT USED
+Explain.
+
+GOOGLE ALTERNATIVE BILLING / EXTERNAL LINK STATUS:
+[exact status]
+
+STRIPE:
+PASS/FAIL/PENDING
+
+STRIPE CONNECT:
+PASS/FAIL/PENDING
+
+SELLER ONBOARDING:
+PASS/FAIL/PENDING
+
+COLLECTIBLE CHECKOUT:
+PASS/FAIL/PENDING
+
+30% PLATFORM FEE:
+PASS/FAIL
+
+SELLER PAYABLE:
+PASS/FAIL
+
+PAYOUTS:
+PASS/FAIL/PENDING
+
+REFUNDS:
+PASS/FAIL
+
+DISPUTES:
+PASS/FAIL
+
+WEBHOOK SECURITY:
+PASS/FAIL
+
+IDEMPOTENCY:
+PASS/FAIL
+
+RECONCILIATION:
+PASS/FAIL
+
+ADMIN:
+PASS/FAIL
+
+RLS / SECURITY:
+PASS/FAIL
+
+MIGRATIONS:
+[list]
+
+LOCAL/PRODUCTION MIGRATION PARITY:
+PASS/FAIL
+
+MOBILE TESTS:
+PASS/FAIL
+[count]
+
+API TESTS:
+PASS/FAIL
+[count]
+
+ADMIN TESTS:
+PASS/FAIL
+[count]
+
+CONNECTED TESTS:
+PASS/FAIL
+[count]
+
+SIGNED-BUILD TESTING STILL REQUIRED:
+[list or NONE]
+
+PROVIDER APPROVALS / CONSOLE ACTIONS STILL REQUIRED:
+[list or NONE]
+
+CREDENTIALS / IDS STILL REQUIRED:
+Use the ITEM / PROVIDER / WHERE TO GET IT / VALUE TYPE / WHERE IT WILL GO / WHY format.
+
+TRUE BLOCKERS:
+[list or NONE]
+
+DO NOT mark Stage 3 fully complete if Apple/Google/Stripe live configuration genuinely remains unfinished.
+
+Only if payment integrations are completely connected to the extent possible and remaining items are exclusively unavoidable store review/release validations, end with:
+
+STAGE 3 PAYMENT CONNECTIONS: IMPLEMENTED
+READY FOR FINAL PAYMENT VALIDATION + MAPBOX
+
+Do not start Mapbox automatically.
