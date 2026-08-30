@@ -3,8 +3,16 @@ name: OpenAPI codegen path
 description: Orval can clean generated clients before failing to resolve the API spec in this workspace.
 ---
 
-The OpenAPI generator currently cleans generated outputs before failing to resolve its input target, including absolute targets, file URLs, and direct CLI input against the unchanged baseline spec.
+Orval 8.21's Scalar loader requires a relative filesystem target resolved from
+the current working directory; absolute targets fail before parsing. Keep
+generated outputs protected from preflight failures with `clean: false`.
 
-**Why:** A contract change can accidentally remove tracked client and Zod outputs even though the source spec is valid; the failure appears to be in the installed Orval runtime rather than the spec path.
+**Why:** A contract change can accidentally remove tracked client and Zod
+outputs even though the source spec is valid. Workspace-root and package-local
+pnpm invocations also use different working directories.
 
-**How to apply:** Do not run the existing Orval command until its runtime issue is fixed. The failure reproduces in Orval 8.20 and 8.21. Preserve generated outputs and validate consuming API/Admin packages directly.
+**How to apply:** Derive the input target with
+`path.relative(process.cwd(), path.resolve(__dirname, "openapi.yaml"))`.
+Pin `override.zod.version` to the workspace's installed Zod major. If Zod
+schema files are generated separately, disable Orval package index generation
+and export only the runtime schema barrel to avoid duplicate inline body names.

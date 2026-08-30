@@ -4,7 +4,13 @@ import path from "path";
 const root = path.resolve(__dirname, "..", "..");
 const apiClientReactSrc = path.resolve(root, "lib", "api-client-react", "src");
 const apiZodSrc = path.resolve(root, "lib", "api-zod", "src");
-const openApiSpec = path.resolve(__dirname, "openapi.yaml");
+// Orval 8.21 resolves input targets from the current working directory but
+// rejects absolute paths. Derive a relative target so filtered pnpm commands
+// work from both the workspace root and this package directory.
+const openApiSpec = path.relative(
+  process.cwd(),
+  path.resolve(__dirname, "openapi.yaml"),
+);
 
 // Our exports make assumptions about the title of the API being "Api" (i.e. generated output is `api.ts`).
 const titleTransformer: InputTransformerFn = (config) => {
@@ -28,7 +34,9 @@ export default defineConfig({
       client: "react-query",
       mode: "split",
       baseUrl: "/api",
-      clean: true,
+      // Preserve the last generated client if input resolution or generation
+      // fails. Generated output is refreshed in place on successful runs.
+      clean: false,
       prettier: true,
       override: {
         fetch: {
@@ -54,10 +62,12 @@ export default defineConfig({
       target: "generated",
       schemas: { path: "generated/types", type: "typescript" },
       mode: "split",
-      clean: true,
+      indexFiles: false,
+      clean: false,
       prettier: true,
       override: {
         zod: {
+          version: 3,
           coerce: {
             query: ['boolean', 'number', 'string'],
             param: ['boolean', 'number', 'string'],

@@ -1,3 +1,4 @@
 export { setBaseUrl, setAuthTokenGetter } from "./custom-fetch";
 export type { AuthTokenGetter } from "./custom-fetch";
-export * from "./admin-client";
+export * from './generated/api';
+export * from './generated/api.schemas';
