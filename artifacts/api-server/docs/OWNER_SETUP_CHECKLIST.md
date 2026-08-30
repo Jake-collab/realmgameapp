@@ -13,7 +13,8 @@ This checklist records actions that cannot be completed from the repository. Do 
 - [ ] Publish/configure the API production service with `bash artifacts/api-server/scripts/start-production.sh` on an always-on Reserved VM (or equivalent). This starts the API and trusted worker together; if the provider separates them, run the worker with `pnpm --filter @workspace/api-server run worker` after the one-time build.
 - [ ] Give the worker the same production `SUPABASE_URL` and server-only `SUPABASE_SERVICE_ROLE_KEY` as the API through the provider's secret environment, never through mobile or browser configuration.
 - [ ] Set `SCHEDULER_ENABLED=true`, `SCHEDULER_INTERVAL_SECONDS=60`, and `SCHEDULER_MAINTENANCE_INTERVAL_SECONDS=3600`; do not also register these jobs in Supabase `pg_cron`.
-- [ ] Configure automatic service restart when either sibling process exits, and alert on missing `scheduled_worker_heartbeat`, three consecutive `scheduled_worker_cycle_failed` events, or queue age above the delivery SLA.
+- [ ] Configure automatic service restart when either sibling process exits, and route the verified scheduler rules to the deployment alert provider: missing `scheduled_worker_heartbeat` for two cadences (120 seconds at the 60-second production interval), `scheduled_worker_cycle_failed` when `consecutiveCycleFailures >= 3`, and `scheduled_worker_cycle_complete.queue.queueAgeSeconds > 300`.
+- [x] Run the non-production always-on launcher smoke test and verify the three consecutive-failure signal, aged-queue signal, and clear-after-recovery behavior recorded in `docs/DEPLOYMENT_CONTRACT.md`.
 - [ ] Enable backups and test a restore before launch.
 
 ## Mapbox and native builds

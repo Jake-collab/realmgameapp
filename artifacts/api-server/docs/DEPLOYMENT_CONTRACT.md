@@ -103,6 +103,26 @@ and server-only Supabase configuration, then restart the always-on service if
 the process exited or heartbeats are stale. A restart is not a substitute for
 investigating repeated cycle failures.
 
+#### Scheduler alert verification record
+
+The always-on launcher was smoke-tested against the non-production Supabase
+project on 2026-08-30 with `NODE_ENV=production`, both API and worker
+children, and a two-second interval to make the signals observable. The
+documented production cadence remains 60 seconds.
+
+Observed structured events and alert rules:
+
+| Alert name / log event | Observed evidence | Operator threshold |
+|---|---|---|
+| `scheduled_worker_heartbeat` | Heartbeats were emitted while cycles were in progress and included `cycleCount`, `cycleStartedAt`, `consecutiveCycleFailures`, and `lastQueueHealth` | Alert after two expected heartbeats are absent (120 seconds at the 60-second production cadence) |
+| `scheduled_worker_cycle_failed` | A temporary unreachable Supabase URL produced consecutive counts `1`, `2`, and `3` without stopping the worker; the third event carried `consecutiveCycleFailures: 3` | Alert at `consecutiveCycleFailures >= 3`, or on worker process exit |
+| `scheduled_worker_cycle_complete` with `queue.queueAgeSeconds` | A controlled due scheduled row aged by more than ten minutes produced `queueAgeSeconds` values of 605–610 and identified `oldestByQueue.scheduledNotifications`; after RPC recovery, subsequent cycles reported `queueAgeSeconds: null` and all queue buckets null | Alert when `queue.queueAgeSeconds > 300` seconds (the initial five-minute delivery SLA) |
+
+This verifies the production-format log events, fields, thresholds, and
+recovery behavior. The repository does not select or provision an external
+alert vendor; the owner must connect these event/field rules to the deployment
+log alert provider and confirm delivery to the operator channel before launch.
+
 ## Admin and mobile
 
 - Deploy the admin bundle separately from the API and point it at the approved API origin.
