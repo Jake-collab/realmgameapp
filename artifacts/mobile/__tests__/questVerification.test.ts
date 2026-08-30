@@ -37,5 +37,6 @@ describe('method-driven Quest verification', () => {
     expect(verificationLabel('gps')).toBe('GPS validation');
     expect(verificationLabel('timer')).toBe('Timed activity');
     expect(verificationLabel('integrity_confirmation')).toBe('Integrity confirmation');
+   expect(verificationLabel('activity_tracking')).toBe('Distance activity');
   });
 });

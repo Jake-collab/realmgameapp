@@ -45,4 +45,21 @@ describe("AI Quest safety boundary", () => {
     assert.equal(inspectCandidate({ ...base, verification_methods: ["integrity_confirmation"], proof_type: "photo" }, "daily").valid, false);
     assert.equal(inspectCandidate({ ...base, verification_methods: ["integrity_confirmation", "timer"], required_duration_minutes: 10 }, "daily").valid, true);
   });
+
+  it("requires a canonical server-measured distance for activity candidates", () => {
+    const base = generatedQuestSchema.parse({
+      title: "Walk a public route", summary: "Walk a safe public route and build distance.",
+      description: "Walk along a safe public route during daylight and build the required distance.",
+      quest_type: "daily", difficulty: "easy", estimated_duration_minutes: 30, recommended_points: canonicalQuestPoints.easy,
+      category: "movement", interest_bubble_ids: [interest], objectives: ["Walk the route."],
+      verification_methods: ["activity_tracking"], required_duration_minutes: null,
+      required_distance_meters: 1000, activity_type: "walking",
+      proof_type: "none", proof_instructions: "", safety_notes: ["Stay on public paths."],
+      accessibility_notes: [], location_requirement: "none",
+      reasoning_metadata: { difficulty_reason: "Short walk", points_reason: "Canonical easy points", proof_reason: "Server-measured movement" },
+    });
+    assert.equal(inspectCandidate(base, "daily").valid, true);
+    assert.equal(inspectCandidate({ ...base, required_distance_meters: null }, "daily").valid, false);
+    assert.equal(inspectCandidate({ ...base, verification_methods: ["integrity_confirmation"], required_distance_meters: 1000 }, "daily").valid, false);
+  });
 });

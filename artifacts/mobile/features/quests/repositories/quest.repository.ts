@@ -48,6 +48,14 @@ export interface QuestIntegrityConfirmationResult {
   integrity_confirmed_at: string;
 }
 
+export interface QuestActivitySampleResult {
+  accepted: boolean;
+  rejection_code: string | null;
+  segment_distance_meters: number;
+  total_distance_meters: number;
+  was_duplicate: boolean;
+}
+
 export interface QuestWithRelations extends QuestRowExtended {
   quest_objectives: QuestObjectiveRow[];
   quest_locations: QuestLocationRow[];
@@ -426,6 +434,33 @@ export async function confirmQuestIntegrity(
   } as never);
   if (error) throw normalizeQuestError(error);
   return data as unknown as QuestIntegrityConfirmationResult;
+}
+
+/**
+ * Submit one device location sample. The server validates ordering, freshness,
+ * accuracy, and speed, then derives the accepted distance.
+ */
+export async function recordQuestActivitySample(input: {
+  participationId: string;
+  userId: string;
+  clientSampleId: string;
+  latitude: number;
+  longitude: number;
+  accuracyMeters: number;
+  capturedAt: string;
+}): Promise<QuestActivitySampleResult> {
+  const client = requireSupabase();
+  const { data, error } = await client.rpc('record_quest_activity_sample' as never, {
+    p_participation_id: input.participationId,
+    p_user_id: input.userId,
+    p_client_sample_id: input.clientSampleId,
+    p_latitude: input.latitude,
+    p_longitude: input.longitude,
+    p_accuracy_meters: input.accuracyMeters,
+    p_captured_at: input.capturedAt,
+  } as never);
+  if (error) throw normalizeQuestError(error);
+  return data as unknown as QuestActivitySampleResult;
 }
 
 /**

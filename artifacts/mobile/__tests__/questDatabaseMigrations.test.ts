@@ -150,4 +150,23 @@ describe("Supabase migration filename preflight", () => {
     expect(repairSource).toContain("'pm.proof_id = ps.id'");
     expect(repairSource).toContain("'pm.submission_id = ps.id'");
   });
+
+  test("activity tracking derives progress from protected, quality-checked samples", () => {
+    const source = fs.readFileSync(
+      path.resolve(__dirname, "../supabase/migrations/068_quest_activity_tracking.sql"),
+      "utf8",
+    );
+
+    expect(source).toContain("'activity_tracking'");
+    expect(source).toContain("required_distance_meters");
+    expect(source).toContain("CREATE TABLE IF NOT EXISTS quest_activity_samples");
+    expect(source).toContain("REVOKE ALL ON TABLE quest_activity_samples FROM anon, authenticated");
+    expect(source).toContain("record_quest_activity_sample");
+    expect(source).toContain("stale_sample");
+    expect(source).toContain("out_of_order");
+    expect(source).toContain("unrealistic_speed");
+    expect(source).toContain("UNIQUE (participation_id, client_sample_id)");
+    expect(source).toContain("Activity distance requirement has not been met.");
+    expect(source).toContain("activity_tracking_thresholds");
+  });
 });

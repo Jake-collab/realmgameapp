@@ -32,6 +32,7 @@ import {
   useQuestDetail,
   useQuestProgress,
   useAbandonQuest,
+  useQuestActivityTracking,
 } from '@/features/quests/hooks';
 import { useQuery } from '@tanstack/react-query';
 import { questKeys } from '@/features/quests/queries/questKeys';
@@ -161,6 +162,11 @@ export default function ActiveQuestScreen() {
 
   const quest = detailQuery.data;
   const stepProgress = progressQuery.data ?? [];
+  const activity = useQuestActivityTracking({
+    quest,
+    participation,
+    userId: user?.id,
+  });
 
   const abandonMutation = useAbandonQuest(questId ?? '', {
     onSuccess: result => {
@@ -374,6 +380,68 @@ export default function ActiveQuestScreen() {
           </View>
         )}
 
+        {methods.includes('activity_tracking') && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
+              Distance progress
+            </Text>
+            <View
+              style={[
+                styles.activityCard,
+                { backgroundColor: colors.secondary, borderColor: colors.border },
+              ]}
+            >
+              <View style={styles.activityHeading}>
+                <View style={[styles.activityIcon, { backgroundColor: colors.accent + '18' }]}>
+                  <Feather name="navigation" size={18} color={colors.accent} />
+                </View>
+                <View style={styles.activityHeadingCopy}>
+                  <Text style={[styles.activityTitle, { color: colors.foreground }]}>
+                    {activity.distanceMeters >= activity.targetMeters
+                      ? 'Distance target reached'
+                      : 'Keep moving to build progress'}
+                  </Text>
+                  <Text style={[styles.activitySubtext, { color: colors.mutedForeground }]}>
+                    {Math.round(activity.distanceMeters)} m of {Math.round(activity.targetMeters)} m
+                  </Text>
+                </View>
+                <Text style={[styles.activityPercent, { color: colors.accent }]}>
+                  {activity.targetMeters > 0
+                    ? `${Math.min(100, Math.round((activity.distanceMeters / activity.targetMeters) * 100))}%`
+                    : '—'}
+                </Text>
+              </View>
+              <View style={[styles.activityTrack, { backgroundColor: colors.border }]}>
+                <View
+                  style={[
+                    styles.activityFill,
+                    {
+                      width: `${activity.targetMeters > 0 ? Math.min(100, (activity.distanceMeters / activity.targetMeters) * 100) : 0}%`,
+                      backgroundColor: colors.accent,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.activityStatus}>
+                <Feather
+                  name={activity.isTracking ? 'radio' : 'info'}
+                  size={13}
+                  color={activity.isTracking ? colors.accent : colors.mutedForeground}
+                />
+                <Text style={[styles.activityStatusText, { color: colors.mutedForeground }]}>
+                  {activity.errorMessage
+                    ?? (activity.isTracking
+                      ? 'Tracking while Worlds is open'
+                      : 'Waiting for foreground location permission')}
+                </Text>
+              </View>
+              <Text style={[styles.activityPrivacy, { color: colors.mutedForeground }]}>
+                Distance is calculated on the server from quality-checked samples. Background tracking is not enabled.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* ── Proof requirement ──────────────────────────────────── */}
         {(quest.proof_type !== 'none' || methods.length > 0) && (
           <View style={styles.section}>
@@ -540,6 +608,64 @@ const styles = StyleSheet.create({
     padding: spacing[3],
     borderWidth: StyleSheet.hairlineWidth,
     borderRadius: radius.lg,
+  },
+  activityCard: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    gap: spacing[3],
+  },
+  activityHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+  },
+  activityIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activityHeadingCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  activityTitle: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: fontSize.sm,
+  },
+  activitySubtext: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+  },
+  activityPercent: {
+    fontFamily: fontFamily.bold,
+    fontSize: fontSize.sm,
+  },
+  activityTrack: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  activityFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  activityStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+  },
+  activityStatusText: {
+    flex: 1,
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.xs,
+  },
+  activityPrivacy: {
+    fontFamily: fontFamily.regular,
+    fontSize: 11,
+    lineHeight: 15,
   },
   verificationText: {
     fontFamily: fontFamily.semiBold,

@@ -125,6 +125,8 @@ export interface QuestSummary {
   public_location: QuestPublicLocation | null;
   verification_methods?: QuestVerificationMethod[] | null;
   required_duration_minutes?: number | null;
+  required_distance_meters?: number | null;
+  activity_type?: 'walking' | 'running' | 'cycling' | 'hiking' | 'general' | null;
 }
 
 // ─── Quest detail (full view) ─────────────────────────────────────────────────

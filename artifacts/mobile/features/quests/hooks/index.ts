@@ -30,3 +30,4 @@ export { useMyQuestRank } from './useMyQuestRank';
 export { useSubmissionHistory } from './useSubmissionHistory';
 export { useQuestPointHistory } from './useQuestPointHistory';
 export { useCompletionDetail } from './useCompletionDetail';
+export { useQuestActivityTracking } from './useQuestActivityTracking';

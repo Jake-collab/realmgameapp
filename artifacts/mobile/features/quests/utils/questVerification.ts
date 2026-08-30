@@ -9,6 +9,7 @@ export const QUEST_VERIFICATION_METHODS: QuestVerificationMethod[] = [
   'gps',
   'timer',
   'integrity_confirmation',
+  'activity_tracking',
 ];
 
 /**
@@ -36,6 +37,7 @@ export function verificationLabel(method: QuestVerificationMethod): string {
     case 'gps': return 'GPS validation';
     case 'timer': return 'Timed activity';
     case 'integrity_confirmation': return 'Integrity confirmation';
+    case 'activity_tracking': return 'Distance activity';
   }
 }
 

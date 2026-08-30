@@ -78,6 +78,7 @@ export {
   startQuestTimer,
   confirmQuestIntegrityRequirement,
 } from './services/questVerification.service';
+export { recordQuestActivitySample } from './repositories/quest.repository';
 export {
   getQuestVerificationMethods,
   formatRemainingTimer,

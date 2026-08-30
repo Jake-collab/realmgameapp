@@ -138,6 +138,9 @@ done
 echo "Running Quest RPC and RLS contracts against the disposable database."
 pnpm exec jest --runInBand __tests__/questRpc.integration.test.ts
 
+echo "Running activity tracking validation, persistence, and idempotency contracts against the disposable database."
+pnpm exec jest --runInBand __tests__/questActivityTracking.integration.test.ts
+
 echo "Running moderator cleanup operator actions against the disposable database."
 pnpm exec jest --runInBand __tests__/moderationMediaRetention.integration.test.ts
 

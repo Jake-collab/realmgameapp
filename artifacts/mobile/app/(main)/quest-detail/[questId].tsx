@@ -33,6 +33,7 @@ import {
   useStartQuest,
 } from '@/features/quests/hooks';
 import { resolveQuestAction } from '@/features/quests/utils/questActionResolver';
+import { getQuestVerificationMethods, verificationLabel } from '@/features/quests/utils/questVerification';
 import QuestTypeBadge from '@/components/quest/QuestTypeBadge';
 import DifficultyBadge from '@/components/quest/DifficultyBadge';
 import DurationLabel from '@/components/quest/DurationLabel';
@@ -204,6 +205,7 @@ export default function QuestDetailScreen() {
     geo:     colors.accent,
   };
   const accentColor = typeColors[quest.quest_type] ?? colors.primary;
+  const verificationMethods = getQuestVerificationMethods(quest);
 
   const isUnavailable = !action.enabled;
   const isLoading = isStarting || startMutation.isPending;
@@ -310,6 +312,24 @@ export default function QuestDetailScreen() {
             proofType={quest.proof_type}
             completionMode={quest.completion_mode}
           />
+          {verificationMethods.length > 0 && (
+            <View style={styles.verificationList}>
+              {verificationMethods.map((method) => (
+                <View key={method} style={[styles.verificationItem, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                  <Feather
+                    name={method === 'activity_tracking' ? 'navigation' : method === 'camera' ? 'camera' : method === 'gps' ? 'map-pin' : method === 'timer' ? 'clock' : 'check-circle'}
+                    size={15}
+                    color={accentColor}
+                  />
+                  <Text style={[styles.verificationText, { color: colors.foreground }]}>
+                    {method === 'activity_tracking' && quest.required_distance_meters
+                      ? `${verificationLabel(method)} · ${Math.round(quest.required_distance_meters)} m`
+                      : verificationLabel(method)}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Location */}
@@ -525,6 +545,21 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: fontSize.base,
     lineHeight: fontSize.base * 1.65,
+  },
+  verificationList: {
+    gap: spacing[2],
+  },
+  verificationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    padding: spacing[3],
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.lg,
+  },
+  verificationText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: fontSize.sm,
   },
   objectives: {
     gap: spacing[2],

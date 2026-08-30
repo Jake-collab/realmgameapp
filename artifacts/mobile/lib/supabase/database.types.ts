@@ -32,7 +32,7 @@ export type QuestSourceType = 'admin' | 'ai' | 'system';
  */
 export type Difficulty = 'very_easy' | 'easy' | 'medium' | 'hard' | 'epic';
 export type ProofType = 'photo' | 'video' | 'text' | 'location' | 'qr_code' | 'none';
-export type QuestVerificationMethod = 'camera' | 'gps' | 'timer' | 'integrity_confirmation';
+export type QuestVerificationMethod = 'camera' | 'gps' | 'timer' | 'integrity_confirmation' | 'activity_tracking';
 export type LocationRequirementType = 'none' | 'approximate' | 'precise';
 export type IndoorOutdoor = 'indoor' | 'outdoor' | 'both';
 export type ParticipationStatus =
@@ -211,6 +211,8 @@ export interface QuestRow {
   repeat_cooldown_hours: number | null;
   verification_methods?: QuestVerificationMethod[] | null;
   required_duration_minutes?: number | null;
+  required_distance_meters?: number | null;
+  activity_type?: 'walking' | 'running' | 'cycling' | 'hiking' | 'general' | null;
   verification_config?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
@@ -278,8 +280,27 @@ export interface QuestParticipationRow {
   verification_started_at?: string | null;
   verification_earliest_completion_at?: string | null;
   integrity_confirmed_at?: string | null;
+  activity_distance_meters?: number;
+  activity_first_sample_at?: string | null;
+  activity_last_sample_at?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Raw activity samples are server-audited and are not selected by mobile. */
+export interface QuestActivitySampleRow {
+  id: string;
+  participation_id: string;
+  user_id: string;
+  client_sample_id: string;
+  captured_at: string;
+  latitude: number;
+  longitude: number;
+  accuracy_meters: number;
+  segment_distance_meters: number;
+  accepted: boolean;
+  rejection_code: string | null;
+  recorded_at: string;
 }
 
 // ─── Migration 017: Quest occurrence and prerequisite rows ─────────────────────
@@ -681,6 +702,11 @@ export interface Database {
         Update: Partial<Pick<QuestParticipationRow,
           'status' | 'last_progress_at' | 'submitted_at' | 'abandoned_at'
         >>;
+      };
+      quest_activity_samples: {
+        Row: QuestActivitySampleRow;
+        Insert: never;
+        Update: never;
       };
       quest_step_progress: {
         Row: QuestStepProgressRow;

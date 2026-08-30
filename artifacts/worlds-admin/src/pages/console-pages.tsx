@@ -81,7 +81,7 @@ export function QuestsPage({ data }: { data: AdminData }) {
 function AdminQuestCreateForm({ data, onCreated }: { data: AdminData; onCreated: () => void }) {
   const [draft, setDraft] = useState<AdminQuestCreate>({
     title: '', type: 'daily', difficulty: 'easy', points: 100, methods: ['integrity_confirmation'],
-    requiredDurationMinutes: null,
+    requiredDurationMinutes: null, requiredDistanceMeters: null, activityType: null,
   });
   const [message, setMessage] = useState('');
   const toggle = (method: QuestVerificationUpdate['methods'][number]) => setDraft((current) => ({
@@ -95,6 +95,7 @@ function AdminQuestCreateForm({ data, onCreated }: { data: AdminData; onCreated:
     if (draft.methods.includes('gps') && draft.type !== 'geo') { setMessage('GPS verification is only available for Geo Quests.'); return; }
     if (draft.methods.includes('timer') && (!draft.requiredDurationMinutes || draft.requiredDurationMinutes < 1)) { setMessage('Timer duration must be at least 1 minute.'); return; }
     if (draft.methods.includes('timer') && !draft.methods.includes('integrity_confirmation')) { setMessage('Timer Quests require final integrity confirmation.'); return; }
+    if (draft.methods.includes('activity_tracking') && (!draft.requiredDistanceMeters || draft.requiredDistanceMeters < 1)) { setMessage('Activity tracking requires a distance in meters.'); return; }
     data.createQuest.mutate(draft, {
       onSuccess: () => onCreated(),
       onError: (error) => setMessage(error instanceof Error ? error.message : 'Could not create Quest.'),
@@ -111,6 +112,7 @@ function AdminQuestCreateForm({ data, onCreated }: { data: AdminData; onCreated:
     <div className="toolbar">
       <div className="field"><span>Verification methods</span><div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>{verificationOptions.map((option) => <button key={option.value} type="button" className={`tag ${draft.methods.includes(option.value) ? 'blue' : ''}`} onClick={() => toggle(option.value)} aria-pressed={draft.methods.includes(option.value)}>{option.label}</button>)}</div></div>
       {draft.methods.includes('timer') && <label className="field">Timer minutes<input type="number" min="1" max="1440" value={draft.requiredDurationMinutes ?? ''} onChange={(event) => setDraft({ ...draft, requiredDurationMinutes: Number(event.target.value) })} /></label>}
+      {draft.methods.includes('activity_tracking') && <><label className="field">Distance (meters)<input type="number" min="1" max="100000" value={draft.requiredDistanceMeters ?? ''} onChange={(event) => setDraft({ ...draft, requiredDistanceMeters: Number(event.target.value) })} /></label><label className="field">Activity type<select value={draft.activityType ?? 'general'} onChange={(event) => setDraft({ ...draft, activityType: event.target.value as AdminQuestCreate['activityType'] })}><option value="general">General</option><option value="walking">Walking</option><option value="running">Running</option><option value="cycling">Cycling</option><option value="hiking">Hiking</option></select></label></>}
     </div>
     {message && <div className="notice" style={{ margin: '0 20px 16px' }}><AlertTriangle /><span>{message}</span></div>}
     <div className="panel-footer"><span className="identity-handle">The draft will be saved to the human review queue.</span><button className="btn btn-primary" onClick={save} disabled={data.createQuest.isPending || !draft.title.trim()}>{data.createQuest.isPending ? 'Creating…' : 'Create draft'}</button></div>
@@ -120,6 +122,7 @@ function AdminQuestCreateForm({ data, onCreated }: { data: AdminData; onCreated:
 const verificationOptions: Array<{ value: QuestVerificationUpdate['methods'][number]; label: string }> = [
   { value: 'camera', label: 'Camera' }, { value: 'gps', label: 'GPS location' },
   { value: 'timer', label: 'Timer' }, { value: 'integrity_confirmation', label: 'Integrity confirmation' },
+  { value: 'activity_tracking', label: 'Distance activity' },
 ];
 
 function QuestVerificationEditor({ quest, data }: { quest: any; data: AdminData }) {
@@ -127,6 +130,8 @@ function QuestVerificationEditor({ quest, data }: { quest: any; data: AdminData 
   const initial = (Array.isArray(quest.verificationMethods) && quest.verificationMethods.length ? quest.verificationMethods : ['camera']) as QuestVerificationUpdate['methods'];
   const [methods, setMethods] = useState<QuestVerificationUpdate['methods']>(initial);
   const [duration, setDuration] = useState(String(quest.requiredDurationMinutes ?? ''));
+  const [distance, setDistance] = useState(String(quest.requiredDistanceMeters ?? ''));
+  const [activityType, setActivityType] = useState<NonNullable<QuestVerificationUpdate['activityType']>>(quest.activityType ?? 'general');
   const [message, setMessage] = useState('');
   useEffect(() => {
     const nextMethods = Array.isArray(quest.verificationMethods) && quest.verificationMethods.length
@@ -134,6 +139,8 @@ function QuestVerificationEditor({ quest, data }: { quest: any; data: AdminData 
       : ['camera' as const];
     setMethods(nextMethods);
     setDuration(String(quest.requiredDurationMinutes ?? ''));
+    setDistance(String(quest.requiredDistanceMeters ?? ''));
+    setActivityType(quest.activityType ?? 'general');
   }, [quest.verificationMethods, quest.requiredDurationMinutes]);
   const toggle = (method: QuestVerificationUpdate['methods'][number]) => {
     setMessage('');
@@ -144,14 +151,16 @@ function QuestVerificationEditor({ quest, data }: { quest: any; data: AdminData 
     if (!methods.length) { setMessage('Choose a method.'); return; }
     if (methods.includes('timer') && (!Number(duration) || Number(duration) < 1)) { setMessage('Timer must be at least 1 minute.'); return; }
     if (methods.includes('timer') && !methods.includes('integrity_confirmation')) { setMessage('Timer Quests require final integrity confirmation.'); return; }
+    if (methods.includes('activity_tracking') && (!Number(distance) || Number(distance) < 1)) { setMessage('Activity tracking requires a distance in meters.'); return; }
     if (methods.includes('gps') && quest.type !== 'geo') { setMessage('GPS is only available for Geo Quests.'); return; }
-    data.updateQuestVerification.mutate({ id: quest.id, update: { methods, requiredDurationMinutes: methods.includes('timer') ? Number(duration) : null, locationRequired: methods.includes('gps') } }, {
+    data.updateQuestVerification.mutate({ id: quest.id, update: { methods, requiredDurationMinutes: methods.includes('timer') ? Number(duration) : null, requiredDistanceMeters: methods.includes('activity_tracking') ? Number(distance) : null, activityType: methods.includes('activity_tracking') ? activityType : null, locationRequired: methods.includes('gps') } }, {
       onSuccess: () => setMessage('Saved.'), onError: (error) => setMessage(error instanceof Error ? error.message : 'Unable to save.'),
     });
   };
   return <div style={{ minWidth: 190 }}>
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>{verificationOptions.map((option) => <button key={option.value} type="button" className={`tag ${methods.includes(option.value) ? 'blue' : ''}`} onClick={() => toggle(option.value)} disabled={!canManage || data.updateQuestVerification.isPending} aria-pressed={methods.includes(option.value)}>{option.label}</button>)}</div>
     {methods.includes('timer') && <input type="number" min="1" max="1440" value={duration} onChange={(event) => setDuration(event.target.value)} placeholder="Minutes" aria-label={`Timer duration for ${quest.title}`} style={{ width: 90, marginTop: 6 }} disabled={!canManage} />}
+    {methods.includes('activity_tracking') && <div style={{ display: 'flex', gap: 5, marginTop: 6 }}><input type="number" min="1" max="100000" value={distance} onChange={(event) => setDistance(event.target.value)} placeholder="Meters" aria-label={`Activity distance for ${quest.title}`} style={{ width: 90 }} disabled={!canManage} /><select value={activityType} onChange={(event) => setActivityType(event.target.value as NonNullable<QuestVerificationUpdate['activityType']>)} aria-label={`Activity type for ${quest.title}`} disabled={!canManage}><option value="general">General</option><option value="walking">Walking</option><option value="running">Running</option><option value="cycling">Cycling</option><option value="hiking">Hiking</option></select></div>}
     <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6 }}><button type="button" className="btn btn-primary" style={{ minHeight: 27, padding: '0 8px', fontSize: 11 }} onClick={save} disabled={!canManage || data.updateQuestVerification.isPending}>{data.updateQuestVerification.isPending ? 'Saving…' : 'Save'}</button>{message && <span className="identity-handle">{message}</span>}</div>
   </div>;
 }

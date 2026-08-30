@@ -93,8 +93,10 @@ export type MediaRetentionEvidence = {
 };
 
 export type QuestVerificationUpdate = {
-  methods: Array<'camera' | 'gps' | 'timer' | 'integrity_confirmation'>;
+  methods: Array<'camera' | 'gps' | 'timer' | 'integrity_confirmation' | 'activity_tracking'>;
   requiredDurationMinutes?: number | null;
+  requiredDistanceMeters?: number | null;
+  activityType?: 'walking' | 'running' | 'cycling' | 'hiking' | 'general' | null;
   locationRequired?: boolean;
 };
 
@@ -105,6 +107,8 @@ export type AdminQuestCreate = {
   points: number;
   methods: QuestVerificationUpdate['methods'];
   requiredDurationMinutes?: number | null;
+  requiredDistanceMeters?: number | null;
+  activityType?: QuestVerificationUpdate['activityType'];
   summary?: string;
   description?: string;
 };

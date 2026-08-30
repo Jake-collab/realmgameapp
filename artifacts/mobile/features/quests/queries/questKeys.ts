@@ -68,6 +68,10 @@ export const questKeys = {
   participation: (participationId: string) =>
     [...questKeys.all, 'participation', participationId] as const,
 
+  /** Server-derived activity progress for a participation */
+  activity: (participationId: string) =>
+    [...questKeys.all, 'activity', participationId] as const,
+
   /** A user's participation for a specific quest */
   questParticipation: (questId: string, userId: string) =>
     [...questKeys.all, 'quest-participation', questId, userId] as const,

@@ -5,7 +5,7 @@ import { z } from "zod";
 
 export const questGenerationTypes = ["daily", "monthly", "geo"] as const;
 export type QuestGenerationType = (typeof questGenerationTypes)[number];
-export const verificationMethods = ["camera", "gps", "timer", "integrity_confirmation"] as const;
+export const verificationMethods = ["camera", "gps", "timer", "integrity_confirmation", "activity_tracking"] as const;
 export const canonicalQuestPoints = {
   easy: 100,
   medium: 200,
@@ -35,6 +35,8 @@ export const generatedQuestSchema = z.object({
   objectives: z.array(z.string().trim().min(1).max(500)).min(1).max(20),
   verification_methods: z.array(z.enum(verificationMethods)).min(1).max(4),
   required_duration_minutes: z.number().int().min(0).max(1440).nullable(),
+  required_distance_meters: z.number().int().min(1).max(100000).nullable().optional().default(null),
+  activity_type: z.enum(["walking", "running", "cycling", "hiking", "general"]).nullable().optional().default(null),
   // Retained for clients and stored drafts which still use the original proof contract.
   proof_type: z.enum(["photo", "video", "text", "location", "none"]),
   proof_instructions: z.string().max(1000),
@@ -151,8 +153,8 @@ const defaultPrompt = (type: QuestGenerationType): PromptVersion => ({
   contentInstructions: defaultText(type),
   safetyInstructions: "Do not require trespassing, unsafe activity, private information, or unverifiable access claims.",
   pointInstructions: "Recommend points only; the platform's deterministic validator and staff review decide the final reward.",
-  proofInstructions: "Choose one or more verification_methods from camera, gps, timer, and integrity_confirmation. Use camera only for independently observable visual evidence, gps only with an approximate or precise location_requirement, and timer only with a positive required_duration_minutes plus integrity_confirmation. An integrity_confirmation-only Quest must use proof_type none and have empty proof_instructions; never request irrelevant media or proof. Composite methods are allowed only when every method has an independently verifiable requirement. Retain proof_type for legacy clients and never return QR proof.",
-  outputFormat: "Return one JSON object matching the generated Quest schema, including a non-empty verification_methods array and required_duration_minutes (a positive integer for timer Quests, otherwise null).",
+  proofInstructions: "Choose one or more verification_methods from camera, gps, timer, integrity_confirmation, and activity_tracking. Use camera only for independently observable visual evidence, gps only with an approximate or precise location_requirement, timer only with a positive required_duration_minutes plus integrity_confirmation, and activity_tracking only when the Quest has a measurable required_distance_meters from 1 to 100000 plus an optional activity_type (walking, running, cycling, hiking, or general). Activity distance is derived from sequential quality-checked device samples; never request start/end distance claims. An integrity_confirmation-only Quest must use proof_type none and have empty proof_instructions; never request irrelevant media or proof. Composite methods are allowed only when every method has an independently verifiable requirement. Retain proof_type for legacy clients and never return QR proof.",
+  outputFormat: "Return one JSON object matching the generated Quest schema, including a non-empty verification_methods array, required_duration_minutes (a positive integer for timer Quests, otherwise null), required_distance_meters (a positive integer for activity_tracking Quests, otherwise null), and activity_type (or null).",
   active: true,
   createdAt: new Date(0).toISOString(),
   updatedBy: "system",
@@ -323,6 +325,15 @@ export function inspectCandidate(candidate: GeneratedQuest, type: QuestGeneratio
   if (!methods.includes("timer") && candidate.required_duration_minutes !== null) {
     diagnostics.push("A required duration may only be supplied for timer verification.");
   }
+  if (methods.includes("activity_tracking") && (!Number.isInteger(candidate.required_distance_meters) || (candidate.required_distance_meters ?? 0) < 1)) {
+    diagnostics.push("Activity tracking requires a positive required distance in meters.");
+  }
+  if (!methods.includes("activity_tracking") && candidate.required_distance_meters !== null) {
+    diagnostics.push("A required distance may only be supplied for activity tracking.");
+  }
+  if (candidate.activity_type !== null && !methods.includes("activity_tracking")) {
+    diagnostics.push("Activity type may only be supplied for activity tracking.");
+  }
   if (methods.includes("gps") && candidate.location_requirement === "none") {
     diagnostics.push("GPS verification requires an approximate or precise location requirement.");
   }
@@ -333,7 +344,7 @@ export function inspectCandidate(candidate: GeneratedQuest, type: QuestGeneratio
   if (integrityOnly && (candidate.proof_type !== "none" || candidate.proof_instructions.trim())) {
     diagnostics.push("Integrity-only verification must not request proof or media.");
   }
-  if (methods.length > 1 && !methods.some((method) => method === "camera" || method === "gps" || method === "timer")) {
+  if (methods.length > 1 && !methods.some((method) => method === "camera" || method === "gps" || method === "timer" || method === "activity_tracking")) {
     diagnostics.push("Composite verification requires independently verifiable camera, GPS, or timer requirements.");
   }
   if (candidate.quest_type !== type) diagnostics.push("Quest type does not match the requested generation lane.");

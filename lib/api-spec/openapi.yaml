@@ -758,8 +758,10 @@ components:
         updatedAt: { type: string, format: date-time }
         verificationMethods:
           type: array
-          items: { type: string, enum: [camera, gps, timer, integrity_confirmation] }
+          items: { type: string, enum: [camera, gps, timer, integrity_confirmation, activity_tracking] }
         requiredDurationMinutes: { type: ["integer", "null"], minimum: 1 }
+        requiredDistanceMeters: { type: ["integer", "null"], minimum: 1, maximum: 100000 }
+        activityType: { type: ["string", "null"], enum: [walking, running, cycling, hiking, general, null] }
         locationRequirementType: { type: string }
     AdminQuestVerificationUpdate:
       type: object
@@ -771,8 +773,10 @@ components:
           minItems: 1
           maxItems: 6
           uniqueItems: true
-          items: { type: string, enum: [camera, gps, timer, integrity_confirmation] }
+          items: { type: string, enum: [camera, gps, timer, integrity_confirmation, activity_tracking] }
         requiredDurationMinutes: { type: ["integer", "null"], minimum: 1, maximum: 1440 }
+        requiredDistanceMeters: { type: ["integer", "null"], minimum: 1, maximum: 100000 }
+        activityType: { type: ["string", "null"], enum: [walking, running, cycling, hiking, general, null] }
         locationRequired: { type: boolean }
     AdminQuestCreate:
       type: object
@@ -788,8 +792,10 @@ components:
           minItems: 1
           maxItems: 4
           uniqueItems: true
-          items: { type: string, enum: [camera, gps, timer, integrity_confirmation] }
+          items: { type: string, enum: [camera, gps, timer, integrity_confirmation, activity_tracking] }
         requiredDurationMinutes: { type: ["integer", "null"], minimum: 1, maximum: 1440 }
+        requiredDistanceMeters: { type: ["integer", "null"], minimum: 1, maximum: 100000 }
+        activityType: { type: ["string", "null"], enum: [walking, running, cycling, hiking, general, null] }
         summary: { type: string, minLength: 10, maxLength: 300 }
         description: { type: string, minLength: 20, maxLength: 4000 }
     AdminQuestPage:
