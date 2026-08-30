@@ -14,7 +14,24 @@ const identities: Record<string, { id: string; role: string }> = {
   admin: { id: "staff-admin", role: "admin" },
 };
 const testMediaId = "11111111-1111-4111-8111-111111111111";
-const retentionRows = [
+type RetentionTestRow = {
+  media_id: string;
+  status: "pending" | "processing" | "failed" | "completed";
+  attempt_count: number;
+  lease_acquired_at: string | null;
+  next_attempt_at: string | null;
+  storage_delete_outcome: "deleted" | "missing" | null;
+  storage_deleted_at: string | null;
+  failure_classification: "retryable" | "blocked_reference" | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+  bucket: string;
+  storage_path: string;
+  storage_url: string;
+  media_bytes: string;
+};
+const retentionRows: RetentionTestRow[] = [
   {
     media_id: "22222222-2222-4222-8222-222222222222",
     status: "pending",
@@ -102,6 +119,37 @@ const retentionRows = [
   },
 ];
 
+const generatedRetentionRows: RetentionTestRow[] = Array.from({ length: 125 }, (_, index) => {
+  const updatedAt = new Date(Date.UTC(2026, 7, 29, 0, index)).toISOString();
+  const kind = index % 5;
+  const status = kind === 0
+    ? "pending"
+    : kind === 1
+      ? "processing"
+      : kind === 2 || kind === 3
+        ? "failed"
+        : "completed";
+  const failureClassification = kind === 2 ? "retryable" : kind === 3 ? "blocked_reference" : null;
+  return {
+    media_id: `${(0x70000000 + index).toString(16)}-7000-4700-8700-${index.toString(16).padStart(12, "0")}`,
+    status,
+    attempt_count: kind === 0 ? 0 : index % 4,
+    lease_acquired_at: status === "pending" ? null : updatedAt,
+    next_attempt_at: status === "processing" || status === "failed" ? updatedAt : null,
+    storage_delete_outcome: status === "completed" ? "deleted" : null,
+    storage_deleted_at: status === "completed" ? updatedAt : null,
+    failure_classification: failureClassification,
+    last_error: failureClassification === "blocked_reference" ? "Review required." : null,
+    created_at: "2026-08-28T00:00:00.000Z",
+    updated_at: updatedAt,
+    bucket: "generated-private-bucket",
+    storage_path: `generated-user/proof/${index}.jpg`,
+    storage_url: `https://storage.example.test/object/generated-user/proof/${index}.jpg`,
+    media_bytes: "ffd8ffd9",
+  };
+});
+retentionRows.push(...generatedRetentionRows);
+
 let supabase: StartedServer;
 let api: StartedServer;
 let stateDirectory: string;
@@ -165,7 +213,12 @@ describe("admin moderation authorization", () => {
           res.end("[]");
           return;
         }
-        res.end(JSON.stringify(retentionRows));
+        const limit = Number(url.searchParams.get("limit") ?? retentionRows.length);
+        const page = matchingRows
+          .slice()
+          .sort((left, right) => right.updated_at.localeCompare(left.updated_at))
+          .slice(0, limit);
+        res.end(JSON.stringify(page));
         return;
       }
       if (req.url?.startsWith("/storage/v1/object/sign/proof-submissions/")) {
@@ -328,15 +381,38 @@ describe("admin moderation authorization", () => {
     const body = JSON.parse(serialized) as {
       items: Array<Record<string, unknown>>;
       summary: Record<string, number>;
+      list: {
+        scope: string;
+        ordering: string;
+        limit: number;
+        returned: number;
+        hasMore: boolean;
+        totalsScope: string;
+      };
     };
     assert.deepEqual(body.summary, {
-      pending: 1,
-      retrying: 1,
-      completed: 2,
-      blocked: 1,
-      total: 5,
+      pending: 26,
+      retrying: 51,
+      completed: 27,
+      blocked: 26,
+      total: 130,
     });
-    assert.equal(body.items.length, body.summary.total);
+    assert.deepEqual(body.list, {
+      scope: "latest",
+      ordering: "updated_at_desc",
+      limit: 100,
+      returned: 100,
+      hasMore: true,
+      totalsScope: "all",
+    });
+    assert.equal(body.items.length, body.list.returned);
+    assert.equal(body.items.length < body.summary.total, true);
+    assert.equal(body.items[0]!.mediaId, retentionRows[4]!.media_id);
+    assert.equal(body.items.some((item) => item.mediaId === generatedRetentionRows[29]!.media_id), false);
+    assert.deepEqual(
+      new Set(body.items.map((item) => item.state)),
+      new Set(["pending", "retrying", "completed", "blocked"]),
+    );
 
     const states = new Map(body.items.map((item) => [
       item.mediaId,

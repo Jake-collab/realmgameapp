@@ -42,6 +42,7 @@ export type MediaRetentionAdminData = {
     lastError: string | null;
     updatedAt: string;
   }>;
+  list: { scope: 'latest'; ordering: 'updated_at_desc'; limit: number; returned: number; hasMore: boolean; totalsScope: 'all' };
   generatedAt: string;
 };
 

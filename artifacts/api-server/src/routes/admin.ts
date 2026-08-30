@@ -139,6 +139,8 @@ type MediaRetentionCleanupRow = {
   updated_at: string;
 };
 
+const MEDIA_RETENTION_PAGE_SIZE = 100;
+
 function retentionCleanupState(
   row: Pick<MediaRetentionCleanupRow, "status" | "failure_classification">,
 ) {
@@ -456,12 +458,13 @@ router.get("/admin/moderation/media-retention", requireAdmin("moderation.read"),
       adminCount("media_retention_cleanups?status=eq.completed"),
       adminCount(`media_retention_cleanups?${blockedFilter}`),
       adminRead<MediaRetentionCleanupRow[]>(
-        "media_retention_cleanups?select=media_id,status,attempt_count,lease_acquired_at,next_attempt_at,storage_delete_outcome,storage_deleted_at,failure_classification,last_error,created_at,updated_at&order=updated_at.desc&limit=100",
+        `media_retention_cleanups?select=media_id,status,attempt_count,lease_acquired_at,next_attempt_at,storage_delete_outcome,storage_deleted_at,failure_classification,last_error,created_at,updated_at&order=updated_at.desc&limit=${MEDIA_RETENTION_PAGE_SIZE}`,
       ),
     ]);
     const retrying = processing + Math.max(0, failed - blocked);
+    const total = pending + retrying + completed + blocked;
     res.json({
-      summary: { pending, retrying, completed, blocked, total: pending + retrying + completed + blocked },
+      summary: { pending, retrying, completed, blocked, total },
       items: rows.map((row) => ({
         mediaId: row.media_id,
         state: retentionCleanupState(row),
@@ -473,6 +476,14 @@ router.get("/admin/moderation/media-retention", requireAdmin("moderation.read"),
         lastError: safeRetentionError(row.last_error),
         updatedAt: row.updated_at,
       })),
+      list: {
+        scope: "latest",
+        ordering: "updated_at_desc",
+        limit: MEDIA_RETENTION_PAGE_SIZE,
+        returned: rows.length,
+        hasMore: total > rows.length,
+        totalsScope: "all",
+      },
       generatedAt: new Date(),
     });
   } catch (error) {
