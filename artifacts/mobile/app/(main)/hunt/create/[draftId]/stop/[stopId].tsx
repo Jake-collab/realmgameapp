@@ -8,7 +8,7 @@ import { useCreatorDraftEditor } from '@/features/hunts/creator/useCreatorDraftE
 import { useColors } from '@/hooks/useColors';
 import type { CreatorStopType } from '@/features/hunts/types/creator.types';
 import * as ImagePicker from 'expo-image-picker';
-import { beginCreatorStopSweep, configureHuntDropCommerce, uploadCreatorStopSweep } from '@/features/hunts/repositories/creator.repository';
+import { acknowledgePaidCollectibleFee, beginCreatorStopSweep, configureHuntDropCommerce, uploadCreatorStopSweep } from '@/features/hunts/repositories/creator.repository';
 import type { CollectibleRarity, CreatorStopCommerce } from '@/features/hunts/types/creator.types';
 
 const EMPTY_COMMERCE: CreatorStopCommerce = {
@@ -27,6 +27,7 @@ function rarityForQuantity(quantity: number | null): CollectibleRarity {
 export default function StopEditor() {
   const {draftId,stopId}=useLocalSearchParams<{draftId:string;stopId:string}>(); const id=String(draftId); const c=useCreatorDraftEditor(id); const colors=useColors();
   const index=c.payload.stops.findIndex(s=>s.id===stopId); const stop=c.payload.stops[index]; const [sweeping,setSweeping]=useState(false);
+  const [paidFeeAcknowledged, setPaidFeeAcknowledged] = useState(false);
   if (!stop) return <View style={{flex:1,justifyContent:'center',padding:24}}><Text style={{color:colors.foreground}}>Stop unavailable.</Text></View>;
   const set=(patch:Partial<typeof stop>)=>c.setPayload({...c.payload,stops:c.payload.stops.map(s=>s.id===stop.id?{...s,...patch}:s)});
   const commerce = { ...EMPTY_COMMERCE, ...stop.commerce };
@@ -37,8 +38,10 @@ export default function StopEditor() {
     if(commerce.findLimit !== null && commerce.findLimit < 1){Alert.alert('Check find limit','Enter a positive find limit or leave it blank for unlimited.');return;}
     if(commerce.quantity !== null && commerce.quantity < 1){Alert.alert('Check quantity','Enter a positive quantity or leave it blank for unlimited.');return;}
     const name=commerce.collectibleName.trim();
-    if(name && commerce.priceMinor > 0 && commerce.priceMinor < 100){Alert.alert('Check price','Paid collectibles must cost at least 100 cents. Use 0 for Free.');return;}
+    if(name && commerce.priceMinor > 0 && commerce.priceMinor < 100){Alert.alert('Check price','Paid collectibles must cost at least 100 cents. Use Free for a $0 collectible.');return;}
+    if(name && commerce.priceMinor > 0 && !paidFeeAcknowledged){Alert.alert('Acknowledge the platform fee','Confirm that Worlds charges a 30% platform fee before saving a paid collectible.');return;}
     try{
+      if(name && commerce.priceMinor > 0) await acknowledgePaidCollectibleFee(stop.id);
       await configureHuntDropCommerce({
         stopId:stop.id,findLimit:commerce.findLimit,collectibleName:name||null,
         collectibleDescription:name?(commerce.collectibleDescription.trim()||null):null,
@@ -66,10 +69,20 @@ export default function StopEditor() {
     <Input label="Collectible name (optional)" value={commerce.collectibleName} onChangeText={collectibleName=>setCommerce({collectibleName})} placeholder="Leave blank for no collectible"/>
     {!!commerce.collectibleName.trim()&&<>
       <Input label="Collectible description" value={commerce.collectibleDescription} onChangeText={collectibleDescription=>setCommerce({collectibleDescription})} multiline/>
-      <Input label="Price in cents (0 = Free)" value={commerce.priceMinor.toString()} onChangeText={value=>setCommerce({priceMinor:Number.parseInt(value.replace(/\D/g,''),10)||0})} keyboardType="number-pad"/>
+       <Text style={[creatorStyles.label,{color:colors.foreground,marginTop:8}]}>Collectible pricing</Text>
+       <View style={{flexDirection:'row',gap:8}}>
+         <Button size="sm" variant={commerce.priceMinor===0?'primary':'outline'} onPress={()=>{setCommerce({priceMinor:0});setPaidFeeAcknowledged(false);}}>Free · $0</Button>
+         <Button size="sm" variant={commerce.priceMinor>0?'primary':'outline'} onPress={()=>{if(commerce.priceMinor===0)setCommerce({priceMinor:100});setPaidFeeAcknowledged(false);}}>Paid</Button>
+       </View>
+       {commerce.priceMinor>0&&<Input label="Paid price in cents (minimum 100)" value={commerce.priceMinor.toString()} onChangeText={value=>{setCommerce({priceMinor:Number.parseInt(value.replace(/\D/g,''),10)||0});setPaidFeeAcknowledged(false);}} keyboardType="number-pad"/>}
       <Input label="Quantity (blank = unlimited)" value={commerce.quantity?.toString() ?? ''} onChangeText={value=>setCommerce({quantity:parseOptionalPositive(value)})} keyboardType="number-pad"/>
       <Input label="Rarity (set by quantity)" value={rarityForQuantity(commerce.quantity)} editable={false}/>
-      <Text style={{color:colors.mutedForeground}}>Worlds charges a 30% platform fee on paid collectible sales. The creator receives the remaining 70%, subject to refunds or reversals.</Text>
+       {commerce.priceMinor>0&&<>
+         <Text style={{color:colors.mutedForeground}}>Worlds charges a 30% platform fee on collectible sales. The intended creator share is 70% before external fees, taxes, refunds, reversals, or other adjustments.</Text>
+         <Button fullWidth variant={paidFeeAcknowledged?'primary':'outline'} onPress={()=>setPaidFeeAcknowledged(!paidFeeAcknowledged)}>
+           {paidFeeAcknowledged?'30% platform fee acknowledged':'I acknowledge the 30% platform fee'}
+         </Button>
+       </>}
       <Text style={{color:colors.mutedForeground}}>Paid collectibles remain unavailable until the seller completes verification. Free collectibles do not require seller verification.</Text>
     </>}
     <CreatorNext label="Save stop" onPress={saveStop}/></CreatorStepLayout>;

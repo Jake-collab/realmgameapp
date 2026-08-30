@@ -240,14 +240,111 @@ export const ListAdminHuntsResponse = zod.object({
 /**
  * @summary Get provider-neutral revenue operations state
  */
+export const getAdminRevenueResponsePlansItemPriceMinorMin = 0;
+
+export const getAdminRevenueResponsePlansItemCurrencyRegExp = new RegExp('^[A-Z]{3}$');
+
+
+export const getAdminRevenueResponseCreditPacksItemCurrencyRegExp = new RegExp('^[A-Z]{3}$');
+export const getAdminRevenueResponseAllowanceConfigurationItemLimitMin = 0;
+
+export const getAdminRevenueResponseMetricsActiveMembershipsMin = 0;
+
+export const getAdminRevenueResponseMetricsOpenTransactionsMin = 0;
+
+export const getAdminRevenueResponseTransactionsItemCurrencyRegExp = new RegExp('^[A-Z]{3}$');
+
+export const getAdminRevenueResponseTransactionsItemPlatformFeeMinorMin = 0;
+
+export const getAdminRevenueResponseTransactionsItemIntendedSellerShareMinorMin = 0;
+
+export const getAdminRevenueResponseTransactionsItemProcessingFeeMinorMin = 0;
+
+export const getAdminRevenueResponseTransactionsItemAppStoreFeeMinorMin = 0;
+
+export const getAdminRevenueResponseTransactionsItemTaxMinorMin = 0;
+
+export const getAdminRevenueResponseTransactionsItemSellerPayableMinorMin = 0;
+
+export const getAdminRevenueResponseTransactionsItemEventsItemAmountMinorMin = 0;
+
+export const getAdminRevenueResponseSuspiciousActivityItemEventCountMin = 0;
+
+
+
 export const GetAdminRevenueResponse = zod.object({
-  "plans": zod.array(zod.record(zod.string(), zod.unknown())),
-  "creditPacks": zod.array(zod.record(zod.string(), zod.unknown())),
-  "configuration": zod.array(zod.record(zod.string(), zod.unknown())),
-  "metrics": zod.record(zod.string(), zod.unknown()),
-  "transactions": zod.array(zod.record(zod.string(), zod.unknown())),
-  "sellers": zod.array(zod.record(zod.string(), zod.unknown())),
-  "auditEvents": zod.array(zod.record(zod.string(), zod.unknown())),
+  "plans": zod.array(zod.object({
+  "code": zod.string(),
+  "name": zod.string(),
+  "billing_cadence": zod.enum(['free', 'monthly', 'yearly']),
+  "price_minor": zod.number().min(getAdminRevenueResponsePlansItemPriceMinorMin),
+  "currency": zod.string().regex(getAdminRevenueResponsePlansItemCurrencyRegExp),
+  "is_active": zod.boolean()
+})),
+  "creditPacks": zod.array(zod.object({
+  "code": zod.string(),
+  "credits": zod.number().min(1),
+  "price_minor": zod.number().min(1),
+  "currency": zod.string().regex(getAdminRevenueResponseCreditPacksItemCurrencyRegExp),
+  "is_active": zod.boolean()
+})),
+  "configuration": zod.array(zod.object({
+  "key": zod.enum(['platform_fee_percent', 'paid_collectible_price_limits', 'collectible_rarity_thresholds']),
+  "value": zod.record(zod.string(), zod.unknown()),
+  "effective_at": zod.coerce.date()
+})),
+  "allowanceConfiguration": zod.array(zod.object({
+  "planCode": zod.enum(['free', 'worlds_monthly', 'worlds_yearly']),
+  "allowanceKind": zod.enum(['quest_monthly', 'quest_geo_weekly', 'quest_personalized_daily', 'hunt_drop_creation_weekly']),
+  "limit": zod.number().min(getAdminRevenueResponseAllowanceConfigurationItemLimitMin),
+  "period": zod.enum(['utc_month', 'iso_week_utc', 'utc_day'])
+})),
+  "metrics": zod.object({
+  "activeMemberships": zod.number().min(getAdminRevenueResponseMetricsActiveMembershipsMin),
+  "openTransactions": zod.number().min(getAdminRevenueResponseMetricsOpenTransactionsMin),
+  "sellerPayableByCurrency": zod.record(zod.string(), zod.number())
+}),
+  "transactions": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "state": zod.enum(['pending', 'finalized', 'refunded', 'partially_refunded', 'charged_back', 'reversed', 'failed']),
+  "currency": zod.string().regex(getAdminRevenueResponseTransactionsItemCurrencyRegExp),
+  "gross_minor": zod.number().min(1),
+  "platform_fee_minor": zod.number().min(getAdminRevenueResponseTransactionsItemPlatformFeeMinorMin),
+  "intended_seller_share_minor": zod.number().min(getAdminRevenueResponseTransactionsItemIntendedSellerShareMinorMin),
+  "processing_fee_minor": zod.number().min(getAdminRevenueResponseTransactionsItemProcessingFeeMinorMin),
+  "app_store_fee_minor": zod.number().min(getAdminRevenueResponseTransactionsItemAppStoreFeeMinorMin),
+  "tax_minor": zod.number().min(getAdminRevenueResponseTransactionsItemTaxMinorMin),
+  "seller_payable_minor": zod.number().min(getAdminRevenueResponseTransactionsItemSellerPayableMinorMin),
+  "created_at": zod.coerce.date(),
+  "finalized_at": zod.coerce.date().nullable(),
+  "events": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "eventType": zod.enum(['intent_created', 'finalized', 'refund', 'partial_refund', 'chargeback', 'dispute', 'reversal', 'payout']),
+  "amountMinor": zod.number().min(getAdminRevenueResponseTransactionsItemEventsItemAmountMinorMin),
+  "createdAt": zod.coerce.date()
+}))
+})),
+  "sellers": zod.array(zod.object({
+  "user_id": zod.string().uuid(),
+  "onboarding_status": zod.enum(['not_started', 'pending', 'verified', 'restricted', 'disabled']),
+  "provider_name": zod.string().nullable(),
+  "updated_at": zod.coerce.date()
+})),
+  "suspiciousActivity": zod.array(zod.object({
+  "orderId": zod.string().uuid(),
+  "state": zod.enum(['refunded', 'partially_refunded', 'charged_back', 'reversed', 'failed']),
+  "eventCount": zod.number().min(getAdminRevenueResponseSuspiciousActivityItemEventCountMin),
+  "createdAt": zod.coerce.date(),
+  "reason": zod.string()
+})),
+  "auditEvents": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "entity_type": zod.string(),
+  "entity_id": zod.string().uuid().nullable(),
+  "event_type": zod.string(),
+  "details": zod.record(zod.string(), zod.unknown()),
+  "created_at": zod.coerce.date()
+})),
   "generatedAt": zod.coerce.date()
 })
 

@@ -32,6 +32,7 @@ import LocationSummary from '@/components/quest/LocationSummary';
 import { QuestCardSkeleton } from '@/components/quest/QuestSkeleton';
 import EmptyState from '@/components/ui/EmptyState';
 import type { QuestRowExtended } from '@/features/quests/repositories/quest.repository';
+import { useRevenueSummary } from '@/features/revenue/hooks/useRevenueSummary';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -238,6 +239,7 @@ export default function QuestListScreen() {
   const assignedDailyQuery = useAssignedDailyQuest();
   const monthlyQuery = useMonthlyQuests();
   const geoQuery = useGeoQuests();
+  const revenueSummary = useRevenueSummary();
 
   const activeQuery =
     activeSection === 'daily'   ? dailyQuery :
@@ -262,6 +264,14 @@ export default function QuestListScreen() {
       ...((dailyQuery.data ?? []) as QuestRowExtended[]).filter((quest) => quest.id !== assignedDailyQuery.data?.id),
     ]
     : (activeQuery.data ?? []) as QuestRowExtended[];
+  const allowanceKind = activeSection === 'monthly'
+    ? 'quest_monthly'
+    : activeSection === 'geo'
+      ? 'quest_geo_weekly'
+      : 'quest_personalized_daily';
+  const allowance = revenueSummary.data?.allowances.find((item) => item.kind === allowanceKind);
+  const showMembershipUpsell = revenueSummary.data?.planCode === 'free'
+    && !!allowance && allowance.remaining <= 1;
 
   // Empty state configs per section
   const emptyConfig = {
@@ -368,6 +378,25 @@ export default function QuestListScreen() {
             />
           </View>
         ))}
+        {showMembershipUpsell && (
+          <TouchableOpacity
+            onPress={() => router.push('/(main)/membership')}
+            style={[styles.membershipUpsell, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '45' }]}
+            accessibilityRole="button"
+            accessibilityLabel="View Worlds Membership options"
+          >
+            <Feather name="star" size={18} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.upsellTitle, { color: colors.foreground }]}>Make room for more Quests</Text>
+              <Text style={[styles.upsellBody, { color: colors.mutedForeground }]}>
+                {allowance.remaining === 0
+                  ? 'Your included Free-plan access for this period is used. Worlds Membership expands Quest allowances.'
+                  : `${allowance.remaining} included Quest remains this period. Worlds Membership expands Quest allowances.`}
+              </Text>
+            </View>
+            <Feather name="chevron-right" size={18} color={colors.primary} />
+          </TouchableOpacity>
+        )}
 
         <View style={{ height: spacing[20] }} />
       </ScrollView>
@@ -411,4 +440,15 @@ const styles = StyleSheet.create({
   itemWrapper: {
     marginBottom: spacing[3],
   },
+  membershipUpsell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[3],
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    marginTop: spacing[2],
+  },
+  upsellTitle: { fontFamily: fontFamily.semiBold, fontSize: fontSize.sm },
+  upsellBody: { fontFamily: fontFamily.regular, fontSize: fontSize.xs, lineHeight: 18, marginTop: 3 },
 });

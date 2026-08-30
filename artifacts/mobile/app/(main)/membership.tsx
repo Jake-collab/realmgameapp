@@ -1,5 +1,5 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
@@ -23,14 +23,26 @@ export default function MembershipScreen() {
   const freeClaim = useClaimFreeCollectible();
   const purchaseIntent = useCreateCollectiblePurchaseIntent();
   const current = summary.data?.planCode ?? 'free';
+  const refreshSummary = useCallback(() => { void summary.refetch(); }, [summary]);
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={{ backgroundColor: colors.background }}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={summary.isFetching} onRefresh={refreshSummary} tintColor={colors.primary} />}
+    >
       <View style={styles.header}>
         <View style={[styles.icon, { backgroundColor: colors.primary + '18' }]}><Feather name="award" size={22} color={colors.primary} /></View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.title, { color: colors.foreground }]}>Worlds Membership</Text>
           <Text style={[styles.subtitle, { color: colors.mutedForeground }]}>One membership for Quest and Hunt.</Text>
         </View>
+       {summary.isLoading && <ActivityIndicator color={colors.primary} accessibilityLabel="Loading membership summary" />}
+       {summary.isError && (
+         <View style={[styles.error, { backgroundColor: colors.destructive + '12', borderColor: colors.destructive + '45' }]}>
+            <Text style={[styles.planDetail, { color: colors.destructive }]}>{"Couldn't refresh your membership, balances, and Hunt history."}</Text>
+           <Button variant="outline" onPress={refreshSummary}>Retry</Button>
+         </View>
+       )}
         <Feather name="x" size={20} color={colors.mutedForeground} onPress={() => router.back()} />
       </View>
       {summary.data && (
@@ -149,7 +161,7 @@ function CollectibleAction({ badge, freeClaim, purchaseIntent, colors }: {
         {freeClaim.data?.alreadyOwned ? 'Already owned' : 'Free collectible claimed'}
       </Text>;
     }
-    return <Text style={[styles.planDetail, { color: colors.primary }]}>Purchase Intent created. Payment is not complete.</Text>;
+    return <Text style={[styles.planDetail, { color: colors.primary }]}>Purchase intent created. Payment is pending and no collectible has been added yet.</Text>;
   }
 
   const price = badge.priceMinor == null
@@ -202,4 +214,5 @@ const styles = StyleSheet.create({
   creditLabel: { fontFamily: fontFamily.regular, fontSize: fontSize.xs },
   creditPrice: { fontFamily: fontFamily.bold, fontSize: fontSize.sm, marginTop: spacing[2] },
   note: { fontFamily: fontFamily.regular, fontSize: fontSize.xs, lineHeight: 18, marginTop: spacing[2] },
+  error: { borderWidth: 1, borderRadius: radius.lg, padding: spacing[3], gap: spacing[2] },
 });

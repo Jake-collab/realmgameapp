@@ -43,16 +43,19 @@ import { HuntFriendSelector } from '@/components/hunt/HuntFriendSelector';
 import { InvitationCard } from '@/components/hunt/InvitationCard';
 import type { MyHuntsSummaryEntry } from '@/features/hunts/types/hunt.types';
 import { RevenueAllowanceCard } from '@/features/revenue/components/RevenueAllowanceCard';
+import { useRevenueSummary } from '@/features/revenue/hooks/useRevenueSummary';
 
 // ─── Section types ────────────────────────────────────────────────────────────
 
-type Section = 'active' | 'ready' | 'completed' | 'invitations' | 'create';
+type Section = 'active' | 'ready' | 'completed' | 'invitations' | 'badges' | 'collection' | 'create';
 
 const SECTIONS: { key: Section; label: string }[] = [
   { key: 'active',      label: 'Active' },
   { key: 'ready',       label: 'Ready' },
   { key: 'completed',   label: 'Completed' },
   { key: 'invitations', label: 'Invitations' },
+  { key: 'badges',      label: 'Find Badges' },
+  { key: 'collection',  label: 'Collection' },
   { key: 'create',      label: 'Create' },
 ];
 
@@ -64,6 +67,7 @@ export default function MyHuntsScreen() {
 
   const myHuntsQuery = useMyHunts({ userId: user?.id ?? null });
   const invitationsQuery = useHuntInvitations({ userId: user?.id ?? null });
+  const revenueSummary = useRevenueSummary();
 
   const summary = myHuntsQuery.data as import('@/features/hunts/types/hunt.types').MyHuntsSummary | undefined;
   const invitations = invitationsQuery.data ?? [];
@@ -88,11 +92,12 @@ export default function MyHuntsScreen() {
     }
   }, [summary]);
 
-  const isRefreshing = myHuntsQuery.isFetching || invitationsQuery.isFetching;
+  const isRefreshing = myHuntsQuery.isFetching || invitationsQuery.isFetching || revenueSummary.isFetching;
   const handleRefresh = useCallback(() => {
     myHuntsQuery.refetch();
     invitationsQuery.refetch();
-  }, [myHuntsQuery, invitationsQuery]);
+    revenueSummary.refetch();
+  }, [myHuntsQuery, invitationsQuery, revenueSummary]);
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.background }]}>
@@ -165,6 +170,12 @@ export default function MyHuntsScreen() {
                 colors={colors}
               />
             )}
+             {activeSection === 'badges' && (
+               <FindBadgesSection summary={revenueSummary} colors={colors} />
+             )}
+             {activeSection === 'collection' && (
+               <CollectionSection summary={revenueSummary} colors={colors} />
+             )}
             {activeSection === 'create' && (
               <CreateHuntSection colors={colors} />
             )}
@@ -402,6 +413,93 @@ function InvitationsSection({
   );
 }
 
+// ─── Find Badge gallery and Collection ────────────────────────────────────────
+
+function FindBadgesSection({
+  summary, colors,
+}: {
+  summary: ReturnType<typeof useRevenueSummary>;
+  colors: ReturnType<typeof useColors>;
+}) {
+  if (summary.isLoading) return <ActivityIndicator color={colors.hunt} style={styles.loader} />;
+  if (summary.isError) {
+    return <EmptySection icon="wifi-off" title="Couldn't load Find Badges" body="Pull down to retry your Hunt history." colors={colors} />;
+  }
+  const badges = summary.data?.findBadges ?? [];
+  if (!badges.length) {
+    return <EmptySection
+      icon="award"
+      title="No Find Badges yet"
+      body="Each verified Drop find earns a permanent badge. A badge is yours even if its collectible is declined, sold out, or deactivated."
+      colors={colors}
+    />;
+  }
+  return (
+    <View style={styles.sectionList} testID="find-badge-gallery">
+      <Text style={[styles.galleryIntro, { color: colors.mutedForeground }]}>Your verified discoveries are permanent Hunt history.</Text>
+      {badges.map((badge) => (
+        <View key={badge.id} style={[styles.createdCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.createdTop}>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>{badge.dropTitle}</Text>
+            <Feather name="award" size={18} color={colors.hunt} accessibilityLabel="Find Badge earned" />
+          </View>
+          <Text style={[styles.createdSummary, { color: colors.mutedForeground }]}>
+            {badge.rarity ?? 'Find Badge'}{badge.creatorName ? ` · by ${badge.creatorName}` : ''}
+          </Text>
+          {badge.collectibleName ? (
+            <Text style={[styles.createdSummary, { color: colors.mutedForeground }]}>
+              {badge.saleStatus === 'sold_out' ? `${badge.collectibleName} · Sold Out`
+                : badge.saleStatus === 'deactivated' ? `${badge.collectibleName} · Deactivated`
+                  : `Collectible available: ${badge.collectibleName}`}
+            </Text>
+          ) : <Text style={[styles.createdSummary, { color: colors.mutedForeground }]}>No collectible offered</Text>}
+          {badge.collectibleId && badge.ownershipStatus !== 'active' && badge.saleStatus === 'active' && (
+            <TouchableOpacity onPress={() => router.push('/(main)/membership')} accessibilityRole="button" accessibilityLabel={`View acquisition options for ${badge.dropTitle}`} style={[styles.viewBtn, { borderColor: colors.border }]}>
+              <Text style={[styles.viewBtnText, { color: colors.foreground }]}>View collectible</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function CollectionSection({
+  summary, colors,
+}: {
+  summary: ReturnType<typeof useRevenueSummary>;
+  colors: ReturnType<typeof useColors>;
+}) {
+  if (summary.isLoading) return <ActivityIndicator color={colors.hunt} style={styles.loader} />;
+  if (summary.isError) {
+    return <EmptySection icon="wifi-off" title="Couldn't load Collection" body="Pull down to retry your acquired collectibles." colors={colors} />;
+  }
+  const collection = summary.data?.collection ?? [];
+  if (!collection.length) {
+    return <EmptySection
+      icon="package"
+      title="No collectibles acquired"
+      body="Find Badges record every verified find. Collectibles appear here only after a free claim or finalized purchase."
+      colors={colors}
+    />;
+  }
+  return (
+    <View style={styles.sectionList} testID="collectible-collection">
+      <Text style={[styles.galleryIntro, { color: colors.mutedForeground }]}>Only acquired collectibles live in your Collection.</Text>
+      {collection.map((owned) => (
+        <View key={owned.ownershipId} style={[styles.createdCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.createdTop}>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>{owned.name}</Text>
+            <Text style={[styles.createdStatusText, { color: owned.status === 'active' ? colors.hunt : colors.destructive }]}>{owned.status}</Text>
+          </View>
+          <Text style={[styles.createdSummary, { color: colors.mutedForeground }]}>{owned.rarity}{owned.creatorName ? ` · by ${owned.creatorName}` : ''}</Text>
+          <Text style={[styles.createdMeta, { color: colors.mutedForeground }]}>{owned.acquisitionType === 'purchase' ? 'Purchased' : 'Free claim'} · {new Date(owned.acquiredAt).toLocaleDateString()}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
 // ─── Create Section ───────────────────────────────────────────────────────────
 
 function CreateHuntSection({ colors }: { colors: ReturnType<typeof useColors> }) {
@@ -411,11 +509,11 @@ function CreateHuntSection({ colors }: { colors: ReturnType<typeof useColors> })
   const hunts = created.data ?? [];
 
   const archiveHunt = (huntId: string) => Alert.alert(
-    'Archive this Hunt?',
-    'Players will no longer be able to join it.',
+    'Deactivate this Hunt?',
+    'It will no longer appear in active discovery. Existing finds, Find Badges, and collectible ownership remain available.',
     [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Archive', style: 'destructive', onPress: () => archive.mutate(huntId) },
+      { text: 'Deactivate', style: 'destructive', onPress: () => archive.mutate(huntId) },
     ],
   );
   const deleteHunt = (huntId: string) => Alert.alert(
@@ -480,7 +578,7 @@ function CreateHuntSection({ colors }: { colors: ReturnType<typeof useColors> })
             ) : hunt.occurrenceId ? (
               <TouchableOpacity onPress={() => setInviteHuntId(inviteHuntId === hunt.id ? null : hunt.id)} style={[styles.viewBtn, { borderColor: colors.border }]}><Feather name="user-plus" size={14} color={colors.foreground} /><Text style={[styles.viewBtnText, { color: colors.foreground }]}>Invite</Text></TouchableOpacity>
             ) : null}
-            <TouchableOpacity onPress={() => archiveHunt(hunt.id)} style={[styles.viewBtn, { borderColor: colors.border }]}><Feather name="archive" size={14} color={colors.foreground} /><Text style={[styles.viewBtnText, { color: colors.foreground }]}>Archive</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => archiveHunt(hunt.id)} style={[styles.viewBtn, { borderColor: colors.border }]}><Feather name="archive" size={14} color={colors.foreground} /><Text style={[styles.viewBtnText, { color: colors.foreground }]}>{hunt.status === 'draft' ? 'Archive' : 'Deactivate'}</Text></TouchableOpacity>
             {(hunt.status === 'draft' || hunt.status === 'archived' || hunt.status === 'rejected') && <TouchableOpacity onPress={() => deleteHunt(hunt.id)} style={[styles.iconAction, { borderColor: colors.destructive }]} accessibilityLabel="Delete Hunt"><Feather name="trash-2" size={14} color={colors.destructive} /></TouchableOpacity>}
           </View>
           {inviteHuntId === hunt.id && hunt.occurrenceId && <HuntFriendSelector huntId={hunt.id} occurrenceId={hunt.occurrenceId} onDone={() => setInviteHuntId(null)} />}
@@ -568,6 +666,7 @@ const styles = StyleSheet.create({
   loader: { marginTop: spacing[8] },
 
   sectionList: { gap: spacing[3] },
+  galleryIntro: { fontFamily: fontFamily.regular, fontSize: fontSize.sm, lineHeight: 20 },
 
   subheader: {
     fontFamily: fontFamily.semiBold,

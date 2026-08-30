@@ -522,7 +522,7 @@ router.get("/admin/revenue", requireAdmin("admin.revenue.read"), async (_req, re
   try {
     const [
       plans, creditPacks, configuration, transactions, sellers, auditEvents,
-      entitlementCount, activeOrderCount, payableRows,
+      transactionEvents, entitlementCount, activeOrderCount, payableRows, allowanceRows,
     ] = await Promise.all([
       adminRead<Array<Record<string, unknown>>>("membership_plans?select=code,name,billing_cadence,price_minor,currency,is_active&order=price_minor.asc"),
       adminRead<Array<Record<string, unknown>>>("drop_credit_packs?select=code,credits,price_minor,currency,is_active&order=credits.asc"),
@@ -530,9 +530,13 @@ router.get("/admin/revenue", requireAdmin("admin.revenue.read"), async (_req, re
       adminRead<Array<Record<string, unknown>>>("marketplace_orders?select=id,state,currency,gross_minor,platform_fee_minor,intended_seller_share_minor,processing_fee_minor,app_store_fee_minor,tax_minor,seller_payable_minor,created_at,finalized_at&order=created_at.desc&limit=25"),
       adminRead<Array<Record<string, unknown>>>("seller_profiles?select=user_id,onboarding_status,provider_name,updated_at&order=updated_at.desc&limit=25"),
       adminRead<Array<Record<string, unknown>>>("revenue_audit_events?select=id,entity_type,entity_id,event_type,details,created_at&order=created_at.desc&limit=50"),
+      adminRead<Array<Record<string, unknown>>>("marketplace_transaction_events?select=id,order_id,event_type,amount_minor,created_at&order=created_at.desc&limit=100"),
       adminCount("membership_entitlements?select=id&status=eq.active"),
       adminCount("marketplace_orders?select=id&state=in.(pending,finalized,partially_refunded)"),
       adminRead<Array<{ amount_minor: number | string; currency: string }>>("seller_balance_ledger?select=amount_minor,currency"),
+      adminRead<Array<{ plan_code: string; allowance_kind: string; allowance_limit: number; is_active: boolean }>>(
+        "revenue_allowance_catalog?select=plan_code,allowance_kind,allowance_limit,is_active&is_active=eq.true&order=plan_code.asc,allowance_kind.asc",
+      ),
     ]);
     const payableByCurrency = payableRows.reduce<Record<string, number>>((totals, row) => {
       totals[row.currency] = (totals[row.currency] ?? 0) + Number(row.amount_minor);
@@ -542,9 +546,21 @@ router.get("/admin/revenue", requireAdmin("admin.revenue.read"), async (_req, re
       plans,
       creditPacks,
       configuration,
+      allowanceConfiguration: allowanceRows.map((row) => ({
+        planCode: row.plan_code,
+        allowanceKind: row.allowance_kind,
+        limit: row.allowance_limit,
+        period: allowancePeriod(row.plan_code, row.allowance_kind),
+      })),
       metrics: { activeMemberships: entitlementCount, openTransactions: activeOrderCount, sellerPayableByCurrency: payableByCurrency },
-      transactions,
+      transactions: transactions.map((order) => ({
+        ...order,
+        events: transactionEvents
+          .filter((event) => event.order_id === order.id)
+          .map(({ id, event_type, amount_minor, created_at }) => ({ id, eventType: event_type, amountMinor: amount_minor, createdAt: created_at })),
+      })),
       sellers,
+      suspiciousActivity: suspiciousRevenueActivity(transactions, transactionEvents),
       auditEvents: auditEvents.map((event) => ({ ...event, details: safeRevenueAuditDetails(event.details) })),
       generatedAt: new Date().toISOString(),
     });
@@ -552,6 +568,34 @@ router.get("/admin/revenue", requireAdmin("admin.revenue.read"), async (_req, re
     liveUnavailable(res, error, "Revenue operations");
   }
 });
+
+function allowancePeriod(planCode: string, allowanceKind: string) {
+  if (allowanceKind === "quest_monthly") return "utc_month";
+  if (allowanceKind === "quest_personalized_daily" && planCode !== "free") return "utc_day";
+  return "iso_week_utc";
+}
+
+function suspiciousRevenueActivity(
+  orders: Array<Record<string, unknown>>,
+  events: Array<Record<string, unknown>>,
+) {
+  const eventCounts = new Map<string, number>();
+  for (const event of events) {
+    const orderId = typeof event.order_id === "string" ? event.order_id : null;
+    if (orderId) eventCounts.set(orderId, (eventCounts.get(orderId) ?? 0) + 1);
+  }
+  return orders
+    .filter((order) => ["charged_back", "failed", "partially_refunded", "refunded", "reversed"].includes(String(order.state)))
+    .map((order) => ({
+      orderId: order.id,
+      state: order.state,
+      eventCount: eventCounts.get(String(order.id)) ?? 0,
+      createdAt: order.created_at,
+      reason: ["charged_back", "failed"].includes(String(order.state))
+        ? "Payment exception requires review."
+        : "Refund or reversal recorded; review the immutable transaction events.",
+    }));
+}
 
 const revenueConfigurationSchemas = {
   platform_fee_percent: z.object({ basis_points: z.number().int().min(0).max(10_000) }).strict(),

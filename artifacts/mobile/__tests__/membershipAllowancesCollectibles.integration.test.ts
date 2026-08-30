@@ -219,9 +219,22 @@ async function cleanupFixtures(): Promise<void> {
 
   for (const user of [firstPlayer, secondPlayer, seller]) {
     if (!user?.id) continue;
-    const result = await admin.auth.admin.deleteUser(user.id);
-    if (result.error && !/foreign key|immutable_revenue_history/i.test(result.error.message)) {
-      throw result.error;
+    let lastError: Error | null = null;
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        const result = await admin.auth.admin.deleteUser(user.id);
+        if (!result.error || /foreign key|immutable_revenue_history/i.test(result.error.message)) {
+          lastError = null;
+          break;
+        }
+        lastError = result.error;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+      }
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 250));
+    }
+    if (lastError) {
+      console.warn(`Could not remove connected-test user ${user.id} after three attempts: ${lastError.message}`);
     }
   }
 }
@@ -624,6 +637,38 @@ describeIntegration("Task 88 membership, allowances, and collectibles", () => {
       .in("event_type", ["refund", "partial_refund", "chargeback", "reversal"]);
     expect(events.error).toBeNull();
     expect(events.data!.reduce((sum, event) => sum + event.amount_minor, 0)).toBe(900);
+  });
+
+  test("keeps owner commerce private while exposing only safe public Drop detail", async () => {
+    const [publicCollectible, publicDrop, foreignOrders, directOwnership] = await Promise.all([
+      firstClient.rpc("get_public_collectible_detail", {
+        p_collectible_id: paidDrop.collectibleId,
+      }),
+      firstClient.rpc("get_public_hunt_drop_detail", {
+        p_hunt_stop_id: paidDrop.stopId,
+      }),
+      firstClient
+        .from("marketplace_orders")
+        .select("id, buyer_user_id, seller_user_id")
+        .neq("buyer_user_id", firstPlayer.id),
+      secondClient
+        .from("collectible_ownership")
+        .select("id, user_id")
+        .neq("user_id", secondPlayer.id),
+    ]);
+    expect(publicCollectible.error).toBeNull();
+    expect(publicCollectible.data).toMatchObject({
+      collectibleId: paidDrop.collectibleId,
+      priceMinor: 1000,
+    });
+    expect(publicCollectible.data).not.toHaveProperty("creatorUserId");
+    expect(publicDrop.error).toBeNull();
+    expect(publicDrop.data).toMatchObject({ huntStopId: paidDrop.stopId });
+    expect(JSON.stringify(publicDrop.data)).not.toContain("validation_point");
+    expect(foreignOrders.error).toBeNull();
+    expect(foreignOrders.data).toEqual([]);
+    expect(directOwnership.error).toBeNull();
+    expect(directOwnership.data).toEqual([]);
   });
 
   test("revenue operations do not rewrite Quest/Hunt points or canonical hunt_stops", async () => {

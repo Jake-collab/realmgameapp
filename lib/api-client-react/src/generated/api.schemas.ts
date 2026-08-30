@@ -9,31 +9,223 @@ export interface HealthStatus {
   status: string;
 }
 
-export type AdminRevenuePlansItem = { [key: string]: unknown };
+export type AdminMembershipPlanBillingCadence = typeof AdminMembershipPlanBillingCadence[keyof typeof AdminMembershipPlanBillingCadence];
 
-export type AdminRevenueCreditPacksItem = { [key: string]: unknown };
 
-export type AdminRevenueConfigurationItem = { [key: string]: unknown };
+export const AdminMembershipPlanBillingCadence = {
+  free: 'free',
+  monthly: 'monthly',
+  yearly: 'yearly',
+} as const;
 
-export type AdminRevenueMetrics = { [key: string]: unknown };
+export interface AdminMembershipPlan {
+  code: string;
+  name: string;
+  billing_cadence: AdminMembershipPlanBillingCadence;
+  /** @minimum 0 */
+  price_minor: number;
+  /** @pattern ^[A-Z]{3}$ */
+  currency: string;
+  is_active: boolean;
+}
 
-export type AdminRevenueTransactionsItem = { [key: string]: unknown };
+export interface AdminDropCreditPack {
+  code: string;
+  /** @minimum 1 */
+  credits: number;
+  /** @minimum 1 */
+  price_minor: number;
+  /** @pattern ^[A-Z]{3}$ */
+  currency: string;
+  is_active: boolean;
+}
 
-export type AdminRevenueSellersItem = { [key: string]: unknown };
+export type AdminRevenueConfigurationKey = typeof AdminRevenueConfigurationKey[keyof typeof AdminRevenueConfigurationKey];
 
-export type AdminRevenueAuditEventsItem = { [key: string]: unknown };
+
+export const AdminRevenueConfigurationKey = {
+  platform_fee_percent: 'platform_fee_percent',
+  paid_collectible_price_limits: 'paid_collectible_price_limits',
+  collectible_rarity_thresholds: 'collectible_rarity_thresholds',
+} as const;
+
+export type AdminRevenueConfigurationValue = { [key: string]: unknown };
+
+export interface AdminRevenueConfiguration {
+  key: AdminRevenueConfigurationKey;
+  value: AdminRevenueConfigurationValue;
+  effective_at: string;
+}
+
+export type AdminAllowanceConfigurationPlanCode = typeof AdminAllowanceConfigurationPlanCode[keyof typeof AdminAllowanceConfigurationPlanCode];
+
+
+export const AdminAllowanceConfigurationPlanCode = {
+  free: 'free',
+  worlds_monthly: 'worlds_monthly',
+  worlds_yearly: 'worlds_yearly',
+} as const;
+
+export type AdminAllowanceConfigurationAllowanceKind = typeof AdminAllowanceConfigurationAllowanceKind[keyof typeof AdminAllowanceConfigurationAllowanceKind];
+
+
+export const AdminAllowanceConfigurationAllowanceKind = {
+  quest_monthly: 'quest_monthly',
+  quest_geo_weekly: 'quest_geo_weekly',
+  quest_personalized_daily: 'quest_personalized_daily',
+  hunt_drop_creation_weekly: 'hunt_drop_creation_weekly',
+} as const;
+
+export type AdminAllowanceConfigurationPeriod = typeof AdminAllowanceConfigurationPeriod[keyof typeof AdminAllowanceConfigurationPeriod];
+
+
+export const AdminAllowanceConfigurationPeriod = {
+  utc_month: 'utc_month',
+  iso_week_utc: 'iso_week_utc',
+  utc_day: 'utc_day',
+} as const;
+
+export interface AdminAllowanceConfiguration {
+  planCode: AdminAllowanceConfigurationPlanCode;
+  allowanceKind: AdminAllowanceConfigurationAllowanceKind;
+  /** @minimum 0 */
+  limit: number;
+  period: AdminAllowanceConfigurationPeriod;
+}
+
+export type AdminRevenueMetricsSellerPayableByCurrency = {[key: string]: number};
+
+export interface AdminRevenueMetrics {
+  /** @minimum 0 */
+  activeMemberships: number;
+  /** @minimum 0 */
+  openTransactions: number;
+  sellerPayableByCurrency: AdminRevenueMetricsSellerPayableByCurrency;
+}
+
+export type AdminMarketplaceTransactionState = typeof AdminMarketplaceTransactionState[keyof typeof AdminMarketplaceTransactionState];
+
+
+export const AdminMarketplaceTransactionState = {
+  pending: 'pending',
+  finalized: 'finalized',
+  refunded: 'refunded',
+  partially_refunded: 'partially_refunded',
+  charged_back: 'charged_back',
+  reversed: 'reversed',
+  failed: 'failed',
+} as const;
+
+export type AdminMarketplaceTransactionEventEventType = typeof AdminMarketplaceTransactionEventEventType[keyof typeof AdminMarketplaceTransactionEventEventType];
+
+
+export const AdminMarketplaceTransactionEventEventType = {
+  intent_created: 'intent_created',
+  finalized: 'finalized',
+  refund: 'refund',
+  partial_refund: 'partial_refund',
+  chargeback: 'chargeback',
+  dispute: 'dispute',
+  reversal: 'reversal',
+  payout: 'payout',
+} as const;
+
+export interface AdminMarketplaceTransactionEvent {
+  id: string;
+  eventType: AdminMarketplaceTransactionEventEventType;
+  /** @minimum 0 */
+  amountMinor: number;
+  createdAt: string;
+}
+
+export interface AdminMarketplaceTransaction {
+  id: string;
+  state: AdminMarketplaceTransactionState;
+  /** @pattern ^[A-Z]{3}$ */
+  currency: string;
+  /** @minimum 1 */
+  gross_minor: number;
+  /** @minimum 0 */
+  platform_fee_minor: number;
+  /** @minimum 0 */
+  intended_seller_share_minor: number;
+  /** @minimum 0 */
+  processing_fee_minor: number;
+  /** @minimum 0 */
+  app_store_fee_minor: number;
+  /** @minimum 0 */
+  tax_minor: number;
+  /** @minimum 0 */
+  seller_payable_minor: number;
+  created_at: string;
+  /** @nullable */
+  finalized_at: string | null;
+  events: AdminMarketplaceTransactionEvent[];
+}
+
+export type AdminSellerStatusOnboardingStatus = typeof AdminSellerStatusOnboardingStatus[keyof typeof AdminSellerStatusOnboardingStatus];
+
+
+export const AdminSellerStatusOnboardingStatus = {
+  not_started: 'not_started',
+  pending: 'pending',
+  verified: 'verified',
+  restricted: 'restricted',
+  disabled: 'disabled',
+} as const;
+
+export interface AdminSellerStatus {
+  user_id: string;
+  onboarding_status: AdminSellerStatusOnboardingStatus;
+  /** @nullable */
+  provider_name: string | null;
+  updated_at: string;
+}
+
+export type AdminSuspiciousRevenueActivityState = typeof AdminSuspiciousRevenueActivityState[keyof typeof AdminSuspiciousRevenueActivityState];
+
+
+export const AdminSuspiciousRevenueActivityState = {
+  refunded: 'refunded',
+  partially_refunded: 'partially_refunded',
+  charged_back: 'charged_back',
+  reversed: 'reversed',
+  failed: 'failed',
+} as const;
+
+export interface AdminSuspiciousRevenueActivity {
+  orderId: string;
+  state: AdminSuspiciousRevenueActivityState;
+  /** @minimum 0 */
+  eventCount: number;
+  createdAt: string;
+  reason: string;
+}
+
+export type AdminRevenueAuditEventDetails = { [key: string]: unknown };
+
+export interface AdminRevenueAuditEvent {
+  id: string;
+  entity_type: string;
+  /** @nullable */
+  entity_id: string | null;
+  event_type: string;
+  details: AdminRevenueAuditEventDetails;
+  created_at: string;
+}
 
 export interface AdminRevenue {
-  plans: AdminRevenuePlansItem[];
-  creditPacks: AdminRevenueCreditPacksItem[];
-  configuration: AdminRevenueConfigurationItem[];
+  plans: AdminMembershipPlan[];
+  creditPacks: AdminDropCreditPack[];
+  configuration: AdminRevenueConfiguration[];
+  allowanceConfiguration: AdminAllowanceConfiguration[];
   metrics: AdminRevenueMetrics;
-  transactions: AdminRevenueTransactionsItem[];
-  sellers: AdminRevenueSellersItem[];
-  auditEvents: AdminRevenueAuditEventsItem[];
+  transactions: AdminMarketplaceTransaction[];
+  sellers: AdminSellerStatus[];
+  suspiciousActivity: AdminSuspiciousRevenueActivity[];
+  auditEvents: AdminRevenueAuditEvent[];
   generatedAt: string;
-  [key: string]: unknown;
- }
+}
 
 export interface AdminRevenueAction {
   /**

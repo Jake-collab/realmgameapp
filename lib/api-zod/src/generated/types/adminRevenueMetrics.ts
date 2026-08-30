@@ -5,5 +5,12 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { AdminRevenueMetricsSellerPayableByCurrency } from './adminRevenueMetricsSellerPayableByCurrency';
 
-export type AdminRevenueMetrics = { [key: string]: unknown };
+export interface AdminRevenueMetrics {
+  /** @minimum 0 */
+  activeMemberships: number;
+  /** @minimum 0 */
+  openTransactions: number;
+  sellerPayableByCurrency: AdminRevenueMetricsSellerPayableByCurrency;
+}

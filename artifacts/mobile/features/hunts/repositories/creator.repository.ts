@@ -105,6 +105,16 @@ export interface HuntDropCommerceInput {
   quantity: number | null;
 }
 
+export async function acknowledgePaidCollectibleFee(stopId: string): Promise<void> {
+  const { data, error } = await client().rpc('acknowledge_paid_collectible_fee', {
+    p_stop_id: stopId,
+    p_disclosure_version: 'stage-2-v1',
+    p_idempotency_key: `fee-ack:${stopId}`,
+  });
+  if (error) throw error;
+  if (!data?.success) throw new Error('The platform fee acknowledgement could not be saved.');
+}
+
 export async function configureHuntDropCommerce(input: HuntDropCommerceInput): Promise<void> {
   const { data, error } = await client().rpc('configure_hunt_drop_commerce', {
     p_stop_id: input.stopId,

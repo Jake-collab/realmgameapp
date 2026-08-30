@@ -105,9 +105,11 @@ export type RevenueAdminData = {
   plans: Array<{ code: string; name: string; billing_cadence: string; price_minor: number; currency: string; is_active: boolean }>;
   creditPacks: Array<{ code: string; credits: number; price_minor: number; currency: string; is_active: boolean }>;
   configuration: Array<{ key: string; value: Record<string, unknown>; effective_at: string }>;
+  allowanceConfiguration: Array<{ planCode: string; allowanceKind: string; limit: number; period: string }>;
   metrics: { activeMemberships: number; openTransactions: number; sellerPayableByCurrency: Record<string, number> };
-  transactions: Array<Record<string, unknown>>;
+  transactions: Array<Record<string, unknown> & { events: Array<{ id: string; eventType: string; amountMinor: number; createdAt: string }> }>;
   sellers: Array<Record<string, unknown>>;
+  suspiciousActivity: Array<{ orderId: string; state: string; eventCount: number; createdAt: string; reason: string }>;
   auditEvents: Array<Record<string, unknown>>;
   generatedAt: string;
 };
@@ -192,7 +194,7 @@ export function useAdminData(mediaRetentionPage = 1, mediaRetentionSnapshot?: st
   });
   const revenue = useQuery<RevenueAdminData>({
     queryKey: ['/admin/revenue'],
-    enabled: can('admin.review.read'),
+    enabled: can('admin.revenue.read'),
     queryFn: () => moderationFetch<RevenueAdminData>('/api/admin/revenue'),
   });
   const refreshRevenue = () => void client.invalidateQueries({ queryKey: ['/admin/revenue'] });

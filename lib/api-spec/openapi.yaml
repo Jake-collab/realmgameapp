@@ -703,17 +703,112 @@ components:
         - status
     AdminRevenue:
       type: object
-      additionalProperties: true
-      required: [plans, creditPacks, configuration, metrics, transactions, sellers, auditEvents, generatedAt]
+      additionalProperties: false
+      required: [plans, creditPacks, configuration, allowanceConfiguration, metrics, transactions, sellers, suspiciousActivity, auditEvents, generatedAt]
       properties:
-        plans: { type: array, items: { type: object, additionalProperties: true } }
-        creditPacks: { type: array, items: { type: object, additionalProperties: true } }
-        configuration: { type: array, items: { type: object, additionalProperties: true } }
-        metrics: { type: object, additionalProperties: true }
-        transactions: { type: array, items: { type: object, additionalProperties: true } }
-        sellers: { type: array, items: { type: object, additionalProperties: true } }
-        auditEvents: { type: array, items: { type: object, additionalProperties: true } }
+        plans: { type: array, items: { $ref: "#/components/schemas/AdminMembershipPlan" } }
+        creditPacks: { type: array, items: { $ref: "#/components/schemas/AdminDropCreditPack" } }
+        configuration: { type: array, items: { $ref: "#/components/schemas/AdminRevenueConfiguration" } }
+        allowanceConfiguration: { type: array, items: { $ref: "#/components/schemas/AdminAllowanceConfiguration" } }
+        metrics: { $ref: "#/components/schemas/AdminRevenueMetrics" }
+        transactions: { type: array, items: { $ref: "#/components/schemas/AdminMarketplaceTransaction" } }
+        sellers: { type: array, items: { $ref: "#/components/schemas/AdminSellerStatus" } }
+        suspiciousActivity: { type: array, items: { $ref: "#/components/schemas/AdminSuspiciousRevenueActivity" } }
+        auditEvents: { type: array, items: { $ref: "#/components/schemas/AdminRevenueAuditEvent" } }
         generatedAt: { type: string, format: date-time }
+    AdminMembershipPlan:
+      type: object
+      required: [code, name, billing_cadence, price_minor, currency, is_active]
+      properties:
+        code: { type: string }
+        name: { type: string }
+        billing_cadence: { type: string, enum: [free, monthly, yearly] }
+        price_minor: { type: integer, minimum: 0 }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        is_active: { type: boolean }
+    AdminDropCreditPack:
+      type: object
+      required: [code, credits, price_minor, currency, is_active]
+      properties:
+        code: { type: string }
+        credits: { type: integer, minimum: 1 }
+        price_minor: { type: integer, minimum: 1 }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        is_active: { type: boolean }
+    AdminRevenueConfiguration:
+      type: object
+      required: [key, value, effective_at]
+      properties:
+        key: { type: string, enum: [platform_fee_percent, paid_collectible_price_limits, collectible_rarity_thresholds] }
+        value: { type: object, additionalProperties: true }
+        effective_at: { type: string, format: date-time }
+    AdminAllowanceConfiguration:
+      type: object
+      required: [planCode, allowanceKind, limit, period]
+      properties:
+        planCode: { type: string, enum: [free, worlds_monthly, worlds_yearly] }
+        allowanceKind: { type: string, enum: [quest_monthly, quest_geo_weekly, quest_personalized_daily, hunt_drop_creation_weekly] }
+        limit: { type: integer, minimum: 0 }
+        period: { type: string, enum: [utc_month, iso_week_utc, utc_day] }
+    AdminRevenueMetrics:
+      type: object
+      required: [activeMemberships, openTransactions, sellerPayableByCurrency]
+      properties:
+        activeMemberships: { type: integer, minimum: 0 }
+        openTransactions: { type: integer, minimum: 0 }
+        sellerPayableByCurrency: { type: object, additionalProperties: { type: integer } }
+    AdminMarketplaceTransaction:
+      type: object
+      required: [id, state, currency, gross_minor, platform_fee_minor, intended_seller_share_minor, processing_fee_minor, app_store_fee_minor, tax_minor, seller_payable_minor, created_at, finalized_at, events]
+      properties:
+        id: { type: string, format: uuid }
+        state: { type: string, enum: [pending, finalized, refunded, partially_refunded, charged_back, reversed, failed] }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        gross_minor: { type: integer, minimum: 1 }
+        platform_fee_minor: { type: integer, minimum: 0 }
+        intended_seller_share_minor: { type: integer, minimum: 0 }
+        processing_fee_minor: { type: integer, minimum: 0 }
+        app_store_fee_minor: { type: integer, minimum: 0 }
+        tax_minor: { type: integer, minimum: 0 }
+        seller_payable_minor: { type: integer, minimum: 0 }
+        created_at: { type: string, format: date-time }
+        finalized_at: { type: [string, "null"], format: date-time }
+        events: { type: array, items: { $ref: "#/components/schemas/AdminMarketplaceTransactionEvent" } }
+    AdminMarketplaceTransactionEvent:
+      type: object
+      required: [id, eventType, amountMinor, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        eventType: { type: string, enum: [intent_created, finalized, refund, partial_refund, chargeback, dispute, reversal, payout] }
+        amountMinor: { type: integer, minimum: 0 }
+        createdAt: { type: string, format: date-time }
+    AdminSellerStatus:
+      type: object
+      required: [user_id, onboarding_status, provider_name, updated_at]
+      properties:
+        user_id: { type: string, format: uuid }
+        onboarding_status: { type: string, enum: [not_started, pending, verified, restricted, disabled] }
+        provider_name: { type: [string, "null"] }
+        updated_at: { type: string, format: date-time }
+    AdminSuspiciousRevenueActivity:
+      type: object
+      required: [orderId, state, eventCount, createdAt, reason]
+      properties:
+        orderId: { type: string, format: uuid }
+        state: { type: string, enum: [refunded, partially_refunded, charged_back, reversed, failed] }
+        eventCount: { type: integer, minimum: 0 }
+        createdAt: { type: string, format: date-time }
+        reason: { type: string }
+    AdminRevenueAuditEvent:
+      type: object
+      required: [id, entity_type, entity_id, event_type, details, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        entity_type: { type: string }
+        entity_id: { type: [string, "null"], format: uuid }
+        event_type: { type: string }
+        details: { type: object, additionalProperties: true }
+        created_at: { type: string, format: date-time }
     AdminRevenueAction:
       type: object
       additionalProperties: false

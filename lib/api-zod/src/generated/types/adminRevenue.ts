@@ -5,22 +5,25 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { AdminRevenueAuditEventsItem } from './adminRevenueAuditEventsItem';
-import type { AdminRevenueConfigurationItem } from './adminRevenueConfigurationItem';
-import type { AdminRevenueCreditPacksItem } from './adminRevenueCreditPacksItem';
+import type { AdminAllowanceConfiguration } from './adminAllowanceConfiguration';
+import type { AdminDropCreditPack } from './adminDropCreditPack';
+import type { AdminMarketplaceTransaction } from './adminMarketplaceTransaction';
+import type { AdminMembershipPlan } from './adminMembershipPlan';
+import type { AdminRevenueAuditEvent } from './adminRevenueAuditEvent';
+import type { AdminRevenueConfiguration } from './adminRevenueConfiguration';
 import type { AdminRevenueMetrics } from './adminRevenueMetrics';
-import type { AdminRevenuePlansItem } from './adminRevenuePlansItem';
-import type { AdminRevenueSellersItem } from './adminRevenueSellersItem';
-import type { AdminRevenueTransactionsItem } from './adminRevenueTransactionsItem';
+import type { AdminSellerStatus } from './adminSellerStatus';
+import type { AdminSuspiciousRevenueActivity } from './adminSuspiciousRevenueActivity';
 
 export interface AdminRevenue {
-  plans: AdminRevenuePlansItem[];
-  creditPacks: AdminRevenueCreditPacksItem[];
-  configuration: AdminRevenueConfigurationItem[];
+  plans: AdminMembershipPlan[];
+  creditPacks: AdminDropCreditPack[];
+  configuration: AdminRevenueConfiguration[];
+  allowanceConfiguration: AdminAllowanceConfiguration[];
   metrics: AdminRevenueMetrics;
-  transactions: AdminRevenueTransactionsItem[];
-  sellers: AdminRevenueSellersItem[];
-  auditEvents: AdminRevenueAuditEventsItem[];
+  transactions: AdminMarketplaceTransaction[];
+  sellers: AdminSellerStatus[];
+  suspiciousActivity: AdminSuspiciousRevenueActivity[];
+  auditEvents: AdminRevenueAuditEvent[];
   generatedAt: Date;
-  [key: string]: unknown;
- }
+}

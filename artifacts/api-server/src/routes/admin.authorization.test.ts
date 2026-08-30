@@ -266,6 +266,19 @@ describe("admin moderation authorization", () => {
         }]));
         return;
       }
+      if (req.url?.startsWith("/rest/v1/revenue_allowance_catalog")) {
+        res.end(JSON.stringify([
+          { plan_code: "free", allowance_kind: "quest_personalized_daily", allowance_limit: 7, is_active: true },
+          { plan_code: "worlds_monthly", allowance_kind: "quest_personalized_daily", allowance_limit: 3, is_active: true },
+          { plan_code: "worlds_yearly", allowance_kind: "hunt_drop_creation_weekly", allowance_limit: 9, is_active: true },
+        ]));
+        return;
+      }
+      if (/^\/rest\/v1\/(membership_plans|drop_credit_packs|revenue_configuration|marketplace_orders|seller_profiles|revenue_audit_events|marketplace_transaction_events|membership_entitlements|seller_balance_ledger)/.test(req.url ?? "")) {
+        if (req.headers.prefer === "count=exact") res.setHeader("content-range", "0-0/0");
+        res.end("[]");
+        return;
+      }
       if (req.url?.startsWith("/rest/v1/rpc/moderate_media_retention_cleanup") && req.method === "POST") {
         let rawBody = "";
         req.on("data", (chunk) => { rawBody += chunk; });
@@ -435,6 +448,23 @@ describe("admin moderation authorization", () => {
       assert.equal((await request(route.path, options, "moderator")).status, 403);
       assert.equal((await request(route.path, options, "admin")).status, 400);
     }
+  });
+
+  it("keeps provider-neutral revenue visibility staff-only", async () => {
+    assert.equal((await request("/admin/revenue")).status, 401);
+    assert.equal((await request("/admin/revenue", {}, "user")).status, 403);
+    // Moderators have read-only revenue visibility. The fixture deliberately
+    // lacks revenue tables, so trusted data availability is reported separately.
+    const revenue = await request("/admin/revenue", {}, "moderator");
+    assert.equal(revenue.status, 200);
+    const revenueBody = await revenue.json() as {
+      allowanceConfiguration: Array<{ planCode: string; allowanceKind: string; limit: number; period: string }>;
+    };
+    assert.deepEqual(revenueBody.allowanceConfiguration, [
+      { planCode: "free", allowanceKind: "quest_personalized_daily", limit: 7, period: "iso_week_utc" },
+      { planCode: "worlds_monthly", allowanceKind: "quest_personalized_daily", limit: 3, period: "utc_day" },
+      { planCode: "worlds_yearly", allowanceKind: "hunt_drop_creation_weekly", limit: 9, period: "iso_week_utc" },
+    ]);
   });
 
   it("keeps moderation settings writes restricted and leaves settings unchanged on denial", async () => {
