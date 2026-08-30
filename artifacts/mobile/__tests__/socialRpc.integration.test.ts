@@ -32,6 +32,7 @@ const liveMobileUrl = testUrl || process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const liveMobileAnonKey = testAnonKey || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 const liveMobileConfigured = Boolean(liveMobileUrl && liveMobileAnonKey);
 const describeLiveMobile = liveMobileConfigured ? describe : describe.skip;
+const oppositeDirectionRaceIterations = 10;
 
 let social: SocialRepository;
 let mobileClient: SupabaseClient;
@@ -84,6 +85,23 @@ function testAnonClient(): SupabaseClient {
   return createClient(testUrl, testAnonKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+}
+
+function summarizeError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return String(error);
+  }
+}
+
+function formatRaceContext(context: Record<string, unknown>): string {
+  return JSON.stringify(context, (_key, value) => {
+    if (typeof value === 'bigint') return value.toString();
+    return value;
+  }, 2);
 }
 
 describeIntegration('Social RPC contracts', () => {
@@ -294,85 +312,138 @@ describeIntegration('Social RPC contracts', () => {
     await expect(social.searchPublicUsers(viewer.username)).resolves.toEqual([]);
   });
 
-  test('opposite friend requests atomically become one friendship', async () => {
-    const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
-    const firstUser = await createTestUser('viewer', suffix);
-    const secondUser = await createTestUser('target', suffix);
-    const firstClient = testAnonClient();
-    const secondClient = testAnonClient();
+  test('opposite friend requests atomically become one friendship across repeated races', async () => {
+    for (let iteration = 0; iteration < oppositeDirectionRaceIterations; iteration += 1) {
+      const context: Record<string, unknown> = { iteration: iteration + 1 };
+      let firstUser: TestUser | undefined;
+      let secondUser: TestUser | undefined;
+      let firstClient: SupabaseClient | undefined;
+      let secondClient: SupabaseClient | undefined;
+      let failure: unknown;
+      let cleanupErrors: string[] = [];
 
-    try {
-      await Promise.all([
-        signInClientAs(firstClient, firstUser),
-        signInClientAs(secondClient, secondUser),
-      ]);
+      try {
+        const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}-${iteration}`;
+        firstUser = await createTestUser('viewer', suffix);
+        secondUser = await createTestUser('target', suffix);
+        context.users = {
+          first: { id: firstUser.id, username: firstUser.username },
+          second: { id: secondUser.id, username: secondUser.username },
+        };
+        firstClient = testAnonClient();
+        secondClient = testAnonClient();
 
-      const results = await Promise.all([
-        firstClient.rpc('send_friend_request', {
-          p_target_username: secondUser.username,
-          p_source_context: 'search',
-        }),
-        secondClient.rpc('send_friend_request', {
-          p_target_username: firstUser.username,
-          p_source_context: 'search',
-        }),
-      ]);
-      results.forEach(({ error }) => {
-        if (error) throw error;
-      });
+        await Promise.all([
+          signInClientAs(firstClient, firstUser),
+          signInClientAs(secondClient, secondUser),
+        ]);
 
-      const responses = results.map(({ data }) => data as {
-        ok?: boolean;
-        code?: string;
-        state?: string;
-      });
-      expect(responses).toHaveLength(2);
-      responses.forEach((response) => {
-        expect(response.ok).toBe(true);
-      });
-      expect(responses.map((response) => response.code).sort()).toEqual([
-        'auto_accepted',
-        'sent',
-      ]);
-      expect(responses.map((response) => response.state).sort()).toEqual([
-        'friends',
-        'outgoing_request',
-      ]);
+        const results = await Promise.all([
+          firstClient.rpc('send_friend_request', {
+            p_target_username: secondUser.username,
+            p_source_context: 'search',
+          }),
+          secondClient.rpc('send_friend_request', {
+            p_target_username: firstUser.username,
+            p_source_context: 'search',
+          }),
+        ]);
+        context.rpcResults = results.map(({ data, error }) => ({
+          data,
+          error: error ? summarizeError(error) : null,
+        }));
+        results.forEach(({ error }) => {
+          if (error) throw error;
+        });
 
-      const pair = [firstUser.id, secondUser.id].sort();
-      const { data: friendships, error: friendshipError } = await adminClient
-        .from('friendships')
-        .select('id, status, user_id_a, user_id_b')
-        .eq('user_id_a', pair[0])
-        .eq('user_id_b', pair[1])
-        .eq('status', 'active');
-      if (friendshipError) throw friendshipError;
-      expect(friendships).toHaveLength(1);
+        const responses = results.map(({ data }) => data as {
+          ok?: boolean;
+          code?: string;
+          state?: string;
+        });
+        expect(responses).toHaveLength(2);
+        responses.forEach((response) => {
+          expect(response.ok).toBe(true);
+        });
+        expect(responses.map((response) => response.code).sort()).toEqual([
+          'auto_accepted',
+          'sent',
+        ]);
+        expect(responses.map((response) => response.state).sort()).toEqual([
+          'friends',
+          'outgoing_request',
+        ]);
 
-      const { data: pendingRequests, error: pendingError } = await adminClient
-        .from('friend_requests')
-        .select('id')
-        .in('requester_id', [firstUser.id, secondUser.id])
-        .in('recipient_id', [firstUser.id, secondUser.id])
-        .eq('status', 'pending');
-      if (pendingError) throw pendingError;
-      expect(pendingRequests).toEqual([]);
+        const pair = [firstUser.id, secondUser.id].sort();
+        const [friendshipQuery, pendingQuery, notificationQuery] = await Promise.all([
+          adminClient
+            .from('friendships')
+            .select('id, status, user_id_a, user_id_b')
+            .eq('user_id_a', pair[0])
+            .eq('user_id_b', pair[1])
+            .eq('status', 'active'),
+          adminClient
+            .from('friend_requests')
+            .select('id, status, requester_id, recipient_id')
+            .in('requester_id', [firstUser.id, secondUser.id])
+            .in('recipient_id', [firstUser.id, secondUser.id])
+            .eq('status', 'pending'),
+          adminClient
+            .from('notifications')
+            .select('id, user_id, type, data')
+            .in('user_id', [firstUser.id, secondUser.id])
+            .eq('type', 'friend_request_accepted'),
+        ]);
+        context.finalState = {
+          friendships: friendshipQuery.data,
+          pendingRequests: pendingQuery.data,
+          acceptanceNotifications: notificationQuery.data,
+        };
+        if (friendshipQuery.error) throw friendshipQuery.error;
+        if (pendingQuery.error) throw pendingQuery.error;
+        if (notificationQuery.error) throw notificationQuery.error;
 
-      const { data: acceptanceNotifications, error: notificationError } = await adminClient
-        .from('notifications')
-        .select('id, user_id, type')
-        .in('user_id', [firstUser.id, secondUser.id])
-        .eq('type', 'friend_request_accepted');
-      if (notificationError) throw notificationError;
-      expect(acceptanceNotifications).toHaveLength(1);
-    } finally {
-      await Promise.all([firstClient.auth.signOut(), secondClient.auth.signOut()]);
-      const { error: secondDeleteError } = await adminClient.auth.admin.deleteUser(secondUser.id);
-      if (secondDeleteError) throw secondDeleteError;
-      const { error: firstDeleteError } = await adminClient.auth.admin.deleteUser(firstUser.id);
-      if (firstDeleteError) throw firstDeleteError;
+        expect(friendshipQuery.data).toHaveLength(1);
+        expect(pendingQuery.data).toEqual([]);
+        expect(notificationQuery.data).toHaveLength(1);
+      } catch (error) {
+        failure = error;
+      } finally {
+        cleanupErrors = [];
+        const clients = [firstClient, secondClient].filter(
+          (client): client is SupabaseClient => Boolean(client),
+        );
+        const signOutResults = await Promise.allSettled(
+          clients.map((client) => client.auth.signOut()),
+        );
+        signOutResults.forEach((result) => {
+          if (result.status === 'rejected') cleanupErrors.push(summarizeError(result.reason));
+          else if (result.value.error) cleanupErrors.push(summarizeError(result.value.error));
+        });
+
+        if (secondUser) {
+          const { error } = await adminClient.auth.admin.deleteUser(secondUser.id);
+          if (error) cleanupErrors.push(summarizeError(error));
+        }
+        if (firstUser) {
+          const { error } = await adminClient.auth.admin.deleteUser(firstUser.id);
+          if (error) cleanupErrors.push(summarizeError(error));
+        }
+        if (!failure && cleanupErrors.length > 0) {
+          failure = new Error(`Cleanup failed: ${cleanupErrors.join('; ')}`);
+        }
+      }
+
+      if (failure) {
+        context.cleanup = { errors: cleanupErrors };
+        const message = failure instanceof Error ? failure.message : summarizeError(failure);
+        throw new Error(
+          `Opposite friend request race iteration ${iteration + 1} failed: ${message}\n` +
+          `Race context:\n${formatRaceContext(context)}`,
+        );
+      }
     }
-  }, 30_000);
+  }, 120_000);
 });
 
 describeLiveMobile('Social RPC missing-session boundary', () => {
