@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { AlertTriangle, ArrowUpRight, Check, ChevronRight, Database, FileText, Flag, LockKeyhole, Plus, Search, ShieldCheck, SlidersHorizontal, UsersRound } from 'lucide-react';
+import { AlertTriangle, ArrowUpRight, Check, ChevronLeft, ChevronRight, Database, FileText, Flag, LockKeyhole, Plus, Search, ShieldCheck, SlidersHorizontal, UsersRound } from 'lucide-react';
 import { useAdminData } from '@/hooks/use-admin-data';
 import { DiagnosticsList, ErrorState, MetricGrid, PageHeader, QueueList, RefreshButton, StatusBadge, UnavailableState } from '@/components/admin-ui';
 import { moderationFetch, type MediaRetentionEvidence } from '@/hooks/use-admin-data';
@@ -114,7 +114,7 @@ export function DiagnosticsPage({ data }: { data: AdminData }) {
   );
 }
 
-export function MediaRetentionPage({ data }: { data: AdminData }) {
+export function MediaRetentionPage({ data, page = 1, onPageChange }: { data: AdminData; page?: number; onPageChange?: (page: number) => void }) {
   const retention = data.mediaRetention.data;
   const items = retention?.items ?? [];
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
@@ -125,6 +125,13 @@ export function MediaRetentionPage({ data }: { data: AdminData }) {
   });
   const evidenceData = evidence.data;
   const canManage = data.session.data?.permissions.includes('moderation.manage') === true;
+  const list = retention?.list;
+  const currentPage = list?.page ?? page;
+  const goToPage = (nextPage: number) => {
+    if (!onPageChange || nextPage < 1 || (list && nextPage > list.totalPages)) return;
+    setSelectedMediaId(null);
+    onPageChange(nextPage);
+  };
   const takeAction = (action: 'requeue' | 'resolve') => {
     if (!evidenceData?.canonicalReference.fingerprint || !selectedMediaId || !canManage) return;
     const label = action === 'requeue' ? 'requeue this cleanup for the trusted worker' : 'mark this cleanup resolved without a Storage deletion';
@@ -167,10 +174,17 @@ export function MediaRetentionPage({ data }: { data: AdminData }) {
       </div>
       <section className="panel" style={{ marginTop: 22 }}>
         <div className="panel-header">
-          <div><div className="panel-title">Recent cleanup records</div><div className="panel-kicker">{retention ? `${retention.summary.total} total records across all history · showing the latest ${retention.list.returned}` : 'Live worker state'}</div></div>
+          <div><div className="panel-title">Cleanup history</div><div className="panel-kicker">{retention ? `${retention.summary.total} total records across all history · showing ${retention.list.returned} records on page ${currentPage} of ${retention.list.totalPages}` : 'Live worker state'}</div></div>
           <StatusBadge status={retention ? (retention.summary.blocked ? 'blocked' : 'healthy') : 'unavailable'} />
         </div>
         {data.mediaRetention.isError ? <ErrorState onRetry={() => void data.mediaRetention.refetch()} /> : data.mediaRetention.isLoading ? <TableSkeleton columns={8} /> : !retention ? <UnavailableState onRetry={() => void data.mediaRetention.refetch()} /> : !items.length ? <div className="empty-state"><Check /><strong>No cleanup records yet</strong><p>The worker has not recorded a rejected private-media cleanup.</p></div> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>State</th><th>Reference</th><th>Attempts</th><th>Last attempt</th><th>Next retry</th><th>Deletion result</th><th>Error summary</th><th>Evidence</th></tr></thead><tbody>{items.map((item) => <tr key={item.mediaId} data-testid={`row-retention-${item.mediaId}`}><td><StatusBadge status={item.state} /></td><td className="mono" title={item.mediaId}>{item.mediaId.slice(0, 8)}…</td><td className="mono">{item.attemptCount}</td><td>{fmtDateTime(item.lastAttemptAt)}</td><td>{fmtDateTime(item.nextAttemptAt)}</td><td>{item.deletionOutcome === 'missing' ? <span className="tag orange">Object missing · complete</span> : item.deletionOutcome === 'deleted' ? <span className="tag green">Deleted</span> : item.state === 'blocked' ? <span className="tag red">Blocked</span> : item.state === 'resolved' ? <span className="tag green">Resolved</span> : <span className="tag red">Deletion failed</span>}</td><td style={{ maxWidth: 310, color: 'hsl(var(--muted-foreground))' }}>{item.lastError || '—'}</td><td>{item.state === 'blocked' ? <button className="btn btn-quiet" onClick={() => setSelectedMediaId(item.mediaId)} data-testid={`button-retention-evidence-${item.mediaId}`}>Review</button> : '—'}</td></tr>)}</tbody></table></div>}
+        {retention && (retention.list.totalPages > 1 || currentPage > 1) ? <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginTop: 16, flexWrap: 'wrap' }} data-testid="retention-pagination">
+          <span className="panel-kicker">Page {currentPage} of {retention.list.totalPages} · {retention.list.offset + 1}–{retention.list.offset + retention.list.returned} of {retention.summary.total}</span>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button className="btn btn-quiet" onClick={() => goToPage(currentPage - 1)} disabled={data.mediaRetention.isFetching || currentPage <= 1 || !onPageChange} data-testid="button-retention-previous"><ChevronLeft /> Newer</button>
+            <button className="btn btn-quiet" onClick={() => goToPage(currentPage + 1)} disabled={data.mediaRetention.isFetching || !retention.list.hasMore || !onPageChange} data-testid="button-retention-next">Older <ChevronRight /></button>
+          </div>
+        </div> : null}
       </section>
       {selectedMediaId ? <section className="panel" style={{ marginTop: 22 }} data-testid="panel-retention-evidence">
         <div className="panel-header">

@@ -143,6 +143,9 @@ type MediaRetentionCleanupRow = {
 };
 
 const MEDIA_RETENTION_PAGE_SIZE = 100;
+const MediaRetentionQuery = z.object({
+  page: z.coerce.number().int().min(1).max(100_000).default(1),
+});
 
 function retentionCleanupState(
   row: Pick<MediaRetentionCleanupRow, "status" | "failure_classification">,
@@ -471,7 +474,15 @@ router.get("/admin/diagnostics", requireAdmin("admin.diagnostics.read"), async (
   }));
 });
 
-router.get("/admin/moderation/media-retention", requireAdmin("moderation.read"), async (_req, res) => {
+router.get("/admin/moderation/media-retention", requireAdmin("moderation.read"), async (req, res) => {
+  const parsedQuery = MediaRetentionQuery.safeParse(req.query);
+  if (!parsedQuery.success) {
+    res.status(400).json({ error: "Page must be a positive integer no greater than 100000." });
+    return;
+  }
+  const page = parsedQuery.data.page;
+  const offset = (page - 1) * MEDIA_RETENTION_PAGE_SIZE;
+
   try {
     const blockedFilter = `status=eq.failed&failure_classification=eq.${
       MODERATION_RETENTION_FAILURE_CLASSIFICATION.BLOCKED_REFERENCE
@@ -484,7 +495,7 @@ router.get("/admin/moderation/media-retention", requireAdmin("moderation.read"),
       adminCount("media_retention_cleanups?status=eq.resolved"),
       adminCount(`media_retention_cleanups?${blockedFilter}`),
       adminRead<MediaRetentionCleanupRow[]>(
-        `media_retention_cleanups?select=media_id,status,attempt_count,lease_acquired_at,next_attempt_at,storage_delete_outcome,storage_deleted_at,failure_classification,last_error,created_at,updated_at&order=updated_at.desc&limit=${MEDIA_RETENTION_PAGE_SIZE}`,
+        `media_retention_cleanups?select=media_id,status,attempt_count,lease_acquired_at,next_attempt_at,storage_delete_outcome,storage_deleted_at,failure_classification,last_error,created_at,updated_at&order=updated_at.desc&offset=${offset}&limit=${MEDIA_RETENTION_PAGE_SIZE}`,
       ),
     ]);
     const retrying = processing + Math.max(0, failed - blocked);
@@ -503,11 +514,15 @@ router.get("/admin/moderation/media-retention", requireAdmin("moderation.read"),
         updatedAt: row.updated_at,
       })),
       list: {
-        scope: "latest",
+        scope: "all",
         ordering: "updated_at_desc",
+        page,
+        pageSize: MEDIA_RETENTION_PAGE_SIZE,
+        offset,
         limit: MEDIA_RETENTION_PAGE_SIZE,
         returned: rows.length,
-        hasMore: total > rows.length,
+        hasMore: offset + rows.length < total,
+        totalPages: Math.ceil(total / MEDIA_RETENTION_PAGE_SIZE),
         totalsScope: "all",
       },
       generatedAt: new Date(),

@@ -42,7 +42,7 @@ export type MediaRetentionAdminData = {
     lastError: string | null;
     updatedAt: string;
   }>;
-  list: { scope: 'latest'; ordering: 'updated_at_desc'; limit: number; returned: number; hasMore: boolean; totalsScope: 'all' };
+  list: { scope: 'all'; ordering: 'updated_at_desc'; page: number; pageSize: number; offset: number; limit: number; returned: number; hasMore: boolean; totalPages: number; totalsScope: 'all' };
   generatedAt: string;
 };
 
@@ -120,7 +120,7 @@ export function useModerationData(enabled = true) {
   return { cases, reports, snapshots, diagnostics, settings, claim, resolve, updateSettings };
 }
 
-export function useAdminData() {
+export function useAdminData(mediaRetentionPage = 1) {
   const client = useQueryClient();
   const session = useGetAdminSession({
     query: { queryKey: getGetAdminSessionQueryKey() },
@@ -150,7 +150,7 @@ export function useAdminData() {
   });
   const moderation = useModerationData(session.data?.authorized === true && permissions.some((permission: string) => permission === 'moderation.read' || permission === 'integrity.read'));
   const notifications = useNotificationAdminData(session.data?.authorized === true && permissions.includes('admin.read'));
-  const mediaRetention = useQuery<MediaRetentionAdminData>({ queryKey: ['/admin/moderation/media-retention'], enabled: can('moderation.read'), queryFn: () => moderationFetch<MediaRetentionAdminData>('/api/admin/moderation/media-retention') });
+  const mediaRetention = useQuery<MediaRetentionAdminData>({ queryKey: ['/admin/moderation/media-retention', mediaRetentionPage], enabled: can('moderation.read'), queryFn: () => moderationFetch<MediaRetentionAdminData>(`/api/admin/moderation/media-retention?page=${mediaRetentionPage}`) });
 
   const mediaRetentionAction = useMutation({
     mutationFn: (input: { mediaId: string; action: 'requeue' | 'resolve'; referenceFingerprint: string; reason: string }) => moderationFetch(`/api/admin/moderation/media-retention/${encodeURIComponent(input.mediaId)}/action`, {

@@ -243,7 +243,7 @@ describe("admin moderation authorization", () => {
         const page = matchingRows
           .slice()
           .sort((left, right) => right.updated_at.localeCompare(left.updated_at))
-          .slice(0, limit);
+          .slice(Number(url.searchParams.get("offset") ?? 0), Number(url.searchParams.get("offset") ?? 0) + limit);
         res.end(JSON.stringify(page));
         return;
       }
@@ -428,6 +428,8 @@ describe("admin moderation authorization", () => {
   it("keeps media retention status staff-only, preserves persisted states, and excludes Storage references", async () => {
     assert.equal((await request("/admin/moderation/media-retention")).status, 401);
     assert.equal((await request("/admin/moderation/media-retention", {}, "user")).status, 403);
+    assert.equal((await request("/admin/moderation/media-retention?page=0", {}, "moderator")).status, 400);
+    assert.equal((await request("/admin/moderation/media-retention?page=not-a-number", {}, "moderator")).status, 400);
 
     const response = await request("/admin/moderation/media-retention", {}, "moderator");
     assert.equal(response.status, 200);
@@ -453,11 +455,15 @@ describe("admin moderation authorization", () => {
       total: 130,
     });
     assert.deepEqual(body.list, {
-      scope: "latest",
+      scope: "all",
       ordering: "updated_at_desc",
+      page: 1,
+      pageSize: 100,
+      offset: 0,
       limit: 100,
       returned: 100,
       hasMore: true,
+      totalPages: 2,
       totalsScope: "all",
     });
     assert.equal(body.items.length, body.list.returned);
@@ -509,6 +515,45 @@ describe("admin moderation authorization", () => {
     assert.equal(serialized.includes("storagePath"), false);
     assert.equal(serialized.includes("storageUrl"), false);
     assert.equal(serialized.includes("mediaBytes"), false);
+  });
+
+  it("returns older cleanup pages without changing all-history totals or exposing Storage references", async () => {
+    const response = await request("/admin/moderation/media-retention?page=2", {}, "moderator");
+    assert.equal(response.status, 200);
+    const serialized = await response.text();
+    const body = JSON.parse(serialized) as {
+      items: Array<{ mediaId: string }>;
+      summary: Record<string, number>;
+      list: { page: number; pageSize: number; offset: number; returned: number; hasMore: boolean; totalPages: number };
+    };
+    assert.deepEqual(body.summary, {
+      pending: 26,
+      retrying: 51,
+      completed: 27,
+      resolved: 0,
+      blocked: 26,
+      total: 130,
+    });
+    assert.deepEqual(body.list, {
+      scope: "all",
+      ordering: "updated_at_desc",
+      page: 2,
+      pageSize: 100,
+      offset: 100,
+      limit: 100,
+      returned: 30,
+      hasMore: false,
+      totalPages: 2,
+      totalsScope: "all",
+    });
+    assert.equal(body.items[0]!.mediaId, generatedRetentionRows[29]!.media_id);
+    assert.equal(body.items.some((item) => item.mediaId === retentionRows[4]!.media_id), false);
+    for (const row of retentionRows) {
+      assert.equal(serialized.includes(row.bucket), false);
+      assert.equal(serialized.includes(row.storage_path), false);
+      assert.equal(serialized.includes(row.storage_url), false);
+      assert.equal(serialized.includes(row.media_bytes), false);
+    }
   });
 
   it("lets only moderators inspect redacted cleanup evidence", async () => {

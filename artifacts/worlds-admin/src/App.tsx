@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Redirect, Route, Switch, useLocation, Router as WouterRouter } from 'wouter';
 import { AlertTriangle } from 'lucide-react';
@@ -44,7 +44,8 @@ function AccessState({ message, loading = false }: { message: string; loading?: 
 }
 
 function Router() {
-  const data = useAdminData();
+  const [mediaRetentionPage, setMediaRetentionPage] = useState(1);
+  const data = useAdminData(mediaRetentionPage);
   const session = data.session.data;
   if (data.session.isLoading) {
     return <AccessState loading message="We’re verifying your approved Worlds staff account." />;
@@ -73,7 +74,7 @@ function Router() {
           <Route path="/ai/settings"><AIPage data={data} /></Route>
           <Route path="/hunts"><OperationsPage data={data} /></Route>
           <Route path="/moderation/media"><OperationsPage data={data} /></Route>
-          <Route path="/moderation/media-retention"><MediaRetentionPage data={data} /></Route>
+          <Route path="/moderation/media-retention"><MediaRetentionPage data={data} page={mediaRetentionPage} onPageChange={setMediaRetentionPage} /></Route>
           <Route path="/moderation/reports"><OperationsPage data={data} /></Route>
           <Route path="/moderation/anti-cheat"><OperationsPage data={data} /></Route>
           <Route path="/interests"><OperationsPage data={data} /></Route>
