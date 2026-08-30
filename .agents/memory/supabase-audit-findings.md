@@ -22,3 +22,9 @@ One-time service-role grant loops do not grant privileges to RLS tables created 
 **Why:** Scheduler tables created after the privilege-restoration migration were inaccessible to the service-role REST path used by queue health checks.
 
 **How to apply:** Each migration that creates a server-read table must grant the required service-role privileges itself, or a later privilege migration must explicitly cover the complete table set.
+
+Check both local filenames and the linked migration ledger before choosing a new migration number; concurrent task merges can reserve a version that is not visible in an earlier local snapshot.
+
+**Why:** The scheduler privilege migration occupied 058 while the friend-request repair was being prepared, so the repair needed the next available version.
+
+**How to apply:** Re-list migrations immediately before pushing and move the new migration to the next unused version rather than reusing a collision.
