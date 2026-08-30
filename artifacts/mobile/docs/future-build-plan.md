@@ -62,10 +62,11 @@
 - Push notifications (Expo Notifications)
 
 ## Build 8 — Monetization
-- In-app purchases (RevenueCat)
-- Premium quest packs
-- Creator revenue share
-- Subscription tier (unlimited access)
+- See `REVENUE_STAGE_1_SPEC.md` for the canonical provider-neutral revenue model
+- One Worlds Membership with allowance-based Quest and Hunt access
+- Weekly included Drop allowance and separate Extra Drop Credits
+- Find Badges, acquired Collectibles, and provider-neutral marketplace accounting
+- External payment-provider connections and store-policy validation are Stage 3 work
 
 ## Build 9 — Polish + Performance
 - Offline mode (full write queue)

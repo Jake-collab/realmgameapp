@@ -340,7 +340,7 @@ The following systems are planned but not yet implemented. Architecture must acc
 | **Events** | Time-limited special quests and hunts with unique rewards |
 | **Future Game Modes** | Additional modes added via the game mode registry without core changes |
 | **Creator Mode** | Tools for players to design and publish quests and hunts |
-| **Marketplace** | Exchange of cosmetics, power-ups, and creator content |
+| **Marketplace** | Provider-neutral creator collectible marketplace; see `REVENUE_STAGE_1_SPEC.md` for the canonical Stage 1 revenue rules |
 | **Cosmetics** | Avatar items, trail effects, pin styles, profile frames |
 | **Notifications** | Push notifications for invites, quest completions, leaderboard changes |
 | **Achievements** | Milestone badges and XP multipliers across all game modes |
@@ -608,7 +608,7 @@ features/<mode>/
 | **Build 9** | AI Generation | Quest generation, hint system, narrative content, server-side proxy, caching |
 | **Build 10** | Social | Friends, teams, guilds, activity feeds, sharing |
 | **Build 11** | Notifications | Push notifications for invites, completions, leaderboard changes |
-| **Build 12** | Monetization | In-app purchases, subscriptions, marketplace, cosmetics (RevenueCat) |
+| **Build 12** | Monetization | Provider-neutral membership, allowances, Drop Credits, collectibles, marketplace, and seller accounting; see `REVENUE_STAGE_1_SPEC.md` |
 | **Build 13** | Testing | Unit tests, integration tests, E2E tests for critical flows |
 | **Build 14** | Performance | Profiling, offline mode, image optimization, map tile caching |
 | **Build 15** | Deployment | App Store submission (Expo Launch), production Supabase, monitoring |

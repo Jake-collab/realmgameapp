@@ -1,0 +1,836 @@
+WORLDs BUILD 1 — STAGE 1 REVENUE, MEMBERSHIP, DROP CREDITS & COLLECTIBLES SPECIFICATION
+
+We are adding the canonical revenue system for Worlds.
+
+This is STAGE 1 ONLY.
+
+DO NOT:
+- connect Stripe
+- connect Apple In-App Purchase
+- connect Google Play Billing
+- modify production Supabase
+- apply database migrations
+- create Stripe products/prices
+- configure payment-provider secrets
+- start Mapbox
+- implement speculative payment-provider-specific behavior
+
+Your job in Stage 1 is to:
+
+1. Inspect the CURRENT Worlds codebase and existing Quest/Hunt architecture.
+2. Reconcile the following product/business rules with the existing implementation.
+3. Identify any conflicts or dependencies.
+4. Create/update the canonical internal specification/documentation for Stage 2 implementation.
+5. Produce an exact implementation plan for Stage 2.
+6. Do NOT implement the Stage 2 database/payment architecture yet.
+
+The following rules are canonical and override conflicting earlier revenue concepts.
+
+==================================================
+A. ONE WORLDs MEMBERSHIP
+==================================================
+
+Worlds has ONE membership covering both Quest and Hunt.
+
+PRICE:
+
+Monthly:
+$4.99/month
+
+Yearly:
+$44.99/year
+
+The yearly membership provides the same benefits as monthly, only with annual billing.
+
+Do not create separate Quest and Hunt memberships.
+
+Membership status must eventually be server-authoritative and payment-provider-neutral.
+
+==================================================
+B. QUEST — FREE
+==================================================
+
+Free users receive:
+
+MONTHLY QUESTS:
+10 per applicable monthly Quest period/drop.
+
+GEO-QUESTS:
+1 per week.
+
+DAILY/PERSONALIZED QUEST:
+1 per week.
+
+“Daily Quest” is the existing personalized Quest system.
+
+Do NOT create a separate consumer-facing Personal Quest category.
+
+The personalized Quest is generated/assigned using the existing Interest Bubble architecture.
+
+==================================================
+C. QUEST — MEMBERSHIP
+==================================================
+
+Worlds Members receive:
+
+MONTHLY QUESTS:
+50 per applicable monthly Quest period/drop.
+
+GEO-QUESTS:
+2 per week.
+
+DAILY/PERSONALIZED QUEST:
+1 per day.
+
+Existing Quest verification, QVAC, QAVS, points, proof, GPS, timer, integrity and activity-tracking rules remain unchanged.
+
+Membership changes ACCESS/ALLOWANCE.
+
+Membership must NEVER weaken verification requirements.
+
+==================================================
+D. HUNT — FREE
+==================================================
+
+Free users receive:
+
+DROP CREATION:
+2 included Drops per week.
+
+HUNTING:
+Unlimited.
+
+Finding/collecting other users' Drops does NOT consume the user's Drop-creation allowance.
+
+==================================================
+E. HUNT — MEMBERSHIP
+==================================================
+
+Worlds Members receive:
+
+DROP CREATION:
+5 included Drops per week.
+
+HUNTING:
+Unlimited.
+
+This is part of the SAME Worlds Membership used by Quest.
+
+==================================================
+F. WEEKLY DROP ALLOWANCE
+==================================================
+
+The included weekly Drop allowance and purchased Drop Credits are separate systems.
+
+Free:
+2 included Drops/week.
+
+Member:
+5 included Drops/week.
+
+When creating a Drop:
+
+1. Consume an available INCLUDED weekly Drop first.
+2. Only after included Drops are exhausted should an Extra Drop Credit be consumed.
+
+Purchased credits must not reduce or replace the user's included weekly allowance.
+
+The UI should clearly show approximately:
+
+Drops available this week: X / 2
+
+or:
+
+Drops available this week: X / 5
+
+and separately:
+
+Extra Drop Credits: X
+
+Do not create unnecessary new bottom navigation tabs for this information.
+
+Weekly reset timing must eventually be server-authoritative.
+
+Stage 2 should define the exact canonical reset implementation.
+
+==================================================
+G. EXTRA DROP CREDIT PACKS
+==================================================
+
+Canonical packs:
+
+$1.99 = 5 Extra Drop Credits
+
+$4.99 = 15 Extra Drop Credits
+
+$9.99 = 35 Extra Drop Credits
+
+One Extra Drop Credit allows creation of ONE additional Drop beyond the included allowance.
+
+Purchased credits:
+
+- are account-bound
+- are consumable
+- must use a server-authoritative ledger
+- must not be forgeable by the client
+- must not expire
+- survive membership cancellation
+- are independent of the weekly allowance
+
+Stage 1 must remain payment-provider-neutral.
+
+Do NOT assume Stripe is necessarily the checkout provider for these credits inside iOS/Android.
+
+==================================================
+H. DROP FIND LIMIT
+==================================================
+
+Drop creators can independently configure how many users may FIND their Drop.
+
+Options:
+
+- numeric quantity
+OR
+- Unlimited
+
+Example:
+
+Find limit = 10
+
+After 10 valid users successfully find the Drop, it becomes exhausted for new discovery and disappears from the active Hunt map/discovery experience.
+
+This must eventually be concurrency-safe so simultaneous final finds cannot exceed the configured limit.
+
+The creator must be warned during creation:
+
+When the find limit is exhausted, this Drop will disappear from active Hunt discovery.
+
+Existing historical records are NOT deleted when the Drop disappears.
+
+==================================================
+I. COLLECTIBLE ACQUISITION LIMIT
+==================================================
+
+This is SEPARATE from the Drop find limit.
+
+Creators can independently configure how many users can acquire the associated collectible.
+
+Options:
+
+- numeric quantity
+OR
+- Unlimited
+
+Example:
+
+Find limit = 100
+Collectible quantity = 5
+
+Up to 100 users can find the Drop.
+
+Only 5 collectible acquisitions can occur.
+
+If the collectible sells out before the find limit is reached:
+
+- the Drop remains findable
+- users may still earn the Find Badge
+- collectible displays Sold Out
+- no additional collectible ownership can be created
+
+If the find limit is exhausted first:
+
+- the Drop disappears from active discovery
+- existing legitimate collectible ownership/history remains intact
+
+Acquisition limits must eventually be atomic/concurrency-safe.
+
+==================================================
+J. FIND BADGES
+==================================================
+
+Every successful verified Drop find earns a permanent Find Badge.
+
+The user receives the badge WHETHER OR NOT they acquire/purchase the collectible.
+
+The badge represents:
+
+“I successfully found this Drop.”
+
+Badge history remains even if:
+
+- user declines the collectible
+- collectible sells out
+- creator later deletes/deactivates the Drop
+- a paid collectible purchase is later refunded
+
+The Badge system must have an accessible list/gallery.
+
+Do not necessarily add another bottom navigation tab.
+
+Prefer integration into the existing Hunt/Profile/Progress/My Hunts architecture where it fits without clutter.
+
+Badge records should eventually contain sufficient immutable snapshot information so historical badges remain understandable if the original Drop changes/disappears.
+
+==================================================
+K. COLLECTIBLES
+==================================================
+
+The collectible is distinct from the Find Badge.
+
+The collectible can have an image and associated display metadata.
+
+A user gets the collectible ONLY when:
+
+1. the collectible is offered for $0 and they successfully claim/acquire it
+
+OR
+
+2. it is paid and their purchase successfully completes.
+
+Simply finding the Drop does NOT permanently grant the collectible image/item.
+
+If the user finds a paid Drop and declines purchase:
+
+- award the Find Badge
+- do NOT add the collectible to Collection
+
+If the collectible is free:
+
+- allow the finder to acquire it for $0
+- successful acquisition adds it to Collection
+
+Collection should show only collectibles actually acquired.
+
+==================================================
+L. COLLECTION
+==================================================
+
+Users need an accessible Collection area showing their acquired collectibles.
+
+Do NOT unnecessarily restructure the Hunt bottom navigation.
+
+Prefer integration into existing My Hunts / Profile / Progress architecture.
+
+Collection should eventually support display of:
+
+- collectible image
+- collectible name
+- rarity
+- creator attribution where appropriate
+- acquisition date
+- free vs purchased state
+
+Historical ownership must survive removal/deactivation of the original Drop.
+
+==================================================
+M. DROP / COLLECTION STATISTICS
+==================================================
+
+Maintain distinct concepts for:
+
+- Drops Found
+- Find Badges Earned
+- Collectibles Acquired
+- Drops Created
+
+These are not interchangeable.
+
+A user may find a Drop and earn a badge without acquiring its collectible.
+
+The UI can surface useful lifetime totals without adding unnecessary navigation.
+
+==================================================
+N. FREE AND PAID COLLECTIBLES
+==================================================
+
+Creator chooses:
+
+FREE
+$0
+
+OR
+
+PAID
+creator-selected sale price.
+
+For paid collectibles, the creator must be explicitly informed BEFORE publishing:
+
+“Worlds charges a 30% platform fee on collectible sales.”
+
+Do not hide this disclosure.
+
+==================================================
+O. COLLECTIBLE PRICING
+==================================================
+
+Canonical launch rule:
+
+FREE = $0
+
+PAID minimum = $1.00
+
+Do not hard-code an arbitrary permanent maximum price in product logic.
+
+Stage 2 should support an admin-configurable maximum/safety limit so pricing policy can change without rebuilding the app.
+
+Money must eventually use integer minor currency units rather than floating-point arithmetic.
+
+==================================================
+P. WORLDs MARKETPLACE FEE
+==================================================
+
+Canonical advertised platform fee:
+
+30% of the collectible sale price.
+
+Accounting must distinguish:
+
+- gross buyer price
+- Worlds platform fee
+- creator/seller economic share
+- payment processing fees
+- app-store/platform fees where applicable
+- taxes where applicable
+- refunds
+- chargebacks/reversals
+- actual seller payable amount
+
+DO NOT assume:
+
+Buyer price × 70% = guaranteed final cash payout to seller
+
+until the payment-provider architecture establishes how external fees are handled.
+
+Do not silently subtract fees without an auditable accounting model.
+
+==================================================
+Q. SELLER ECONOMIC SHARE
+==================================================
+
+The intended marketplace economics BEFORE external processing/store/tax effects are:
+
+70% creator/seller economic share
+30% Worlds platform fee
+
+Stage 2 must preserve enough accounting information to reconcile external fees correctly.
+
+Do not promise sellers a final net amount that the payment architecture cannot guarantee.
+
+==================================================
+R. BUYER VS SELLER PAYMENT SETUP
+==================================================
+
+Do NOT require every Worlds user to connect a card or bank account at signup.
+
+BUYER:
+
+A buyer should be prompted for the required payment method only when necessary to make a paid purchase.
+
+SELLER:
+
+A user creating only free collectibles does not need payout onboarding.
+
+When a creator attempts to list a PAID collectible, the system should require/guide them through the required seller payout onboarding before paid sales can be enabled.
+
+Exact provider onboarding is Stage 3.
+
+==================================================
+S. REFUNDS / REVERSALS
+==================================================
+
+Stage 2 must support a provider-neutral refund/reversal model.
+
+If a paid collectible transaction is fully refunded/reversed:
+
+- paid collectible ownership/access should normally be revoked
+- the user's historical Find Badge remains
+- seller payable proceeds must be reversed/adjusted appropriately
+- platform accounting must record the reversal
+- transaction history must remain auditable
+
+Do not erase the historical transaction.
+
+Chargebacks/disputes must similarly be representable.
+
+Partial-refund behavior should be supported by the accounting architecture even if the launch UI does not expose manual partial refunds.
+
+==================================================
+T. SELLER PAYOUTS
+==================================================
+
+Do not design one immediate bank payout per collectible transaction.
+
+Seller earnings should be accounted for through a seller balance/payable model and ultimately paid according to the payment provider's supported payout schedule.
+
+Exact Stripe Connect or alternative payout architecture belongs to Stage 3.
+
+==================================================
+U. MANUAL DROP DELETION / DEACTIVATION
+==================================================
+
+Drop creators must be able to manually remove/deactivate their own active Drop, subject to security/business rules.
+
+Deletion must NOT destroy historical records required by users or accounting.
+
+If a creator removes a Drop:
+
+- remove it from active Hunt discovery/map
+- prevent new finds
+- prevent new collectible purchases/acquisitions
+- retain already-earned Find Badges
+- retain already-acquired collectible ownership
+- retain required transaction/accounting/audit history
+
+Prefer soft-delete/deactivation over destructive deletion where historical integrity is required.
+
+A creator must not be able to delete a Drop to erase a legitimate sale or another user's ownership.
+
+==================================================
+V. UNIVERSAL RARITY SYSTEM
+==================================================
+
+Rarity is system-derived.
+
+Creators cannot manually select their rarity.
+
+Initial canonical rarity scale:
+
+UNIQUE
+1 collectible available
+
+LEGENDARY
+2–5 available
+
+EPIC
+6–20 available
+
+RARE
+21–50 available
+
+UNCOMMON
+51–100 available
+
+COMMON
+101+ or Unlimited
+
+Rarity should primarily describe COLLECTIBLE scarcity.
+
+If a Drop has no collectible, the system may derive/display a Find rarity from the Drop's find limit if the product architecture needs it, but do not confuse Find rarity with collectible rarity.
+
+Once a collectible Drop goes live, its rarity classification should be snapshotted/immutable for already-created ownership/badges even if future policy thresholds change.
+
+When a user finds/acquires an item, display the appropriate rarity badge prominently.
+
+==================================================
+W. MEMBERSHIP UI
+==================================================
+
+There must be a clear Membership screen/modal accessible from the app.
+
+It should compare:
+
+FREE
+
+Quest:
+- 10 Monthly Quests
+- 1 Geo-Quest/week
+- 1 Daily/Personalized Quest/week
+
+Hunt:
+- 2 Drop creations/week
+- Unlimited hunting
+
+WORLDs MEMBERSHIP
+
+$4.99/month
+or
+$44.99/year
+
+Quest:
+- 50 Monthly Quests
+- 2 Geo-Quests/week
+- 1 Daily/Personalized Quest/day
+
+Hunt:
+- 5 Drop creations/week
+- Unlimited hunting
+
+Also show Extra Drop Credit packs:
+
+$1.99 → 5
+$4.99 → 15
+$9.99 → 35
+
+Do not implement actual checkout in Stage 1.
+
+==================================================
+X. PASSIVE MEMBERSHIP UPSELL
+==================================================
+
+Membership should advertise itself without intrusive popups.
+
+For FREE users:
+
+QUEST:
+
+At/near the end of available Quest content, show a subdued/faded membership message such as:
+
+“More Quests available with Worlds Membership.”
+
+It should open the Membership comparison screen.
+
+HUNT:
+
+Near the Drop creation allowance/action, show something equivalent to:
+
+“Create up to 5 Drops each week with Worlds Membership, or use Extra Drop Credits for additional Drops.”
+
+Do not use disruptive repeated modal advertising.
+
+Members should not see irrelevant upgrade advertising.
+
+==================================================
+Y. PAYMENT-PROVIDER-NEUTRAL ARCHITECTURE
+==================================================
+
+Stage 2 must NOT make core entitlement logic Stripe-specific.
+
+The future backend should be capable of recognizing trusted purchases from providers such as:
+
+- Apple
+- Google
+- Stripe
+- another approved provider if necessary
+
+Core Worlds systems should consume canonical internal entitlement/transaction state rather than trusting provider-specific client responses.
+
+Future provider identifiers should be stored separately from canonical internal IDs.
+
+The mobile client must never be authoritative for:
+
+- membership status
+- credit grants
+- seller earnings
+- collectible purchase success
+- refunds
+- payment state
+- entitlements
+
+==================================================
+Z. APP STORE / PLAY STORE FEE OPTIMIZATION
+==================================================
+
+Worlds intends to minimize Apple App Store and Google Play fees LEGALLY and in compliance with the rules applicable at launch.
+
+Do NOT implement any attempt to disguise digital purchases as physical purchases.
+
+Do NOT implement deceptive redirects or prohibited payment steering.
+
+Do NOT assume a permanent universal 30% Apple or Google fee.
+
+Payment architecture must remain flexible enough that Stage 3 can select the lowest-cost compliant route available for:
+
+1. Worlds Membership
+2. Extra Drop Credits
+3. user-to-user collectible purchases
+4. creator/seller payouts
+
+depending on:
+
+- platform
+- storefront/country
+- current Apple rules
+- current Google rules
+- permitted external checkout
+- IAP/Play Billing requirements
+- alternative billing programs
+- Stripe/payment-processing costs
+- taxes
+- creator payout requirements
+
+Stage 3 will re-check CURRENT Apple/Google policies immediately before production payment implementation.
+
+==================================================
+AA. APP-STORE PRODUCT VS MARKETPLACE DISTINCTION
+==================================================
+
+Treat these as separate economic categories:
+
+CATEGORY 1:
+Worlds Membership
+
+CATEGORY 2:
+Extra Drop Credits
+
+CATEGORY 3:
+User-created collectible marketplace transactions
+
+CATEGORY 4:
+Creator/seller payouts
+
+Do not assume one payment rail is optimal or legally permitted for all four categories.
+
+==================================================
+AB. ADMIN REQUIREMENTS FOR STAGE 2
+==================================================
+
+Plan for Admin controls for at least:
+
+- membership plan definitions
+- entitlement/allowance values
+- Drop Credit pack definitions
+- paid collectible minimum price
+- paid collectible maximum/safety limit
+- platform fee percentage
+- rarity thresholds
+- refund/reversal visibility
+- transaction visibility
+- seller status
+- suspicious marketplace activity
+- Drop deactivation/moderation
+
+Core financial changes must be audited.
+
+Do not implement these controls yet in Stage 1.
+
+==================================================
+AC. SECURITY REQUIREMENTS FOR STAGE 2
+==================================================
+
+Plan Stage 2 so users cannot:
+
+- self-grant membership
+- self-grant Drop Credits
+- reset their weekly allowance
+- create unlimited Drops
+- manipulate collectible supply
+- acquire sold-out collectibles
+- purchase the final collectible concurrently twice
+- change their own seller proceeds
+- change the Worlds fee
+- fabricate successful purchases
+- fabricate refunds
+- fabricate ownership
+- delete other users' badges
+- delete other users' collectible ownership
+- access another user's private payment information
+
+All financial/entitlement transitions must ultimately be server-authoritative.
+
+==================================================
+AD. EXISTING SYSTEMS MUST REMAIN INTACT
+==================================================
+
+Do not redesign:
+
+- QVAC
+- QAVS
+- Quest points
+- Hunt points
+- Supabase security architecture
+- existing Quest verification
+- existing Hunt verification
+- existing social architecture
+- existing Admin authorization
+- Mapbox architecture
+
+unless Stage 2 requires a clearly identified integration point.
+
+Membership does NOT bypass QVAC/QAVS.
+
+Purchased Drop Credits do NOT purchase Hunt Points.
+
+Purchasing a collectible does NOT automatically award additional Hunt Points unless an existing legitimate Hunt completion rule independently awards them.
+
+Do not create pay-to-win leaderboard behavior.
+
+==================================================
+AE. STAGE 1 DELIVERABLE
+==================================================
+
+Inspect the actual codebase first.
+
+Then produce a canonical Stage 1 specification and Stage 2 implementation plan.
+
+Report:
+
+STAGE 1 REVENUE MODEL STATUS:
+PASS / NEEDS CLARIFICATION
+
+CURRENT CODE CONFLICTS:
+[List or NONE]
+
+CANONICAL MEMBERSHIP RULES:
+[Summarize]
+
+CANONICAL QUEST ALLOWANCES:
+[Summarize]
+
+CANONICAL HUNT ALLOWANCES:
+[Summarize]
+
+DROP CREDIT RULES:
+[Summarize]
+
+DROP FIND LIMIT RULES:
+[Summarize]
+
+COLLECTIBLE QUANTITY RULES:
+[Summarize]
+
+BADGE VS COLLECTION RULES:
+[Summarize]
+
+RARITY RULES:
+[Summarize]
+
+MARKETPLACE RULES:
+[Summarize]
+
+REFUND / REVERSAL RULES:
+[Summarize]
+
+SELLER / PAYOUT RULES:
+[Summarize]
+
+PAYMENT-PROVIDER BOUNDARIES:
+[Summarize]
+
+APP STORE / PLAY STORE CONSIDERATIONS:
+[List architectural considerations only. Do not implement payment integrations.]
+
+STAGE 2 REQUIRED SUPABASE CHANGES:
+List anticipated:
+- tables
+- columns
+- enums
+- ledgers
+- RPCs/functions
+- RLS changes
+- indexes/constraints
+- audit records
+- scheduled/reset jobs
+- retention requirements
+
+Do not create them yet.
+
+STAGE 2 REQUIRED APPLICATION CHANGES:
+[List]
+
+STAGE 3 EXTERNAL PAYMENT CONNECTIONS:
+[List what will eventually need to be connected/configured, without doing it.]
+
+UNRESOLVED PRODUCT DECISIONS:
+[List ONLY decisions that genuinely require owner input. Do not invent unnecessary questions.]
+
+TRUE BLOCKERS BEFORE STAGE 2:
+[List or NONE]
+
+If these rules can be implemented without additional owner decisions, end exactly with:
+
+STAGE 1 REVENUE SPECIFICATION: COMPLETE
+READY FOR STAGE 2 SUPABASE + APPLICATION IMPLEMENTATION
+
+Do not begin Stage 2 automatically.
+Do not modify production Supabase.
+Do not start Stripe, Apple billing, Google billing, or Mapbox.
