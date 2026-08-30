@@ -1,0 +1,81 @@
+Migration parity blocker is complete.
+
+Now fix ONLY the next Supabase blocker from the final audit:
+
+RLS IS DISABLED ON 7 PRODUCTION APPLICATION TABLES
+
+The audit identified:
+
+- enforcement_events
+- integrity_policy_versions
+- integrity_risk_snapshots
+- moderation_policy_versions
+- notification_deliveries
+- notification_events
+- scheduled_notifications
+
+Do not start the service_role privilege blocker separately yet.
+Do not start Auth retesting.
+Do not start Mapbox.
+
+Please:
+
+1. Inspect the current canonical schema, migrations, worker/API access patterns, and intended security model for all 7 tables.
+
+2. Determine the correct RLS policies for each table before changing production.
+
+3. Create a NEW forward migration using the next unused migration number.
+
+4. Enable RLS on all 7 tables.
+
+5. Preserve required trusted server/worker functionality.
+
+6. Do NOT give anon or ordinary authenticated users broad SELECT/INSERT/UPDATE/DELETE access merely to make tests pass.
+
+7. Keep notification queues, moderation/integrity data, enforcement data, and internal policy data protected from ordinary clients unless the current canonical product explicitly requires narrowly scoped user access.
+
+8. Apply the migration through the existing linked Supabase CLI.
+
+Then test production using:
+- anonymous client
+- ordinary authenticated user
+- service_role/trusted server
+
+Verify:
+
+- RLS is enabled on all 7 tables.
+- Anonymous access is denied where intended.
+- Ordinary authenticated access is denied where intended.
+- Cross-user/internal data cannot be accessed.
+- Worker notification queue operations still work.
+- Notification claim/recovery/maintenance RPCs still work.
+- Moderation/integrity server operations still work.
+- Admin/trusted operations still work.
+- Existing Quest/Hunt/Social functionality is unaffected.
+
+IMPORTANT:
+
+The previous audit also found that service_role lacked required access to:
+- enforcement_events
+- integrity_policy_versions
+- integrity_risk_snapshots
+- moderation_policy_versions
+
+If enabling correct RLS exposes that the trusted server requires minimum table privileges on these four tables, you MAY include the minimum necessary service_role grants in this same migration because they are directly required to make the new RLS configuration production-safe.
+
+Do not grant broader privileges than required.
+
+When finished return only:
+
+RLS BLOCKER: COMPLETE
+
+or
+
+RLS BLOCKER: NOT COMPLETE
+[exact remaining issue]
+
+If the four service_role privilege problems were also safely resolved as part of this work, additionally state:
+
+SERVICE_ROLE MODERATION/INTEGRITY PRIVILEGE BLOCKER: COMPLETE
+
+Do not start Auth testing or Mapbox.
