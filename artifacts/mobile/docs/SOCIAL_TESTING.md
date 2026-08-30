@@ -134,19 +134,26 @@ pnpm --filter @workspace/mobile test:integration
 
 For the Supabase CLI, the two key values can be obtained with
 `supabase status`; do not commit them or print the service-role key in CI logs.
-CI should provide the three `SOCIAL_TEST_*` values as protected environment
-secrets. The service-role key is used only to create/update/delete disposable
-test users; all social assertions run through the authenticated mobile client
-and the production repository RPC wrappers.
+The release-gated disposable Supabase check provisions a fresh local database
+from the checked-in migrations, exports the three `SOCIAL_TEST_*` values from
+that run's ephemeral `supabase status` output, and runs this suite before
+teardown. It also requires the integration variables to be present, so a
+broken CI handoff cannot silently turn the release check into a skipped test.
+No hosted project or CI database secrets are required. The service-role key is
+used only to create/update/delete disposable test users; all social assertions
+run through the authenticated mobile client and the production repository RPC
+wrappers.
 
 The suite is skipped when any required variable is absent, which keeps the
 normal unit-test command safe in disconnected development environments. If all
 variables are present but the schema is missing or an RPC contract is wrong, it
 fails rather than silently falling back to mocks.
 
-Full integration test coverage should verify:
+The release-gated integration run verifies:
 - RPC authentication enforcement
 - Block exclusion in search
 - Canonical pair uniqueness
 - Request acceptance atomicity
+- Repeated opposite-direction request races produce one friendship, no
+  pending requests, and one acceptance notification
 - Privacy-setting enforcement on profile queries

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-# Run the live Quest RPC/RLS contract suite against a disposable local
-# Supabase database. A fresh volume receives the checked-in migrations before
-# the suite runs, and its volumes are deleted on exit.
+# Run the live Quest and Social RPC/RLS contract suites against a disposable
+# local Supabase database. A fresh volume receives the checked-in migrations
+# before the suites run, and its volumes are deleted on exit.
 
 set -euo pipefail
 
@@ -120,6 +120,10 @@ set +a
 export QUEST_TEST_SUPABASE_URL="$API_URL"
 export QUEST_TEST_SUPABASE_ANON_KEY="$ANON_KEY"
 export QUEST_TEST_SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+export SOCIAL_TEST_SUPABASE_URL="$API_URL"
+export SOCIAL_TEST_SUPABASE_ANON_KEY="$ANON_KEY"
+export SOCIAL_TEST_SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+export SOCIAL_TEST_REQUIRE_INTEGRATION=true
 export QUEST_TEST_DB_URL="$DB_URL"
 export SUPABASE_URL="$API_URL"
 export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
@@ -137,6 +141,9 @@ done
 
 echo "Running Quest RPC and RLS contracts against the disposable database."
 pnpm exec jest --runInBand __tests__/questRpc.integration.test.ts
+
+echo "Running Social RPC contracts, including repeated opposite-direction races, against the disposable database."
+pnpm exec jest --runInBand __tests__/socialRpc.integration.test.ts
 
 echo "Running method-driven Quest verification contracts against the disposable database."
 pnpm exec jest --runInBand __tests__/questVerification.integration.test.ts

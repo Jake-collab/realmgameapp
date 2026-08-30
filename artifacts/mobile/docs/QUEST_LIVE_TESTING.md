@@ -12,7 +12,8 @@ QUEST_TEST_SUPABASE_SERVICE_ROLE_KEY=
 
 The release check uses a disposable local Supabase database. CI removes any
 previous test volume, starts the database from `supabase/config.toml`, applies
-every checked-in migration, and deletes its Docker volumes after the test. No Supabase project, database
+every checked-in migration, runs the Quest and Social RPC/RLS suites, and
+deletes its Docker volumes after the test. No Supabase project, database
 credentials, or CI secrets are required.
 
 The release gate is pinned to **Supabase CLI `2.115.0`**. The local harness uses
@@ -34,7 +35,8 @@ QUEST_TEST_SUPABASE_SERVICE_ROLE_KEY=... \
 pnpm test -- --runInBand __tests__/questRpc.integration.test.ts
 ```
 
-To run the same isolated check locally (requires Docker and the Supabase CLI):
+To run the same isolated Quest and Social check locally (requires Docker and
+the Supabase CLI):
 
 ```sh
 pnpm test:quest-database

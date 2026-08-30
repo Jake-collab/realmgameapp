@@ -27,6 +27,13 @@ const testUrl = process.env.SOCIAL_TEST_SUPABASE_URL ?? '';
 const testAnonKey = process.env.SOCIAL_TEST_SUPABASE_ANON_KEY ?? '';
 const testServiceRoleKey = process.env.SOCIAL_TEST_SUPABASE_SERVICE_ROLE_KEY ?? '';
 const integrationConfigured = Boolean(testUrl && testAnonKey && testServiceRoleKey);
+const integrationRequired = process.env.SOCIAL_TEST_REQUIRE_INTEGRATION === 'true';
+if (integrationRequired && !integrationConfigured) {
+  throw new Error(
+    'Social integration tests require SOCIAL_TEST_SUPABASE_URL, ' +
+      'SOCIAL_TEST_SUPABASE_ANON_KEY, and SOCIAL_TEST_SUPABASE_SERVICE_ROLE_KEY.',
+  );
+}
 const describeIntegration = integrationConfigured ? describe : describe.skip;
 const liveMobileUrl = testUrl || process.env.EXPO_PUBLIC_SUPABASE_URL || '';
 const liveMobileAnonKey = testAnonKey || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
