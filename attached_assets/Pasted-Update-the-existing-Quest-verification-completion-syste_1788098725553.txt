@@ -1,0 +1,421 @@
+Update the existing Quest verification/completion system to support multiple verification methods based on what is actually appropriate for each Quest.
+
+IMPORTANT:
+
+* Preserve the existing Quest architecture, UI, database structure, proof submission system, camera flow, GPS/geofencing logic, moderation, admin functionality, points system, and existing working functionality wherever possible.
+* Extend/refactor the existing implementation rather than unnecessarily rebuilding it.
+* Do not remove existing camera-photo, location, moderation, or proof-review functionality.
+* This applies to Daily Quests, Monthly Quest Drops, Geo-Quests, personalized quests, and admin-created quests.
+* The verification method must be determined by the Quest definition/generation process. Users must NOT be allowed to select an easier verification method themselves.
+
+1. Verification Methods
+
+Every Quest must have a defined verification method.
+
+Support these four primary verification methods:
+
+A. camera
+
+Use when a photo or video can naturally demonstrate the activity or its result.
+
+Examples:
+
+* Build a fort → photograph the fort.
+* Plant a flower → photograph the planted flower.
+* Make a paper airplane → photograph it.
+* Draw a picture → photograph the finished drawing.
+* Try a new food → photograph the food.
+
+Use the existing in-app camera/proof flow. Do not replace it with unrestricted gallery upload if the current design intentionally requires in-app capture.
+
+Preserve the existing moderation/safety processing associated with submitted media.
+
+B. gps
+
+Use when physically reaching or being within a specified geographic area is the meaningful completion requirement.
+
+Examples:
+
+* Visit a particular park.
+* Reach a landmark.
+* Check in at a specified Geo-Quest destination.
+
+Continue using server-side geographic validation rather than trusting a client-provided “I am here” value.
+
+Preserve the existing coordinate/radius/Haversine or equivalent geofence validation.
+
+Do NOT automatically require a photo in addition to GPS unless the Quest specifically requires an activity at the destination whose completion reasonably needs visual evidence.
+
+C. timer_confirmation
+
+Use when spending a specified amount of time performing the activity is fundamental to the Quest and a photograph/video would not meaningfully verify that the activity occurred.
+
+Examples:
+
+* Read for 20 minutes.
+* Meditate for 10 minutes.
+* Dance for 15 minutes.
+* Spend 30 minutes drawing.
+* Have a 15-minute phone-free conversation.
+
+Store a required duration for these Quests, such as:
+
+required_duration_minutes
+
+The user presses Start Quest to begin the timer.
+
+The system must record the start time server-side or otherwise validate elapsed time in a tamper-resistant manner. Do not rely solely on a client countdown that can be bypassed by changing device state.
+
+The timer must continue correctly if:
+
+* the user navigates elsewhere in the app,
+* the app goes into the background,
+* the screen locks,
+* or the user later returns to the Quest.
+
+Do NOT require the user to keep the Quest screen open for the entire duration unless technically necessary.
+
+Before the required duration has elapsed, the completion confirmation must remain locked.
+
+After the duration has elapsed, display:
+
+Quest Complete?
+
+✓ I completed this Quest
+
+Include a short integrity statement such as:
+
+By confirming, you’re stating that you genuinely completed the activity as described.
+
+The timer proves that the required period elapsed; it does NOT falsely claim to prove that the person actually performed the activity. The final integrity confirmation remains required.
+
+D. integrity_confirmation
+
+Use when photo/video, GPS, or a timer would not meaningfully verify completion or would make the Quest unnecessarily awkward, invasive, unsafe, or burdensome.
+
+Examples:
+
+* Give someone a genuine compliment.
+* Call someone you haven’t spoken to recently.
+* Tell a caregiver or family member that you appreciate them.
+* Perform a private act of kindness.
+* Ask someone about one of their favorite memories.
+
+When completing one of these Quests, show a dedicated confirmation screen:
+
+Integrity Check
+
+Did you genuinely complete this Quest as described?
+
+✓ Yes, I completed it
+
+Include:
+
+By confirming, you’re stating that you genuinely completed the activity before receiving the Quest points.
+
+Only award points after the user explicitly confirms.
+
+Record the completion as self-attested/integrity-confirmed in the backend.
+
+2. Verification Selection Rules
+
+Implement a consistent selection hierarchy for AI-generated and admin-created Quests.
+
+Evaluate in this order:
+
+1. Can the completion or physical result naturally and meaningfully be demonstrated through an in-app photo/video?
+    → camera
+2. Is reaching or being at a specific geographic location the meaningful completion condition?
+    → gps
+3. Is spending a defined amount of time performing the activity fundamental to the Quest?
+    → timer_confirmation
+4. If none of those meaningfully verify the Quest, or requiring them would be invasive, awkward, unsafe, unreasonable, or interfere with the activity:
+    → integrity_confirmation
+
+Do NOT require objective evidence merely for the appearance of verification.
+
+The verification method should be the least intrusive method that reasonably corresponds to what completing the Quest actually means.
+
+Examples:
+
+“Give a stranger a compliment” should NOT require photographing the stranger.
+
+“Call a relative you haven’t spoken to recently” should NOT require screenshots of call logs or recording the call.
+
+“Meditate for 10 minutes” should NOT require a photo of the user meditating.
+
+“Read for 20 minutes” should use a timer rather than pretending a photograph of a book proves 20 minutes of reading.
+
+“Visit Curtis Hixon Waterfront Park” can use GPS without unnecessarily requiring a photo.
+
+“Find a mural downtown and photograph your favorite one” requires both reaching the relevant area and capturing the requested photograph because both actions are explicitly part of the Quest.
+
+3. Support Composite Verification When Actually Required
+
+Although each Quest should normally use the simplest appropriate verification method, support multiple requirements when the Quest itself genuinely contains multiple independently verifiable requirements.
+
+For example:
+
+“Go to [location] and photograph a specific discovery”
+
+may require:
+
+gps + camera
+
+A timed location activity could potentially require:
+
+gps + timer_confirmation
+
+Do not combine methods unnecessarily.
+
+The AI/admin Quest definition must explicitly state all required verification components.
+
+The user must satisfy every required component before points are awarded.
+
+4. Quest Data Model
+
+Inspect the existing schema before making changes and extend it cleanly.
+
+Conceptually, each Quest needs to represent:
+
+* verification method(s)
+* required duration when applicable
+* GPS coordinates/radius when applicable
+* camera/photo/video requirement when applicable
+* integrity confirmation requirement
+* verification/completion status
+
+Use the project’s existing naming conventions and schema patterns rather than blindly creating duplicate fields.
+
+The architecture should support something equivalent to:
+
+verification_methods
+
+Possible values/components:
+
+* camera
+* gps
+* timer_confirmation
+* integrity_confirmation
+
+And when applicable:
+
+required_duration_minutes
+
+Also preserve existing fields needed for:
+
+* latitude
+* longitude
+* allowed radius
+* media/proof submission
+* moderation
+* completion state
+* points
+* timestamps
+* admin review
+
+Add migrations safely if database changes are necessary.
+
+5. AI Quest Generation
+
+Update the AI Quest-generation contract/system prompts so every generated Quest includes its verification requirements.
+
+The AI must determine verification based on the Quest itself.
+
+For each generated Quest, require structured output containing the equivalent of:
+
+* Quest title
+* Quest description
+* verification method(s)
+* required duration if timed
+* location requirement if geographic
+* media requirement if applicable
+* any existing Quest metadata already required by the application
+
+Do NOT remove existing interest-personalization, Daily/Monthly/Geo categorization, difficulty, safety, or other generation requirements.
+
+The AI should follow this rule:
+
+“Choose the least intrusive verification method that reasonably corresponds to actual completion. Use camera evidence when the result/action can naturally be captured, GPS when reaching a location is the objective, a timer plus integrity confirmation when duration is fundamental, and integrity confirmation when objective evidence would not meaningfully establish completion or would be unnecessarily invasive, unsafe, awkward, or burdensome.”
+
+AI output must be validated server-side before saving a Quest.
+
+Reject or repair invalid combinations such as:
+
+* timer_confirmation without a valid duration;
+* gps without usable location/radius information;
+* unsupported verification values.
+
+6. Admin-Created Quests
+
+Update the admin Quest creation/editing interface to support these verification methods.
+
+Admin should be able to define:
+
+Verification
+
+* Camera
+* GPS
+* Timer + Integrity Confirmation
+* Integrity Confirmation
+
+Allow multiple methods only where composite verification is appropriate.
+
+Conditional fields:
+
+If Timer is selected:
+
+* show required duration.
+
+If GPS is selected:
+
+* show location/coordinates/radius fields using the existing location system.
+
+If Camera is selected:
+
+* show the existing applicable media/proof configuration.
+
+Integrity-only quests should not require irrelevant proof fields.
+
+Existing quests must remain editable.
+
+7. Quest UI
+
+Before a user starts a Quest, clearly but unobtrusively indicate what completion requires.
+
+Examples:
+
+📷 Photo proof required
+
+📍 Location check-in required
+
+⏱️ 20-minute activity
+
+✓ Integrity confirmation
+
+For composite Quests, display each requirement.
+
+Do not clutter the main Quest cards. Put detailed requirements in the expanded Quest view where appropriate.
+
+8. Completion and Points
+
+Points must not be awarded until every required verification component has succeeded.
+
+Examples:
+
+Camera:
+capture → submit → required validation/moderation/review state → completion according to existing rules.
+
+GPS:
+server validates location → completion.
+
+Timer:
+start → required elapsed time → integrity confirmation → completion.
+
+Integrity:
+explicit confirmation → completion.
+
+Composite:
+all required components → completion.
+
+Protect against duplicate point awards.
+
+Completion endpoints/actions must be idempotent.
+
+A user must not be able to repeatedly submit/confirm the same Quest to receive points multiple times.
+
+9. Timer Integrity
+
+Implement timers based on timestamps rather than relying exclusively on an animated countdown.
+
+Record:
+
+* started_at
+* required duration
+* earliest valid completion time
+* completed_at when completed
+
+When the app reloads, calculate remaining time from authoritative timestamps.
+
+Do not award completion merely because the timer elapsed. The user must still press the final integrity confirmation.
+
+10. Safety and Privacy
+
+Verification must never encourage users to:
+
+* photograph strangers unnecessarily;
+* secretly record conversations;
+* expose private communications;
+* photograph sensitive/private information;
+* use a phone while driving;
+* trespass;
+* enter unsafe/restricted areas;
+* perform unsafe actions solely to obtain proof.
+
+Where objective evidence would create one of these problems, use a less intrusive verification method.
+
+11. Existing Quest Types
+
+Apply this system consistently to:
+
+* Daily Quests
+* Monthly Quest Drops
+* Geo-Quests
+* personalized AI-generated Quests
+* admin-created Quests
+
+Do not change the established Quest navigation or introduce new Quest categories just for verification.
+
+12. Existing Data Compatibility
+
+Audit existing Quest records before applying schema changes.
+
+Existing Quests must not break because they lack the new fields.
+
+Create a safe migration/backfill strategy based on their existing proof types.
+
+Do not silently assign an inappropriate verification method where the existing data cannot support that conclusion.
+
+13. Tests
+
+Add/update tests covering at minimum:
+
+* camera-only Quest
+* GPS-only Quest
+* timer Quest
+* integrity-only Quest
+* GPS + camera Quest
+* timer cannot complete early
+* timer survives app navigation/reload/backgrounding
+* integrity confirmation required after timer
+* GPS validation occurs server-side
+* invalid AI verification output is rejected
+* duplicate completion does not award duplicate points
+* existing Quests continue functioning
+* points are not awarded until all required components succeed
+
+14. Final Requirement
+
+After implementation:
+
+1. Run relevant migrations.
+2. Run type checking.
+3. Run linting.
+4. Run automated tests.
+5. Fix failures caused by this implementation.
+6. Inspect the full Quest flow manually in code.
+7. Report exactly:
+    * files changed,
+    * migrations added,
+    * verification methods implemented,
+    * AI generation changes,
+    * admin changes,
+    * user-facing UI changes,
+    * timer implementation,
+    * point-award protections,
+    * tests performed,
+    * any remaining limitations.
+
+Do not claim functionality was tested if it was not actually tested.
+
+Do not redesign unrelated parts of the application.
