@@ -37,10 +37,17 @@ mismatch.
 `pnpm run verify:linked-supabase` reads no secrets from source control. It
 requires `SUPABASE_DB_PASSWORD` in the environment and verifies:
 
-- remote migration parity for every canonical migration from `001` through
-  `057`;
+- remote migration parity for every SQL migration in the checked-in
+  `supabase/migrations/` directory, in version order. The canonical sequence is
+  derived from the filenames, and malformed or duplicate version prefixes are
+  rejected;
 - the core Quest completion and Hunt Drop authorization RPCs;
 - RLS enabled on `quests` and `hunts`, plus a non-empty RLS policy set.
+
+The disposable CI check uses the same checked-in migration directory as its
+source of truth and applies the complete set in canonical order. The linked
+verification command is intended for a hosted project because it additionally
+checks the remote migration ledger and requires linked-project credentials.
 
 Run the configured live Quest and Hunt contract suites after this command when
 credentials are available. Those suites use disposable fixtures and must clean
