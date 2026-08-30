@@ -42,7 +42,8 @@ export type MediaRetentionAdminData = {
     lastError: string | null;
     updatedAt: string;
   }>;
-  list: { scope: 'all'; ordering: 'updated_at_desc'; page: number; pageSize: number; offset: number; limit: number; returned: number; hasMore: boolean; totalPages: number; totalsScope: 'all' };
+  list: { scope: 'all'; ordering: 'created_at_desc'; page: number; pageSize: number; offset: number; limit: number; returned: number; hasMore: boolean; totalPages: number; totalsScope: 'all' };
+  snapshotAt: string;
   generatedAt: string;
 };
 
@@ -141,7 +142,7 @@ export function useModerationData(enabled = true) {
   return { cases, reports, snapshots, diagnostics, settings, claim, resolve, updateSettings };
 }
 
-export function useAdminData(mediaRetentionPage = 1) {
+export function useAdminData(mediaRetentionPage = 1, mediaRetentionSnapshot?: string) {
   const client = useQueryClient();
   const session = useGetAdminSession({
     query: { queryKey: getGetAdminSessionQueryKey() },
@@ -171,7 +172,13 @@ export function useAdminData(mediaRetentionPage = 1) {
   });
   const moderation = useModerationData(session.data?.authorized === true && permissions.some((permission: string) => permission === 'moderation.read' || permission === 'integrity.read'));
   const notifications = useNotificationAdminData(session.data?.authorized === true && permissions.includes('admin.read'));
-  const mediaRetention = useQuery<MediaRetentionAdminData>({ queryKey: ['/admin/moderation/media-retention', mediaRetentionPage], enabled: can('moderation.read'), queryFn: () => moderationFetch<MediaRetentionAdminData>(`/api/admin/moderation/media-retention?page=${mediaRetentionPage}`) });
+  const mediaRetention = useQuery<MediaRetentionAdminData>({
+    queryKey: ['/admin/moderation/media-retention', mediaRetentionPage, mediaRetentionSnapshot ?? null],
+    enabled: can('moderation.read'),
+    queryFn: () => moderationFetch<MediaRetentionAdminData>(
+      `/api/admin/moderation/media-retention?page=${mediaRetentionPage}${mediaRetentionSnapshot ? `&snapshotAt=${encodeURIComponent(mediaRetentionSnapshot)}` : ''}`,
+    ),
+  });
 
   const mediaRetentionAction = useMutation({
     mutationFn: (input: { mediaId: string; action: 'requeue' | 'resolve'; referenceFingerprint: string; reason: string }) => moderationFetch(`/api/admin/moderation/media-retention/${encodeURIComponent(input.mediaId)}/action`, {

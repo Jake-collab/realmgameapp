@@ -222,8 +222,10 @@ describe("admin moderation authorization", () => {
         const status = url.searchParams.get("status")?.replace(/^eq\./, "");
         const failureClassification = url.searchParams.get("failure_classification")?.replace(/^eq\./, "");
         const lastError = url.searchParams.get("last_error")?.replace(/^eq\./, "");
+        const createdAt = url.searchParams.get("created_at")?.replace(/^lte\./, "");
         const matchingRows = retentionRows.filter((row) =>
           (!mediaId || row.media_id === mediaId)
+          && (!createdAt || row.created_at <= createdAt)
           &&
           (!status || row.status === status)
           && (!failureClassification || row.failure_classification === failureClassification)
@@ -242,7 +244,8 @@ describe("admin moderation authorization", () => {
         const limit = Number(url.searchParams.get("limit") ?? retentionRows.length);
         const page = matchingRows
           .slice()
-          .sort((left, right) => right.updated_at.localeCompare(left.updated_at))
+          .sort((left, right) => right.created_at.localeCompare(left.created_at)
+            || right.media_id.localeCompare(left.media_id))
           .slice(Number(url.searchParams.get("offset") ?? 0), Number(url.searchParams.get("offset") ?? 0) + limit);
         res.end(JSON.stringify(page));
         return;
@@ -430,6 +433,7 @@ describe("admin moderation authorization", () => {
     assert.equal((await request("/admin/moderation/media-retention", {}, "user")).status, 403);
     assert.equal((await request("/admin/moderation/media-retention?page=0", {}, "moderator")).status, 400);
     assert.equal((await request("/admin/moderation/media-retention?page=not-a-number", {}, "moderator")).status, 400);
+    assert.equal((await request("/admin/moderation/media-retention?snapshotAt=not-a-date", {}, "moderator")).status, 400);
 
     const response = await request("/admin/moderation/media-retention", {}, "moderator");
     assert.equal(response.status, 200);
@@ -456,7 +460,7 @@ describe("admin moderation authorization", () => {
     });
     assert.deepEqual(body.list, {
       scope: "all",
-      ordering: "updated_at_desc",
+      ordering: "created_at_desc",
       page: 1,
       pageSize: 100,
       offset: 0,
@@ -536,7 +540,7 @@ describe("admin moderation authorization", () => {
     });
     assert.deepEqual(body.list, {
       scope: "all",
-      ordering: "updated_at_desc",
+      ordering: "created_at_desc",
       page: 2,
       pageSize: 100,
       offset: 100,
@@ -553,6 +557,56 @@ describe("admin moderation authorization", () => {
       assert.equal(serialized.includes(row.storage_path), false);
       assert.equal(serialized.includes(row.storage_url), false);
       assert.equal(serialized.includes(row.media_bytes), false);
+    }
+  });
+
+  it("keeps numbered cleanup pages on one creation snapshot while worker activity continues", async () => {
+    const firstResponse = await request("/admin/moderation/media-retention?page=1", {}, "moderator");
+    assert.equal(firstResponse.status, 200);
+    const firstBody = await firstResponse.json() as { snapshotAt: string };
+    assert.ok(firstBody.snapshotAt);
+
+    const originalUpdatedAt = retentionRows[0]!.updated_at;
+    const newMediaId = "88888888-8888-4888-8888-888888888888";
+    const newCreatedAt = new Date(Date.parse(firstBody.snapshotAt) + 1).toISOString();
+    retentionRows[0]!.updated_at = "2026-08-31T00:00:00.000Z";
+    retentionRows.push({
+      ...retentionRows[0]!,
+      media_id: newMediaId,
+      created_at: newCreatedAt,
+      updated_at: newCreatedAt,
+    });
+
+    try {
+      const pageTwo = await request(
+        `/admin/moderation/media-retention?page=2&snapshotAt=${encodeURIComponent(firstBody.snapshotAt)}`,
+        {},
+        "moderator",
+      );
+      assert.equal(pageTwo.status, 200);
+      const pageTwoBody = await pageTwo.json() as {
+        items: Array<{ mediaId: string }>;
+        snapshotAt: string;
+        list: { returned: number; totalPages: number };
+      };
+      assert.equal(pageTwoBody.snapshotAt, firstBody.snapshotAt);
+      assert.equal(pageTwoBody.list.returned, 30);
+      assert.equal(pageTwoBody.list.totalPages, 2);
+      assert.equal(pageTwoBody.items[0]!.mediaId, generatedRetentionRows[29]!.media_id);
+      assert.equal(pageTwoBody.items.some((item) => item.mediaId === newMediaId), false);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      const refreshed = await request("/admin/moderation/media-retention?page=1", {}, "moderator");
+      assert.equal(refreshed.status, 200);
+      const refreshedBody = await refreshed.json() as {
+        items: Array<{ mediaId: string }>;
+        snapshotAt: string;
+      };
+      assert.notEqual(refreshedBody.snapshotAt, firstBody.snapshotAt);
+      assert.equal(refreshedBody.items[0]!.mediaId, newMediaId);
+    } finally {
+      retentionRows.splice(retentionRows.findIndex((row) => row.media_id === newMediaId), 1);
+      retentionRows[0]!.updated_at = originalUpdatedAt;
     }
   });
 

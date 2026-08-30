@@ -45,7 +45,8 @@ function AccessState({ message, loading = false }: { message: string; loading?: 
 
 function Router() {
   const [mediaRetentionPage, setMediaRetentionPage] = useState(1);
-  const data = useAdminData(mediaRetentionPage);
+  const [mediaRetentionSnapshot, setMediaRetentionSnapshot] = useState<string>();
+  const data = useAdminData(mediaRetentionPage, mediaRetentionSnapshot);
   const session = data.session.data;
   if (data.session.isLoading) {
     return <AccessState loading message="We’re verifying your approved Worlds staff account." />;
@@ -74,7 +75,18 @@ function Router() {
           <Route path="/ai/settings"><AIPage data={data} /></Route>
           <Route path="/hunts"><OperationsPage data={data} /></Route>
           <Route path="/moderation/media"><OperationsPage data={data} /></Route>
-          <Route path="/moderation/media-retention"><MediaRetentionPage data={data} page={mediaRetentionPage} onPageChange={setMediaRetentionPage} /></Route>
+          <Route path="/moderation/media-retention"><MediaRetentionPage
+            data={data}
+            page={mediaRetentionPage}
+            onPageChange={(nextPage, snapshotAt) => {
+              setMediaRetentionPage(nextPage);
+              if (snapshotAt) setMediaRetentionSnapshot(snapshotAt);
+            }}
+            onRefresh={() => {
+              setMediaRetentionPage(1);
+              setMediaRetentionSnapshot(undefined);
+            }}
+          /></Route>
           <Route path="/moderation/reports"><OperationsPage data={data} /></Route>
           <Route path="/moderation/anti-cheat"><OperationsPage data={data} /></Route>
           <Route path="/interests"><OperationsPage data={data} /></Route>

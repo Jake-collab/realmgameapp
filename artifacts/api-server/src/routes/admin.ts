@@ -145,6 +145,7 @@ type MediaRetentionCleanupRow = {
 const MEDIA_RETENTION_PAGE_SIZE = 100;
 const MediaRetentionQuery = z.object({
   page: z.coerce.number().int().min(1).max(100_000).default(1),
+  snapshotAt: z.string().datetime({ offset: true }).optional(),
 });
 
 function retentionCleanupState(
@@ -620,31 +621,34 @@ router.get("/admin/diagnostics", requireAdmin("admin.diagnostics.read"), async (
 router.get("/admin/moderation/media-retention", requireAdmin("moderation.read"), async (req, res) => {
   const parsedQuery = MediaRetentionQuery.safeParse(req.query);
   if (!parsedQuery.success) {
-    res.status(400).json({ error: "Page must be a positive integer no greater than 100000." });
+    res.status(400).json({ error: "Page must be a positive integer no greater than 100000, and snapshotAt must be a valid timestamp when provided." });
     return;
   }
   const page = parsedQuery.data.page;
+  const snapshotAt = parsedQuery.data.snapshotAt ?? new Date().toISOString();
   const offset = (page - 1) * MEDIA_RETENTION_PAGE_SIZE;
 
   try {
+    const snapshotFilter = `created_at=lte.${encodeURIComponent(snapshotAt)}`;
     const blockedFilter = `status=eq.failed&failure_classification=eq.${
       MODERATION_RETENTION_FAILURE_CLASSIFICATION.BLOCKED_REFERENCE
     }`;
     const [pending, processing, failed, completed, resolved, blocked, rows] = await Promise.all([
-      adminCount("media_retention_cleanups?status=eq.pending"),
-      adminCount("media_retention_cleanups?status=eq.processing"),
-      adminCount("media_retention_cleanups?status=eq.failed"),
-      adminCount("media_retention_cleanups?status=eq.completed"),
-      adminCount("media_retention_cleanups?status=eq.resolved"),
-      adminCount(`media_retention_cleanups?${blockedFilter}`),
+      adminCount(`media_retention_cleanups?${snapshotFilter}&status=eq.pending`),
+      adminCount(`media_retention_cleanups?${snapshotFilter}&status=eq.processing`),
+      adminCount(`media_retention_cleanups?${snapshotFilter}&status=eq.failed`),
+      adminCount(`media_retention_cleanups?${snapshotFilter}&status=eq.completed`),
+      adminCount(`media_retention_cleanups?${snapshotFilter}&status=eq.resolved`),
+      adminCount(`media_retention_cleanups?${snapshotFilter}&${blockedFilter}`),
       adminRead<MediaRetentionCleanupRow[]>(
-        `media_retention_cleanups?select=media_id,status,attempt_count,lease_acquired_at,next_attempt_at,storage_delete_outcome,storage_deleted_at,failure_classification,last_error,created_at,updated_at&order=updated_at.desc&offset=${offset}&limit=${MEDIA_RETENTION_PAGE_SIZE}`,
+        `media_retention_cleanups?${snapshotFilter}&select=media_id,status,attempt_count,lease_acquired_at,next_attempt_at,storage_delete_outcome,storage_deleted_at,failure_classification,last_error,created_at,updated_at&order=created_at.desc,media_id.desc&offset=${offset}&limit=${MEDIA_RETENTION_PAGE_SIZE}`,
       ),
     ]);
     const retrying = processing + Math.max(0, failed - blocked);
     const total = pending + retrying + completed + resolved + blocked;
     res.json({
       summary: { pending, retrying, completed, resolved, blocked, total },
+      snapshotAt,
       items: rows.map((row) => ({
         mediaId: row.media_id,
         state: retentionCleanupState(row),
@@ -658,7 +662,7 @@ router.get("/admin/moderation/media-retention", requireAdmin("moderation.read"),
       })),
       list: {
         scope: "all",
-        ordering: "updated_at_desc",
+        ordering: "created_at_desc",
         page,
         pageSize: MEDIA_RETENTION_PAGE_SIZE,
         offset,

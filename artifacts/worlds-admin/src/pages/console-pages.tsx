@@ -203,7 +203,17 @@ export function DiagnosticsPage({ data }: { data: AdminData }) {
   );
 }
 
-export function MediaRetentionPage({ data, page = 1, onPageChange }: { data: AdminData; page?: number; onPageChange?: (page: number) => void }) {
+export function MediaRetentionPage({
+  data,
+  page = 1,
+  onPageChange,
+  onRefresh,
+}: {
+  data: AdminData;
+  page?: number;
+  onPageChange?: (page: number, snapshotAt?: string) => void;
+  onRefresh?: () => void;
+}) {
   const retention = data.mediaRetention.data;
   const items = retention?.items ?? [];
   const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
@@ -219,7 +229,7 @@ export function MediaRetentionPage({ data, page = 1, onPageChange }: { data: Adm
   const goToPage = (nextPage: number) => {
     if (!onPageChange || nextPage < 1 || (list && nextPage > list.totalPages)) return;
     setSelectedMediaId(null);
-    onPageChange(nextPage);
+    onPageChange(nextPage, retention?.snapshotAt);
   };
   const takeAction = (action: 'requeue' | 'resolve') => {
     if (!evidenceData?.canonicalReference.fingerprint || !selectedMediaId || !canManage) return;
@@ -239,8 +249,16 @@ export function MediaRetentionPage({ data, page = 1, onPageChange }: { data: Adm
       <PageHeader
         eyebrow="Review / storage"
         title="Media retention cleanup"
-        description="Track rejected private-media cleanup without opening private media or exposing Storage paths."
-        actions={<RefreshButton onClick={() => void data.mediaRetention.refetch()} loading={data.mediaRetention.isFetching} />}
+        description="Track rejected private-media cleanup without opening private media or exposing Storage paths. Refresh to start a new history snapshot."
+        actions={<RefreshButton
+          onClick={() => {
+            setSelectedMediaId(null);
+            if (onRefresh) onRefresh();
+            else void data.mediaRetention.refetch();
+          }}
+          loading={data.mediaRetention.isFetching}
+          testId="button-refresh-retention"
+        />}
       />
       <div className="metrics-grid" style={{ marginTop: 26 }}>
         {[
@@ -263,7 +281,7 @@ export function MediaRetentionPage({ data, page = 1, onPageChange }: { data: Adm
       </div>
       <section className="panel" style={{ marginTop: 22 }}>
         <div className="panel-header">
-          <div><div className="panel-title">Cleanup history</div><div className="panel-kicker">{retention ? `${retention.summary.total} total records across all history · showing ${retention.list.returned} records on page ${currentPage} of ${retention.list.totalPages}` : 'Live worker state'}</div></div>
+          <div><div className="panel-title">Cleanup history</div><div className="panel-kicker">{retention ? `${retention.summary.total} records in this snapshot · showing ${retention.list.returned} on page ${currentPage} of ${retention.list.totalPages}` : 'Live worker state'}</div></div>
           <StatusBadge status={retention ? (retention.summary.blocked ? 'blocked' : 'healthy') : 'unavailable'} />
         </div>
         {data.mediaRetention.isError ? <ErrorState onRetry={() => void data.mediaRetention.refetch()} /> : data.mediaRetention.isLoading ? <TableSkeleton columns={8} /> : !retention ? <UnavailableState onRetry={() => void data.mediaRetention.refetch()} /> : !items.length ? <div className="empty-state"><Check /><strong>No cleanup records yet</strong><p>The worker has not recorded a rejected private-media cleanup.</p></div> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>State</th><th>Reference</th><th>Attempts</th><th>Last attempt</th><th>Next retry</th><th>Deletion result</th><th>Error summary</th><th>Evidence</th></tr></thead><tbody>{items.map((item) => <tr key={item.mediaId} data-testid={`row-retention-${item.mediaId}`}><td><StatusBadge status={item.state} /></td><td className="mono" title={item.mediaId}>{item.mediaId.slice(0, 8)}…</td><td className="mono">{item.attemptCount}</td><td>{fmtDateTime(item.lastAttemptAt)}</td><td>{fmtDateTime(item.nextAttemptAt)}</td><td>{item.deletionOutcome === 'missing' ? <span className="tag orange">Object missing · complete</span> : item.deletionOutcome === 'deleted' ? <span className="tag green">Deleted</span> : item.state === 'blocked' ? <span className="tag red">Blocked</span> : item.state === 'resolved' ? <span className="tag green">Resolved</span> : <span className="tag red">Deletion failed</span>}</td><td style={{ maxWidth: 310, color: 'hsl(var(--muted-foreground))' }}>{item.lastError || '—'}</td><td>{item.state === 'blocked' ? <button className="btn btn-quiet" onClick={() => setSelectedMediaId(item.mediaId)} data-testid={`button-retention-evidence-${item.mediaId}`}>Review</button> : '—'}</td></tr>)}</tbody></table></div>}

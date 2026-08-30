@@ -64,10 +64,16 @@ history is materialized before push delivery, and provider failure never
 removes that history.
 
 The staff-only `GET /api/admin/moderation/media-retention?page=N` endpoint exposes the
-cleanup backlog to authorized moderators and administrators. It returns all-history
-counts for pending, retrying, completed, resolved, and blocked reference states,
-plus a page of up to 100 records (newest first) with attempt timestamps, retry
-timestamps, deletion outcome, and bounded error summaries. The response
+cleanup backlog to authorized moderators and administrators. The first response
+returns a `snapshotAt` boundary; pass it back as
+`/api/admin/moderation/media-retention?page=N&snapshotAt=<boundary>` when
+continuing through the numbered pages. A snapshot includes only records created
+by the boundary and orders them newest-first by immutable creation time (with
+`media_id` as the tie-breaker), so worker updates cannot shift an investigation
+between pages. Omitting `snapshotAt` starts a new snapshot and is the explicit
+refresh path. It returns snapshot counts for pending, retrying, completed,
+resolved, and blocked reference states, plus a page of up to 100 records with
+attempt timestamps, retry timestamps, deletion outcome, and bounded error summaries. The response
 deliberately excludes bucket names, Storage paths, signed URLs, and media bytes.
 A `missing` deletion outcome is a
 successful terminal result; a failed deletion remains retryable, while a

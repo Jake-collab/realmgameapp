@@ -28,6 +28,7 @@
 - [Storage RLS policy evaluation](storage-rls-policy-evaluation.md) — anonymous policies must not invoke creator-only helpers behind a short-circuit condition.
 - [Storage retention integration](storage-retention-integration.md) — batch-remove reports missing objects as HTTP 200 with an empty list; isolate linked Storage metadata in local harnesses.
 - [Moderation retention classification](moderation-retention-classification.md) — distinguish retryable cleanup failures from blocked reference drift with persisted state, not error wording.
+- [Cleanup history snapshots](cleanup-history-snapshots.md) — paginate a stable immutable creation snapshot; refresh explicitly to include new worker records.
 - [Admin media URL boundary](admin-media-url-boundary.md) — staff access to private media is ID-only and server-signed after authorization.
 - [Mobile media withdrawal](mobile-media-withdrawal.md) — treat deleted media and failed signed URLs as unavailable, clear stale UI URLs, and refresh owning queries.
 - [Hosted Auth URL configuration](hosted-auth-url-configuration.md) — the installed Supabase connection can inspect provider status but cannot mutate redirect allowlists; dashboard access is required.
