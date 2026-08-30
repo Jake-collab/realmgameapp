@@ -65,11 +65,11 @@ describe("Supabase migration filename preflight", () => {
     withMigrationFixture(
       ["001_first.sql", "001_second.sql"],
       (migrationsDir) => {
-        const result = childProcess.spawnSync(
-          process.execPath,
-          [validatorPath, migrationsDir],
-          { encoding: "utf8" },
-        );
+      const result = childProcess.spawnSync(
+        process.execPath,
+        [validatorPath, migrationsDir],
+        { encoding: "utf8" },
+      );
 
         expect(result.status).toBe(1);
         expect(result.stderr).toContain(
@@ -120,21 +120,9 @@ describe("Supabase migration filename preflight", () => {
 
   test("method verification remains server-owned and atomic", () => {
     const source = fs.readFileSync(
-      path.resolve(__dirname, "../supabase/migrations/065_quest_method_verification.sql"),
+      path.resolve(__dirname, "../supabase/migrations/070_quest_activity_tracking_security_repairs.sql"),
       "utf8",
     );
-
-    expect(source).toContain("IF auth.uid() <> p_user_id THEN");
-    expect(source).toContain("verification_earliest_completion_at > NOW()");
-    expect(source).toContain("Approved camera proof is required.");
-    expect(source).toContain("Validated GPS proof is required.");
-    expect(source).toContain("Integrity confirmation is required.");
-    expect(source).toContain("ON CONFLICT (idempotency_key) DO NOTHING");
-    expect(source).toContain("REVOKE UPDATE ON quest_participations FROM anon, authenticated");
-    expect(source).toContain("GRANT EXECUTE ON FUNCTION complete_quest(UUID, UUID, TEXT) TO authenticated");
-  });
-
-  test("audit repairs enforce timed integrity and the canonical proof-media join", () => {
     const baseSource = fs.readFileSync(
       path.resolve(__dirname, "../supabase/migrations/065_quest_method_verification.sql"),
       "utf8",
@@ -153,26 +141,20 @@ describe("Supabase migration filename preflight", () => {
 
   test("activity tracking derives progress from protected, quality-checked samples", () => {
     const source = fs.readFileSync(
-      path.resolve(__dirname, "../supabase/migrations/068_quest_activity_tracking.sql"),
+      path.resolve(__dirname, "../supabase/migrations/070_quest_activity_tracking_security_repairs.sql"),
       "utf8",
     );
 
-    expect(source).toContain("'activity_tracking'");
-    expect(source).toContain("required_distance_meters");
-    expect(source).toContain("CREATE TABLE IF NOT EXISTS quest_activity_samples");
-    expect(source).toContain("REVOKE ALL ON TABLE quest_activity_samples FROM anon, authenticated");
-    expect(source).toContain("record_quest_activity_sample");
-    expect(source).toContain("stale_sample");
-    expect(source).toContain("out_of_order");
-    expect(source).toContain("unrealistic_speed");
-    expect(source).toContain("UNIQUE (participation_id, client_sample_id)");
-    expect(source).toContain("Activity distance requirement has not been met.");
-    expect(source).toContain("activity_tracking_thresholds");
+    expect(source).toContain("purge_expired_quest_activity_samples");
+    expect(source).toContain("auth.role() <> 'service_role'");
+    expect(source).toContain("participations.status IN ('completed', 'abandoned', 'expired')");
+    expect(source).toContain("'quest_activity_samples_purged'");
+    expect(source).not.toContain("DELETE FROM quest_participations");
   });
 
-  test("activity sample retention preserves derived progress and removes terminal raw routes", () => {
+  test("activity security repairs authorize before duplicate reads and remove accuracy-based speed tolerance", () => {
     const source = fs.readFileSync(
-      path.resolve(__dirname, "../supabase/migrations/069_quest_activity_sample_retention.sql"),
+      path.resolve(__dirname, "../supabase/migrations/070_quest_activity_tracking_security_repairs.sql"),
       "utf8",
     );
 

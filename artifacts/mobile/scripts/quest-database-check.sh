@@ -138,6 +138,9 @@ done
 echo "Running Quest RPC and RLS contracts against the disposable database."
 pnpm exec jest --runInBand __tests__/questRpc.integration.test.ts
 
+echo "Running method-driven Quest verification contracts against the disposable database."
+pnpm exec jest --runInBand __tests__/questVerification.integration.test.ts
+
 echo "Running activity tracking validation, persistence, and idempotency contracts against the disposable database."
 pnpm exec jest --runInBand __tests__/questActivityTracking.integration.test.ts
 
