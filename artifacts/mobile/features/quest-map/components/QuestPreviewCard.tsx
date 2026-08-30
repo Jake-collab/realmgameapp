@@ -12,7 +12,7 @@
  * - Safety note is shown before any location-required action.
  */
 
-import React, { memo } from 'react';
+import React, { memo, useEffect, useState } from 'react';
 import {
   Image,
   StyleSheet,
@@ -26,6 +26,7 @@ import { useColors } from '@/hooks/useColors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
 import { resolveQuestAction } from '@/features/quests/utils/questActionResolver';
+import { getMediaFallbackMessage } from '@/services/media/media.service';
 import { formatDistance } from '../../maps/utils/geoUtils';
 import type { PublicGeoQuestMapItem } from '../types/questMap.types';
 import type { DistanceUnit } from '../../maps/config/mapConfig';
@@ -34,15 +35,22 @@ interface QuestPreviewCardProps {
   quest: PublicGeoQuestMapItem;
   distanceUnit?: DistanceUnit;
   onClose?: () => void;
+  onMediaUnavailable?: () => void;
 }
 
 function QuestPreviewCardComponent({
   quest,
   distanceUnit = 'miles',
   onClose,
+  onMediaUnavailable,
 }: QuestPreviewCardProps) {
   const colors = useColors();
   const router = useRouter();
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [quest.thumbnailUrl]);
 
   const action = resolveQuestAction({
     availabilityState: quest.availabilityState as any,
@@ -79,15 +87,34 @@ function QuestPreviewCardComponent({
     >
       {/* Header row */}
       <View style={styles.header}>
-        {quest.thumbnailUrl ? (
+        {quest.thumbnailUrl && !imageError ? (
           <Image
             source={{ uri: quest.thumbnailUrl }}
             style={[styles.thumbnail, { borderColor: colors.border }]}
             accessibilityLabel={`${quest.title} thumbnail`}
+            onError={() => {
+              setImageError(true);
+              onMediaUnavailable?.();
+            }}
           />
         ) : (
-          <View style={[styles.thumbnailPlaceholder, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+          <View
+            style={[
+              styles.thumbnailPlaceholder,
+              { backgroundColor: colors.secondary, borderColor: colors.border },
+            ]}
+            accessibilityLabel={
+              imageError
+                ? `${quest.title} ${getMediaFallbackMessage('thumbnail')}`
+                : undefined
+            }
+          >
             <Feather name="map-pin" size={20} color={colors.accent} />
+            {imageError && (
+              <Text style={[styles.thumbnailFallback, { color: colors.mutedForeground }]}>
+                {getMediaFallbackMessage('thumbnail')}
+              </Text>
+            )}
           </View>
         )}
 
@@ -240,6 +267,12 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  thumbnailFallback: {
+    fontFamily: fontFamily.regular,
+    fontSize: 8,
+    textAlign: 'center',
+    marginTop: 2,
   },
   headerInfo: {
     flex: 1,

@@ -16,7 +16,7 @@
  * - Does NOT log clue content to analytics
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -28,6 +28,7 @@ import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
+import { getMediaFallbackMessage } from '@/services/media/media.service';
 import type { ActiveHuntStop } from '@/features/hunts/types/hunt.types';
 
 interface CurrentCluePanelProps {
@@ -35,6 +36,7 @@ interface CurrentCluePanelProps {
   isOrdered: boolean;
   stopNumber?: number;
   totalStops?: number;
+  onMediaUnavailable?: () => void;
 }
 
 export function CurrentCluePanel({
@@ -42,11 +44,17 @@ export function CurrentCluePanel({
   isOrdered,
   stopNumber,
   totalStops,
+  onMediaUnavailable,
 }: CurrentCluePanelProps) {
   const colors = useColors();
   const clue = stop.clue;
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(!!clue?.imageUrl);
+
+  useEffect(() => {
+    setImageError(false);
+    setImageLoading(!!clue?.imageUrl);
+  }, [clue?.imageUrl]);
 
   const hasText  = !!clue?.clueText;
   const hasImage = !!clue?.imageUrl && !imageError;
@@ -87,7 +95,11 @@ export function CurrentCluePanel({
               style={[styles.clueImage, imageLoading && styles.hidden]}
               resizeMode="cover"
               onLoad={() => setImageLoading(false)}
-              onError={() => { setImageError(true); setImageLoading(false); }}
+              onError={() => {
+                setImageError(true);
+                setImageLoading(false);
+                onMediaUnavailable?.();
+              }}
               accessibilityLabel={`Clue image for stop: ${stop.title}`}
             />
           </View>
@@ -102,8 +114,17 @@ export function CurrentCluePanel({
           </View>
         )}
 
+        {/* Withdrawn or expired image fallback */}
+        {imageError && (
+          <View style={[styles.clueTextBox, { backgroundColor: colors.background }]}>
+            <Text style={[styles.clueText, { color: colors.mutedForeground }]}>
+              {getMediaFallbackMessage('clue')}
+            </Text>
+          </View>
+        )}
+
         {/* No clue content */}
-        {!hasText && !hasImage && clue && (
+        {!hasText && !hasImage && !imageError && clue && (
           <View style={[styles.clueTextBox, { backgroundColor: colors.background }]}>
             <Text style={[styles.clueText, { color: colors.mutedForeground }]}>
               Head to the area shown above.

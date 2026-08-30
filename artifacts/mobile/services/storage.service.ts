@@ -61,11 +61,21 @@ export const storageService = {
     path: string,
     expiresIn = 60
   ): Promise<{ url: string | null; error: string | null }> {
-    const client = requireSupabase();
-    const { data, error } = await client.storage
-      .from(bucket)
-      .createSignedUrl(path, expiresIn);
+    try {
+      const client = requireSupabase();
+      const { data, error } = await client.storage
+        .from(bucket)
+        .createSignedUrl(path, expiresIn);
 
-    return { url: data?.signedUrl ?? null, error: error?.message ?? null };
+      return { url: data?.signedUrl ?? null, error: error?.message ?? null };
+    } catch (error) {
+      // A revoked object, an expired URL, or an unavailable Storage
+      // connection is a missing-media state for callers. Return it as data
+      // so screens can render their fallback instead of throwing.
+      return {
+        url: null,
+        error: error instanceof Error ? error.message : 'Media is unavailable.',
+      };
+    }
   },
 };

@@ -52,6 +52,7 @@ interface NearbyResultsSheetProps {
   onDeselectQuest: () => void;
   onSortChange: (sort: NearbySortOrder) => void;
   onOpenFilters: () => void;
+  onMediaUnavailable?: () => void;
 }
 
 function NearbyResultsSheetComponent({
@@ -68,6 +69,7 @@ function NearbyResultsSheetComponent({
   onDeselectQuest,
   onSortChange,
   onOpenFilters,
+  onMediaUnavailable,
 }: NearbyResultsSheetProps) {
   const colors = useColors();
 
@@ -127,6 +129,7 @@ function NearbyResultsSheetComponent({
               quest={selectedQuest}
               distanceUnit={distanceUnit}
               onClose={onDeselectQuest}
+              onMediaUnavailable={onMediaUnavailable}
             />
           )}
 

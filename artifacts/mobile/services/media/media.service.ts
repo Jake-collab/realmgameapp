@@ -41,6 +41,41 @@ export interface RegisterMediaPayload {
   altText?: string;
 }
 
+export type MediaAssetReference = Pick<
+  MediaAssetRow,
+  'bucket' | 'storage_path' | 'visibility' | 'moderation_status'
+> & {
+  deleted_at?: string | null;
+};
+
+export type MediaAssetAvailability = 'available' | 'withdrawn' | 'unavailable';
+
+/**
+ * Returns the safe display state for a media record.
+ *
+ * A withdrawal is represented by deleted_at so it can be retained for
+ * moderation evidence while its Storage object is no longer readable.
+ */
+export function getMediaAssetAvailability(
+  asset:
+    | (Pick<MediaAssetRow, 'moderation_status'> & { deleted_at?: string | null })
+    | null
+    | undefined,
+): MediaAssetAvailability {
+  if (!asset) return 'unavailable';
+  if (asset.deleted_at) return 'withdrawn';
+  return asset.moderation_status === 'approved' ? 'available' : 'unavailable';
+}
+
+export type MediaFallbackKind = 'clue' | 'thumbnail';
+
+/** User-facing copy for media that was withdrawn or whose signed URL expired. */
+export function getMediaFallbackMessage(kind: MediaFallbackKind): string {
+  return kind === 'clue'
+    ? 'This clue image is no longer available.'
+    : 'Image unavailable';
+}
+
 // ─── Avatar upload ────────────────────────────────────────────────────────────
 
 /**
@@ -140,8 +175,12 @@ export async function uploadProofMediaFromUri(input: {
  * when an approved media asset is eligible for broad display.
  */
 export async function resolveMediaUrl(
-  asset: Pick<MediaAssetRow, 'bucket' | 'storage_path' | 'visibility' | 'moderation_status'>
+  asset: MediaAssetReference
 ): Promise<string | null> {
+  // Do not request a URL for content that moderation has withdrawn. This
+  // also prevents a stale client-side record from appearing approved while
+  // Storage cleanup is still in progress.
+  if (getMediaAssetAvailability(asset) !== 'available') return null;
   return getSignedUrl(asset.bucket, asset.storage_path, 3600);
 }
 

@@ -47,6 +47,7 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useActiveHunt } from '@/features/hunts/hooks/useActiveHunt';
@@ -55,6 +56,7 @@ import { useCompleteHunt } from '@/features/hunts/hooks/useCompleteHunt';
 import { useWithdrawFromHunt } from '@/features/hunts/hooks/useWithdrawFromHunt';
 import { useCollectHuntDrop } from '@/features/hunts/hooks/useCollectHuntDrop';
 import { useHuntDropSearchZones } from '@/features/hunts/hooks/useHuntDropSearchZones';
+import { huntKeys } from '@/features/hunts/queries/huntKeys';
 
 import {
   useSubmitHuntProof,
@@ -94,6 +96,7 @@ export default function HuntActiveScreen() {
   const colors = useColors();
   const { participationId } = useLocalSearchParams<{ participationId: string }>();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   // ── Core hunt data ───────────────────────────────────────────────────────────
   const {
@@ -121,6 +124,12 @@ export default function HuntActiveScreen() {
     userId: user?.id ?? '',
     huntId: hunt?.huntId ?? '',
   });
+
+  const handleMediaUnavailable = useCallback(() => {
+    void queryClient.invalidateQueries({
+      queryKey: huntKeys.activeHunt(participationId ?? '', user?.id ?? ''),
+    });
+  }, [participationId, queryClient, user?.id]);
 
   // ── View mode ─────────────────────────────────────────────────────────────────
   const viewMode = useMemo(
@@ -492,6 +501,7 @@ export default function HuntActiveScreen() {
             isOrdered={isOrdered}
             stopNumber={stopNumber}
             totalStops={hunt.currentStops.length}
+            onMediaUnavailable={handleMediaUnavailable}
           />
         ) : (
           <View style={[styles.noStop, { backgroundColor: colors.card, borderColor: colors.border }]}>

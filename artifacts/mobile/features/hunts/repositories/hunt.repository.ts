@@ -34,6 +34,7 @@ import type {
 } from '../types/hunt.types';
 import { normalizeHuntError, HuntErrors } from '../utils/huntErrors';
 import { normalizeError } from '@/lib/errors/normalizeError';
+import { resolveMediaUrl } from '@/services/media/media.service';
 
 // ─── Supabase client ──────────────────────────────────────────────────────────
 
@@ -124,15 +125,13 @@ export async function fetchHuntDetail(
   if ((data as any).cover_media_id && participation) {
     const { data: media } = await (supabase
       .from('media_assets') as any)
-      .select('bucket, storage_path')
+      .select('bucket, storage_path, visibility, moderation_status, deleted_at')
       .eq('id', (data as any).cover_media_id)
       .eq('moderation_status', 'approved')
+      .is('deleted_at', null)
       .maybeSingle();
     if (media) {
-      const { data: signed } = await supabase.storage
-        .from(media.bucket)
-        .createSignedUrl(media.storage_path, 3600);
-      thumbnailUrl = signed?.signedUrl ?? null;
+      thumbnailUrl = await resolveMediaUrl(media);
     }
   }
 

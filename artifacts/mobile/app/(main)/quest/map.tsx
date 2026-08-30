@@ -29,6 +29,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
@@ -59,6 +60,7 @@ import { usePlaceSearch } from '@/features/quest-map/hooks/usePlaceSearch';
 import { SearchThisAreaButton } from '@/features/quest-map/components/SearchThisAreaButton';
 import { NearbyResultsSheet } from '@/features/quest-map/components/NearbyResultsSheet';
 import { MapFilterSheet } from '@/features/quest-map/components/MapFilterSheet';
+import { questMapKeys } from '@/features/quest-map/queries/questMapKeys';
 import type {
   PublicGeoQuestMapItem,
   BottomSheetState,
@@ -71,6 +73,7 @@ import type {
 function QuestMapInner() {
   const colors = useColors();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { isReady, isModuleUnavailable, isTokenMissing } = useMapContext();
   const permissionHook = useLocationPermission();
 
@@ -81,6 +84,15 @@ function QuestMapInner() {
   const [isFilterSheetVisible, setIsFilterSheetVisible] = useState(false);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [showSearchThisArea, setShowSearchThisArea] = useState(false);
+
+  const handleMediaUnavailable = useCallback(() => {
+    // Remove the stale URL from the selected item immediately, then refresh
+    // viewport/nearby data so the next render reflects moderation state.
+    setSelectedQuest(current =>
+      current ? { ...current, thumbnailUrl: null } : current,
+    );
+    void queryClient.invalidateQueries({ queryKey: questMapKeys.all });
+  }, [queryClient]);
 
   // ── Camera / bounds state ───────────────────────────────────────────────────
   const [activeBounds, setActiveBounds] = useState<BoundingBox | null>(null);
@@ -430,6 +442,7 @@ function QuestMapInner() {
         onDeselectQuest={handleDeselectQuest}
         onSortChange={setNearbySort}
         onOpenFilters={() => setIsFilterSheetVisible(true)}
+        onMediaUnavailable={handleMediaUnavailable}
       />
 
       {/* ── Filter sheet ──────────────────────────────────────────────────── */}
