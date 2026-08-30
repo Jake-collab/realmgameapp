@@ -1,0 +1,63 @@
+The friend-request Supabase blocker is complete.
+
+Now fix ONLY the final remaining true Supabase blocker from the audit:
+
+SERVICE_ROLE SCHEDULER / QUEUE-HEALTH PRIVILEGES
+
+The audit found:
+
+- service_role cannot directly read:
+  - notification_events
+  - scheduled_notifications
+- both currently return PostgreSQL permission errors
+- the current worker queue-health path reads those tables directly
+- therefore the latest worker build would fail its queue-health check against production
+
+Please:
+
+1. Inspect the current canonical schema and the scheduler privilege migration that already exists locally.
+
+2. Determine the exact intended privilege model for:
+   - notification_events
+   - scheduled_notifications
+
+3. Preserve RLS/security for normal authenticated and anonymous users.
+
+4. Grant ONLY the minimum required direct table privileges to service_role for the worker queue-health path.
+
+5. Do not weaken ordinary-user RLS.
+
+6. Do not expose these tables to anon/authenticated users beyond the existing intended policies.
+
+7. Create a new migration only if the current scheduler-privilege migration has not already been applied correctly.
+
+8. Apply the required migration/change to the linked production Supabase project.
+
+9. Verify against production:
+
+- service_role can perform the exact queue-health reads required by the worker
+- ordinary authenticated users still cannot access protected scheduler data
+- anonymous users remain denied
+- notification claim RPCs still work
+- scheduled maintenance RPCs still work
+- no duplicate scheduler ownership is introduced
+- migration history remains clean
+
+10. Then verify whether the production deployment must be republished to pick up the latest worker observability/queue-health code.
+
+If republish is required, tell me only:
+OWNER ACTION REQUIRED: REPUBLISH
+
+If you can verify the currently published worker already contains the needed build, do so.
+
+When finished return only:
+
+SCHEDULER PRIVILEGE BLOCKER: COMPLETE
+
+or
+
+SCHEDULER PRIVILEGE BLOCKER: OWNER ACTION REQUIRED
+[exact single action]
+
+Do not start Mapbox.
+Do not run the full final Supabase audit yet.
