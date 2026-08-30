@@ -23,6 +23,12 @@ One-time service-role grant loops do not grant privileges to RLS tables created 
 
 **How to apply:** Each migration that creates a server-read table must grant the required service-role privileges itself, or a later privilege migration must explicitly cover the complete table set.
 
+Application tables created for trusted-only moderation, integrity, or queue work still need explicit RLS enablement; withholding client table grants is not a substitute when the project contract requires RLS on every table. Service-role access must also be granted explicitly where the trusted API uses those tables.
+
+**Why:** The production audit found four moderation/integrity tables without RLS and without service-role REST privileges. They were inaccessible to ordinary clients, but the missing RLS and trusted access still violated the security contract and broke the server persistence path.
+
+**How to apply:** For every new application table, verify `relrowsecurity = true`, deny ordinary-client reads/writes, and exercise the intended service-role path before declaring schema/security parity.
+
 Check both local filenames and the linked migration ledger before choosing a new migration number; concurrent task merges can reserve a version that is not visible in an earlier local snapshot.
 
 **Why:** The scheduler privilege migration occupied 058 while the friend-request repair was being prepared, so the repair needed the next available version.
