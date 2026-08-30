@@ -38,6 +38,7 @@ let mobileClient: SupabaseClient;
 let adminClient: SupabaseClient;
 let viewer: TestUser;
 let target: TestUser;
+let concurrentClients: SupabaseClient[] = [];
 
 async function createTestUser(
   role: 'viewer' | 'target',
@@ -68,11 +69,21 @@ async function createTestUser(
 }
 
 async function signInAs(user: TestUser): Promise<void> {
-  const { error } = await mobileClient.auth.signInWithPassword({
+  await signInClientAs(mobileClient, user);
+}
+
+async function signInClientAs(client: SupabaseClient, user: TestUser): Promise<void> {
+  const { error } = await client.auth.signInWithPassword({
     email: user.email,
     password: user.password,
   });
   if (error) throw error;
+}
+
+function testAnonClient(): SupabaseClient {
+  return createClient(testUrl, testAnonKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 }
 
 describeIntegration('Social RPC contracts', () => {
@@ -96,6 +107,7 @@ describeIntegration('Social RPC contracts', () => {
 
   afterAll(async () => {
     await mobileClient?.auth.signOut();
+    await Promise.all(concurrentClients.map((client) => client.auth.signOut()));
     if (target?.id) {
       const { error } = await adminClient.auth.admin.deleteUser(target.id);
       if (error) throw error;
@@ -126,13 +138,80 @@ describeIntegration('Social RPC contracts', () => {
       }),
     ]);
 
+    concurrentClients = [testAnonClient(), testAnonClient()];
+    await Promise.all(concurrentClients.map((client) => signInClientAs(client, viewer)));
+
+    // The repository uses one authenticated singleton, so use two independent
+    // authenticated clients to exercise the database race itself.
+    const concurrentResults = await Promise.all(
+      concurrentClients.map(async (client) => {
+        const { data, error } = await client.rpc('send_friend_request', {
+          p_target_username: target.username,
+          p_source_context: 'search',
+        });
+        if (error) throw error;
+        return data as {
+          ok?: boolean;
+          code?: string;
+          request_id?: string;
+          state?: string;
+        };
+      }),
+    );
+    expect(concurrentResults).toHaveLength(2);
+    concurrentResults.forEach((result) => {
+      expect(result).toMatchObject({
+        ok: true,
+        state: 'outgoing_request',
+      });
+      expect(result.request_id).toEqual(expect.any(String));
+    });
+
+    const requestIds = concurrentResults.map((result) => result.request_id);
+    expect(new Set(requestIds).size).toBe(1);
+    const concurrentRequestId = requestIds[0];
+    if (!concurrentRequestId) {
+      throw new Error('Concurrent friend request did not return an identifier');
+    }
+
+    const { data: pendingRequests, error: pendingRequestError } = await adminClient
+      .from('friend_requests')
+      .select('id, status, requester_id, recipient_id')
+      .eq('requester_id', viewer.id)
+      .eq('recipient_id', target.id)
+      .eq('status', 'pending');
+    if (pendingRequestError) throw pendingRequestError;
+    expect(pendingRequests).toHaveLength(1);
+    expect(pendingRequests?.[0]).toMatchObject({
+      id: concurrentRequestId,
+      status: 'pending',
+      requester_id: viewer.id,
+      recipient_id: target.id,
+    });
+
+    const { data: receivedNotifications, error: notificationError } = await adminClient
+      .from('notifications')
+      .select('id, type, data')
+      .eq('user_id', target.id)
+      .eq('type', 'friend_request_received');
+    if (notificationError) throw notificationError;
+    expect(receivedNotifications).toHaveLength(1);
+    expect(receivedNotifications?.[0]).toMatchObject({
+      type: 'friend_request_received',
+      data: {
+        request_id: concurrentRequestId,
+        requester_username: viewer.username,
+      },
+    });
+
     const sentResult = await social.sendFriendRequest(target.username, 'search');
     expect(sentResult).toMatchObject({
       ok: true,
-      code: 'sent',
+      code: 'request_exists',
       state: 'outgoing_request',
+      requestId: concurrentRequestId,
     });
-    expect(sentResult.requestId).toEqual(expect.any(String));
+    expect(sentResult.requestId).toBe(concurrentRequestId);
 
     // The active-pair rule is a partial unique index. A repeated send should
     // return the existing request instead of raising a database conflict.
