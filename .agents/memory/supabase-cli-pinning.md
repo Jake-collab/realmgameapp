@@ -14,10 +14,10 @@ CLI or container changes look like Quest regressions.
 from the supported CLI distribution, run a fresh disposable migration
 provisioning check, and run the complete Quest RPC/RLS suite.
 
-The workspace's available Supabase CLI currently reports `2.22.12` even when
-the harness requests `2.115.0`; candidate mode reaches container startup but
-the Storage image can fail on a missing `fix-search-by-timestamp-sqli`
-migration before application tests run.
+The workspace's preinstalled Supabase CLI can be older than the release pin.
+Do not let its presence silently override the requested npm candidate; verify
+the resolved version before provisioning. A mismatched CLI and Storage image
+can fail on an internal migration before application tests run.
 
 **Why:** This distinguishes a local CLI/Storage image provisioning failure from
 a policy or application regression.

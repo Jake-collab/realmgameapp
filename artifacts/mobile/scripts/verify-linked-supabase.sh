@@ -9,7 +9,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 MIGRATIONS_DIR="$MOBILE_DIR/supabase/migrations"
-SUPABASE_CLI_VERSION="${SUPABASE_CLI_VERSION:-2.115.0}"
+SUPABASE_CLI_VERSION="${SUPABASE_CLI_VERSION:-2.116.0}"
 SCHEMA_DUMP="$(mktemp "${TMPDIR:-/tmp}/worlds-linked-schema.XXXXXX.sql")"
 MIGRATION_JSON="$(mktemp "${TMPDIR:-/tmp}/worlds-linked-migrations.XXXXXX.json")"
 

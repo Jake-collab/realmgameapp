@@ -224,6 +224,46 @@ describe("Supabase migration filename preflight", () => {
     );
   });
 
+  test("the disposable harness and release workflow use the same concrete CLI pin", () => {
+    const checkSource = fs.readFileSync(
+      path.resolve(__dirname, "../scripts/quest-database-check.sh"),
+      "utf8",
+    );
+    const linkedCheckSource = fs.readFileSync(
+      path.resolve(__dirname, "../scripts/verify-linked-supabase.sh"),
+      "utf8",
+    );
+    const workflowSource = fs.readFileSync(
+      path.resolve(__dirname, "../../../.github/workflows/quest-database.yml"),
+      "utf8",
+    );
+
+    const harnessPin = checkSource.match(
+      /SUPABASE_CLI_VERSION="\$\{SUPABASE_CLI_VERSION:-([^}]+)\}"/,
+    )?.[1];
+
+    expect(harnessPin).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(linkedCheckSource).toContain(
+      `SUPABASE_CLI_VERSION="\${SUPABASE_CLI_VERSION:-${harnessPin}}"`,
+    );
+    expect(workflowSource).toContain(`version: ${harnessPin}`);
+  });
+
+  test("the disposable check gates readiness on Auth instead of aggregate Docker health", () => {
+    const checkSource = fs.readFileSync(
+      path.resolve(__dirname, "../scripts/quest-database-check.sh"),
+      "utf8",
+    );
+
+    expect(checkSource).toContain(
+      'run_supabase --agent yes start --ignore-health-check > "$START_OUTPUT_FILE"',
+    );
+    expect(checkSource).not.toContain("run_supabase status");
+    expect(checkSource).toContain(
+      'curl --fail --silent --show-error "$API_URL/auth/v1/health"',
+    );
+  });
+
   test("method verification remains server-owned and atomic", () => {
     const source = fs.readFileSync(
       path.resolve(__dirname, "../supabase/migrations/070_quest_activity_tracking_security_repairs.sql"),

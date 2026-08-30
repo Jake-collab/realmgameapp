@@ -94,7 +94,7 @@ jobs:
           # Keep this pinned. Update deliberately by running the local
           # disposable check and the Quest RPC/RLS suite first; see
           # artifacts/mobile/docs/QUEST_LIVE_TESTING.md.
-          version: 2.115.0
+          version: 2.116.0
 
       - name: Apply migrations and run Quest contracts
         run: bash artifacts/mobile/scripts/quest-database-check.sh

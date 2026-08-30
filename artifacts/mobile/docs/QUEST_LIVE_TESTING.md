@@ -16,10 +16,18 @@ every checked-in migration, runs the Quest and Social RPC/RLS suites, and
 deletes its Docker volumes after the test. No Supabase project, database
 credentials, or CI secrets are required.
 
-The release gate is pinned to **Supabase CLI `2.115.0`**. The local harness uses
+The release gate is pinned to **Supabase CLI `2.116.0`**. The local harness uses
 the same version by default and refuses to run with a different installed CLI,
 so a local pass exercises the same CLI contract as CI. The release gate never
 uses `latest`.
+
+The harness captures structured local credentials directly from
+`supabase start`, with the CLI's aggregate health check disabled, and then
+waits for the real Auth health endpoint. This is intentional: constrained
+Docker runtimes can reject container-exec health probes even after PostgreSQL
+is accepting connections. Failed startup, malformed or missing local
+credentials, or an Auth endpoint that does not become healthy still fails the
+run.
 
 For a manually managed disposable Supabase project, apply the complete
 migration set first, including `039_quest_integrity.sql`. The suite creates two
