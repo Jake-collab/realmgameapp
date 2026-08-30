@@ -60,6 +60,8 @@ permissions:
   contents: read
 
 jobs:
+  # Keep this job id and display name stable: the protected release branch
+  # requires the resulting "Quest RPC and RLS contracts" status check.
   quest-database:
     name: Quest RPC and RLS contracts
     runs-on: ubuntu-latest

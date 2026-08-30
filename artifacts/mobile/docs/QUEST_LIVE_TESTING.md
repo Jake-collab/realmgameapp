@@ -113,8 +113,31 @@ only used to create and clean up disposable fixtures.
 ## Release gate
 
 `.github/workflows/quest-database.yml` runs on Quest-related pull requests and
-on every `main` push. Configure the `Quest RPC and RLS contracts` job as a
-required status check in the repository's protected `main` branch before
-enabling automatic releases. A migration, RPC, reward-idempotency,
-cross-owner, proof-immutability, or objective-integrity failure then produces a
-failed check and cannot be merged into the release branch.
+on every `main` push. The protected `main` branch is the release branch and
+must require this exact status check before enabling automatic releases:
+
+- Workflow: `Quest database contracts`
+- Required job/check: `Quest RPC and RLS contracts`
+- Workflow job id: `quest-database`
+
+Configure the repository's `main` branch protection rule or ruleset to require
+the `Quest RPC and RLS contracts` check. Do not select the advisory
+`Candidate Supabase CLI compatibility` or
+`Report candidate Supabase CLI incompatibility` jobs instead; those jobs do
+not run on pull requests and are not release gates.
+
+### Verifying the required check
+
+After adding or changing the Social RPC race coverage, open a pull request
+targeting protected `main` and wait for the `Quest database contracts`
+workflow to finish. Confirm the `quest-database` job log contains:
+
+```text
+Running Social RPC contracts, including repeated opposite-direction races, against the disposable database.
+```
+
+Then confirm the pull request shows the successful
+`Quest RPC and RLS contracts` check as required by the `main` branch rule. A
+migration, RPC, reward-idempotency, cross-owner, proof-immutability,
+objective-integrity, or social race failure must produce a failed required
+check and block the merge or release.
