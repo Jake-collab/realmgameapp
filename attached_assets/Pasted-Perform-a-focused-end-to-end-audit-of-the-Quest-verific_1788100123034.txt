@@ -1,0 +1,43 @@
+Perform a focused end-to-end audit of the Quest verification system you just implemented.
+
+Do NOT redesign or add unrelated features.
+
+Trace actual code paths for:
+
+AI/admin Quest creation
+→ verification classification
+→ database storage
+→ user starts Quest
+→ verification UI
+→ verification submission
+→ server validation
+→ completion
+→ point award
+→ Progress/Completed state.
+
+Specifically verify:
+
+1. Camera-only Quests cannot complete without required camera proof.
+2. GPS-only Quests use authoritative/server-side geographic validation.
+3. GPS-only Quests do not unnecessarily demand camera proof.
+4. Timer Quests cannot be completed before the required duration.
+5. Timer state survives navigation, reload, backgrounding, and screen locking through timestamp-based calculation.
+6. Timer expiration alone does not award points.
+7. Timer Quests require the final integrity confirmation.
+8. Integrity-only Quests show the dedicated confirmation UI and require explicit confirmation.
+9. Users cannot change a Quest’s assigned verification method.
+10. Composite verification requires every assigned component.
+11. Points cannot be awarded twice through repeated requests, double taps, refreshes, or resubmission.
+12. AI-generated Quests always receive valid verification configuration.
+13. Invalid AI combinations are rejected/repaired safely.
+14. Admin-created Quests enforce the same validation rules.
+15. Existing Quest records remain compatible.
+16. Daily, Monthly, Geo, personalized, and admin-created Quests all use the same underlying verification framework appropriately.
+17. Existing proof moderation and safety systems were not accidentally bypassed.
+18. No verification flow unnecessarily encourages photographing strangers, recording conversations, exposing private information, trespassing, or unsafe phone use.
+
+Run the relevant tests/typecheck/lint/build checks.
+
+If you discover an issue, fix it rather than only describing it, provided the fix is within the verification-system scope.
+
+At completion, give me a concise PASS/FAIL table for each of the 18 checks and identify any remaining limitation that requires a separate decision from me.
