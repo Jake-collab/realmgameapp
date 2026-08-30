@@ -42,7 +42,7 @@ fi
 project_ref="$(<supabase/.temp/project-ref)"
 echo "Verifying linked Supabase project ${project_ref}."
 
-raw_migrations="$(run_supabase migration list --linked --output-format json)"
+raw_migrations="$(run_supabase --output-format json migration list --linked)"
 migration_json="$(printf '%s\n' "$raw_migrations" | sed -n '/^{"migrations":/,$p')"
 if [[ -z "$migration_json" ]]; then
   echo "Supabase CLI did not return migration JSON." >&2
