@@ -16,6 +16,7 @@ import {
   SettingsPage,
   UsersPage,
   AIPage,
+  MediaRetentionPage,
 } from '@/pages/console-pages';
 import NotFound from '@/pages/not-found';
 
@@ -72,6 +73,7 @@ function Router() {
           <Route path="/ai/settings"><AIPage data={data} /></Route>
           <Route path="/hunts"><OperationsPage data={data} /></Route>
           <Route path="/moderation/media"><OperationsPage data={data} /></Route>
+          <Route path="/moderation/media-retention"><MediaRetentionPage data={data} /></Route>
           <Route path="/moderation/reports"><OperationsPage data={data} /></Route>
           <Route path="/moderation/anti-cheat"><OperationsPage data={data} /></Route>
           <Route path="/interests"><OperationsPage data={data} /></Route>

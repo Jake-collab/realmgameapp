@@ -157,6 +157,21 @@ paths:
               schema: { type: object, additionalProperties: true }
         "401": { description: Authentication required }
         "403": { description: Permission denied }
+  /admin/moderation/media-retention:
+    get:
+      operationId: getAdminMediaRetention
+      tags: [admin]
+      summary: Get privacy-safe rejected media cleanup status
+      responses:
+        "200":
+          description: Cleanup counts and bounded operational records without Storage paths or media
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminMediaRetention"
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "503": { description: Live data unavailable }
   /admin/moderation/scan/text:
     post:
       operationId: scanAdminModerationText
@@ -778,4 +793,36 @@ components:
         checks:
           type: array
           items: { $ref: "#/components/schemas/AdminDiagnostic" }
+        generatedAt: { type: string, format: date-time }
+    AdminMediaRetentionItem:
+      type: object
+      required: [mediaId, state, attemptCount, lastAttemptAt, nextAttemptAt, deletionOutcome, completedAt, lastError, updatedAt]
+      properties:
+        mediaId: { type: string, format: uuid }
+        state:
+          type: string
+          enum: [pending, retrying, completed, blocked]
+        attemptCount: { type: integer, minimum: 0 }
+        lastAttemptAt: { type: ["string", "null"], format: date-time }
+        nextAttemptAt: { type: ["string", "null"], format: date-time }
+        deletionOutcome: { type: ["string", "null"], enum: [deleted, missing, null] }
+        completedAt: { type: ["string", "null"], format: date-time }
+        lastError: { type: ["string", "null"] }
+        updatedAt: { type: string, format: date-time }
+    AdminMediaRetention:
+      type: object
+      required: [summary, items, generatedAt]
+      properties:
+        summary:
+          type: object
+          required: [pending, retrying, completed, blocked, total]
+          properties:
+            pending: { type: integer, minimum: 0 }
+            retrying: { type: integer, minimum: 0 }
+            completed: { type: integer, minimum: 0 }
+            blocked: { type: integer, minimum: 0 }
+            total: { type: integer, minimum: 0 }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AdminMediaRetentionItem" }
         generatedAt: { type: string, format: date-time }

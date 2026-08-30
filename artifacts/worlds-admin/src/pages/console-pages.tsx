@@ -112,6 +112,47 @@ export function DiagnosticsPage({ data }: { data: AdminData }) {
   );
 }
 
+export function MediaRetentionPage({ data }: { data: AdminData }) {
+  const retention = data.mediaRetention.data;
+  const items = retention?.items ?? [];
+  return (
+    <div className="page-wrap">
+      <PageHeader
+        eyebrow="Review / storage"
+        title="Media retention cleanup"
+        description="Track rejected private-media cleanup without opening private media or exposing Storage paths."
+        actions={<RefreshButton onClick={() => void data.mediaRetention.refetch()} loading={data.mediaRetention.isFetching} />}
+      />
+      <div className="metrics-grid" style={{ marginTop: 26 }}>
+        {[
+          ['Pending', retention?.summary.pending, 'Awaiting a worker claim'],
+          ['Retrying', retention?.summary.retrying, 'Deletion or claim will retry'],
+          ['Completed', retention?.summary.completed, 'Terminal cleanup records'],
+          ['Blocked references', retention?.summary.blocked, 'Manual review required'],
+        ].map(([label, value, detail]) => (
+          <div className="metric-card" key={String(label)} data-testid={`metric-retention-${String(label).toLowerCase().replace(/\s+/g, '-')}`}>
+            <div className="metric-label">{label}</div>
+            <div className="metric-value">{value ?? '—'}</div>
+            <div className="metric-detail">{detail}</div>
+          </div>
+        ))}
+      </div>
+      <div className="notice" style={{ marginTop: 18 }}>
+        <LockKeyhole />
+        <span><strong>Privacy boundary:</strong> this view contains cleanup references and bounded error summaries only. It never returns private media, bucket names, or raw Storage paths.</span>
+      </div>
+      <section className="panel" style={{ marginTop: 22 }}>
+        <div className="panel-header">
+          <div><div className="panel-title">Recent cleanup records</div><div className="panel-kicker">{retention ? `${retention.summary.total} total records · showing the latest ${items.length}` : 'Live worker state'}</div></div>
+          <StatusBadge status={retention ? (retention.summary.blocked ? 'blocked' : 'healthy') : 'unavailable'} />
+        </div>
+        {data.mediaRetention.isError ? <ErrorState onRetry={() => void data.mediaRetention.refetch()} /> : data.mediaRetention.isLoading ? <TableSkeleton columns={7} /> : !retention ? <UnavailableState onRetry={() => void data.mediaRetention.refetch()} /> : !items.length ? <div className="empty-state"><Check /><strong>No cleanup records yet</strong><p>The worker has not recorded a rejected private-media cleanup.</p></div> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>State</th><th>Reference</th><th>Attempts</th><th>Last attempt</th><th>Next retry</th><th>Deletion result</th><th>Error summary</th></tr></thead><tbody>{items.map((item) => <tr key={item.mediaId} data-testid={`row-retention-${item.mediaId}`}><td><StatusBadge status={item.state} /></td><td className="mono" title={item.mediaId}>{item.mediaId.slice(0, 8)}…</td><td className="mono">{item.attemptCount}</td><td>{fmtDateTime(item.lastAttemptAt)}</td><td>{fmtDateTime(item.nextAttemptAt)}</td><td>{item.deletionOutcome === 'missing' ? <span className="tag orange">Object missing · complete</span> : item.deletionOutcome === 'deleted' ? <span className="tag green">Deleted</span> : item.state === 'blocked' ? <span className="tag red">Blocked</span> : <span className="tag red">Deletion failed</span>}</td><td style={{ maxWidth: 310, color: 'hsl(var(--muted-foreground))' }}>{item.lastError || '—'}</td></tr>)}</tbody></table></div>}
+      </section>
+      <div className="notice" style={{ marginTop: 18 }}><AlertTriangle /><span>“Object missing” is a successful idempotent terminal outcome. “Deletion failed” remains retryable; blocked references require manual review before the worker can proceed.</span></div>
+    </div>
+  );
+}
+
 type AiResponse = {
   provider?: { configured: boolean; provider: string | null; model: string | null };
   promptTemplates?: Array<{ type: string; versions: number; activeVersion: number | null }>;

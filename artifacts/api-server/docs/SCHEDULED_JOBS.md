@@ -62,3 +62,12 @@ refuses to start
 in production without trusted Supabase configuration. In-app notification
 history is materialized before push delivery, and provider failure never
 removes that history.
+
+The staff-only `GET /api/admin/moderation/media-retention` endpoint exposes the
+cleanup backlog to authorized moderators and administrators. It returns counts
+for pending, retrying, completed, and blocked reference states, plus the latest
+100 records with attempt timestamps, retry timestamps, deletion outcome, and
+bounded error summaries. The response deliberately excludes bucket names,
+Storage paths, signed URLs, and media bytes. A `missing` deletion outcome is a
+successful terminal result; a failed deletion remains retryable, while a
+reference-change error is blocked for manual review.

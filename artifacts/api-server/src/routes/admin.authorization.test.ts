@@ -58,6 +58,26 @@ describe("admin moderation authorization", () => {
         }]));
         return;
       }
+      if (req.url?.startsWith("/rest/v1/media_retention_cleanups")) {
+        res.setHeader("content-range", "0-0/0");
+        if (req.headers.prefer === "count=exact") {
+          res.end("[]");
+          return;
+        }
+        res.end(JSON.stringify([{
+          media_id: testMediaId,
+          status: "failed",
+          attempt_count: 2,
+          lease_acquired_at: null,
+          next_attempt_at: "2026-08-30T02:00:00.000Z",
+          storage_delete_outcome: null,
+          storage_deleted_at: null,
+          last_error: "Supabase Storage deletion failed for proof-submissions/target-user/proof/test.png with status 503.",
+          created_at: "2026-08-30T00:00:00.000Z",
+          updated_at: "2026-08-30T01:00:00.000Z",
+        }]));
+        return;
+      }
       if (req.url?.startsWith("/storage/v1/object/sign/proof-submissions/")) {
         if (token !== "test-service-key" || req.method !== "POST") {
           res.statusCode = 401;
@@ -206,5 +226,23 @@ describe("admin moderation authorization", () => {
     assert.match(body.signedUrl, /^http:\/\/127\.0\.0\.1:\d+\/storage\/v1\/object\/sign\/proof-submissions\//);
     assert.ok(Date.parse(body.expiresAt) > Date.now());
     assert.equal(body.storagePath, undefined);
+  });
+
+  it("keeps media retention status staff-only and excludes Storage references", async () => {
+    assert.equal((await request("/admin/moderation/media-retention")).status, 401);
+    assert.equal((await request("/admin/moderation/media-retention", {}, "user")).status, 403);
+
+    const response = await request("/admin/moderation/media-retention", {}, "moderator");
+    assert.equal(response.status, 200);
+    const body = await response.json() as {
+      items: Array<Record<string, unknown>>;
+      summary: Record<string, number>;
+    };
+    assert.equal(body.items[0]?.state, "retrying");
+    assert.equal(body.items[0]?.lastError, "Supabase Storage deletion failed for [redacted storage reference] with status 503.");
+    assert.equal(String(body.items[0]?.lastError).includes("target-user/proof/test.png"), false);
+    assert.equal(body.items[0]?.storagePath, undefined);
+    assert.equal(body.items[0]?.bucket, undefined);
+    assert.equal(body.summary.total, 0);
   });
 });

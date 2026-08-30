@@ -29,6 +29,22 @@ export type NotificationAdminData = {
   delivery: Array<{ id: string; notificationId: string; channel: 'in_app' | 'push'; status: string; attemptCount: number; failureCategory: string | null; lastAttemptAt: string | null; createdAt: string }>;
 };
 
+export type MediaRetentionAdminData = {
+  summary: { pending: number; retrying: number; completed: number; blocked: number; total: number };
+  items: Array<{
+    mediaId: string;
+    state: 'pending' | 'retrying' | 'completed' | 'blocked';
+    attemptCount: number;
+    lastAttemptAt: string | null;
+    nextAttemptAt: string | null;
+    deletionOutcome: 'deleted' | 'missing' | null;
+    completedAt: string | null;
+    lastError: string | null;
+    updatedAt: string;
+  }>;
+  generatedAt: string;
+};
+
 export function useNotificationAdminData(enabled = true) {
   const client = useQueryClient();
   const overview = useQuery<NotificationAdminData>({ queryKey: ['/admin/notifications'], enabled, queryFn: () => moderationFetch<NotificationAdminData>('/api/admin/notifications') });
@@ -86,6 +102,7 @@ export function useAdminData() {
   });
   const moderation = useModerationData(session.data?.authorized === true && permissions.some((permission: string) => permission === 'moderation.read' || permission === 'integrity.read'));
   const notifications = useNotificationAdminData(session.data?.authorized === true && permissions.includes('admin.read'));
+  const mediaRetention = useQuery<MediaRetentionAdminData>({ queryKey: ['/admin/moderation/media-retention'], enabled: can('moderation.read'), queryFn: () => moderationFetch<MediaRetentionAdminData>('/api/admin/moderation/media-retention') });
 
-  return { session, dashboard, reviewQueues, users, quests, audit, diagnostics, moderation, notifications };
+  return { session, dashboard, reviewQueues, users, quests, audit, diagnostics, moderation, notifications, mediaRetention };
 }

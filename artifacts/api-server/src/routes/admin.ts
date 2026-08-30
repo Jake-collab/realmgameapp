@@ -121,6 +121,39 @@ async function adminCount(path: string) {
   return range ? Number(range.split("/")[1]) || 0 : 0;
 }
 
+const blockedRetentionReferenceError = "Media Storage reference changed; manual review required.";
+
+type MediaRetentionCleanupRow = {
+  media_id: string;
+  status: "pending" | "processing" | "failed" | "completed";
+  attempt_count: number;
+  lease_acquired_at: string | null;
+  next_attempt_at: string | null;
+  storage_delete_outcome: "deleted" | "missing" | null;
+  storage_deleted_at: string | null;
+  last_error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+function retentionCleanupState(row: Pick<MediaRetentionCleanupRow, "status" | "last_error">) {
+  if (row.last_error === blockedRetentionReferenceError) return "blocked" as const;
+  if (row.status === "completed") return "completed" as const;
+  if (row.status === "pending") return "pending" as const;
+  return "retrying" as const;
+}
+
+function safeRetentionError(error: string | null) {
+  if (!error) return null;
+  const buckets = Array.from(canonicalStorageBuckets).join("|");
+  return error
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(new RegExp(`\\b(?:${buckets})\\b(?:\\/[^\\s,;)]*)?`, "gi"), "[redacted storage reference]")
+    .replace(/\bhttps?:\/\/[^\s,;)]+/gi, "[redacted URL]")
+    .slice(0, 300);
+}
+
 function liveUnavailable(res: ExpressResponse, error: unknown, resource: string) {
   res.status(503).json({ error: error instanceof Error ? error.message : `${resource} is unavailable.` });
 }
@@ -401,6 +434,40 @@ router.get("/admin/diagnostics", requireAdmin("admin.diagnostics.read"), async (
     ],
     generatedAt: new Date(),
   }));
+});
+
+router.get("/admin/moderation/media-retention", requireAdmin("moderation.read"), async (_req, res) => {
+  try {
+    const blockedFilter = `status=eq.failed&last_error=eq.${encodeURIComponent(blockedRetentionReferenceError)}`;
+    const [pending, processing, failed, completed, blocked, rows] = await Promise.all([
+      adminCount("media_retention_cleanups?status=eq.pending"),
+      adminCount("media_retention_cleanups?status=eq.processing"),
+      adminCount("media_retention_cleanups?status=eq.failed"),
+      adminCount("media_retention_cleanups?status=eq.completed"),
+      adminCount(`media_retention_cleanups?${blockedFilter}`),
+      adminRead<MediaRetentionCleanupRow[]>(
+        "media_retention_cleanups?select=media_id,status,attempt_count,lease_acquired_at,next_attempt_at,storage_delete_outcome,storage_deleted_at,last_error,created_at,updated_at&order=updated_at.desc&limit=100",
+      ),
+    ]);
+    const retrying = processing + Math.max(0, failed - blocked);
+    res.json({
+      summary: { pending, retrying, completed, blocked, total: pending + retrying + completed + blocked },
+      items: rows.map((row) => ({
+        mediaId: row.media_id,
+        state: retentionCleanupState(row),
+        attemptCount: row.attempt_count,
+        lastAttemptAt: row.lease_acquired_at ?? (row.status === "pending" ? null : row.updated_at),
+        nextAttemptAt: row.next_attempt_at,
+        deletionOutcome: row.storage_delete_outcome,
+        completedAt: row.storage_deleted_at,
+        lastError: safeRetentionError(row.last_error),
+        updatedAt: row.updated_at,
+      })),
+      generatedAt: new Date(),
+    });
+  } catch (error) {
+    liveUnavailable(res, error, "Media retention cleanup data");
+  }
 });
 
 router.get("/admin/media/:mediaId/signed-url", requireAdmin("moderation.read"), async (req, res) => {

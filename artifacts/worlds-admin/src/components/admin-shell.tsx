@@ -6,6 +6,7 @@ import {
   Bell,
   ChevronDown,
   ClipboardCheck,
+  Database,
   FileClock,
   Flag,
   Gauge,
@@ -53,6 +54,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: '/quests/submissions', label: 'Proof review', icon: ClipboardCheck, permission: 'admin.review.read' },
       { href: '/moderation/media', label: 'Media moderation', icon: ListChecks, permission: 'moderation.read' },
+      { href: '/moderation/media-retention', label: 'Storage cleanup', icon: Database, permission: 'moderation.read' },
       { href: '/moderation/reports', label: 'Reports', icon: Flag, permission: 'moderation.read' },
       { href: '/moderation/anti-cheat', label: 'Anti-cheat', icon: ShieldCheck, permission: 'integrity.read' },
     ],
