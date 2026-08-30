@@ -40,3 +40,9 @@ Applied Supabase migrations should remain immutable; ship corrections to an alre
 **Why:** Rewriting an applied migration can make local history diverge from the linked project and can prevent a clean, auditable deployment.
 
 **How to apply:** Preserve the original migration, add the corrected object definition in the next numbered migration, push it with the linked CLI, and verify remote parity afterward.
+
+Append-only audit logs with an `ON DELETE SET NULL` actor foreign key can block account/profile deletion when the immutability trigger rejects the FK's internal nullification update.
+
+**Why:** Disposable moderator accounts could not be removed until their profile deletion was performed with only the audit update trigger temporarily bypassed; the audit rows themselves remained preserved.
+
+**How to apply:** Keep audit evidence, but design account-retention cleanup to permit or explicitly handle actor anonymization without allowing ordinary audit edits or deletes.

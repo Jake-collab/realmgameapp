@@ -93,6 +93,11 @@ required_markers=(
   '"collect_hunt_drop"'
   '"run_scheduled_maintenance"'
   '"claim_notification_events"'
+  '"moderate_media_retention_cleanup"'
+  '"operator_resolution"'
+  '"resolved_by"'
+  '"send_friend_request"'
+  'GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."media_retention_cleanups" TO "service_role"'
 )
 
 for marker in "${required_markers[@]}"; do

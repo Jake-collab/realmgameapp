@@ -323,7 +323,7 @@ describeIntegration('Social RPC contracts', () => {
       let cleanupErrors: string[] = [];
 
       try {
-        const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}-${iteration}`;
+        const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}${iteration}`;
         firstUser = await createTestUser('viewer', suffix);
         secondUser = await createTestUser('target', suffix);
         context.users = {
