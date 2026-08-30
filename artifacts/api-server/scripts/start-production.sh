@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+cd "$ROOT_DIR"
+
 # One Reserved VM owns both long-lived processes. The API remains the
 # externally reachable process; the worker is the existing trusted scheduler.
 node --enable-source-maps artifacts/api-server/dist/index.mjs &
@@ -13,7 +16,8 @@ shutdown() {
   kill "$api_pid" "$worker_pid" 2>/dev/null || true
   wait "$api_pid" "$worker_pid" 2>/dev/null || true
 }
-trap shutdown TERM INT
+trap 'shutdown; exit 143' TERM
+trap 'shutdown; exit 130' INT
 
 while kill -0 "$api_pid" 2>/dev/null && kill -0 "$worker_pid" 2>/dev/null; do
   sleep 2

@@ -17,6 +17,16 @@ import {
 
 type JsonObject = Record<string, unknown>;
 
+export type WorkerQueueHealth = {
+  oldestQueuedAt: string | null;
+  queueAgeSeconds: number | null;
+  oldestByQueue: {
+    notificationEvents: string | null;
+    scheduledNotifications: string | null;
+    pushDeliveries: string | null;
+  };
+};
+
 type ClaimedEvent = {
   id: string;
   event_id: string;
@@ -137,7 +147,7 @@ function notificationFromRendered(
 }
 
 export class SupabaseNotificationStore {
-  private readonly workerId = randomUUID();
+  readonly workerId = randomUUID();
 
   persistenceDiagnostics() {
     return {
@@ -225,6 +235,39 @@ export class SupabaseNotificationStore {
       "notification_deliveries?select=id&channel=eq.push&status=eq.queued&limit=2000",
     );
     return rows.length;
+  }
+
+  async queueHealth(checkedAt = new Date()): Promise<WorkerQueueHealth> {
+    this.assertReliableWorkerStorage();
+    const checkedAtIso = checkedAt.toISOString();
+    const [events, scheduled, deliveries] = await Promise.all([
+      supabaseAdminRequest<Array<{ created_at: string }>>(
+        "notification_events?select=created_at&processing_status=in.(pending,processing)&order=created_at.asc&limit=1",
+      ),
+      supabaseAdminRequest<Array<{ scheduled_for: string }>>(
+        `scheduled_notifications?select=scheduled_for&status=in.(scheduled,queued,sending)&scheduled_for=lte.${encodeURIComponent(checkedAtIso)}&order=scheduled_for.asc&limit=1`,
+      ),
+      supabaseAdminRequest<Array<{ created_at: string }>>(
+        "notification_deliveries?select=created_at&channel=eq.push&status=in.(queued,sending)&order=created_at.asc&limit=1",
+      ),
+    ]);
+
+    const oldestByQueue = {
+      notificationEvents: events[0]?.created_at ?? null,
+      scheduledNotifications: scheduled[0]?.scheduled_for ?? null,
+      pushDeliveries: deliveries[0]?.created_at ?? null,
+    };
+    const timestamps = Object.values(oldestByQueue)
+      .filter((value): value is string => value !== null)
+      .map(value => ({ value, time: Date.parse(value) }))
+      .filter(item => Number.isFinite(item.time))
+      .sort((left, right) => left.time - right.time);
+    const oldestQueuedAt = timestamps[0]?.value ?? null;
+    const queueAgeSeconds = oldestQueuedAt === null
+      ? null
+      : Math.max(0, Math.floor((checkedAt.getTime() - Date.parse(oldestQueuedAt)) / 1000));
+
+    return { oldestQueuedAt, queueAgeSeconds, oldestByQueue };
   }
 
   async runDue(): Promise<Array<{ job: { id: string; status: string }; notification: NotificationRecord | null }>> {

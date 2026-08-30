@@ -61,10 +61,47 @@ register these functions in `pg_cron` or another scheduler. Multiple trusted
 worker replicas may safely share the queue because claims use row locks and
 leases.
 
-If `SCHEDULER_ENABLED` is false, the worker exits without claiming work. If
-trusted Supabase configuration is absent, production startup fails explicitly.
+If `SCHEDULER_ENABLED` is false, a development worker exits without claiming
+work; a production worker exits nonzero so the service restart policy and alert
+can surface the missing scheduler. If trusted Supabase configuration is absent,
+production startup fails explicitly.
 The API server and worker are separate processes. Publishing the API service
-does not by itself publish or start the worker.
+does not by itself publish or start the worker. In this repository's production
+artifact, the exact combined-service start command is:
+
+```bash
+bash artifacts/api-server/scripts/start-production.sh
+```
+
+That launcher starts the API and the worker as sibling processes on one
+always-on Reserved VM (or equivalent always-on service). It exits when either
+child exits, so the deployment's automatic restart policy can recover a failed
+API or worker. If the provider manages the processes separately, configure the
+worker process with the `pnpm ... run worker` command above and the same
+restart policy; do not replace it with a cron invocation or a short-lived job.
+
+#### Worker monitoring and recovery
+
+The worker emits structured logs for:
+
+- `scheduled_worker_started` and `scheduled_worker_stopped`, which identify the
+  worker instance and its configured cadence.
+- `scheduled_worker_heartbeat`, emitted every scheduler interval even while a
+  database cycle is in progress. Alert when two expected heartbeats are absent.
+- `scheduled_worker_cycle_failed`, including
+  `consecutiveCycleFailures`, `totalCycleFailures`, and the last successful
+  cycle. Alert on three consecutive failures or any worker process exit.
+- `scheduled_worker_cycle_complete`, including `queue.queueAgeSeconds`,
+  `queue.oldestQueuedAt`, and per-queue timestamps. Alert when queue age
+  exceeds the product's delivery SLA (five minutes is a reasonable initial
+  threshold) and investigate the worker/Supabase connection.
+
+The worker's in-app history and queue state remain in Supabase, so restarting
+the process is safe: the next worker recovers expired leases and retries
+bounded, idempotent work. An operator should first confirm the worker heartbeat
+and server-only Supabase configuration, then restart the always-on service if
+the process exited or heartbeats are stale. A restart is not a substitute for
+investigating repeated cycle failures.
 
 ## Admin and mobile
 

@@ -30,6 +30,7 @@ NODE_ENV = "production"
 SCHEDULER_ENABLED = "true"
 SCHEDULER_INTERVAL_SECONDS = "60"
 SCHEDULER_MAINTENANCE_INTERVAL_SECONDS = "3600"
+MODERATION_MEDIA_RETENTION_DAYS = "30"
 
 [services.production.health.startup]
 path = "/api/healthz"

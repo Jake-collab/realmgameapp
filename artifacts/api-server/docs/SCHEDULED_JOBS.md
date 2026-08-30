@@ -53,8 +53,12 @@ service-role credential path.
 
 Each cycle logs processed work, recovery counts, delivery outcomes,
 maintenance results (including rejected-media candidate, deletion, missing,
-failure, and skipped counts plus bounded error details), overlap skips, and
-failures. The worker refuses to start
+failure, and skipped counts plus bounded error details), queue age,
+overlap skips, and failures. Heartbeat logs identify a live worker even when a
+cycle is blocked on Supabase; failed-cycle logs include consecutive and total
+failure counts. Operators should alert on two missed heartbeats, three
+consecutive failed cycles, or queue age above the delivery SLA. The worker
+refuses to start
 in production without trusted Supabase configuration. In-app notification
 history is materialized before push delivery, and provider failure never
 removes that history.
