@@ -14,6 +14,89 @@ const identities: Record<string, { id: string; role: string }> = {
   admin: { id: "staff-admin", role: "admin" },
 };
 const testMediaId = "11111111-1111-4111-8111-111111111111";
+const blockedRetentionError = "Media Storage reference changed; manual review required.";
+const retentionRows = [
+  {
+    media_id: "22222222-2222-4222-8222-222222222222",
+    status: "pending",
+    attempt_count: 0,
+    lease_acquired_at: null,
+    next_attempt_at: null,
+    storage_delete_outcome: null,
+    storage_deleted_at: null,
+    last_error: null,
+    created_at: "2026-08-30T00:00:00.000Z",
+    updated_at: "2026-08-30T00:10:00.000Z",
+    bucket: "proof-submissions",
+    storage_path: "pending-user/proof/pending.jpg",
+    storage_url: "https://storage.example.test/object/pending-user/proof/pending.jpg",
+    media_bytes: "ffd8ffd9",
+  },
+  {
+    media_id: "33333333-3333-4333-8333-333333333333",
+    status: "failed",
+    attempt_count: 2,
+    lease_acquired_at: null,
+    next_attempt_at: "2026-08-30T02:00:00.000Z",
+    storage_delete_outcome: null,
+    storage_deleted_at: null,
+    last_error: "Supabase Storage deletion failed for proof-submissions/retry-user/proof/retry.png with status 503. Source URL: https://storage.example.test/object/retry-user/proof/retry.png",
+    created_at: "2026-08-30T00:00:00.000Z",
+    updated_at: "2026-08-30T01:00:00.000Z",
+    bucket: "proof-submissions",
+    storage_path: "retry-user/proof/retry.png",
+    storage_url: "https://storage.example.test/object/retry-user/proof/retry.png",
+    media_bytes: "ffd8ffd9",
+  },
+  {
+    media_id: "44444444-4444-4444-8444-444444444444",
+    status: "completed",
+    attempt_count: 1,
+    lease_acquired_at: "2026-08-30T01:00:00.000Z",
+    next_attempt_at: null,
+    storage_delete_outcome: "deleted",
+    storage_deleted_at: "2026-08-30T01:01:00.000Z",
+    last_error: null,
+    created_at: "2026-08-30T00:00:00.000Z",
+    updated_at: "2026-08-30T01:01:00.000Z",
+    bucket: "quest-media",
+    storage_path: "deleted-user/quest/deleted.jpg",
+    storage_url: "https://storage.example.test/object/deleted-user/quest/deleted.jpg",
+    media_bytes: "ffd8ffd9",
+  },
+  {
+    media_id: "55555555-5555-4555-8555-555555555555",
+    status: "completed",
+    attempt_count: 1,
+    lease_acquired_at: "2026-08-30T01:10:00.000Z",
+    next_attempt_at: null,
+    storage_delete_outcome: "missing",
+    storage_deleted_at: "2026-08-30T01:11:00.000Z",
+    last_error: null,
+    created_at: "2026-08-30T00:00:00.000Z",
+    updated_at: "2026-08-30T01:11:00.000Z",
+    bucket: "hunt-media",
+    storage_path: "missing-user/hunt/missing.jpg",
+    storage_url: "https://storage.example.test/object/missing-user/hunt/missing.jpg",
+    media_bytes: "ffd8ffd9",
+  },
+  {
+    media_id: "66666666-6666-4666-8666-666666666666",
+    status: "failed",
+    attempt_count: 3,
+    lease_acquired_at: null,
+    next_attempt_at: null,
+    storage_delete_outcome: null,
+    storage_deleted_at: null,
+    last_error: blockedRetentionError,
+    created_at: "2026-08-30T00:00:00.000Z",
+    updated_at: "2026-08-30T01:12:00.000Z",
+    bucket: "custom-game-media",
+    storage_path: "blocked-user/game/blocked.jpg",
+    storage_url: "https://storage.example.test/object/blocked-user/game/blocked.jpg",
+    media_bytes: "ffd8ffd9",
+  },
+];
 
 let supabase: StartedServer;
 let api: StartedServer;
@@ -59,23 +142,24 @@ describe("admin moderation authorization", () => {
         return;
       }
       if (req.url?.startsWith("/rest/v1/media_retention_cleanups")) {
-        res.setHeader("content-range", "0-0/0");
+        const url = new URL(req.url, "http://supabase.test");
+        const status = url.searchParams.get("status")?.replace(/^eq\./, "");
+        const lastError = url.searchParams.get("last_error")?.replace(/^eq\./, "");
+        const matchingRows = retentionRows.filter((row) =>
+          (!status || row.status === status)
+          && (!lastError || row.last_error === lastError),
+        );
         if (req.headers.prefer === "count=exact") {
+          res.setHeader(
+            "content-range",
+            matchingRows.length > 0
+              ? `0-${matchingRows.length - 1}/${matchingRows.length}`
+              : "0-0/0",
+          );
           res.end("[]");
           return;
         }
-        res.end(JSON.stringify([{
-          media_id: testMediaId,
-          status: "failed",
-          attempt_count: 2,
-          lease_acquired_at: null,
-          next_attempt_at: "2026-08-30T02:00:00.000Z",
-          storage_delete_outcome: null,
-          storage_deleted_at: null,
-          last_error: "Supabase Storage deletion failed for proof-submissions/target-user/proof/test.png with status 503.",
-          created_at: "2026-08-30T00:00:00.000Z",
-          updated_at: "2026-08-30T01:00:00.000Z",
-        }]));
+        res.end(JSON.stringify(retentionRows));
         return;
       }
       if (req.url?.startsWith("/storage/v1/object/sign/proof-submissions/")) {
@@ -228,21 +312,65 @@ describe("admin moderation authorization", () => {
     assert.equal(body.storagePath, undefined);
   });
 
-  it("keeps media retention status staff-only and excludes Storage references", async () => {
+  it("keeps media retention status staff-only, preserves persisted states, and excludes Storage references", async () => {
     assert.equal((await request("/admin/moderation/media-retention")).status, 401);
     assert.equal((await request("/admin/moderation/media-retention", {}, "user")).status, 403);
 
     const response = await request("/admin/moderation/media-retention", {}, "moderator");
     assert.equal(response.status, 200);
-    const body = await response.json() as {
+    const serialized = await response.text();
+    const body = JSON.parse(serialized) as {
       items: Array<Record<string, unknown>>;
       summary: Record<string, number>;
     };
-    assert.equal(body.items[0]?.state, "retrying");
-    assert.equal(body.items[0]?.lastError, "Supabase Storage deletion failed for [redacted storage reference] with status 503.");
-    assert.equal(String(body.items[0]?.lastError).includes("target-user/proof/test.png"), false);
-    assert.equal(body.items[0]?.storagePath, undefined);
-    assert.equal(body.items[0]?.bucket, undefined);
-    assert.equal(body.summary.total, 0);
+    assert.deepEqual(body.summary, {
+      pending: 1,
+      retrying: 1,
+      completed: 2,
+      blocked: 1,
+      total: 5,
+    });
+    assert.equal(body.items.length, body.summary.total);
+
+    const states = new Map(body.items.map((item) => [
+      item.mediaId,
+      { state: item.state, deletionOutcome: item.deletionOutcome, lastError: item.lastError },
+    ]));
+    assert.deepEqual(states.get(retentionRows[0]!.media_id), {
+      state: "pending",
+      deletionOutcome: null,
+      lastError: null,
+    });
+    assert.deepEqual(states.get(retentionRows[1]!.media_id), {
+      state: "retrying",
+      deletionOutcome: null,
+      lastError: "Supabase Storage deletion failed for [redacted storage reference] with status 503. Source URL: [redacted URL]",
+    });
+    assert.deepEqual(states.get(retentionRows[2]!.media_id), {
+      state: "completed",
+      deletionOutcome: "deleted",
+      lastError: null,
+    });
+    assert.deepEqual(states.get(retentionRows[3]!.media_id), {
+      state: "completed",
+      deletionOutcome: "missing",
+      lastError: null,
+    });
+    assert.deepEqual(states.get(retentionRows[4]!.media_id), {
+      state: "blocked",
+      deletionOutcome: null,
+      lastError: blockedRetentionError,
+    });
+
+    for (const row of retentionRows) {
+      assert.equal(serialized.includes(row.bucket), false);
+      assert.equal(serialized.includes(row.storage_path), false);
+      assert.equal(serialized.includes(row.storage_url), false);
+      assert.equal(serialized.includes(row.media_bytes), false);
+    }
+    assert.equal(serialized.includes("bucket"), false);
+    assert.equal(serialized.includes("storagePath"), false);
+    assert.equal(serialized.includes("storageUrl"), false);
+    assert.equal(serialized.includes("mediaBytes"), false);
   });
 });
