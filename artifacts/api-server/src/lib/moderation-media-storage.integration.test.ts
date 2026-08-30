@@ -4,7 +4,8 @@
  * This suite is intentionally skipped unless the disposable Supabase harness
  * provides QUEST_TEST_* credentials. It uses the real Storage API and the
  * production maintenance worker; the harness removes the complete Supabase
- * project after the run.
+ * project after the run. The access test covers the bucket policies from
+ * migrations 051 and 053, plus the proof folder contract from migration 052.
  */
 
 import { after, before, describe, it } from "node:test";
@@ -15,19 +16,34 @@ import { promisify } from "node:util";
 import { SupabaseNotificationStore } from "./durable-notifications";
 
 type JsonObject = Record<string, unknown>;
+type TestUser = {
+  id: string;
+  email: string;
+  password: string;
+};
 type Fixture = {
   userId: string;
   mediaId: string;
+  bucket: string;
   path: string;
   moderationCaseId: string;
 };
 
 const testUrl = process.env.QUEST_TEST_SUPABASE_URL ?? "";
+const testAnonKey = process.env.QUEST_TEST_SUPABASE_ANON_KEY ?? "";
 const testServiceRoleKey = process.env.QUEST_TEST_SUPABASE_SERVICE_ROLE_KEY ?? "";
 const testDbUrl = process.env.QUEST_TEST_DB_URL ?? "";
-const configured = Boolean(testUrl && testServiceRoleKey && testDbUrl);
+const configured = Boolean(testUrl && testAnonKey && testServiceRoleKey && testDbUrl);
 const describeIntegration = configured ? describe : describe.skip;
-const bucket = "moderation-quarantine";
+const retentionBucket = "moderation-quarantine";
+const canonicalBuckets = [
+  "avatars",
+  "quest-media",
+  "hunt-media",
+  "custom-game-media",
+  "proof-submissions",
+  "moderation-quarantine",
+] as const;
 const apiUrl = testUrl.replace(/\/$/, "");
 const headers = {
   apikey: testServiceRoleKey,
@@ -37,6 +53,7 @@ const headers = {
 
 let store: SupabaseNotificationStore;
 const fixtures: Fixture[] = [];
+const users: TestUser[] = [];
 let bucketCreated = false;
 const execFileAsync = promisify(execFile);
 
@@ -62,26 +79,30 @@ async function storage<T>(path: string, init: RequestInit = {}): Promise<T> {
   }));
 }
 
-async function createUser(): Promise<string> {
+async function createUser(): Promise<TestUser> {
+  const password = `MediaRetention-${randomUUID()}-Password!`;
+  const email = `media-retention-${randomUUID()}@example.com`;
   const response = await readJson<{ id?: string; user?: { id: string } }>(await fetch(`${apiUrl}/auth/v1/admin/users`, {
     method: "POST",
     headers,
     body: JSON.stringify({
-      email: `media-retention-${randomUUID()}@example.com`,
-      password: `MediaRetention-${randomUUID()}-Password!`,
+      email,
+      password,
       email_confirm: true,
     }),
   }));
   const userId = response.user?.id ?? response.id;
   if (!userId) throw new Error("Supabase Auth did not return a fixture user.");
-  return userId;
+  const user = { id: userId, email, password };
+  users.push(user);
+  return user;
 }
 
-async function createBucket(): Promise<void> {
+async function createBucket(targetBucket = retentionBucket): Promise<void> {
   const response = await fetch(`${apiUrl}/storage/v1/bucket`, {
     method: "POST",
     headers,
-    body: JSON.stringify({ id: bucket, name: bucket, public: false }),
+    body: JSON.stringify({ id: targetBucket, name: targetBucket, public: false }),
   });
   const detail = response.ok ? "" : await response.text();
   if (!response.ok && response.status !== 409 && !detail.includes("BucketAlreadyExists")) {
@@ -90,9 +111,17 @@ async function createBucket(): Promise<void> {
   bucketCreated = true;
 }
 
-async function uploadObject(path: string): Promise<void> {
+function encodeStoragePath(path: string): string {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
+function fixturePrefix(fixture: Fixture): string {
+  return fixture.path.split("/").slice(0, -1).join("/");
+}
+
+async function uploadObject(targetBucket: string, path: string): Promise<void> {
   await readJson<unknown>(await fetch(
-    `${apiUrl}/storage/v1/object/${encodeURIComponent(bucket)}/${path.split("/").map(encodeURIComponent).join("/")}`,
+    `${apiUrl}/storage/v1/object/${encodeURIComponent(targetBucket)}/${encodeStoragePath(path)}`,
     {
       method: "POST",
       headers: {
@@ -106,29 +135,69 @@ async function uploadObject(path: string): Promise<void> {
   ));
 }
 
-async function listedObjectPaths(prefix: string): Promise<string[]> {
-  const rows = await storage<Array<{ name: string }>>("object/list/" + encodeURIComponent(bucket), {
+async function uploadObjectAsUser(
+  targetBucket: string,
+  path: string,
+  user: TestUser,
+): Promise<void> {
+  const accessToken = await accessTokenFor(user);
+  await readJson<unknown>(
+    await fetch(
+      `${apiUrl}/storage/v1/object/${encodeURIComponent(targetBucket)}/${encodeStoragePath(path)}`,
+      {
+        method: "POST",
+        headers: {
+          apikey: testAnonKey,
+          authorization: `Bearer ${accessToken}`,
+          "content-type": "image/jpeg",
+          "x-upsert": "false",
+        },
+        body: new Uint8Array([0xff, 0xd8, 0xff, 0xd9]),
+      },
+    ),
+  );
+}
+
+async function listedObjectPaths(targetBucket: string, prefix: string): Promise<string[]> {
+  const rows = await storage<Array<{ name: string }>>("object/list/" + encodeURIComponent(targetBucket), {
     method: "POST",
     body: JSON.stringify({ prefix, limit: 100, offset: 0 }),
   });
   return rows.map((row) => row.name);
 }
 
-async function createFixture(hasObject: boolean): Promise<Fixture> {
-  const userId = await createUser();
+async function createFixture(hasObject: boolean, targetBucket = retentionBucket): Promise<Fixture> {
+  const user = await createUser();
   const suffix = randomUUID();
-  const path = `integration/${suffix}/rejected.jpg`;
-  const fixture: Fixture = { userId, mediaId: "", path, moderationCaseId: "" };
+  // Use the production folder shapes for owner-scoped policies. Reads below
+  // always use a different authenticated user, so these objects remain
+  // rejected/private even in buckets with an owner read policy.
+  const path = targetBucket === "avatars"
+    ? `${user.id}/rejected-${suffix}.jpg`
+    : `${user.id}/${suffix}/rejected.jpg`;
+  const fixture: Fixture = {
+    userId: user.id,
+    mediaId: "",
+    bucket: targetBucket,
+    path,
+    moderationCaseId: "",
+  };
   fixtures.push(fixture);
-  if (hasObject) await uploadObject(path);
+  if (hasObject) {
+    if (targetBucket === "proof-submissions") {
+      await uploadObjectAsUser(targetBucket, path, user);
+    } else {
+      await uploadObject(targetBucket, path);
+    }
+  }
 
   const oldTimestamp = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString();
   const media = await rest<Array<{ id: string }>>("media_assets?select=id", {
     method: "POST",
     headers: { ...headers, prefer: "return=representation" },
     body: JSON.stringify({
-      owner_user_id: userId,
-      bucket,
+      owner_user_id: user.id,
+      bucket: targetBucket,
       storage_path: path,
       media_type: "image",
       mime_type: "image/jpeg",
@@ -162,6 +231,48 @@ async function createFixture(hasObject: boolean): Promise<Fixture> {
   return fixture;
 }
 
+async function accessTokenFor(user: TestUser): Promise<string> {
+  const response = await readJson<{ access_token?: string }>(await fetch(
+    `${apiUrl}/auth/v1/token?grant_type=password`,
+    {
+      method: "POST",
+      headers: {
+        apikey: testAnonKey,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ email: user.email, password: user.password }),
+    },
+  ));
+  if (!response.access_token) throw new Error("Supabase Auth did not return a fixture access token.");
+  return response.access_token;
+}
+
+async function assertStorageReadDenied(
+  fixture: Fixture,
+  authorization: string,
+  clientLabel: string,
+): Promise<void> {
+  const response = await fetch(
+    `${apiUrl}/storage/v1/object/${encodeURIComponent(fixture.bucket)}/${encodeStoragePath(fixture.path)}`,
+    {
+      headers: {
+        apikey: testAnonKey,
+        authorization,
+      },
+    },
+  );
+  await response.arrayBuffer();
+  assert.equal(
+    response.ok,
+    false,
+    `${clientLabel} unexpectedly read rejected ${fixture.bucket}/${fixture.path} (HTTP ${response.status}).`,
+  );
+  assert.ok(
+    response.status >= 400 && response.status < 500,
+    `${clientLabel} received a server error instead of an access denial for ${fixture.bucket}/${fixture.path} (HTTP ${response.status}).`,
+  );
+}
+
 async function queryMedia(fixture: Fixture): Promise<JsonObject> {
   const rows = await rest<JsonObject[]>(
     `media_assets?select=id,deleted_at,moderation_status,visibility&id=eq.${fixture.mediaId}`,
@@ -181,7 +292,7 @@ async function queryCleanup(fixture: Fixture): Promise<JsonObject> {
 }
 
 async function removeFixture(fixture: Fixture): Promise<void> {
-  await fetch(`${apiUrl}/storage/v1/object/${encodeURIComponent(bucket)}`, {
+  await fetch(`${apiUrl}/storage/v1/object/${encodeURIComponent(fixture.bucket)}`, {
     method: "DELETE",
     headers,
     body: JSON.stringify({ prefixes: [fixture.path] }),
@@ -216,8 +327,8 @@ async function removeDatabaseFixtures(): Promise<void> {
 }
 
 async function removeAuthFixtures(): Promise<void> {
-  for (const fixture of fixtures) {
-    const response = await fetch(`${apiUrl}/auth/v1/admin/users/${fixture.userId}`, {
+  for (const user of users) {
+    const response = await fetch(`${apiUrl}/auth/v1/admin/users/${user.id}`, {
       method: "DELETE",
       headers,
     });
@@ -232,7 +343,13 @@ describeIntegration("rejected media Storage retention", () => {
     process.env.SUPABASE_URL = testUrl;
     process.env.SUPABASE_SERVICE_ROLE_KEY = testServiceRoleKey;
     await createBucket();
+    await createBucket("avatars");
+    await createBucket("quest-media");
+    await createBucket("hunt-media");
+    await createBucket("custom-game-media");
+    await createBucket("proof-submissions");
     store = new SupabaseNotificationStore();
+    await createUser();
   });
 
   after(async () => {
@@ -255,7 +372,7 @@ describeIntegration("rejected media Storage retention", () => {
       cleanupError ??= error;
     }
     if (bucketCreated) {
-      const response = await fetch(`${apiUrl}/storage/v1/bucket/${encodeURIComponent(bucket)}`, {
+      const response = await fetch(`${apiUrl}/storage/v1/bucket/${encodeURIComponent(retentionBucket)}`, {
         method: "DELETE",
         headers,
       });
@@ -268,7 +385,7 @@ describeIntegration("rejected media Storage retention", () => {
 
   it("deletes real objects while retaining media, moderation, cleanup, and audit evidence", async () => {
     const fixture = await createFixture(true);
-    assert.deepEqual(await listedObjectPaths(`integration/${fixture.path.split("/")[1]}`), ["rejected.jpg"]);
+    assert.deepEqual(await listedObjectPaths(fixture.bucket, fixturePrefix(fixture)), ["rejected.jpg"]);
 
     const result = await store.runMaintenance(30);
     assert.deepEqual(result.moderation_media, {
@@ -280,7 +397,7 @@ describeIntegration("rejected media Storage retention", () => {
       skipped: 0,
       errors: [],
     });
-    assert.deepEqual(await listedObjectPaths(`integration/${fixture.path.split("/")[1]}`), []);
+    assert.deepEqual(await listedObjectPaths(fixture.bucket, fixturePrefix(fixture)), []);
 
     const media = await queryMedia(fixture);
     assert.equal(media.deleted_at !== null, true);
@@ -323,7 +440,7 @@ describeIntegration("rejected media Storage retention", () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async (input, init) => {
       const body = typeof init?.body === "string" ? init.body : "";
-      if (String(input).includes(`/storage/v1/object/${bucket}`) && body.includes(fixture.path)) {
+      if (String(input).includes(`/storage/v1/object/${retentionBucket}`) && body.includes(fixture.path)) {
         return new Response("temporary Storage outage", { status: 503 });
       }
       return originalFetch(input, init);
@@ -364,10 +481,51 @@ describeIntegration("rejected media Storage retention", () => {
       skipped: 0,
       errors: [],
     });
-    assert.deepEqual(await listedObjectPaths(`integration/${fixture.path.split("/")[1]}`), []);
+    assert.deepEqual(await listedObjectPaths(fixture.bucket, fixturePrefix(fixture)), []);
     const completed = await queryCleanup(fixture);
     assert.equal(completed.status, "completed");
     assert.equal(completed.attempt_count, 2);
     assert.equal(completed.storage_delete_outcome, "deleted");
+  });
+
+  it("denies rejected private media to anonymous and ordinary clients while trusted cleanup removes it", async () => {
+    const viewer = users[0];
+    if (!viewer) throw new Error("The ordinary authenticated fixture user was not created.");
+    const viewerToken = await accessTokenFor(viewer);
+    const accessFixtures: Fixture[] = [];
+    for (const targetBucket of canonicalBuckets) {
+      accessFixtures.push(await createFixture(true, targetBucket));
+    }
+
+    for (const fixture of accessFixtures) {
+      await assertStorageReadDenied(
+        fixture,
+        `Bearer ${testAnonKey}`,
+        "Anonymous client",
+      );
+      await assertStorageReadDenied(
+        fixture,
+        `Bearer ${viewerToken}`,
+        "Ordinary authenticated client",
+      );
+    }
+
+    const result = await store.runMaintenance(30);
+    assert.deepEqual(result.moderation_media, {
+      candidates: accessFixtures.length,
+      claimed: accessFixtures.length,
+      deleted: accessFixtures.length,
+      missing: 0,
+      failed: 0,
+      skipped: 0,
+      errors: [],
+    });
+    for (const fixture of accessFixtures) {
+      assert.deepEqual(await listedObjectPaths(fixture.bucket, fixturePrefix(fixture)), []);
+      const media = await queryMedia(fixture);
+      assert.equal(media.deleted_at !== null, true);
+      assert.equal(media.moderation_status, "rejected");
+      assert.equal(media.visibility, "private");
+    }
   });
 });

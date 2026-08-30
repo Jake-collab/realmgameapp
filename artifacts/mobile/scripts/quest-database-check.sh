@@ -115,5 +115,5 @@ done
 echo "Running Quest RPC and RLS contracts against the disposable database."
 pnpm exec jest --runInBand __tests__/questRpc.integration.test.ts
 
-echo "Running rejected-media Storage retention contracts against the disposable database."
+echo "Running rejected-media Storage access and retention contracts against the disposable database."
 pnpm --filter @workspace/api-server test

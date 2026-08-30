@@ -93,6 +93,9 @@ The suite verifies:
 - A participant cannot attach an objective from another Quest.
 - Step progress, abandonment, expiration, and proof draft/submission writes persist.
 - Submitted proof is immutable under the authenticated RLS policy.
+- Rejected private media is unreadable through Storage to anonymous and
+  ordinary authenticated clients across every canonical bucket, while the
+  trusted retention worker can still remove the object and preserve evidence.
 
 Do not point these variables at a production database. The service-role key is
 only used to create and clean up disposable fixtures.
