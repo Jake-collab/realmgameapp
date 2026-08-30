@@ -1,4 +1,5 @@
 // @ts-nocheck
+const childProcess = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
@@ -52,6 +53,54 @@ describe("Supabase migration filename preflight", () => {
       expect(() => getCanonicalMigrations(migrationsDir)).toThrow(
         "Migration filename must start with a three-digit version",
       );
+    });
+  });
+
+  test("reports concise actionable errors from the CLI", () => {
+    const validatorPath = path.resolve(
+      __dirname,
+      "../scripts/validate-supabase-migrations.js",
+    );
+
+    withMigrationFixture(
+      ["001_first.sql", "001_second.sql"],
+      (migrationsDir) => {
+        const result = childProcess.spawnSync(
+          process.execPath,
+          [validatorPath, migrationsDir],
+          { encoding: "utf8" },
+        );
+
+        expect(result.status).toBe(1);
+        expect(result.stderr).toContain(
+          "Migration filename preflight failed:",
+        );
+        expect(result.stderr).toContain(
+          "Duplicate canonical migration version 001: 001_first.sql and 001_second.sql.",
+        );
+        expect(result.stderr).toContain("Rename one file");
+        expect(result.stderr).not.toContain("at getCanonicalMigrations");
+        expect(result.stderr).not.toContain("Error:");
+      },
+    );
+
+    withMigrationFixture(["1_first.sql"], (migrationsDir) => {
+      const result = childProcess.spawnSync(
+        process.execPath,
+        [validatorPath, migrationsDir],
+        { encoding: "utf8" },
+      );
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        "Migration filename preflight failed:",
+      );
+      expect(result.stderr).toContain(
+        "NNN_description.sql (for example, 001_create_users.sql)",
+      );
+      expect(result.stderr).toContain("1_first.sql");
+      expect(result.stderr).not.toContain("at getCanonicalMigrations");
+      expect(result.stderr).not.toContain("Error:");
     });
   });
 
