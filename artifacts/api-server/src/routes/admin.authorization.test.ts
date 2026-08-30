@@ -4,6 +4,7 @@ import { createServer, type Server } from "node:http";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { createHash } from "node:crypto";
 
 type StartedServer = { server: Server; origin: string };
 
@@ -14,6 +15,10 @@ const identities: Record<string, { id: string; role: string }> = {
   admin: { id: "staff-admin", role: "admin" },
 };
 const testMediaId = "11111111-1111-4111-8111-111111111111";
+const blockedMediaId = "66666666-6666-4666-8666-666666666666";
+const currentBlockedPath = "current-user/game/blocked-v2.jpg";
+const currentBlockedFingerprint = createHash("md5").update(`custom-game-media|${currentBlockedPath}`).digest("hex");
+let lastRetentionAction: Record<string, unknown> | null = null;
 type RetentionTestRow = {
   media_id: string;
   status: "pending" | "processing" | "failed" | "completed";
@@ -185,7 +190,25 @@ describe("admin moderation authorization", () => {
           res.end(JSON.stringify({ error: "trusted access required" }));
           return;
         }
-        res.end(JSON.stringify([{
+        const url = new URL(req.url, "http://supabase.test");
+        const mediaId = url.searchParams.get("id")?.replace(/^eq\./, "");
+        res.end(JSON.stringify([mediaId === blockedMediaId ? {
+          id: blockedMediaId,
+          media_type: "image",
+          mime_type: "image/jpeg",
+          file_size: 1024,
+          width: 640,
+          height: 480,
+          purpose: "custom_game",
+          visibility: "private",
+          moderation_status: "rejected",
+          moderation_reason: "Blocked by policy",
+          bucket: "custom-game-media",
+          storage_path: currentBlockedPath,
+          created_at: "2026-08-29T00:00:00.000Z",
+          updated_at: "2026-08-30T01:13:00.000Z",
+          deleted_at: "2026-08-30T01:12:00.000Z",
+        } : {
           id: testMediaId,
           bucket: "proof-submissions",
           storage_path: "target-user/proof/test.png",
@@ -195,10 +218,13 @@ describe("admin moderation authorization", () => {
       }
       if (req.url?.startsWith("/rest/v1/media_retention_cleanups")) {
         const url = new URL(req.url, "http://supabase.test");
+        const mediaId = url.searchParams.get("media_id")?.replace(/^eq\./, "");
         const status = url.searchParams.get("status")?.replace(/^eq\./, "");
         const failureClassification = url.searchParams.get("failure_classification")?.replace(/^eq\./, "");
         const lastError = url.searchParams.get("last_error")?.replace(/^eq\./, "");
         const matchingRows = retentionRows.filter((row) =>
+          (!mediaId || row.media_id === mediaId)
+          &&
           (!status || row.status === status)
           && (!failureClassification || row.failure_classification === failureClassification)
           && (!lastError || row.last_error === lastError),
@@ -219,6 +245,34 @@ describe("admin moderation authorization", () => {
           .sort((left, right) => right.updated_at.localeCompare(left.updated_at))
           .slice(0, limit);
         res.end(JSON.stringify(page));
+        return;
+      }
+      if (req.url?.startsWith("/rest/v1/moderation_cases")) {
+        res.end(JSON.stringify([{
+          id: "77777777-7777-4777-8777-777777777777",
+          status: "resolved",
+          automated_provider: "test-provider",
+          risk_categories: ["unsafe_media"],
+          risk_score: 0.91,
+          moderator_id: "staff-moderator",
+          moderator_notes: `Review custom-game-media/${currentBlockedPath}.`,
+          decision: "content_removed",
+          decision_reason: "Policy violation",
+          created_at: "2026-08-30T01:00:00.000Z",
+          updated_at: "2026-08-30T01:10:00.000Z",
+        }]));
+        return;
+      }
+      if (req.url?.startsWith("/rest/v1/rpc/moderate_media_retention_cleanup") && req.method === "POST") {
+        let rawBody = "";
+        req.on("data", (chunk) => { rawBody += chunk; });
+        req.on("end", () => {
+          lastRetentionAction = JSON.parse(rawBody) as Record<string, unknown>;
+          const status = lastRetentionAction.p_reference_fingerprint === currentBlockedFingerprint
+            ? { status: "completed", action: lastRetentionAction.p_action, media_id: blockedMediaId }
+            : { status: "reference_mismatch" };
+          res.end(JSON.stringify(status));
+        });
         return;
       }
       if (req.url?.startsWith("/storage/v1/object/sign/proof-submissions/")) {
@@ -394,6 +448,7 @@ describe("admin moderation authorization", () => {
       pending: 26,
       retrying: 51,
       completed: 27,
+      resolved: 0,
       blocked: 26,
       total: 130,
     });
@@ -454,5 +509,69 @@ describe("admin moderation authorization", () => {
     assert.equal(serialized.includes("storagePath"), false);
     assert.equal(serialized.includes("storageUrl"), false);
     assert.equal(serialized.includes("mediaBytes"), false);
+  });
+
+  it("lets only moderators inspect redacted cleanup evidence", async () => {
+    assert.equal((await request(`/admin/moderation/media-retention/${blockedMediaId}`)).status, 401);
+    assert.equal((await request(`/admin/moderation/media-retention/${blockedMediaId}`, {}, "user")).status, 403);
+
+    const response = await request(`/admin/moderation/media-retention/${blockedMediaId}`, {}, "moderator");
+    assert.equal(response.status, 200);
+    const serialized = await response.text();
+    const body = JSON.parse(serialized) as {
+      mediaId: string;
+      cleanup: { state: string };
+      media: { preview: unknown };
+      moderationCases: Array<{ riskCategories: string[] | null }>;
+      canonicalReference: { fingerprint: string | null; matchesCleanup: boolean };
+    };
+    assert.equal(body.mediaId, blockedMediaId);
+    assert.equal(body.cleanup.state, "blocked");
+    assert.equal(body.media.preview, null);
+    assert.deepEqual(body.moderationCases[0]?.riskCategories, ["unsafe_media"]);
+    assert.equal(body.canonicalReference.fingerprint, currentBlockedFingerprint);
+    assert.equal(body.canonicalReference.matchesCleanup, false);
+    assert.equal(serialized.includes("custom-game-media"), false);
+    assert.equal(serialized.includes("blocked-user/game/blocked.jpg"), false);
+    assert.equal(serialized.includes(currentBlockedPath), false);
+  });
+
+  it("requires confirmation and routes retention actions through the trusted audited RPC", async () => {
+    assert.equal((await request(`/admin/moderation/media-retention/${blockedMediaId}/action`, { method: "POST", body: JSON.stringify({ action: "requeue", reason: "Reference confirmed" }) }, "moderator")).status, 400);
+    assert.equal((await request(`/admin/moderation/media-retention/${blockedMediaId}/action`, { method: "POST", body: JSON.stringify({ action: "requeue", referenceFingerprint: "00000000000000000000000000000000", reason: "Reference confirmed", confirmed: true }) }, "user")).status, 403);
+
+    const response = await request(`/admin/moderation/media-retention/${blockedMediaId}/action`, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "requeue",
+        referenceFingerprint: currentBlockedFingerprint,
+        reason: "Reference confirmed after reviewing the current media record.",
+        confirmed: true,
+      }),
+    }, "moderator");
+    assert.equal(response.status, 200);
+    assert.deepEqual(lastRetentionAction, {
+      p_media_id: blockedMediaId,
+      p_action: "requeue",
+      p_reference_fingerprint: currentBlockedFingerprint,
+      p_actor_id: "staff-moderator",
+      p_actor_role: "moderator",
+      p_reason: "Reference confirmed after reviewing the current media record.",
+    });
+    assert.deepEqual(await response.json(), { ok: true, action: "requeue", mediaId: blockedMediaId, auditRecorded: true });
+  });
+
+  it("rejects a stale canonical reference instead of changing cleanup state", async () => {
+    const response = await request(`/admin/moderation/media-retention/${blockedMediaId}/action`, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "resolve",
+        referenceFingerprint: "00000000000000000000000000000000",
+        reason: "Stale reference",
+        confirmed: true,
+      }),
+    }, "moderator");
+    assert.equal(response.status, 409);
+    assert.match(await response.text(), /canonical media reference changed/i);
   });
 });

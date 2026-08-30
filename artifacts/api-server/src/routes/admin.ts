@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response as ExpressResponse } from "express";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import {
   GetAdminDashboardResponse,
   GetAdminDiagnosticsResponse,
@@ -61,11 +61,14 @@ import { ExpoPushProvider, NoopPushProvider, NotificationStore, renderNotificati
 import { SupabaseNotificationStore } from "../lib/durable-notifications";
 import {
   MODERATION_RETENTION_FAILURE_CLASSIFICATION,
+  MODERATION_RETENTION_OPERATOR_ACTION,
+  type ModerationRetentionOperatorAction,
   type ModerationRetentionFailureClassification,
 } from "../lib/moderation-retention";
 import {
   createSupabaseStorageSignedUrl,
   supabaseAdminConfigured,
+  supabaseAdminRpc,
   supabaseAdminRequest,
 } from "../lib/supabase-admin";
 import { evaluateHuntPlacement, type HuntPlacementSignals } from "../lib/hunt-placement";
@@ -127,7 +130,7 @@ async function adminCount(path: string) {
 
 type MediaRetentionCleanupRow = {
   media_id: string;
-  status: "pending" | "processing" | "failed" | "completed";
+  status: "pending" | "processing" | "failed" | "completed" | "resolved";
   attempt_count: number;
   lease_acquired_at: string | null;
   next_attempt_at: string | null;
@@ -148,9 +151,23 @@ function retentionCleanupState(
     row.status === "failed"
     && row.failure_classification === MODERATION_RETENTION_FAILURE_CLASSIFICATION.BLOCKED_REFERENCE
   ) return "blocked" as const;
+  if (row.status === "resolved") return "resolved" as const;
   if (row.status === "completed") return "completed" as const;
   if (row.status === "pending") return "pending" as const;
   return "retrying" as const;
+}
+
+function storageReferenceFingerprint(bucket: string, storagePath: string) {
+  return createHash("md5").update(`${bucket}|${storagePath}`).digest("hex");
+}
+
+function validCanonicalStorageReference(bucket: string, storagePath: string) {
+  return canonicalStorageBuckets.has(bucket)
+    && storagePath.length > 0
+    && storagePath.length <= 1024
+    && !storagePath.startsWith("/")
+    && !storagePath.includes("\\")
+    && !storagePath.split("/").some((segment) => !segment || segment === "." || segment === "..");
 }
 
 function safeRetentionError(error: string | null) {
@@ -162,6 +179,14 @@ function safeRetentionError(error: string | null) {
     .replace(new RegExp(`\\b(?:${buckets})\\b(?:\\/[^\\s,;)]*)?`, "gi"), "[redacted storage reference]")
     .replace(/\bhttps?:\/\/[^\s,;)]+/gi, "[redacted URL]")
     .slice(0, 300);
+}
+
+function safeMediaEvidenceText(value: string | null, media: { bucket: string; storage_path: string }) {
+  if (!value) return null;
+  return safeRetentionError(value)
+    ?.replaceAll(`${media.bucket}/${media.storage_path}`, "[redacted storage reference]")
+    .replaceAll(media.storage_path, "[redacted storage reference]")
+    ?? null;
 }
 
 function liveUnavailable(res: ExpressResponse, error: unknown, resource: string) {
@@ -451,20 +476,21 @@ router.get("/admin/moderation/media-retention", requireAdmin("moderation.read"),
     const blockedFilter = `status=eq.failed&failure_classification=eq.${
       MODERATION_RETENTION_FAILURE_CLASSIFICATION.BLOCKED_REFERENCE
     }`;
-    const [pending, processing, failed, completed, blocked, rows] = await Promise.all([
+    const [pending, processing, failed, completed, resolved, blocked, rows] = await Promise.all([
       adminCount("media_retention_cleanups?status=eq.pending"),
       adminCount("media_retention_cleanups?status=eq.processing"),
       adminCount("media_retention_cleanups?status=eq.failed"),
       adminCount("media_retention_cleanups?status=eq.completed"),
+      adminCount("media_retention_cleanups?status=eq.resolved"),
       adminCount(`media_retention_cleanups?${blockedFilter}`),
       adminRead<MediaRetentionCleanupRow[]>(
         `media_retention_cleanups?select=media_id,status,attempt_count,lease_acquired_at,next_attempt_at,storage_delete_outcome,storage_deleted_at,failure_classification,last_error,created_at,updated_at&order=updated_at.desc&limit=${MEDIA_RETENTION_PAGE_SIZE}`,
       ),
     ]);
     const retrying = processing + Math.max(0, failed - blocked);
-    const total = pending + retrying + completed + blocked;
+    const total = pending + retrying + completed + resolved + blocked;
     res.json({
-      summary: { pending, retrying, completed, blocked, total },
+      summary: { pending, retrying, completed, resolved, blocked, total },
       items: rows.map((row) => ({
         mediaId: row.media_id,
         state: retentionCleanupState(row),
@@ -491,6 +517,189 @@ router.get("/admin/moderation/media-retention", requireAdmin("moderation.read"),
   }
 });
 
+router.get("/admin/moderation/media-retention/:mediaId", requireAdmin("moderation.read"), async (req, res) => {
+  const mediaId = Array.isArray(req.params.mediaId) ? req.params.mediaId[0] : req.params.mediaId;
+  if (!z.string().uuid().safeParse(mediaId).success) {
+    res.status(400).json({ error: "A valid media ID is required." });
+    return;
+  }
+
+  try {
+    const encodedMediaId = encodeURIComponent(mediaId);
+    const [cleanupRows, mediaRows, cases] = await Promise.all([
+      adminRead<Array<MediaRetentionCleanupRow & { bucket: string; storage_path: string; operator_resolution?: string | null; resolved_at?: string | null }>>(
+        `media_retention_cleanups?media_id=eq.${encodedMediaId}&select=media_id,bucket,storage_path,status,attempt_count,lease_acquired_at,next_attempt_at,storage_delete_outcome,storage_deleted_at,failure_classification,last_error,created_at,updated_at,operator_resolution,resolved_at&limit=1`,
+      ),
+      adminRead<Array<{
+        id: string;
+        media_type: string;
+        mime_type: string;
+        file_size: number | null;
+        width: number | null;
+        height: number | null;
+        purpose: string;
+        visibility: string;
+        moderation_status: string;
+        moderation_reason: string | null;
+        bucket: string;
+        storage_path: string;
+        created_at: string;
+        updated_at: string;
+        deleted_at: string | null;
+      }>>(
+        `media_assets?id=eq.${encodedMediaId}&select=id,media_type,mime_type,file_size,width,height,purpose,visibility,moderation_status,moderation_reason,bucket,storage_path,created_at,updated_at,deleted_at&limit=1`,
+      ),
+      adminRead<Array<{
+        id: string;
+        status: string;
+        automated_provider: string | null;
+        risk_categories: string[] | null;
+        risk_score: number | null;
+        moderator_id: string | null;
+        moderator_notes: string | null;
+        decision: string | null;
+        decision_reason: string | null;
+        created_at: string;
+        updated_at: string;
+      }>>(
+        `moderation_cases?entity_type=eq.media&entity_id=eq.${encodedMediaId}&select=id,status,automated_provider,risk_categories,risk_score,moderator_id,moderator_notes,decision,decision_reason,created_at,updated_at&order=created_at.desc`,
+      ),
+    ]);
+    const cleanup = cleanupRows[0];
+    const media = mediaRows[0];
+    if (!cleanup || !media) {
+      res.status(404).json({ error: "Media retention evidence was not found." });
+      return;
+    }
+
+    const validReference = validCanonicalStorageReference(media.bucket, media.storage_path);
+    const fingerprint = validReference
+      ? storageReferenceFingerprint(media.bucket, media.storage_path)
+      : null;
+    let preview: { signedUrl: string; expiresAt: string } | null = null;
+    if (validReference) {
+      try {
+        const expiresInSeconds = 300;
+        preview = {
+          signedUrl: await createSupabaseStorageSignedUrl(media.bucket, media.storage_path, expiresInSeconds),
+          expiresAt: new Date(Date.now() + expiresInSeconds * 1000).toISOString(),
+        };
+      } catch {
+        // The evidence record remains useful when the object is already gone.
+        preview = null;
+      }
+    }
+
+    res.json({
+      mediaId,
+      cleanup: {
+        state: retentionCleanupState(cleanup),
+        status: cleanup.status,
+        attemptCount: cleanup.attempt_count,
+        lastAttemptAt: cleanup.lease_acquired_at ?? (cleanup.status === "pending" ? null : cleanup.updated_at),
+        nextAttemptAt: cleanup.next_attempt_at,
+        deletionOutcome: cleanup.storage_delete_outcome,
+        completedAt: cleanup.storage_deleted_at,
+        lastError: safeRetentionError(cleanup.last_error),
+        operatorResolution: cleanup.operator_resolution ?? null,
+        resolvedAt: cleanup.resolved_at ?? null,
+        updatedAt: cleanup.updated_at,
+      },
+      media: {
+        mediaType: media.media_type,
+        mimeType: media.mime_type,
+        fileSize: media.file_size,
+        width: media.width,
+        height: media.height,
+        purpose: media.purpose,
+        visibility: media.visibility,
+        moderationStatus: media.moderation_status,
+        moderationReason: safeMediaEvidenceText(media.moderation_reason, media),
+        createdAt: media.created_at,
+        updatedAt: media.updated_at,
+        deletedAt: media.deleted_at,
+        preview,
+      },
+      moderationCases: cases.map((item) => ({
+        id: item.id,
+        status: item.status,
+        automatedProvider: item.automated_provider,
+        riskCategories: item.risk_categories,
+        riskScore: item.risk_score,
+        moderatorId: item.moderator_id,
+        moderatorNotes: safeMediaEvidenceText(item.moderator_notes, media),
+        decision: item.decision,
+        decisionReason: safeMediaEvidenceText(item.decision_reason, media),
+        createdAt: item.created_at,
+        updatedAt: item.updated_at,
+      })),
+      canonicalReference: {
+        fingerprint,
+        matchesCleanup: validReference
+          && cleanup.bucket === media.bucket
+          && cleanup.storage_path === media.storage_path,
+      },
+    });
+  } catch (error) {
+    liveUnavailable(res, error, "Media retention evidence");
+  }
+});
+
+router.post("/admin/moderation/media-retention/:mediaId/action", requireAdmin("moderation.manage"), async (req, res) => {
+  const mediaId = Array.isArray(req.params.mediaId) ? req.params.mediaId[0] : req.params.mediaId;
+  if (!z.string().uuid().safeParse(mediaId).success) {
+    res.status(400).json({ error: "A valid media ID is required." });
+    return;
+  }
+  const input = z.object({
+    action: z.enum([MODERATION_RETENTION_OPERATOR_ACTION.REQUEUE, MODERATION_RETENTION_OPERATOR_ACTION.RESOLVE]),
+    referenceFingerprint: z.string().regex(/^[0-9a-f]{32}$/i),
+    reason: z.string().trim().min(1).max(1000),
+    confirmed: z.literal(true),
+  }).safeParse(req.body);
+  if (!input.success) {
+    recordAuditEvent({
+      actorId: req.adminPrincipal?.userId ?? null,
+      action: "moderation_media_retention_action",
+      entityType: "media",
+      entityId: mediaId,
+      result: "rejected",
+      metadata: { validation: "confirmation_reason_action_or_reference_missing" },
+    });
+    res.status(400).json({ error: "Explicit confirmation, a valid reference confirmation, an action, and a reason are required." });
+    return;
+  }
+
+  try {
+    const result = await supabaseAdminRpc<{
+      status: "completed" | "media_missing" | "cleanup_missing" | "not_blocked" | "reference_mismatch";
+      action?: ModerationRetentionOperatorAction;
+      media_id?: string;
+    }>("moderate_media_retention_cleanup", {
+      p_media_id: mediaId,
+      p_action: input.data.action,
+      p_reference_fingerprint: input.data.referenceFingerprint.toLowerCase(),
+      p_actor_id: req.adminPrincipal!.userId,
+      p_actor_role: req.adminPrincipal!.role,
+      p_reason: input.data.reason,
+    });
+    if (result.status !== "completed") {
+      const statusCode = result.status === "media_missing" || result.status === "cleanup_missing" ? 404 : 409;
+      res.status(statusCode).json({
+        error: result.status === "reference_mismatch"
+          ? "The canonical media reference changed. Refresh the evidence before retrying."
+          : result.status === "not_blocked"
+            ? "This cleanup is no longer blocked and cannot be changed by this action."
+            : "Media retention evidence was not found.",
+      });
+      return;
+    }
+    res.json({ ok: true, action: result.action, mediaId: result.media_id, auditRecorded: true });
+  } catch (error) {
+    liveUnavailable(res, error, "Media retention action");
+  }
+});
+
 router.get("/admin/media/:mediaId/signed-url", requireAdmin("moderation.read"), async (req, res) => {
   const mediaId = Array.isArray(req.params.mediaId) ? req.params.mediaId[0] : req.params.mediaId;
   if (!z.string().uuid().safeParse(mediaId).success) {
@@ -512,12 +721,7 @@ router.get("/admin/media/:mediaId/signed-url", requireAdmin("moderation.read"), 
       res.status(404).json({ error: "Media was not found." });
       return;
     }
-    if (
-      !canonicalStorageBuckets.has(media.bucket)
-      || !media.storage_path
-      || media.storage_path.startsWith("/")
-      || media.storage_path.split("/").some((segment) => !segment || segment === "." || segment === "..")
-    ) {
+    if (!validCanonicalStorageReference(media.bucket, media.storage_path)) {
       res.status(422).json({ error: "Media storage metadata is invalid." });
       return;
     }

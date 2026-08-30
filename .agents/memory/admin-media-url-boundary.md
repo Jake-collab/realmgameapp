@@ -13,3 +13,14 @@ client-side service credentials or arbitrary Storage paths would bypass the inte
 **How to apply:** Keep the endpoint behind moderation-read authorization, restrict it to
 canonical bucket records that have not been deleted, and return the signed URL plus expiry
 without a separate raw storage-path field.
+
+For moderator cleanup actions, confirm the current canonical reference with an opaque
+fingerprint and a trusted, row-locking RPC; never accept or persist browser-supplied bucket/path
+values.
+
+**Why:** Reference drift is exactly when stale or tampered storage metadata is most dangerous;
+the worker must remain the only component that performs physical deletion.
+
+**How to apply:** Keep evidence redacted, verify the fingerprint against the locked media row,
+record the operator decision immutably, and let the service-role worker handle any requeued
+cleanup.

@@ -16,7 +16,7 @@ import {
 } from '@workspace/api-client-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-async function moderationFetch<T>(url: string, init?: RequestInit): Promise<T> {
+export async function moderationFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, { credentials: 'include', ...init, headers: { 'Content-Type': 'application/json', ...init?.headers } });
   if (!response.ok) throw new Error((await response.json().catch(() => null))?.error || `Request failed (${response.status})`);
   return response.json() as Promise<T>;
@@ -30,10 +30,10 @@ export type NotificationAdminData = {
 };
 
 export type MediaRetentionAdminData = {
-  summary: { pending: number; retrying: number; completed: number; blocked: number; total: number };
+  summary: { pending: number; retrying: number; completed: number; resolved: number; blocked: number; total: number };
   items: Array<{
     mediaId: string;
-    state: 'pending' | 'retrying' | 'completed' | 'blocked';
+    state: 'pending' | 'retrying' | 'completed' | 'resolved' | 'blocked';
     attemptCount: number;
     lastAttemptAt: string | null;
     nextAttemptAt: string | null;
@@ -44,6 +44,52 @@ export type MediaRetentionAdminData = {
   }>;
   list: { scope: 'latest'; ordering: 'updated_at_desc'; limit: number; returned: number; hasMore: boolean; totalsScope: 'all' };
   generatedAt: string;
+};
+
+export type MediaRetentionEvidence = {
+  mediaId: string;
+  cleanup: {
+    state: 'pending' | 'retrying' | 'completed' | 'resolved' | 'blocked';
+    status: string;
+    attemptCount: number;
+    lastAttemptAt: string | null;
+    nextAttemptAt: string | null;
+    deletionOutcome: 'deleted' | 'missing' | null;
+    completedAt: string | null;
+    lastError: string | null;
+    operatorResolution: string | null;
+    resolvedAt: string | null;
+    updatedAt: string;
+  };
+  media: {
+    mediaType: string;
+    mimeType: string;
+    fileSize: number | null;
+    width: number | null;
+    height: number | null;
+    purpose: string;
+    visibility: string;
+    moderationStatus: string;
+    moderationReason: string | null;
+    createdAt: string;
+    updatedAt: string;
+    deletedAt: string | null;
+    preview: { signedUrl: string; expiresAt: string } | null;
+  };
+  moderationCases: Array<{
+    id: string;
+    status: string;
+    automatedProvider: string | null;
+    riskCategories: string[] | null;
+    riskScore: number | null;
+    moderatorId: string | null;
+    moderatorNotes: string | null;
+    decision: string | null;
+    decisionReason: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  canonicalReference: { fingerprint: string | null; matchesCleanup: boolean };
 };
 
 export function useNotificationAdminData(enabled = true) {
@@ -75,6 +121,7 @@ export function useModerationData(enabled = true) {
 }
 
 export function useAdminData() {
+  const client = useQueryClient();
   const session = useGetAdminSession({
     query: { queryKey: getGetAdminSessionQueryKey() },
   });
@@ -105,5 +152,17 @@ export function useAdminData() {
   const notifications = useNotificationAdminData(session.data?.authorized === true && permissions.includes('admin.read'));
   const mediaRetention = useQuery<MediaRetentionAdminData>({ queryKey: ['/admin/moderation/media-retention'], enabled: can('moderation.read'), queryFn: () => moderationFetch<MediaRetentionAdminData>('/api/admin/moderation/media-retention') });
 
-  return { session, dashboard, reviewQueues, users, quests, audit, diagnostics, moderation, notifications, mediaRetention };
+  const mediaRetentionAction = useMutation({
+    mutationFn: (input: { mediaId: string; action: 'requeue' | 'resolve'; referenceFingerprint: string; reason: string }) => moderationFetch(`/api/admin/moderation/media-retention/${encodeURIComponent(input.mediaId)}/action`, {
+      method: 'POST',
+      body: JSON.stringify({ action: input.action, referenceFingerprint: input.referenceFingerprint, reason: input.reason, confirmed: true }),
+    }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ['/admin/moderation/media-retention'] });
+      void client.invalidateQueries({ queryKey: ['/admin/moderation/media-retention/evidence'] });
+      void client.invalidateQueries({ queryKey: ['/admin/moderation/audit'] });
+    },
+  });
+
+  return { session, dashboard, reviewQueues, users, quests, audit, diagnostics, moderation, notifications, mediaRetention, mediaRetentionAction };
 }

@@ -3,6 +3,8 @@ import { Link, useLocation } from 'wouter';
 import { AlertTriangle, ArrowUpRight, Check, ChevronRight, Database, FileText, Flag, LockKeyhole, Plus, Search, ShieldCheck, SlidersHorizontal, UsersRound } from 'lucide-react';
 import { useAdminData } from '@/hooks/use-admin-data';
 import { DiagnosticsList, ErrorState, MetricGrid, PageHeader, QueueList, RefreshButton, StatusBadge, UnavailableState } from '@/components/admin-ui';
+import { moderationFetch, type MediaRetentionEvidence } from '@/hooks/use-admin-data';
+import { useQuery } from '@tanstack/react-query';
 
 type AdminData = ReturnType<typeof useAdminData>;
 
@@ -115,6 +117,27 @@ export function DiagnosticsPage({ data }: { data: AdminData }) {
 export function MediaRetentionPage({ data }: { data: AdminData }) {
   const retention = data.mediaRetention.data;
   const items = retention?.items ?? [];
+  const [selectedMediaId, setSelectedMediaId] = useState<string | null>(null);
+  const evidence = useQuery<MediaRetentionEvidence>({
+    queryKey: ['/admin/moderation/media-retention/evidence', selectedMediaId],
+    enabled: Boolean(selectedMediaId) && data.session.data?.permissions.includes('moderation.read') === true,
+    queryFn: () => moderationFetch<MediaRetentionEvidence>(`/api/admin/moderation/media-retention/${encodeURIComponent(selectedMediaId!)}`),
+  });
+  const evidenceData = evidence.data;
+  const canManage = data.session.data?.permissions.includes('moderation.manage') === true;
+  const takeAction = (action: 'requeue' | 'resolve') => {
+    if (!evidenceData?.canonicalReference.fingerprint || !selectedMediaId || !canManage) return;
+    const label = action === 'requeue' ? 'requeue this cleanup for the trusted worker' : 'mark this cleanup resolved without a Storage deletion';
+    if (!window.confirm(`Confirm that the canonical media reference is correct and ${label}. This action is recorded and cannot be silently undone.`)) return;
+    const reason = window.prompt('Resolution reason (required)');
+    if (!reason?.trim()) return;
+    data.mediaRetentionAction.mutate({
+      mediaId: selectedMediaId,
+      action,
+      referenceFingerprint: evidenceData.canonicalReference.fingerprint,
+      reason: reason.trim(),
+    });
+  };
   return (
     <div className="page-wrap">
       <PageHeader
@@ -127,7 +150,8 @@ export function MediaRetentionPage({ data }: { data: AdminData }) {
         {[
           ['Pending', retention?.summary.pending, 'Awaiting a worker claim'],
           ['Retrying', retention?.summary.retrying, 'Deletion or claim will retry'],
-          ['Completed', retention?.summary.completed, 'Terminal cleanup records'],
+          ['Completed', retention?.summary.completed, 'Worker-confirmed terminal records'],
+          ['Resolved', retention?.summary.resolved, 'Moderator-closed records'],
           ['Blocked references', retention?.summary.blocked, 'Manual review required'],
         ].map(([label, value, detail]) => (
           <div className="metric-card" key={String(label)} data-testid={`metric-retention-${String(label).toLowerCase().replace(/\s+/g, '-')}`}>
@@ -146,8 +170,33 @@ export function MediaRetentionPage({ data }: { data: AdminData }) {
           <div><div className="panel-title">Recent cleanup records</div><div className="panel-kicker">{retention ? `${retention.summary.total} total records across all history · showing the latest ${retention.list.returned}` : 'Live worker state'}</div></div>
           <StatusBadge status={retention ? (retention.summary.blocked ? 'blocked' : 'healthy') : 'unavailable'} />
         </div>
-        {data.mediaRetention.isError ? <ErrorState onRetry={() => void data.mediaRetention.refetch()} /> : data.mediaRetention.isLoading ? <TableSkeleton columns={7} /> : !retention ? <UnavailableState onRetry={() => void data.mediaRetention.refetch()} /> : !items.length ? <div className="empty-state"><Check /><strong>No cleanup records yet</strong><p>The worker has not recorded a rejected private-media cleanup.</p></div> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>State</th><th>Reference</th><th>Attempts</th><th>Last attempt</th><th>Next retry</th><th>Deletion result</th><th>Error summary</th></tr></thead><tbody>{items.map((item) => <tr key={item.mediaId} data-testid={`row-retention-${item.mediaId}`}><td><StatusBadge status={item.state} /></td><td className="mono" title={item.mediaId}>{item.mediaId.slice(0, 8)}…</td><td className="mono">{item.attemptCount}</td><td>{fmtDateTime(item.lastAttemptAt)}</td><td>{fmtDateTime(item.nextAttemptAt)}</td><td>{item.deletionOutcome === 'missing' ? <span className="tag orange">Object missing · complete</span> : item.deletionOutcome === 'deleted' ? <span className="tag green">Deleted</span> : item.state === 'blocked' ? <span className="tag red">Blocked</span> : <span className="tag red">Deletion failed</span>}</td><td style={{ maxWidth: 310, color: 'hsl(var(--muted-foreground))' }}>{item.lastError || '—'}</td></tr>)}</tbody></table></div>}
+        {data.mediaRetention.isError ? <ErrorState onRetry={() => void data.mediaRetention.refetch()} /> : data.mediaRetention.isLoading ? <TableSkeleton columns={8} /> : !retention ? <UnavailableState onRetry={() => void data.mediaRetention.refetch()} /> : !items.length ? <div className="empty-state"><Check /><strong>No cleanup records yet</strong><p>The worker has not recorded a rejected private-media cleanup.</p></div> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>State</th><th>Reference</th><th>Attempts</th><th>Last attempt</th><th>Next retry</th><th>Deletion result</th><th>Error summary</th><th>Evidence</th></tr></thead><tbody>{items.map((item) => <tr key={item.mediaId} data-testid={`row-retention-${item.mediaId}`}><td><StatusBadge status={item.state} /></td><td className="mono" title={item.mediaId}>{item.mediaId.slice(0, 8)}…</td><td className="mono">{item.attemptCount}</td><td>{fmtDateTime(item.lastAttemptAt)}</td><td>{fmtDateTime(item.nextAttemptAt)}</td><td>{item.deletionOutcome === 'missing' ? <span className="tag orange">Object missing · complete</span> : item.deletionOutcome === 'deleted' ? <span className="tag green">Deleted</span> : item.state === 'blocked' ? <span className="tag red">Blocked</span> : item.state === 'resolved' ? <span className="tag green">Resolved</span> : <span className="tag red">Deletion failed</span>}</td><td style={{ maxWidth: 310, color: 'hsl(var(--muted-foreground))' }}>{item.lastError || '—'}</td><td>{item.state === 'blocked' ? <button className="btn btn-quiet" onClick={() => setSelectedMediaId(item.mediaId)} data-testid={`button-retention-evidence-${item.mediaId}`}>Review</button> : '—'}</td></tr>)}</tbody></table></div>}
       </section>
+      {selectedMediaId ? <section className="panel" style={{ marginTop: 22 }} data-testid="panel-retention-evidence">
+        <div className="panel-header">
+          <div><div className="panel-title">Retention evidence</div><div className="panel-kicker mono">{selectedMediaId}</div></div>
+          <button className="btn btn-quiet" onClick={() => setSelectedMediaId(null)}>Close</button>
+        </div>
+        {evidence.isLoading ? <div className="empty-state">Loading evidence…</div> : evidence.isError ? <ErrorState onRetry={() => void evidence.refetch()} /> : !evidenceData ? <UnavailableState onRetry={() => void evidence.refetch()} /> : <div className="content-grid">
+          <div>
+            {evidenceData.media.preview ? <img src={evidenceData.media.preview.signedUrl} alt="Moderation evidence" style={{ width: '100%', maxHeight: 280, objectFit: 'contain', borderRadius: 8, background: 'hsl(var(--muted))' }} /> : <div className="empty-state"><AlertTriangle /><strong>Preview unavailable</strong><p>The private object may already be missing.</p></div>}
+            <div className="notice" style={{ marginTop: 14 }}><LockKeyhole /><span>Private Storage paths are never shown. The current canonical reference is represented by an opaque confirmation fingerprint.</span></div>
+          </div>
+          <div>
+            <div className="panel-kicker">Media record</div>
+            <p><strong>{evidenceData.media.mediaType}</strong> · {evidenceData.media.mimeType} · {evidenceData.media.purpose}</p>
+            <p>Moderation: <StatusBadge status={evidenceData.media.moderationStatus} /> {evidenceData.media.moderationReason || 'No additional reason'}</p>
+            <p>Cleanup: <StatusBadge status={evidenceData.cleanup.state} /> · {evidenceData.cleanup.attemptCount} attempts</p>
+            <p>Canonical reference: <StatusBadge status={evidenceData.canonicalReference.matchesCleanup ? 'confirmed' : 'changed'} /></p>
+            {evidenceData.moderationCases.length ? <><div className="panel-kicker" style={{ marginTop: 18 }}>Moderation cases</div>{evidenceData.moderationCases.map((item) => <div className="notice" key={item.id} style={{ marginTop: 8 }}><span><strong>{item.status}</strong>{item.decision ? ` · ${item.decision}` : ''}{item.decisionReason ? ` — ${item.decisionReason}` : ''}{item.riskCategories?.length ? ` · ${item.riskCategories.join(', ')}` : ''}</span></div>)}</> : <p className="identity-handle">No linked moderation case was returned.</p>}
+            <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+              <button className="btn btn-primary" onClick={() => takeAction('requeue')} disabled={!canManage || !evidenceData.canonicalReference.fingerprint || data.mediaRetentionAction.isPending} data-testid="button-retention-requeue">Confirm reference & requeue</button>
+              <button className="btn btn-quiet" onClick={() => takeAction('resolve')} disabled={!canManage || !evidenceData.canonicalReference.fingerprint || data.mediaRetentionAction.isPending} data-testid="button-retention-resolve">Resolve cleanup</button>
+            </div>
+            {!evidenceData.canonicalReference.matchesCleanup && <p className="identity-handle" style={{ marginTop: 10 }}>The cleanup is blocked because its saved reference differs from the current media record. Review the current record, then confirm the current reference before acting.</p>}
+          </div>
+        </div>}
+      </section> : null}
       <div className="notice" style={{ marginTop: 18 }}><AlertTriangle /><span>“Object missing” is a successful idempotent terminal outcome. “Deletion failed” remains retryable; blocked references require manual review before the worker can proceed.</span></div>
     </div>
   );
