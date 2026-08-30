@@ -1,0 +1,350 @@
+The QVAC verification-system prompts and the QAVS Activity Tracking Extension have now been implemented.
+
+Before starting Mapbox, perform a focused Supabase delta audit for ALL changes introduced by QVAC + QAVS.
+
+Do not rerun or redesign unrelated Supabase systems unless these additions materially affect them.
+
+Audit the CURRENT implementation against the connected production Supabase project.
+
+==================================================
+1. DISCOVER ALL NEW DATA REQUIREMENTS
+==================================================
+
+Inspect the actual QVAC + QAVS code and determine whether these features introduced or require any new:
+
+- tables
+- columns
+- enums
+- constraints
+- indexes
+- migrations
+- RPCs / PostgreSQL functions
+- triggers
+- RLS policies
+- Storage paths/buckets/policies
+- verification-session records
+- activity-session records
+- activity samples
+- location samples
+- timer state
+- integrity-confirmation state
+- proof-method metadata
+- verification-method selection metadata
+- activity-method metadata
+- moderation/review state
+- completion state
+- points-award dependencies
+- Admin review/audit fields
+- retention/cleanup rules
+
+Do not assume the existing Supabase schema is sufficient merely because the client UI works.
+
+==================================================
+2. QVAC VERIFICATION MODEL
+==================================================
+
+Verify Supabase can securely represent and enforce every QVAC verification method currently implemented, including where applicable:
+
+- live photo
+- live video
+- GPS verification
+- photo + GPS
+- video + GPS
+- text response
+- manual review
+- timer
+- integrity/checkmark confirmation
+- no-media verification
+- any other implemented QVAC method
+
+Quest category and verification method must remain separate concepts.
+
+Verify:
+
+- required verification methods are persisted server-side
+- the player cannot change the assigned method
+- method combinations are represented correctly
+- required methods cannot be bypassed
+- completion remains server-authoritative
+- points cannot be awarded until every required verification condition is satisfied
+- duplicate completion / duplicate points remain impossible
+
+==================================================
+3. QAVS ACTIVITY TRACKING MODEL
+==================================================
+
+Audit every activity-tracking feature introduced by QAVS.
+
+Determine exactly which metrics are currently supported by the implementation, such as:
+
+- elapsed duration
+- active duration
+- distance traveled
+- step count
+- movement/activity state
+- start location
+- end location
+- route/location samples
+- pace/speed where implemented
+- GPS accuracy
+- timestamps
+- pauses/resumes
+- activity completion threshold
+- any other QAVS metric actually present in code
+
+Do NOT invent metrics that QAVS does not implement.
+
+For each supported metric verify it has a canonical server-side representation.
+
+The database must distinguish:
+
+- Quest activity requirement/configuration
+from
+- a user's activity verification session
+from
+- raw/derived activity evidence
+from
+- final server-authoritative verification result
+
+==================================================
+4. ACTIVITY SESSION LIFECYCLE
+==================================================
+
+Verify QAVS has a secure server-authoritative lifecycle such as:
+
+CREATED
+→ STARTED
+→ ACTIVE
+→ PAUSED if supported
+→ FINISHED
+→ VALIDATING
+→ APPROVED / REJECTED / REVIEW
+
+Use the actual current implementation terminology where different.
+
+Verify:
+
+- start time cannot be forged by the client
+- completion time cannot be moved earlier by the client
+- timer readiness is based on persisted authoritative timestamps
+- navigating away/backgrounding does not incorrectly reset required duration
+- timer expiration alone does not automatically award points
+- a finished activity still has to satisfy all required validation
+- replaying the same session cannot produce additional completion/points
+
+==================================================
+5. GPS / ACTIVITY DATA SECURITY
+==================================================
+
+For any QAVS method using GPS/activity tracking, verify:
+
+- location/activity requirements are stored server-side
+- client cannot alter required distance/duration/step thresholds
+- start/end/sample timestamps are validated
+- impossible or obviously invalid sample sequences can be rejected or flagged
+- GPS accuracy requirements are enforced where implemented
+- duplicate/replayed activity evidence is handled safely
+- users cannot submit activity evidence for another user
+- users cannot access another user's private activity/location history
+
+Do not expose raw route history publicly.
+
+==================================================
+6. PRIVACY / DATA MINIMIZATION
+==================================================
+
+Activity tracking can create sensitive location history.
+
+Audit whether Worlds actually needs to permanently retain raw route/location samples after verification.
+
+Prefer the minimum data necessary for product functionality and auditability.
+
+Determine for each data type:
+
+- whether it must be retained
+- retention period
+- whether it can be reduced to derived metrics after validation
+- whether exact GPS samples should be deleted/redacted later
+
+Ensure existing retention/cleanup infrastructure covers QAVS activity data, or add the required cleanup mechanism.
+
+==================================================
+7. RLS / TRUST BOUNDARIES
+==================================================
+
+Verify:
+
+- users may only create/access their own authorized QVAC/QAVS sessions
+- users cannot directly mark verification approved
+- users cannot directly alter derived validation results
+- users cannot alter points
+- users cannot alter Quest verification configuration
+- cross-user activity/location access is denied
+- Admin/manual-review access is properly protected
+- trusted service_role/backend has only required privileges
+
+==================================================
+8. RPC / BACKEND AUTHORITY
+==================================================
+
+Audit whether QVAC/QAVS trusted operations require new or updated RPCs/server handlers for:
+
+- creating verification sessions
+- starting activity sessions
+- recording allowed activity samples/updates
+- pause/resume if supported
+- finishing activity sessions
+- validating duration
+- validating distance
+- validating steps
+- validating GPS/activity integrity
+- completing a Quest
+- awarding points
+- requesting manual review
+- cleanup/retention
+
+Use server-authoritative operations rather than allowing direct client writes to protected results.
+
+==================================================
+9. STORAGE
+==================================================
+
+Verify QVAC/QAVS media continues to use the canonical private Storage architecture.
+
+Check:
+
+- live photo/video proof
+- activity-related media if any
+- moderation evidence
+- manual-review evidence
+
+No new public proof bucket may be introduced.
+
+If QAVS does not use Storage, state that explicitly.
+
+==================================================
+10. POINT AWARD INTEGRATION
+==================================================
+
+Verify the atomic Quest completion / points path understands all new QVAC + QAVS verification states.
+
+For a Quest requiring activity tracking, points must not be awarded unless:
+
+- required activity session is completed
+- required thresholds are satisfied
+- integrity validation is satisfied where required
+- any additional QVAC proof requirements are satisfied
+
+Verify idempotency and concurrency protection remain intact.
+
+==================================================
+11. ADMIN
+==================================================
+
+Verify Admin can configure only valid QVAC/QAVS methods and thresholds.
+
+Where implemented, verify Admin can configure activity requirements such as:
+
+- duration
+- distance
+- steps
+- GPS/activity requirement
+- combinations with other proof methods
+
+Validate sensible server-side bounds so malicious/accidental configuration cannot create impossible or unsafe values.
+
+Verify Admin review access does not bypass audit logging.
+
+==================================================
+12. DATABASE MIGRATIONS
+==================================================
+
+If QVAC/QAVS requires database changes:
+
+- create NEW forward migration(s)
+- use the next unused canonical migration number(s)
+- never edit already-applied production migrations
+- apply through the linked Supabase CLI
+- update migration verification
+- preserve local/production parity
+
+==================================================
+13. CONNECTED PRODUCTION TESTS
+==================================================
+
+Run focused connected tests against production Supabase using disposable data.
+
+Test EVERY QVAC and QAVS method currently implemented.
+
+Include, where applicable:
+
+- timer cannot finish early
+- timer survives navigation/background state from persisted timestamps
+- timer expiration alone awards nothing
+- GPS-only does not require camera proof
+- camera-only requires live media
+- combined methods require every component
+- integrity confirmation cannot be bypassed
+- player cannot change assigned method
+- activity duration below threshold fails
+- activity duration meeting threshold succeeds
+- activity distance below threshold fails
+- activity distance meeting threshold succeeds
+- step threshold enforcement
+- invalid/replayed activity session fails
+- cross-user activity access fails
+- duplicate completion awards no extra points
+- cleanup/retention works
+- Admin/manual review authorization works
+
+Only test methods actually implemented.
+
+Clean up disposable test data afterward.
+
+==================================================
+14. FINAL REPORT
+==================================================
+
+Return:
+
+QVAC + QAVS SUPABASE DELTA STATUS: PASS / FAIL
+
+NEW MIGRATIONS:
+[list or NONE]
+
+SCHEMA CHANGES:
+[list or NONE]
+
+NEW/UPDATED RPCs:
+[list or NONE]
+
+RLS / SECURITY:
+PASS/FAIL
+
+QVAC VERIFICATION:
+PASS/FAIL
+
+QAVS ACTIVITY TRACKING:
+PASS/FAIL
+
+POINT AWARD PROTECTION:
+PASS/FAIL
+
+STORAGE / PRIVATE MEDIA:
+PASS/FAIL
+
+RETENTION / LOCATION PRIVACY:
+PASS/FAIL
+
+CONNECTED TESTS:
+PASS/FAIL
+
+TRUE SUPABASE BLOCKERS:
+[list or NONE]
+
+If there are no remaining blockers, state exactly:
+
+QVAC + QAVS SUPABASE DELTA: COMPLETE
+SUPABASE REMAINS BUILD 1 COMPLETE
+
+Do not start Mapbox.

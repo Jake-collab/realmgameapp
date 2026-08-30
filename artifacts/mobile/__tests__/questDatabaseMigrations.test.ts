@@ -169,4 +169,32 @@ describe("Supabase migration filename preflight", () => {
     expect(source).toContain("Activity distance requirement has not been met.");
     expect(source).toContain("activity_tracking_thresholds");
   });
+
+  test("activity sample retention preserves derived progress and removes terminal raw routes", () => {
+    const source = fs.readFileSync(
+      path.resolve(__dirname, "../supabase/migrations/069_quest_activity_sample_retention.sql"),
+      "utf8",
+    );
+
+    expect(source).toContain("purge_expired_quest_activity_samples");
+    expect(source).toContain("auth.role() <> 'service_role'");
+    expect(source).toContain("participations.status IN ('completed', 'abandoned', 'expired')");
+    expect(source).toContain("'quest_activity_samples_purged'");
+    expect(source).not.toContain("DELETE FROM quest_participations");
+  });
+
+  test("activity security repairs authorize before duplicate reads and remove accuracy-based speed tolerance", () => {
+    const source = fs.readFileSync(
+      path.resolve(__dirname, "../supabase/migrations/070_quest_activity_tracking_security_repairs.sql"),
+      "utf8",
+    );
+
+    expect(source).toContain("RENAME TO record_quest_activity_sample_internal");
+    expect(source).toContain("REVOKE ALL ON FUNCTION record_quest_activity_sample_internal");
+    expect(source).toContain("SELECT user_id");
+    expect(source).toContain("FOR UPDATE");
+    expect(source).toContain("v_owner_id <> p_user_id");
+    expect(source).toContain("'max_accuracy_meters', 25");
+    expect(source).toContain("'accuracy_tolerance_multiplier', 0");
+  });
 });

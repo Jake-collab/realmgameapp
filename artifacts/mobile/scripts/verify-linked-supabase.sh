@@ -98,6 +98,10 @@ required_markers=(
   '"resolved_by"'
   '"send_friend_request"'
   'GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE "public"."media_retention_cleanups" TO "service_role"'
+  'CREATE OR REPLACE FUNCTION "public"."purge_expired_quest_activity_samples"'
+  'quest_activity_samples_purged'
+  'Unauthorized activity sample.'
+  'record_quest_activity_sample_internal'
 )
 
 for marker in "${required_markers[@]}"; do

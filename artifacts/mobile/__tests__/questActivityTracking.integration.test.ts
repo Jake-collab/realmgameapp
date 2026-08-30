@@ -12,7 +12,9 @@ const describeIntegration = url && anonKey && serviceRoleKey ? describe : descri
 describeIntegration('Quest activity tracking RPC', () => {
   let admin: SupabaseClient;
   let client: SupabaseClient;
+  let otherClient: SupabaseClient;
   let userId = '';
+  let otherUserId = '';
   let questId = '';
   let participationId = '';
   let abandonedParticipationId = '';
@@ -26,9 +28,28 @@ describeIntegration('Quest activity tracking RPC', () => {
     const created = await admin.auth.admin.createUser({ email, password, email_confirm: true });
     if (created.error || !created.data.user) throw created.error ?? new Error('Could not create activity test user.');
     userId = created.data.user.id;
+    const otherEmail = `quest-activity-other-${suffix}@example.com`;
+    const otherPassword = `QuestActivityOther-${suffix}-Password!`;
+    const otherCreated = await admin.auth.admin.createUser({
+      email: otherEmail,
+      password: otherPassword,
+      email_confirm: true,
+    });
+    if (otherCreated.error || !otherCreated.data.user) {
+      throw otherCreated.error ?? new Error('Could not create second activity test user.');
+    }
+    otherUserId = otherCreated.data.user.id;
 
     const signedIn = await client.auth.signInWithPassword({ email, password });
     if (signedIn.error || !signedIn.data.session) throw signedIn.error ?? new Error('Could not sign in activity test user.');
+    otherClient = createClient(url, anonKey, { auth: { autoRefreshToken: false, persistSession: false } });
+    const otherSignedIn = await otherClient.auth.signInWithPassword({
+      email: otherEmail,
+      password: otherPassword,
+    });
+    if (otherSignedIn.error || !otherSignedIn.data.session) {
+      throw otherSignedIn.error ?? new Error('Could not sign in second activity test user.');
+    }
 
     const quest = await admin.from('quests').insert({
       slug: `activity-quest-${suffix}`,
@@ -52,8 +73,21 @@ describeIntegration('Quest activity tracking RPC', () => {
     questId = quest.data.id;
 
     const participations = await admin.from('quest_participations').insert([
-      { quest_id: questId, user_id: userId, status: 'started', reward_snapshot_points: 100 },
-      { quest_id: questId, user_id: userId, status: 'abandoned', reward_snapshot_points: 100 },
+      {
+        quest_id: questId,
+        user_id: userId,
+        status: 'started',
+        started_at: new Date(Date.now() - 30_000).toISOString(),
+        reward_snapshot_points: 100,
+      },
+      {
+        quest_id: questId,
+        user_id: userId,
+        status: 'abandoned',
+        started_at: new Date(Date.now() - 30_000).toISOString(),
+        abandoned_at: new Date().toISOString(),
+        reward_snapshot_points: 100,
+      },
     ]).select('id, status');
     if (participations.error || !participations.data || participations.data.length !== 2) {
       throw participations.error ?? new Error('Could not create activity participations.');
@@ -64,8 +98,10 @@ describeIntegration('Quest activity tracking RPC', () => {
 
   afterAll(async () => {
     await client?.auth.signOut();
+    await otherClient?.auth.signOut();
     if (questId) await admin.from('quests').delete().eq('id', questId);
     if (userId) await admin.auth.admin.deleteUser(userId);
+    if (otherUserId) await admin.auth.admin.deleteUser(otherUserId);
   }, 30_000);
 
   async function sample(id: string, latitude: number, capturedAt: string) {
@@ -81,7 +117,7 @@ describeIntegration('Quest activity tracking RPC', () => {
   }
 
   test('accepts sequential samples, rejects spoof-like samples, and is idempotent', async () => {
-    const base = Date.now() + 1_000;
+    const base = Date.now() - 20_000;
     const first = await sample('first', 0, new Date(base).toISOString());
     expect(first.error).toBeNull();
     expect(first.data).toMatchObject({ accepted: true, was_duplicate: false, total_distance_meters: 0 });
@@ -103,10 +139,36 @@ describeIntegration('Quest activity tracking RPC', () => {
     expect(unrealistic.error).toBeNull();
     expect(unrealistic.data).toMatchObject({ accepted: false, rejection_code: 'unrealistic_speed' });
 
+    const inaccurate = await client.rpc('record_quest_activity_sample', {
+      p_participation_id: participationId,
+      p_user_id: userId,
+      p_client_sample_id: 'inaccurate',
+      p_latitude: 0.0002,
+      p_longitude: 0,
+      p_accuracy_meters: 100,
+      p_captured_at: new Date(base + 12_000).toISOString(),
+    });
+    expect(inaccurate.error).toBeNull();
+    expect(inaccurate.data).toMatchObject({ accepted: false, rejection_code: 'insufficient_accuracy' });
+
     const third = await sample('third', 0.0002, new Date(base + 20_000).toISOString());
     expect(third.error).toBeNull();
     expect(third.data.accepted).toBe(true);
   }, 30_000);
+
+  test('does not reveal duplicate decisions or progress across users', async () => {
+    const result = await otherClient.rpc('record_quest_activity_sample', {
+      p_participation_id: participationId,
+      p_user_id: otherUserId,
+      p_client_sample_id: 'second',
+      p_latitude: 0.0001,
+      p_longitude: 0,
+      p_accuracy_meters: 5,
+      p_captured_at: new Date().toISOString(),
+    });
+    expect(result.error).toBeTruthy();
+    expect(result.data).toBeNull();
+  });
 
   test('does not record after abandonment and completion remains atomic', async () => {
     const abandoned = await client.rpc('record_quest_activity_sample', {
@@ -136,5 +198,29 @@ describeIntegration('Quest activity tracking RPC', () => {
     });
     expect(retry.error).toBeNull();
     expect(retry.data).toMatchObject({ awarded_points: 100, was_already_completed: true });
+  }, 30_000);
+
+  test('keeps raw routes private and removes terminal samples without erasing derived distance', async () => {
+    const privateRead = await client.from('quest_activity_samples').select('id');
+    expect(privateRead.error).toBeTruthy();
+
+    const cleanup = await admin.rpc('purge_expired_quest_activity_samples', {
+      p_retention_days: 0,
+    });
+    expect(cleanup.error).toBeNull();
+    expect(Number(cleanup.data)).toBeGreaterThanOrEqual(3);
+
+    const samples = await admin.from('quest_activity_samples')
+      .select('id')
+      .eq('participation_id', participationId);
+    expect(samples.error).toBeNull();
+    expect(samples.data).toHaveLength(0);
+
+    const participation = await admin.from('quest_participations')
+      .select('activity_distance_meters')
+      .eq('id', participationId)
+      .single();
+    expect(participation.error).toBeNull();
+    expect(Number(participation.data?.activity_distance_meters)).toBeGreaterThanOrEqual(20);
   }, 30_000);
 });

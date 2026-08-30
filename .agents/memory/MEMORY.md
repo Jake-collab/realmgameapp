@@ -36,3 +36,4 @@
 - [Supabase audit findings](supabase-audit-findings.md) — verify live migration parity, partial-index conflict targets, and grants for tables created after privilege loops.
 - [Production audit parity](production-audit-parity.md) — repository migration checks are insufficient; compare linked history and live function/object presence before declaring release readiness.
 - [Quest verification boundary](quest-verification-boundary.md) — explicit methods can compose, but every trust check and point award remains server-authoritative.
+- [Quest activity verification](quest-activity-verification.md) — distance is derived from authorized sequential samples; raw routes are private, bounded, and purged after terminal participation.
