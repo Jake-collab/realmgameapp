@@ -31,3 +31,4 @@
 - [Hosted Auth URL configuration](hosted-auth-url-configuration.md) — the installed Supabase connection can inspect provider status but cannot mutate redirect allowlists; dashboard access is required.
 - [Scheduled worker architecture](scheduled-worker-architecture.md) — one trusted API worker owns durable notifications and maintenance; do not add pg_cron duplicates.
 - [Supabase audit findings](supabase-audit-findings.md) — verify live migration parity, partial-index conflict targets, and grants for tables created after privilege loops.
+- [Production audit parity](production-audit-parity.md) — repository migration checks are insufficient; compare linked history and live function/object presence before declaring release readiness.
