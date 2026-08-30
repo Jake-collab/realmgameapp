@@ -18,7 +18,7 @@
  * - Points are NOT shown here — only confirmed after completion.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -55,6 +55,9 @@ import type { ProofOperationResult } from '@/features/quests/services/questProof
 import { getSubmitProofInvalidationKeys } from '@/features/quests/queries/questKeys';
 import { uploadProofMediaFromUri } from '@/services/media/media.service';
 import { attachProofMedia } from '@/features/quests/repositories/proof.repository';
+import { completeQuest } from '@/features/quests/services/questCompletion.service';
+import { confirmQuestIntegrityRequirement } from '@/features/quests/services/questVerification.service';
+import { formatRemainingTimer, getQuestVerificationMethods, verificationLabel } from '@/features/quests/utils/questVerification';
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
@@ -119,6 +122,8 @@ export default function QuestProofScreen() {
   const [capturedLocation, setCapturedLocation] = useState<{ latitude: number; longitude: number; accuracy: number | null } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [integrityConfirmedLocally, setIntegrityConfirmedLocally] = useState(false);
+  const [isConfirmingIntegrity, setIsConfirmingIntegrity] = useState(false);
 
   // Load participation
   const participationQuery = useQuery<QuestParticipationRowExtended | null>({
@@ -143,17 +148,56 @@ export default function QuestProofScreen() {
 
   const existingProof = proofQuery.data;
   const proofType: ProofType = quest?.proof_type ?? 'text';
+  const methods = quest ? getQuestVerificationMethods(quest) : [];
+  const requiresCamera = methods.includes('camera') || needsPhoto(proofType);
+  const requiresGps = methods.includes('gps') || needsLocation(proofType);
+  const requiresIntegrity = methods.includes('integrity_confirmation');
+  const requiresTimer = methods.includes('timer');
+  const requiresText = needsText(proofType);
+  const hasEvidenceInput = requiresText || requiresCamera || requiresGps || needsQrCode(proofType);
+  const integrityConfirmed = integrityConfirmedLocally || !!participation?.integrity_confirmed_at;
+  const submissionType: ProofType = requiresCamera
+    ? proofType === 'video' ? 'video' : 'photo'
+    : requiresGps ? 'location' : proofType;
+
+  useEffect(() => {
+    setIntegrityConfirmedLocally(false);
+  }, [participationId]);
   const isResubmission = participation?.status === 'needs_resubmission';
 
   // ── Validation ─────────────────────────────────────────────────────────────
 
   const canSubmit = useCallback((): boolean => {
     if (!quest) return false;
-    if (needsText(proofType) && textResponse.trim().length < 10) return false;
-    if (needsPhoto(proofType) && !imageUri) return false;
-    if (needsLocation(proofType) && !locationCaptured) return false;
+    if (requiresText && textResponse.trim().length < 10) return false;
+    if (requiresCamera && !imageUri) return false;
+    if (requiresGps && !locationCaptured) return false;
+    if (requiresTimer && !participation?.verification_earliest_completion_at) return false;
+    if (requiresTimer && formatRemainingTimer(participation?.verification_earliest_completion_at ?? null)) return false;
+    if (requiresIntegrity && !integrityConfirmed) return false;
     return true;
-  }, [quest, proofType, textResponse, imageUri, locationCaptured]);
+  }, [
+    quest, requiresText, requiresCamera, requiresGps, requiresTimer,
+    requiresIntegrity, participation?.verification_earliest_completion_at,
+    integrityConfirmed, textResponse, imageUri, locationCaptured,
+  ]);
+
+  const confirmIntegrity = useCallback(async () => {
+    if (!participationId || !user?.id || !requiresIntegrity) return false;
+    setIsConfirmingIntegrity(true);
+    try {
+      const result = await confirmQuestIntegrityRequirement({ participationId, userId: user.id });
+      if (!result.success) {
+        Alert.alert('Cannot confirm yet', result.error.message);
+        return false;
+      }
+      setIntegrityConfirmedLocally(true);
+      await participationQuery.refetch();
+      return true;
+    } finally {
+      setIsConfirmingIntegrity(false);
+    }
+  }, [participationId, user?.id, requiresIntegrity, participationQuery]);
 
   // ── Submit ─────────────────────────────────────────────────────────────────
 
@@ -162,12 +206,29 @@ export default function QuestProofScreen() {
 
     setIsSubmitting(true);
     try {
+      if (requiresIntegrity && !integrityConfirmed) {
+        await confirmIntegrity();
+        return;
+      }
+
+      // Timer/integrity-only Quests have no proof row by design. Completion is
+      // still awarded only by the trusted RPC after its server checks.
+      if (!hasEvidenceInput) {
+        const completion = await completeQuest({ participationId, userId: user.id });
+        if (!completion.success) {
+          Alert.alert('Not ready to complete', completion.error?.message ?? 'The Quest requirements are not complete.');
+          return;
+        }
+        setSubmitted(true);
+        return;
+      }
+
       // 1. Create draft
       const draftResult: ProofOperationResult = await createQuestProofDraft({
         participationId,
         userId: user.id,
-        submissionType: proofType,
-        textResponse: needsText(proofType) ? textResponse.trim() : undefined,
+        submissionType,
+        textResponse: requiresText ? textResponse.trim() : undefined,
         locationLat: capturedLocation?.latitude,
         locationLng: capturedLocation?.longitude,
         locationAccuracyMeters: capturedLocation?.accuracy ?? undefined,
@@ -185,13 +246,13 @@ export default function QuestProofScreen() {
         return;
       }
 
-      if (needsPhoto(proofType) && imageUri) {
+       if (requiresCamera && imageUri) {
         const asset = await uploadProofMediaFromUri({
           userId: user.id,
           localUri: imageUri,
-          mimeType: proofType === 'video' ? 'video/mp4' : 'image/jpeg',
+           mimeType: submissionType === 'video' ? 'video/mp4' : 'image/jpeg',
           proofId: draftResult.proof.id,
-          mediaType: proofType === 'video' ? 'video' : 'image',
+           mediaType: submissionType === 'video' ? 'video' : 'image',
         });
         await attachProofMedia(draftResult.proof.id, asset.id, 0);
       }
@@ -214,7 +275,11 @@ export default function QuestProofScreen() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [canSubmit, participationId, user, proofType, textResponse, questId, queryClient, capturedLocation]);
+  }, [
+    canSubmit, participationId, user, submissionType, requiresText, textResponse,
+    questId, queryClient, capturedLocation, requiresCamera, requiresIntegrity,
+    integrityConfirmed, confirmIntegrity, hasEvidenceInput,
+  ]);
 
   // ── Submitted state ─────────────────────────────────────────────────────────
 
@@ -233,7 +298,7 @@ export default function QuestProofScreen() {
             Proof Submitted!
           </Text>
           <Text style={[styles.successBody, { color: colors.mutedForeground }]}>
-            {needsLocation(proofType)
+            {requiresGps
               ? 'Your location evidence was submitted and is awaiting server validation. You will be notified when a decision is available.'
               : quest?.completion_mode === 'manual_review'
               ? "Your proof is now under review. You'll be notified when a decision is available."
@@ -326,14 +391,22 @@ export default function QuestProofScreen() {
         {/* Proof requirement summary */}
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>Required Proof</Text>
-          <ProofRequirementSummary
-            proofType={quest.proof_type}
-            completionMode={quest.completion_mode}
-          />
+           <View style={styles.methodList}>
+             {methods.map(method => (
+               <View key={method} style={[styles.methodRow, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                 <Feather name={method === 'camera' ? 'camera' : method === 'gps' ? 'map-pin' : method === 'timer' ? 'clock' : 'check-circle'} size={16} color={colors.primary} />
+                 <Text style={[styles.methodText, { color: colors.foreground }]}>{verificationLabel(method)}</Text>
+                  {method === 'timer' && <Text style={[styles.methodMeta, { color: colors.mutedForeground }]}>{formatRemainingTimer(participation.verification_earliest_completion_at ?? null) ?? 'Not started'}</Text>}
+               </View>
+             ))}
+           </View>
+           {quest.proof_type !== 'none' && (
+             <ProofRequirementSummary proofType={quest.proof_type} completionMode={quest.completion_mode} />
+           )}
         </View>
 
         {/* Text input */}
-        {needsText(proofType) && !isReadOnly && (
+        {requiresText && !isReadOnly && (
           <View style={styles.section}>
             <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
               Your Response
@@ -362,7 +435,7 @@ export default function QuestProofScreen() {
         )}
 
         {/* Photo/video upload */}
-        {needsPhoto(proofType) && !isReadOnly && (
+        {requiresCamera && !isReadOnly && (
           <View style={styles.section}>
             <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
               {proofType === 'video' ? 'Video Evidence' : 'Photo Evidence'}
@@ -385,7 +458,7 @@ export default function QuestProofScreen() {
         )}
 
         {/* Location capture */}
-        {needsLocation(proofType) && !isReadOnly && (
+        {requiresGps && !isReadOnly && (
           <View style={styles.section}>
             <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
               Location Check-In
@@ -454,7 +527,7 @@ export default function QuestProofScreen() {
         )}
 
         {/* None — simple completion confirmation */}
-        {proofType === 'none' && !isReadOnly && (
+        {requiresIntegrity && !isReadOnly && (
           <View style={styles.section}>
             <View
               style={[
@@ -464,8 +537,19 @@ export default function QuestProofScreen() {
             >
               <Feather name="check-circle" size={18} color={colors.success} />
               <Text style={[styles.confirmNoteText, { color: colors.mutedForeground }]}>
-                Tap Submit below to confirm you've completed this quest.
+                Confirm that you completed the activity honestly. This confirmation is recorded server-side.
               </Text>
+              {!integrityConfirmed && (
+                <TouchableOpacity
+                  onPress={() => void confirmIntegrity()}
+                  disabled={isConfirmingIntegrity}
+                  style={[styles.confirmIntegrityButton, { backgroundColor: colors.primary }]}
+                >
+                  <Text style={{ color: colors.primaryForeground, fontFamily: fontFamily.semiBold }}>
+                    {isConfirmingIntegrity ? 'Confirming…' : 'I confirm'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
@@ -490,12 +574,16 @@ export default function QuestProofScreen() {
         >
           {!canSubmit() && (
             <Text style={[styles.validationHint, { color: colors.mutedForeground }]}>
-              {needsText(proofType) && textResponse.trim().length < 10
+               {requiresText && textResponse.trim().length < 10
                 ? `${Math.max(0, 10 - textResponse.trim().length)} more character${10 - textResponse.trim().length !== 1 ? 's' : ''} needed`
-                : needsPhoto(proofType) && !imageUri
+                 : requiresCamera && !imageUri
                 ? `${proofType === 'video' ? 'Video' : 'Photo'} required`
-                : needsLocation(proofType) && !locationCaptured
+                 : requiresGps && !locationCaptured
                 ? 'Location check-in required'
+                  : requiresTimer && formatRemainingTimer(participation.verification_earliest_completion_at ?? null)
+                  ? formatRemainingTimer(participation.verification_earliest_completion_at ?? null)
+                 : requiresIntegrity && !integrityConfirmed
+                 ? 'Integrity confirmation required'
                  : needsQrCode(proofType)
                  ? 'QR scanning is unavailable for this quest'
                 : ''}
@@ -570,6 +658,25 @@ const styles = StyleSheet.create({
     paddingTop: spacing[4],
     gap: spacing[2],
   },
+  methodList: { gap: spacing[2] },
+  methodRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    padding: spacing[3],
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.lg,
+  },
+  methodText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: fontSize.sm,
+    flexShrink: 1,
+  },
+  methodMeta: {
+    marginLeft: 'auto',
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+  },
   sectionLabel: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.xs,
@@ -622,6 +729,12 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.regular,
     fontSize: fontSize.sm,
     lineHeight: fontSize.sm * 1.5,
+  },
+  confirmIntegrityButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[2],
+    borderRadius: radius.full,
   },
   actionBar: {
     paddingHorizontal: spacing[5],

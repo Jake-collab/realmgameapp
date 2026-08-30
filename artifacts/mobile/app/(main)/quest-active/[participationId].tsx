@@ -10,7 +10,7 @@
  * - Points are NOT shown here — only shown after confirmed completion.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Pressable,
@@ -47,6 +47,12 @@ import PointsBadge from '@/components/ui/PointsBadge';
 import ConfirmationModal from '@/components/ui/ConfirmationModal';
 import type { QuestParticipationRowExtended } from '@/features/quests/repositories/quest.repository';
 import type { QuestAvailabilityState } from '@/features/quests/types/quest.types';
+import {
+  formatRemainingTimer,
+  getQuestVerificationMethods,
+  verificationLabel,
+} from '@/features/quests/utils/questVerification';
+import { startQuestTimer } from '@/features/quests/services/questVerification.service';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -134,6 +140,8 @@ export default function ActiveQuestScreen() {
   const { user } = useAuth();
 
   const [showAbandonModal, setShowAbandonModal] = useState(false);
+  const [timerText, setTimerText] = useState<string | null>(null);
+  const [startingTimer, setStartingTimer] = useState(false);
 
   // Load participation
   const participationQuery = useQuery<QuestParticipationRowExtended | null>({
@@ -172,7 +180,28 @@ export default function ActiveQuestScreen() {
 
   const handleAction = useCallback(() => {
     if (!participation || !quest) return;
+    if (
+      quest.verification_methods?.includes('timer') &&
+      !participation.verification_started_at &&
+      user?.id
+    ) {
+      setStartingTimer(true);
+      void startQuestTimer({ participationId: participation.id, userId: user.id })
+        .then(result => {
+          if (!result.success) {
+            Alert.alert('Timer unavailable', result.error.message);
+            return;
+          }
+          void participationQuery.refetch();
+        })
+        .finally(() => setStartingTimer(false));
+      return;
+    }
     switch (participation.status) {
+      case 'started':
+      case 'in_progress':
+        router.push(`/quest-proof/${participationId}`);
+        break;
       case 'awaiting_proof':
       case 'needs_resubmission':
         router.push(`/quest-proof/${participationId}`);
@@ -184,13 +213,25 @@ export default function ActiveQuestScreen() {
         router.replace(`/quest-completion/${participationId}`);
         break;
     }
-  }, [participation, quest, participationId, router]);
+  }, [participation, quest, participationId, router, user?.id, participationQuery]);
 
   const handleRefresh = useCallback(() => {
     void participationQuery.refetch();
     void detailQuery.refetch();
     void progressQuery.refetch();
   }, [participationQuery, detailQuery, progressQuery]);
+
+  const timerConfigured = quest?.verification_methods?.includes('timer') ?? false;
+  useEffect(() => {
+    if (!timerConfigured) {
+      setTimerText(null);
+      return;
+    }
+    const update = () => setTimerText(formatRemainingTimer(participation?.verification_earliest_completion_at ?? null));
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [timerConfigured, participation?.verification_earliest_completion_at]);
 
   // ── Loading ─────────────────────────────────────────────────────────────────
 
@@ -252,6 +293,7 @@ export default function ActiveQuestScreen() {
 
   const pointsSnapshot = participation.reward_snapshot_points ?? quest.points_reward;
   const deadlineText = deadline(participation.expires_at);
+  const methods = getQuestVerificationMethods(quest);
 
   const isTerminal = ['completed', 'abandoned', 'expired'].includes(participation.status);
   const showAction = !isTerminal && action.actionType !== 'view' && action.actionType !== 'unavailable';
@@ -333,15 +375,20 @@ export default function ActiveQuestScreen() {
         )}
 
         {/* ── Proof requirement ──────────────────────────────────── */}
-        {quest.proof_type !== 'none' && (
+        {(quest.proof_type !== 'none' || methods.length > 0) && (
           <View style={styles.section}>
             <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>
-              Proof Required
+              Verification Required
             </Text>
-            <ProofRequirementSummary
-              proofType={quest.proof_type}
-              completionMode={quest.completion_mode}
-            />
+            <View style={styles.verificationList}>
+              {methods.map(method => (
+                <View key={method} style={[styles.verificationItem, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+                  <Feather name={method === 'camera' ? 'camera' : method === 'gps' ? 'map-pin' : method === 'timer' ? 'clock' : 'check-circle'} size={16} color={accentColor} />
+                  <Text style={[styles.verificationText, { color: colors.foreground }]}>{verificationLabel(method)}</Text>
+                  {method === 'timer' && <Text style={[styles.timerText, { color: colors.mutedForeground }]}>{timerText ?? 'Starting when you begin'}</Text>}
+                </View>
+              ))}
+            </View>
           </View>
         )}
 
@@ -379,8 +426,8 @@ export default function ActiveQuestScreen() {
           ]}
         >
           <Pressable
-            onPress={handleAction}
-            disabled={!action.enabled}
+             onPress={handleAction}
+             disabled={!action.enabled || startingTimer}
             accessibilityLabel={action.accessibilityLabel ?? action.label}
             accessibilityRole="button"
             style={({ pressed }) => [
@@ -397,7 +444,7 @@ export default function ActiveQuestScreen() {
                 { color: action.enabled ? colors.primaryForeground : colors.mutedForeground },
               ]}
             >
-              {action.label}
+               {startingTimer ? 'Starting timer…' : action.label}
             </Text>
             {action.enabled && (
               <Feather name="arrow-right" size={18} color={colors.primaryForeground} />
@@ -484,6 +531,25 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
+  },
+  verificationList: { gap: spacing[2] },
+  verificationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    padding: spacing[3],
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radius.lg,
+  },
+  verificationText: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: fontSize.sm,
+    flexShrink: 1,
+  },
+  timerText: {
+    marginLeft: 'auto',
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
   },
   abandonRow: {
     alignItems: 'center',

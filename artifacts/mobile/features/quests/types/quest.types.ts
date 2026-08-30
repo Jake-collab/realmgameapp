@@ -24,6 +24,7 @@ import type {
   ParticipationStatus,
   ProofSubmissionStatus,
   IndoorOutdoor,
+  QuestVerificationMethod,
 } from '@/lib/supabase/database.types';
 
 export type {
@@ -35,6 +36,7 @@ export type {
   ParticipationStatus,
   ProofSubmissionStatus,
   IndoorOutdoor,
+  QuestVerificationMethod,
 };
 
 // ─── Completion mode ──────────────────────────────────────────────────────────
@@ -121,6 +123,8 @@ export interface QuestSummary {
   expiration_behavior: QuestExpirationBehavior;
   home_priority: number;
   public_location: QuestPublicLocation | null;
+  verification_methods?: QuestVerificationMethod[] | null;
+  required_duration_minutes?: number | null;
 }
 
 // ─── Quest detail (full view) ─────────────────────────────────────────────────

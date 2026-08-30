@@ -37,6 +37,17 @@ export interface QuestParticipationRowExtended extends QuestParticipationRow {
   occurrence_key: string | null;
 }
 
+export interface QuestVerificationTimerResult {
+  participation_id: string;
+  verification_started_at: string;
+  verification_earliest_completion_at: string;
+}
+
+export interface QuestIntegrityConfirmationResult {
+  participation_id: string;
+  integrity_confirmed_at: string;
+}
+
 export interface QuestWithRelations extends QuestRowExtended {
   quest_objectives: QuestObjectiveRow[];
   quest_locations: QuestLocationRow[];
@@ -389,6 +400,32 @@ export async function insertParticipation(payload: {
 
   if (error) throw normalizeQuestError(error);
   return data as unknown as QuestParticipationRowExtended;
+}
+
+export async function startQuestVerificationTimer(
+  participationId: string,
+  userId: string,
+): Promise<QuestVerificationTimerResult> {
+  const client = requireSupabase();
+  const { data, error } = await client.rpc('start_quest_verification_timer' as never, {
+    p_participation_id: participationId,
+    p_user_id: userId,
+  } as never);
+  if (error) throw normalizeQuestError(error);
+  return data as unknown as QuestVerificationTimerResult;
+}
+
+export async function confirmQuestIntegrity(
+  participationId: string,
+  userId: string,
+): Promise<QuestIntegrityConfirmationResult> {
+  const client = requireSupabase();
+  const { data, error } = await client.rpc('confirm_quest_integrity' as never, {
+    p_participation_id: participationId,
+    p_user_id: userId,
+  } as never);
+  if (error) throw normalizeQuestError(error);
+  return data as unknown as QuestIntegrityConfirmationResult;
 }
 
 /**

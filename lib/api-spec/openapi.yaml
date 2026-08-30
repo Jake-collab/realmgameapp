@@ -85,6 +85,43 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminQuestPage"
+    post:
+      operationId: createAdminQuest
+      tags: [admin]
+      summary: Create a draft Quest with verification requirements
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminQuestCreate" }
+      responses:
+        "201": { description: Draft Quest created }
+        "400": { description: Invalid Quest draft }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "503": { description: Live data unavailable }
+  /admin/quests/{id}/verification:
+    patch:
+      operationId: updateAdminQuestVerification
+      tags: [admin]
+      summary: Update Quest verification methods
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminQuestVerificationUpdate" }
+      responses:
+        "200": { description: Updated Quest verification settings }
+        "400": { description: Invalid or incompatible verification settings }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "404": { description: Quest not found }
+        "503": { description: Live data unavailable }
   /admin/hunts:
     get:
       operationId: listAdminHunts
@@ -719,6 +756,42 @@ components:
         completionCount: { type: ["integer", "null"] }
         reviewCount: { type: ["integer", "null"] }
         updatedAt: { type: string, format: date-time }
+        verificationMethods:
+          type: array
+          items: { type: string, enum: [camera, gps, timer, integrity_confirmation] }
+        requiredDurationMinutes: { type: ["integer", "null"], minimum: 1 }
+        locationRequirementType: { type: string }
+    AdminQuestVerificationUpdate:
+      type: object
+      additionalProperties: false
+      required: [methods]
+      properties:
+        methods:
+          type: array
+          minItems: 1
+          maxItems: 6
+          uniqueItems: true
+          items: { type: string, enum: [camera, gps, timer, integrity_confirmation] }
+        requiredDurationMinutes: { type: ["integer", "null"], minimum: 1, maximum: 1440 }
+        locationRequired: { type: boolean }
+    AdminQuestCreate:
+      type: object
+      additionalProperties: false
+      required: [title, type, difficulty, points, methods]
+      properties:
+        title: { type: string, minLength: 3, maxLength: 120 }
+        type: { type: string, enum: [daily, monthly, geo] }
+        difficulty: { type: string, enum: [easy, medium, hard, epic], default: easy }
+        points: { type: integer, minimum: 1, maximum: 1000, default: 100 }
+        methods:
+          type: array
+          minItems: 1
+          maxItems: 4
+          uniqueItems: true
+          items: { type: string, enum: [camera, gps, timer, integrity_confirmation] }
+        requiredDurationMinutes: { type: ["integer", "null"], minimum: 1, maximum: 1440 }
+        summary: { type: string, minLength: 10, maxLength: 300 }
+        description: { type: string, minLength: 20, maxLength: 4000 }
     AdminQuestPage:
       type: object
       required: [items, page, pageSize, total]

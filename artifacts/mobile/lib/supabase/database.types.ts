@@ -32,6 +32,7 @@ export type QuestSourceType = 'admin' | 'ai' | 'system';
  */
 export type Difficulty = 'very_easy' | 'easy' | 'medium' | 'hard' | 'epic';
 export type ProofType = 'photo' | 'video' | 'text' | 'location' | 'qr_code' | 'none';
+export type QuestVerificationMethod = 'camera' | 'gps' | 'timer' | 'integrity_confirmation';
 export type LocationRequirementType = 'none' | 'approximate' | 'precise';
 export type IndoorOutdoor = 'indoor' | 'outdoor' | 'both';
 export type ParticipationStatus =
@@ -208,6 +209,9 @@ export interface QuestRow {
   ai_generation_id: string | null;
   is_repeatable: boolean;
   repeat_cooldown_hours: number | null;
+  verification_methods?: QuestVerificationMethod[] | null;
+  required_duration_minutes?: number | null;
+  verification_config?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
   archived_at: string | null;
@@ -271,6 +275,9 @@ export interface QuestParticipationRow {
   /** Occurrence key for repeatable quests (migration 017). Null for non-repeatable. */
   occurrence_key: string | null;
   completion_version: number;
+  verification_started_at?: string | null;
+  verification_earliest_completion_at?: string | null;
+  integrity_confirmed_at?: string | null;
   created_at: string;
   updated_at: string;
 }

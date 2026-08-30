@@ -3,7 +3,7 @@ import { Link, useLocation } from 'wouter';
 import { AlertTriangle, ArrowUpRight, Check, ChevronLeft, ChevronRight, Database, FileText, Flag, LockKeyhole, Plus, Search, ShieldCheck, SlidersHorizontal, UsersRound } from 'lucide-react';
 import { useAdminData } from '@/hooks/use-admin-data';
 import { DiagnosticsList, ErrorState, MetricGrid, PageHeader, QueueList, RefreshButton, StatusBadge, UnavailableState } from '@/components/admin-ui';
-import { moderationFetch, type MediaRetentionEvidence } from '@/hooks/use-admin-data';
+import { moderationFetch, type MediaRetentionEvidence, type QuestVerificationUpdate, type AdminQuestCreate } from '@/hooks/use-admin-data';
 import { useQuery } from '@tanstack/react-query';
 
 type AdminData = ReturnType<typeof useAdminData>;
@@ -23,7 +23,7 @@ export function DashboardPage({ data }: { data: AdminData }) {
       </div>
       <MetricGrid metrics={dashboard?.metrics} loading={data.dashboard.isLoading} />
       <div className="content-grid">
-        <section className="panel">
+       <section className="panel">
           <div className="panel-header"><div><div className="panel-title">Priority queue</div><div className="panel-kicker">Items ordered by operational urgency</div></div><Link href="/quests/submissions" className="btn btn-quiet" style={{ minHeight: 32, padding: '0 9px' }} data-testid="link-view-all-queue">View queue <ArrowUpRight /></Link></div>
           {data.dashboard.isError ? <ErrorState onRetry={() => void data.dashboard.refetch()} /> : <QueueList items={dashboard?.actionQueue} loading={data.dashboard.isLoading} onRetry={() => void data.dashboard.refetch()} />}
         </section>
@@ -61,19 +61,97 @@ export function UsersPage({ data }: { data: AdminData }) {
 export function QuestsPage({ data }: { data: AdminData }) {
   const [search, setSearch] = useState('');
   const [type, setType] = useState('all');
+  const [showCreate, setShowCreate] = useState(false);
   const quests = data.quests.data?.items;
   const filtered = useMemo(() => quests?.filter((quest: any) => `${quest.title} ${quest.source}`.toLowerCase().includes(search.toLowerCase()) && (type === 'all' || quest.type === type)), [quests, search, type]);
   return (
     <div className="page-wrap">
-      <PageHeader eyebrow="Operations / content" title="Quest administration" description="Review the content pipeline, publishing state, and proof load across every Quest format." actions={<RefreshButton onClick={() => void data.quests.refetch()} loading={data.quests.isFetching} />} />
+      <PageHeader eyebrow="Operations / content" title="Quest administration" description="Review the content pipeline, publishing state, and proof load across every Quest format." actions={<div style={{ display: 'flex', gap: 8 }}><button className="btn btn-primary" onClick={() => setShowCreate((value) => !value)} disabled={!data.session.data?.permissions.includes('admin.quests.manage')}><Plus style={{ width: 14 }} /> New Quest</button><RefreshButton onClick={() => void data.quests.refetch()} loading={data.quests.isFetching} /></div>} />
+      {showCreate && <AdminQuestCreateForm data={data} onCreated={() => setShowCreate(false)} />}
       <div className="tab-row" data-testid="quest-section-tabs"><Link className={`tab ${type === 'all' ? 'active' : ''}`} href="/quests" data-testid="link-quest-tab-all">All quests</Link><Link className="tab" href="/quests/daily" data-testid="link-quest-tab-daily">Daily</Link><Link className="tab" href="/quests/monthly" data-testid="link-quest-tab-monthly">Monthly</Link><Link className="tab" href="/quests/geo" data-testid="link-quest-tab-geo">Geo</Link><Link className="tab" href="/quests/submissions" data-testid="link-quest-tab-submissions">Proof review</Link></div>
       <div className="toolbar"><div className="search-box"><Search /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search Quest title or source" aria-label="Search quests" data-testid="input-search-quests" /></div><select value={type} onChange={(event) => setType(event.target.value)} style={{ border: '1px solid hsl(var(--input))', background: 'hsl(var(--card))', borderRadius: 6, padding: '9px 10px', color: 'hsl(var(--foreground))', fontSize: 12 }} data-testid="select-quest-type"><option value="all">Every type</option><option value="daily">Daily</option><option value="monthly">Monthly</option><option value="geo">Geo</option></select></div>
       <section className="panel">
         <div className="panel-header"><div><div className="panel-title">Quest catalog</div><div className="panel-kicker">{data.quests.data?.total ?? '—'} records returned · sorted by latest update</div></div><TargetIcon /></div>
-        {data.quests.isError ? <ErrorState onRetry={() => void data.quests.refetch()} /> : data.quests.isLoading ? <TableSkeleton columns={6} /> : !quests ? <UnavailableState onRetry={() => void data.quests.refetch()} /> : !filtered?.length ? <div className="empty-state"><Search /><strong>No matching Quests</strong><p>There are no records matching this search and type filter.</p></div> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Quest</th><th>Type</th><th>Status</th><th>Difficulty</th><th>Completions</th><th>Reviews</th><th>Updated</th></tr></thead><tbody>{filtered.map((quest: any) => <tr key={quest.id} data-testid={`row-quest-${quest.id}`}><td><div className="identity-name">{quest.title}</div><div className="identity-handle">{quest.source} · {quest.points ?? '—'} pts</div></td><td><span className="tag blue">{quest.type}</span></td><td><StatusBadge status={quest.status} /></td><td>{quest.difficulty || '—'}</td><td className="mono">{quest.completionCount ?? '—'}</td><td className="mono">{quest.reviewCount ?? '—'}</td><td>{fmtDate(quest.updatedAt)}</td></tr>)}</tbody></table></div>}
+         {data.quests.isError ? <ErrorState onRetry={() => void data.quests.refetch()} /> : data.quests.isLoading ? <TableSkeleton columns={7} /> : !quests ? <UnavailableState onRetry={() => void data.quests.refetch()} /> : !filtered?.length ? <div className="empty-state"><Search /><strong>No matching Quests</strong><p>There are no records matching this search and type filter.</p></div> : <div className="data-table-wrap"><table className="data-table"><thead><tr><th>Quest</th><th>Type</th><th>Status</th><th>Difficulty</th><th>Verification</th><th>Completions</th><th>Reviews</th><th>Updated</th></tr></thead><tbody>{filtered.map((quest: any) => <tr key={quest.id} data-testid={`row-quest-${quest.id}`}><td><div className="identity-name">{quest.title}</div><div className="identity-handle">{quest.source} · {quest.points ?? '—'} pts</div></td><td><span className="tag blue">{quest.type}</span></td><td><StatusBadge status={quest.status} /></td><td>{quest.difficulty || '—'}</td><td><QuestVerificationEditor quest={quest} data={data} /></td><td className="mono">{quest.completionCount ?? '—'}</td><td className="mono">{quest.reviewCount ?? '—'}</td><td>{fmtDate(quest.updatedAt)}</td></tr>)}</tbody></table></div>}
       </section>
     </div>
   );
+}
+
+function AdminQuestCreateForm({ data, onCreated }: { data: AdminData; onCreated: () => void }) {
+  const [draft, setDraft] = useState<AdminQuestCreate>({
+    title: '', type: 'daily', difficulty: 'easy', points: 100, methods: ['integrity_confirmation'],
+    requiredDurationMinutes: null,
+  });
+  const [message, setMessage] = useState('');
+  const toggle = (method: QuestVerificationUpdate['methods'][number]) => setDraft((current) => ({
+    ...current,
+    methods: current.methods.includes(method) ? current.methods.filter((item) => item !== method) : [...current.methods, method],
+  }));
+  const save = () => {
+    setMessage('');
+    if (draft.methods.length === 0) { setMessage('Choose at least one verification method.'); return; }
+    if (draft.type === 'geo' && !draft.methods.includes('gps')) { setMessage('Geo Quests require GPS verification.'); return; }
+    if (draft.methods.includes('gps') && draft.type !== 'geo') { setMessage('GPS verification is only available for Geo Quests.'); return; }
+    if (draft.methods.includes('timer') && (!draft.requiredDurationMinutes || draft.requiredDurationMinutes < 1)) { setMessage('Timer duration must be at least 1 minute.'); return; }
+    data.createQuest.mutate(draft, {
+      onSuccess: () => onCreated(),
+      onError: (error) => setMessage(error instanceof Error ? error.message : 'Could not create Quest.'),
+    });
+  };
+  return <section className="panel" style={{ marginTop: 20 }}>
+    <div className="panel-header"><div><div className="panel-title">Create Quest draft</div><div className="panel-kicker">New content starts as draft and cannot publish without review.</div></div><Plus style={{ width: 16 }} /></div>
+    <div className="toolbar">
+      <label className="field">Title<input value={draft.title} onChange={(event) => setDraft({ ...draft, title: event.target.value })} placeholder="A clear player-facing title" /></label>
+      <label className="field">Type<select value={draft.type} onChange={(event) => setDraft({ ...draft, type: event.target.value as AdminQuestCreate['type'] })}><option value="daily">Daily</option><option value="monthly">Monthly</option><option value="geo">Geo</option></select></label>
+      <label className="field">Difficulty<select value={draft.difficulty} onChange={(event) => setDraft({ ...draft, difficulty: event.target.value as AdminQuestCreate['difficulty'] })}><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option><option value="epic">Epic</option></select></label>
+      <label className="field">Points<input type="number" min="1" max="1000" value={draft.points} onChange={(event) => setDraft({ ...draft, points: Number(event.target.value) })} /></label>
+    </div>
+    <div className="toolbar">
+      <div className="field"><span>Verification methods</span><div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>{verificationOptions.map((option) => <button key={option.value} type="button" className={`tag ${draft.methods.includes(option.value) ? 'blue' : ''}`} onClick={() => toggle(option.value)} aria-pressed={draft.methods.includes(option.value)}>{option.label}</button>)}</div></div>
+      {draft.methods.includes('timer') && <label className="field">Timer minutes<input type="number" min="1" max="1440" value={draft.requiredDurationMinutes ?? ''} onChange={(event) => setDraft({ ...draft, requiredDurationMinutes: Number(event.target.value) })} /></label>}
+    </div>
+    {message && <div className="notice" style={{ margin: '0 20px 16px' }}><AlertTriangle /><span>{message}</span></div>}
+    <div className="panel-footer"><span className="identity-handle">The draft will be saved to the human review queue.</span><button className="btn btn-primary" onClick={save} disabled={data.createQuest.isPending || !draft.title.trim()}>{data.createQuest.isPending ? 'Creating…' : 'Create draft'}</button></div>
+  </section>;
+}
+
+const verificationOptions: Array<{ value: QuestVerificationUpdate['methods'][number]; label: string }> = [
+  { value: 'camera', label: 'Camera' }, { value: 'gps', label: 'GPS location' },
+  { value: 'timer', label: 'Timer' }, { value: 'integrity_confirmation', label: 'Integrity only' },
+];
+
+function QuestVerificationEditor({ quest, data }: { quest: any; data: AdminData }) {
+  const canManage = data.session.data?.authorized === true && data.session.data.permissions.includes('admin.quests.manage');
+  const initial = (Array.isArray(quest.verificationMethods) && quest.verificationMethods.length ? quest.verificationMethods : ['camera']) as QuestVerificationUpdate['methods'];
+  const [methods, setMethods] = useState<QuestVerificationUpdate['methods']>(initial);
+  const [duration, setDuration] = useState(String(quest.requiredDurationMinutes ?? ''));
+  const [message, setMessage] = useState('');
+  useEffect(() => {
+    const nextMethods = Array.isArray(quest.verificationMethods) && quest.verificationMethods.length
+      ? quest.verificationMethods as QuestVerificationUpdate['methods']
+      : ['camera' as const];
+    setMethods(nextMethods);
+    setDuration(String(quest.requiredDurationMinutes ?? ''));
+  }, [quest.verificationMethods, quest.requiredDurationMinutes]);
+  const toggle = (method: QuestVerificationUpdate['methods'][number]) => {
+    setMessage('');
+    setMethods((current) => current.includes(method) ? current.filter((item) => item !== method) : [...current, method]);
+  };
+  const save = () => {
+    setMessage('');
+    if (!methods.length) { setMessage('Choose a method.'); return; }
+    if (methods.includes('timer') && (!Number(duration) || Number(duration) < 1)) { setMessage('Timer must be at least 1 minute.'); return; }
+    if (methods.includes('gps') && quest.type !== 'geo') { setMessage('GPS is only available for Geo Quests.'); return; }
+    data.updateQuestVerification.mutate({ id: quest.id, update: { methods, requiredDurationMinutes: methods.includes('timer') ? Number(duration) : null, locationRequired: methods.includes('gps') } }, {
+      onSuccess: () => setMessage('Saved.'), onError: (error) => setMessage(error instanceof Error ? error.message : 'Unable to save.'),
+    });
+  };
+  return <div style={{ minWidth: 190 }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>{verificationOptions.map((option) => <button key={option.value} type="button" className={`tag ${methods.includes(option.value) ? 'blue' : ''}`} onClick={() => toggle(option.value)} disabled={!canManage || data.updateQuestVerification.isPending} aria-pressed={methods.includes(option.value)}>{option.label}</button>)}</div>
+    {methods.includes('timer') && <input type="number" min="1" max="1440" value={duration} onChange={(event) => setDuration(event.target.value)} placeholder="Minutes" aria-label={`Timer duration for ${quest.title}`} style={{ width: 90, marginTop: 6 }} disabled={!canManage} />}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6 }}><button type="button" className="btn btn-primary" style={{ minHeight: 27, padding: '0 8px', fontSize: 11 }} onClick={save} disabled={!canManage || data.updateQuestVerification.isPending}>{data.updateQuestVerification.isPending ? 'Saving…' : 'Save'}</button>{message && <span className="identity-handle">{message}</span>}</div>
+  </div>;
 }
 
 function TargetIcon() {

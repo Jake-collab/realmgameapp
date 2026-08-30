@@ -5,6 +5,7 @@ import { z } from "zod";
 
 export const questGenerationTypes = ["daily", "monthly", "geo"] as const;
 export type QuestGenerationType = (typeof questGenerationTypes)[number];
+export const verificationMethods = ["camera", "gps", "timer", "integrity_confirmation"] as const;
 export const canonicalQuestPoints = {
   easy: 100,
   medium: 200,
@@ -32,6 +33,9 @@ export const generatedQuestSchema = z.object({
   category: z.string().trim().min(1).max(80),
   interest_bubble_ids: z.array(z.string().uuid()).max(10),
   objectives: z.array(z.string().trim().min(1).max(500)).min(1).max(20),
+  verification_methods: z.array(z.enum(verificationMethods)).min(1).max(4),
+  required_duration_minutes: z.number().int().min(0).max(1440).nullable(),
+  // Retained for clients and stored drafts which still use the original proof contract.
   proof_type: z.enum(["photo", "video", "text", "location", "none"]),
   proof_instructions: z.string().max(1000),
   safety_notes: z.array(z.string().max(500)).max(20),
@@ -147,8 +151,8 @@ const defaultPrompt = (type: QuestGenerationType): PromptVersion => ({
   contentInstructions: defaultText(type),
   safetyInstructions: "Do not require trespassing, unsafe activity, private information, or unverifiable access claims.",
   pointInstructions: "Recommend points only; the platform's deterministic validator and staff review decide the final reward.",
-  proofInstructions: "Use only supported proof types. Never return QR proof.",
-  outputFormat: "Return one JSON object matching the generated Quest schema.",
+  proofInstructions: "Choose one or more verification_methods from camera, gps, timer, and integrity_confirmation. Use camera only for independently observable visual evidence, gps only with an approximate or precise location_requirement, and timer only with a positive required_duration_minutes. An integrity_confirmation-only Quest must use proof_type none and have empty proof_instructions; never request irrelevant media or proof. Composite methods are allowed only when every method has an independently verifiable requirement. Retain proof_type for legacy clients and never return QR proof.",
+  outputFormat: "Return one JSON object matching the generated Quest schema, including a non-empty verification_methods array and required_duration_minutes (a positive integer for timer Quests, otherwise null).",
   active: true,
   createdAt: new Date(0).toISOString(),
   updatedBy: "system",
@@ -305,6 +309,30 @@ function fingerprint(candidate: GeneratedQuest) {
 
 export function inspectCandidate(candidate: GeneratedQuest, type: QuestGenerationType) {
   const diagnostics: string[] = [];
+  const methods = Array.isArray(candidate.verification_methods) ? candidate.verification_methods : [];
+  if (methods.length === 0) diagnostics.push("Candidate must include at least one verification method.");
+  if (methods.some((method) => !verificationMethods.includes(method))) {
+    diagnostics.push("Candidate contains an unsupported verification method.");
+  }
+  if (methods.includes("timer") && (!Number.isInteger(candidate.required_duration_minutes) || (candidate.required_duration_minutes ?? 0) <= 0)) {
+    diagnostics.push("Timer verification requires a positive required duration in minutes.");
+  }
+  if (!methods.includes("timer") && candidate.required_duration_minutes !== null) {
+    diagnostics.push("A required duration may only be supplied for timer verification.");
+  }
+  if (methods.includes("gps") && candidate.location_requirement === "none") {
+    diagnostics.push("GPS verification requires an approximate or precise location requirement.");
+  }
+  if (methods.includes("camera") && !["photo", "video"].includes(candidate.proof_type)) {
+    diagnostics.push("Camera verification requires photo or video proof for legacy compatibility.");
+  }
+  const integrityOnly = methods.length === 1 && methods[0] === "integrity_confirmation";
+  if (integrityOnly && (candidate.proof_type !== "none" || candidate.proof_instructions.trim())) {
+    diagnostics.push("Integrity-only verification must not request proof or media.");
+  }
+  if (methods.length > 1 && !methods.some((method) => method === "camera" || method === "gps" || method === "timer")) {
+    diagnostics.push("Composite verification requires independently verifiable camera, GPS, or timer requirements.");
+  }
   if (candidate.quest_type !== type) diagnostics.push("Quest type does not match the requested generation lane.");
   if (candidate.proof_type === "location" && candidate.location_requirement === "none") diagnostics.push("Location proof requires a location requirement.");
   if (candidate.recommended_points !== canonicalQuestPoints[candidate.difficulty]) {

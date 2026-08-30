@@ -92,6 +92,23 @@ export type MediaRetentionEvidence = {
   canonicalReference: { fingerprint: string | null; matchesCleanup: boolean };
 };
 
+export type QuestVerificationUpdate = {
+  methods: Array<'camera' | 'gps' | 'timer' | 'integrity_confirmation'>;
+  requiredDurationMinutes?: number | null;
+  locationRequired?: boolean;
+};
+
+export type AdminQuestCreate = {
+  title: string;
+  type: 'daily' | 'monthly' | 'geo';
+  difficulty: 'easy' | 'medium' | 'hard' | 'epic';
+  points: number;
+  methods: QuestVerificationUpdate['methods'];
+  requiredDurationMinutes?: number | null;
+  summary?: string;
+  description?: string;
+};
+
 export function useNotificationAdminData(enabled = true) {
   const client = useQueryClient();
   const overview = useQuery<NotificationAdminData>({ queryKey: ['/admin/notifications'], enabled, queryFn: () => moderationFetch<NotificationAdminData>('/api/admin/notifications') });
@@ -163,6 +180,18 @@ export function useAdminData(mediaRetentionPage = 1) {
       void client.invalidateQueries({ queryKey: ['/admin/moderation/audit'] });
     },
   });
+  const updateQuestVerification = useMutation({
+    mutationFn: (input: { id: string; update: QuestVerificationUpdate }) => moderationFetch(`/api/admin/quests/${encodeURIComponent(input.id)}/verification`, {
+      method: 'PATCH', body: JSON.stringify(input.update),
+    }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: getListAdminQuestsQueryKey({ page: 1, pageSize: 25 }) }),
+  });
+  const createQuest = useMutation({
+    mutationFn: (input: AdminQuestCreate) => moderationFetch('/api/admin/quests', {
+      method: 'POST', body: JSON.stringify(input),
+    }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: getListAdminQuestsQueryKey({ page: 1, pageSize: 25 }) }),
+  });
 
-  return { session, dashboard, reviewQueues, users, quests, audit, diagnostics, moderation, notifications, mediaRetention, mediaRetentionAction };
+  return { session, dashboard, reviewQueues, users, quests, audit, diagnostics, moderation, notifications, mediaRetention, mediaRetentionAction, updateQuestVerification, createQuest };
 }

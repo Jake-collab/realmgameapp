@@ -346,14 +346,123 @@ router.get("/admin/quests", requireAdmin("admin.quests.read"), async (req, res) 
   const filters = `${query.status ? `&status=eq.${encodeURIComponent(query.status)}` : ""}${query.type ? `&quest_type=eq.${encodeURIComponent(query.type)}` : ""}${query.search ? `&title=ilike.*${encodeURIComponent(query.search)}*` : ""}`;
   try {
     const [rows, total] = await Promise.all([
-      adminRead<Array<Record<string, unknown>>>(`quests?select=id,title,quest_type,status,difficulty,points_reward,source_type,updated_at&order=updated_at.desc&offset=${offset}&limit=${query.pageSize}${filters}`),
+      adminRead<Array<Record<string, unknown>>>(`quests?select=id,title,quest_type,status,difficulty,points_reward,source_type,updated_at,verification_methods,required_duration_minutes,location_requirement_type&order=updated_at.desc&offset=${offset}&limit=${query.pageSize}${filters}`).catch(() =>
+        adminRead<Array<Record<string, unknown>>>(`quests?select=id,title,quest_type,status,difficulty,points_reward,source_type,updated_at&order=updated_at.desc&offset=${offset}&limit=${query.pageSize}${filters}`),
+      ),
       adminCount(`quests?select=id${filters}`),
     ]);
     res.json(ListAdminQuestsResponse.parse({
-      items: rows.map((row) => ({ id: String(row.id), title: String(row.title), type: String(row.quest_type), status: String(row.status), difficulty: row.difficulty ?? null, points: row.points_reward ?? null, source: String(row.source_type), completionCount: null, reviewCount: null, updatedAt: row.updated_at })),
+      items: rows.map((row) => ({ id: String(row.id), title: String(row.title), type: String(row.quest_type), status: String(row.status), difficulty: row.difficulty ?? null, points: row.points_reward ?? null, source: String(row.source_type), completionCount: null, reviewCount: null, updatedAt: row.updated_at, verificationMethods: Array.isArray(row.verification_methods) ? row.verification_methods : [], requiredDurationMinutes: row.required_duration_minutes ?? null, locationRequirementType: row.location_requirement_type ?? "none" })),
       page: query.page, pageSize: query.pageSize, total,
     }));
   } catch (error) { liveUnavailable(res, error, "Quest data"); }
+});
+
+const questVerificationMethods = ["camera", "gps", "timer", "integrity_confirmation"] as const;
+const QuestVerificationUpdate = z.object({
+  methods: z.array(z.enum(questVerificationMethods)).min(1).max(4),
+  requiredDurationMinutes: z.number().int().min(1).max(1_440).nullable().optional(),
+  locationRequired: z.boolean().optional(),
+}).strict().superRefine((value, ctx) => {
+  if (new Set(value.methods).size !== value.methods.length) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["methods"], message: "Verification methods must be unique." });
+  }
+  const timer = value.methods.includes("timer");
+  if (timer && (!value.requiredDurationMinutes || value.requiredDurationMinutes < 1)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["requiredDurationMinutes"], message: "A timer duration of at least 1 minute is required." });
+  }
+  if (!timer && value.requiredDurationMinutes != null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["requiredDurationMinutes"], message: "Duration is only valid with the timer method." });
+  }
+  if (value.methods.length === 1 && value.methods[0] === "integrity_confirmation" && value.locationRequired === true) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["locationRequired"], message: "Integrity-only verification cannot require location." });
+  }
+  if (value.locationRequired === true && !value.methods.includes("gps")) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["locationRequired"], message: "Location-required verification must include the location method." });
+  }
+});
+
+const CreateAdminQuest = z.object({
+  title: z.string().trim().min(3).max(120),
+  type: z.enum(["daily", "monthly", "geo"]),
+  difficulty: z.enum(["easy", "medium", "hard", "epic"]).default("easy"),
+  points: z.number().int().min(1).max(1000).default(100),
+  methods: z.array(z.enum(questVerificationMethods)).min(1).max(4),
+  requiredDurationMinutes: z.number().int().min(1).max(1440).nullable().optional(),
+  summary: z.string().trim().min(10).max(300).default("A staff-authored Worlds Quest."),
+  description: z.string().trim().min(20).max(4000).default("Complete this Quest according to the requirements shown in the app."),
+}).strict().superRefine((value, ctx) => {
+  if (value.methods.includes("timer") && (!value.requiredDurationMinutes || value.requiredDurationMinutes < 1)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["requiredDurationMinutes"], message: "A timer duration of at least 1 minute is required." });
+  }
+  if (!value.methods.includes("timer") && value.requiredDurationMinutes != null) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["requiredDurationMinutes"], message: "Duration is only valid with the timer method." });
+  }
+  if (value.type === "geo" && !value.methods.includes("gps")) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["methods"], message: "Geo Quests must include GPS verification." });
+  }
+  if (value.methods.includes("gps") && value.type !== "geo") {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["methods"], message: "GPS verification is only compatible with Geo Quests." });
+  }
+});
+
+router.post("/admin/quests", requireAdmin("admin.quests.manage"), async (req, res) => {
+  const parsed = CreateAdminQuest.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid Quest." }); return; }
+  if (!supabaseAdminConfigured()) { res.status(503).json({ error: "Creating Quests requires trusted Supabase access." }); return; }
+  const value = parsed.data;
+  const slug = `${value.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 70)}-${randomUUID().slice(0, 8)}`;
+  try {
+    const rows = await supabaseAdminRequest<Array<Record<string, unknown>>>("quests", {
+      method: "POST",
+      headers: { prefer: "return=representation" },
+      body: JSON.stringify({
+        slug,
+        title: value.title,
+        summary: value.summary,
+        description: value.description,
+        quest_type: value.type,
+        status: "draft",
+        difficulty: value.difficulty,
+        estimated_duration_minutes: value.requiredDurationMinutes ?? 15,
+        points_reward: value.points,
+        indoor_outdoor: value.type === "geo" ? "outdoor" : "both",
+        proof_type: value.methods.includes("camera") ? "photo" : value.methods.includes("gps") ? "location" : "none",
+        location_requirement_type: value.methods.includes("gps") ? "precise" : "none",
+        source_type: "admin",
+        verification_methods: value.methods,
+        required_duration_minutes: value.methods.includes("timer") ? value.requiredDurationMinutes : null,
+        created_by: req.adminPrincipal?.userId ?? null,
+      }),
+    });
+    res.status(201).json({ item: rows[0] ?? null });
+  } catch (error) { liveUnavailable(res, error, "Quest creation"); }
+});
+
+router.patch("/admin/quests/:id/verification", requireAdmin("admin.quests.manage"), async (req, res) => {
+  const parsed = QuestVerificationUpdate.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid Quest verification settings." }); return; }
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (!id || !z.string().uuid().safeParse(id).success) { res.status(400).json({ error: "A valid Quest ID is required." }); return; }
+  try {
+    const current = await adminRead<Array<{ quest_type: string; location_requirement_type: string | null }>>(`quests?id=eq.${encodeURIComponent(id)}&select=quest_type,location_requirement_type&limit=1`);
+    if (!current[0]) { res.status(404).json({ error: "Quest was not found." }); return; }
+    const location = parsed.data.methods.includes("gps") || parsed.data.locationRequired === true;
+    if (location && current[0].quest_type !== "geo") {
+      res.status(400).json({ error: "Location verification is only compatible with Geo Quests." }); return;
+    }
+    if (current[0].quest_type === "geo" && !location) {
+      res.status(400).json({ error: "Geo Quests must retain location verification." }); return;
+    }
+    const body = {
+      verification_methods: parsed.data.methods,
+      required_duration_minutes: parsed.data.methods.includes("timer") ? parsed.data.requiredDurationMinutes : null,
+    };
+    const items = await supabaseAdminRequest<Array<Record<string, unknown>>>(`quests?id=eq.${encodeURIComponent(id)}`, {
+      method: "PATCH", headers: { prefer: "return=representation" }, body: JSON.stringify(body),
+    });
+    res.json({ item: items[0] ?? null });
+  } catch (error) { liveUnavailable(res, error, "Quest verification"); }
 });
 
 router.get("/admin/hunts", requireAdmin("admin.review.read"), async (req, res) => {

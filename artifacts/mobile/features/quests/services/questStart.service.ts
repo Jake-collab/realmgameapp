@@ -31,6 +31,7 @@ import {
   fetchUserParticipationHistory,
   insertParticipation,
   initializeStepProgress,
+  startQuestVerificationTimer,
   type QuestParticipationRowExtended,
 } from '../repositories/quest.repository';
 import { evaluateQuestEligibility, type EligibilityContext } from './questEligibility.service';
@@ -185,6 +186,27 @@ export async function startQuest(input: StartQuestInput): Promise<QuestStartResu
     return { success: false, participation: null, firstObjective: null, wasExisting: false, error: domainErr };
   }
 
+  // Timer verification begins only after the server has created the
+  // participation. The database clock owns both timestamps.
+  if (quest.verification_methods?.includes('timer')) {
+    try {
+      const timer = await startQuestVerificationTimer(participation.id, context.userId);
+      participation = {
+        ...participation,
+        verification_started_at: timer.verification_started_at,
+        verification_earliest_completion_at: timer.verification_earliest_completion_at,
+      };
+    } catch (err) {
+      return {
+        success: false,
+        participation: null,
+        firstObjective: null,
+        wasExisting: false,
+        error: normalizeQuestError(err),
+      };
+    }
+  }
+
   // ── Step 8: Initialize step progress ─────────────────────────────────────────
   const objectives = (quest.quest_objectives ?? []) as QuestObjectiveRow[];
   const requiredObjectives = objectives.filter(obj => obj.is_required);
@@ -231,6 +253,9 @@ function buildDevModeResult(questId: string, userId: string): QuestStartResult {
     reward_snapshot_points: 100,
     occurrence_key: null,
     completion_version: 1,
+    verification_started_at: null,
+    verification_earliest_completion_at: null,
+    integrity_confirmed_at: null,
     created_at: now,
     updated_at: now,
   };

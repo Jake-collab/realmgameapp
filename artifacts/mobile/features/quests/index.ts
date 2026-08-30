@@ -74,6 +74,15 @@ export { startQuest } from './services/questStart.service';
 export { abandonQuest } from './services/questAbandonment.service';
 export { evaluateQuestAvailability } from './services/questAvailability.service';
 export { evaluateQuestEligibility } from './services/questEligibility.service';
+export {
+  startQuestTimer,
+  confirmQuestIntegrityRequirement,
+} from './services/questVerification.service';
+export {
+  getQuestVerificationMethods,
+  formatRemainingTimer,
+  verificationLabel,
+} from './utils/questVerification';
 
 // Error utilities
 export { makeQuestError, normalizeQuestError, isQuestDomainError } from './utils/questErrors';
