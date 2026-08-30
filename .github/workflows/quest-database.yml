@@ -16,6 +16,7 @@ on:
       - "artifacts/mobile/package.json"
       - "artifacts/mobile/scripts/quest-database-check.sh"
       - "artifacts/mobile/supabase/**"
+      - "artifacts/api-server/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
   push:
@@ -32,6 +33,7 @@ on:
       - "artifacts/mobile/package.json"
       - "artifacts/mobile/scripts/quest-database-check.sh"
       - "artifacts/mobile/supabase/**"
+      - "artifacts/api-server/**"
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
   workflow_dispatch:

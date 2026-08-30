@@ -9,6 +9,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 ENV_FILE="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/quest-supabase.env"
+STORAGE_VERSION_FILE="$MOBILE_DIR/supabase/.temp/storage-version"
+STORAGE_VERSION_BACKUP="${ENV_FILE}.storage-version"
+STORAGE_VERSION_MOVED=false
 SUPABASE_STARTED=false
 SUPABASE_CLI_VERSION="${SUPABASE_CLI_VERSION:-2.115.0}"
 
@@ -45,8 +48,12 @@ cleanup() {
   if [[ "$SUPABASE_STARTED" == true ]]; then
     (
       cd "$MOBILE_DIR"
-      run_supabase stop --no-backup --yes
+      run_supabase stop --no-backup
     ) || echo "Warning: failed to remove disposable Supabase containers." >&2
+  fi
+  if [[ "$STORAGE_VERSION_MOVED" == true ]]; then
+    rm -f "$STORAGE_VERSION_FILE"
+    mv "$STORAGE_VERSION_BACKUP" "$STORAGE_VERSION_FILE"
   fi
   rm -f "$ENV_FILE"
 }
@@ -58,10 +65,17 @@ if [[ ! -f "$MOBILE_DIR/supabase/config.toml" ]]; then
 fi
 
 cd "$MOBILE_DIR"
+# A linked hosted project can leave an ignored storage-version marker in the
+# local .temp directory. It is not part of this disposable project's config
+# and can name a migration absent from the locally selected Storage image.
+if [[ -f "$STORAGE_VERSION_FILE" ]]; then
+  mv "$STORAGE_VERSION_FILE" "$STORAGE_VERSION_BACKUP"
+  STORAGE_VERSION_MOVED=true
+fi
 # Delete any volume from an interrupted prior run before provisioning the
 # disposable project. `supabase start` then applies every migration to the
 # fresh database as part of initialization.
-run_supabase stop --no-backup --yes >/dev/null 2>&1 || true
+run_supabase stop --no-backup >/dev/null 2>&1 || true
 SUPABASE_STARTED=true
 # The CLI can report a false-negative container health status while its Auth
 # service is still completing first-run setup. We verify the Auth endpoint
@@ -83,6 +97,9 @@ set +a
 export QUEST_TEST_SUPABASE_URL="$API_URL"
 export QUEST_TEST_SUPABASE_ANON_KEY="$ANON_KEY"
 export QUEST_TEST_SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+export QUEST_TEST_DB_URL="$DB_URL"
+export SUPABASE_URL="$API_URL"
+export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
 
 for attempt in {1..60}; do
   if curl --fail --silent --show-error "$API_URL/auth/v1/health" >/dev/null; then
@@ -97,3 +114,6 @@ done
 
 echo "Running Quest RPC and RLS contracts against the disposable database."
 pnpm exec jest --runInBand __tests__/questRpc.integration.test.ts
+
+echo "Running rejected-media Storage retention contracts against the disposable database."
+pnpm --filter @workspace/api-server test

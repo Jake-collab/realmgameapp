@@ -97,30 +97,30 @@ BEGIN
     RAISE EXCEPTION 'invalid moderation retention claim';
   END IF;
 
-  SELECT * INTO v_media
-  FROM media_assets
-  WHERE id = p_media_id
-    AND moderation_status = 'rejected'
-    AND visibility = 'private'
-    AND bucket IN (
+  SELECT m.* INTO v_media
+  FROM media_assets AS m
+  WHERE m.id = p_media_id
+    AND m.moderation_status = 'rejected'
+    AND m.visibility = 'private'
+    AND m.bucket IN (
       'avatars', 'quest-media', 'hunt-media', 'custom-game-media',
       'proof-submissions', 'moderation-quarantine'
     )
     AND (
-      (deleted_at IS NULL AND updated_at < p_rejected_before)
+      (m.deleted_at IS NULL AND m.updated_at < p_rejected_before)
       OR EXISTS (
         SELECT 1
-        FROM media_retention_cleanups c
-        WHERE c.media_id = media_assets.id
+        FROM media_retention_cleanups AS c
+        WHERE c.media_id = m.id
           AND c.status IN ('processing', 'failed')
       )
     )
   FOR UPDATE;
   IF NOT FOUND THEN RETURN; END IF;
 
-  SELECT * INTO v_cleanup
-  FROM media_retention_cleanups
-  WHERE media_id = p_media_id
+  SELECT c.* INTO v_cleanup
+  FROM media_retention_cleanups AS c
+  WHERE c.media_id = p_media_id
   FOR UPDATE;
 
   IF v_cleanup.media_id IS NOT NULL THEN
@@ -143,7 +143,7 @@ BEGIN
           last_error = 'Media Storage reference changed; manual review required.',
           lease_token = NULL,
           lease_acquired_at = NULL
-      WHERE media_id = p_media_id;
+      WHERE media_retention_cleanups.media_id = p_media_id;
       RETURN;
     END IF;
   END IF;
@@ -158,7 +158,7 @@ BEGIN
     p_media_id, v_media.bucket, v_media.storage_path, 'processing', 1,
     v_lease, NOW(), NULL, NULL, NULL, NULL
   )
-  ON CONFLICT (media_id) DO UPDATE SET
+  ON CONFLICT ON CONSTRAINT media_retention_cleanups_pkey DO UPDATE SET
     bucket = EXCLUDED.bucket,
     storage_path = EXCLUDED.storage_path,
     status = 'processing',
@@ -177,7 +177,7 @@ BEGIN
 
   RETURN QUERY
   SELECT p_media_id, v_media.bucket, v_media.storage_path, v_lease,
-         (SELECT attempt_count FROM media_retention_cleanups WHERE media_id = p_media_id);
+         (SELECT c.attempt_count FROM media_retention_cleanups AS c WHERE c.media_id = p_media_id);
 END;
 $$;
 

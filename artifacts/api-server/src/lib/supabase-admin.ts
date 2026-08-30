@@ -114,7 +114,8 @@ function validateStorageObjectReference(bucket: string, objectPath: string) {
  *
  * The Storage API's remove endpoint accepts a list of paths. Sending one path
  * keeps the operation idempotent while using the same API contract as the
- * Supabase client. A 404 is a successful "already gone" outcome.
+ * Supabase client. A 404 or empty result list is a successful "already gone"
+ * outcome.
  */
 export async function deleteSupabaseStorageObject(
   bucket: string,
@@ -139,6 +140,16 @@ export async function deleteSupabaseStorageObject(
   if (response.status === 404) return 'missing';
   if (!response.ok) {
     throw new Error(`Supabase Storage deletion failed with status ${response.status}.`);
+  }
+  const body = await response.text();
+  if (body) {
+    try {
+      const payload: unknown = JSON.parse(body);
+      if (Array.isArray(payload) && payload.length === 0) return 'missing';
+    } catch {
+      // A successful response with a non-JSON body is still a successful
+      // deletion; only the Storage API's empty result identifies a miss.
+    }
   }
   return 'deleted';
 }

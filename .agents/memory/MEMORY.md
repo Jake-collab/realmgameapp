@@ -25,6 +25,7 @@
 - [Reusable workflow contracts](reusable-workflow-contracts.md) — failure reporters need static checks in the reusable callee and every local caller permission handoff.
 - [Hosted Supabase reset](hosted-supabase-schema-mismatch.md) — this project required a scoped public-schema reset; the CLI’s linked reset reaches Auth-owned objects and fails.
 - [Storage RLS policy evaluation](storage-rls-policy-evaluation.md) — anonymous policies must not invoke creator-only helpers behind a short-circuit condition.
+- [Storage retention integration](storage-retention-integration.md) — batch-remove reports missing objects as HTTP 200 with an empty list; isolate linked Storage metadata in local harnesses.
 - [Admin media URL boundary](admin-media-url-boundary.md) — staff access to private media is ID-only and server-signed after authorization.
 - [Hosted Auth URL configuration](hosted-auth-url-configuration.md) — the installed Supabase connection can inspect provider status but cannot mutate redirect allowlists; dashboard access is required.
 - [Scheduled worker architecture](scheduled-worker-architecture.md) — one trusted API worker owns durable notifications and maintenance; do not add pg_cron duplicates.
