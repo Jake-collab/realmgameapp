@@ -1,0 +1,337 @@
+Perform the FINAL Supabase Build 1 integration audit for Worlds.
+
+Supabase blockers #1–#5 are now complete, including production worker deployment.
+
+This is a FINAL VALIDATION PASS. Do not redesign working systems and do not move on to Mapbox.
+
+Audit the ACTUAL connected production Supabase project and current production deployment, not mocks or assumptions.
+
+Review all work completed during blockers #1–#5 and verify that the production Supabase configuration matches the current canonical Worlds Build 1 architecture from Prompts 25 and 26.
+
+==================================================
+1. DATABASE / MIGRATIONS
+==================================================
+
+Verify:
+
+- All required canonical migrations are applied remotely.
+- Migration history is consistent.
+- Current Quest schema matches Prompt 25.
+- Current Hunt schema matches Prompt 26.
+- Required tables, enums, indexes, constraints, triggers, RPCs and database functions exist.
+- No obsolete partial schema is still being used.
+- Interest Bubble schema/defaults are present.
+- Platform defaults required by Build 1 exist.
+- No unresolved migration conflicts remain.
+
+Report the latest required production migration number and confirm it is applied.
+
+==================================================
+2. ROW-LEVEL SECURITY / TRUST BOUNDARIES
+==================================================
+
+Test using anonymous, ordinary authenticated, and trusted server contexts.
+
+Verify ordinary users cannot:
+
+- modify Quest Points
+- modify Hunt Points
+- award themselves points
+- approve their own submissions
+- modify moderation decisions
+- access another user's private proof
+- access private Hunt placement/360 media
+- access hidden authoritative Hunt Drop coordinates
+- access private riddle answers
+- alter another user's Hunt state
+- access Admin-only data
+- promote themselves to Admin/Super Admin
+- invoke service-role-only operations
+
+Verify trusted mutations remain server-authoritative.
+
+==================================================
+3. AUTH
+==================================================
+
+Verify current production configuration for:
+
+- signup
+- login
+- logout
+- email verification
+- password reset
+- session persistence/restoration
+- protected routes
+- banned/restricted accounts
+- Admin authorization
+
+Confirm:
+
+Site URL:
+https://matterrealm.com/
+
+Required Redirect URLs are configured.
+
+Do not fail the Supabase audit solely because:
+- matterrealm.com production callback hosting is not deployed yet
+- signed iOS/Android universal-link testing is pending
+
+Track those as pre-release deployment validation items.
+
+==================================================
+4. STORAGE
+==================================================
+
+Verify the final canonical Storage architecture from blocker #2.
+
+Test:
+
+- required buckets exist
+- sensitive buckets are private
+- Quest proof is private
+- Hunt proof is private
+- 360 placement media is private
+- moderation/quarantine evidence is private
+- cross-user private access fails
+- unauthorized write/delete fails
+- signed/protected access works where required
+- approved public-facing media works as intended
+- no application code still depends on obsolete bucket architecture
+
+Also report any intentionally deferred rejected/private-media cleanup task separately.
+
+==================================================
+5. INTEREST BUBBLES / PERSONALIZATION
+==================================================
+
+Verify:
+
+- canonical Interest Bubble pool exists
+- onboarding selections persist
+- user interests can be atomically replaced
+- Admin CRUD is protected
+- Daily Quest personalization can consume the selections
+- combination matching support exists where required
+
+==================================================
+6. QUEST SYSTEM DATABASE INTEGRATION
+==================================================
+
+Validate against production Supabase:
+
+- Daily Quest assignment
+- stable daily assignment
+- Monthly Quest lifecycle
+- Geo-Quest lifecycle
+- Quest start/initiation
+- proof session creation
+- proof submission
+- GPS validation boundaries
+- completion/approval
+- Quest Point award
+- duplicate award prevention
+- point ledger integrity
+- leaderboard access
+- private proof protection
+
+Do not require Mapbox or OpenAI to be configured yet to pass the Supabase DATABASE integration itself.
+
+Clearly distinguish an external-service dependency from a Supabase failure.
+
+==================================================
+7. HUNT SYSTEM DATABASE INTEGRATION
+==================================================
+
+Validate:
+
+- Hunt creation/lifecycle
+- Hunt Drop records
+- private authoritative coordinates
+- public search-zone geometry
+- clue reveal state
+- collection sessions
+- duplicate collection prevention
+- Hunt Point award
+- Hunt Point budget enforcement for Custom Hunts
+- ordered/unordered Hunt state
+- invitation state
+- placement verification records
+- moderation state
+- private 360 evidence
+- reporting/integrity boundaries
+- Hunt leaderboard
+
+Again, external Mapbox/OpenAI/native-camera dependencies should be reported separately rather than incorrectly classified as Supabase failures.
+
+==================================================
+8. SUPER ADMIN
+==================================================
+
+Verify:
+
+- exactly one intended active Super Admin exists
+- my previously promoted account retains super_admin
+- Admin panel recognizes the role
+- ordinary users are denied Admin access
+- client-side self-promotion is impossible
+- trusted Admin operations work
+- role changes are audited
+
+Do not expose account credentials.
+
+==================================================
+9. WORKER / SCHEDULED JOBS
+==================================================
+
+Verify the ACTUAL production deployment.
+
+Confirm:
+
+- production API is running
+- production worker is running
+- worker connects to production Supabase
+- distinct API/worker processes exist as intended
+- only one scheduler owns each scheduled responsibility
+- notification queue processing runs
+- Hunt invitation expiration runs
+- Quest participation expiration runs
+- exact-coordinate retention cleanup runs
+- temporary-session cleanup runs
+- retry/recovery behavior works
+- worker logging exists
+- failure handling exists
+- service-role credentials remain server-only
+
+Do not create duplicate pg_cron jobs.
+
+==================================================
+10. SECRETS / CLIENT SECURITY
+==================================================
+
+Audit production environment boundaries.
+
+Verify:
+
+Client-safe:
+- Supabase public URL/key only as required by current architecture
+
+Server-only:
+- SUPABASE_SERVICE_ROLE_KEY
+- future OpenAI credentials
+- other privileged backend credentials
+
+Verify no service-role or other privileged secret can enter the Expo/mobile bundle.
+
+Do NOT print secret values.
+
+==================================================
+11. CONNECTED END-TO-END SUPABASE TEST
+==================================================
+
+Run the broadest safe connected validation possible against production Supabase using disposable test data where needed.
+
+Validate:
+
+Auth
+→ Profile
+→ Interest Bubbles
+→ Quest state
+→ Quest proof authorization
+→ Quest Points protection
+→ Hunt state
+→ Hunt private-coordinate protection
+→ Hunt collection protection
+→ Hunt Points protection
+→ Storage authorization
+→ Admin denial/authorization
+→ Worker/database interaction
+
+Clean up disposable test data where safe.
+
+==================================================
+12. REMAINING ITEMS
+==================================================
+
+Separate remaining issues into:
+
+A. SUPABASE BLOCKER
+Must be fixed before Supabase integration is complete.
+
+B. EXTERNAL INTEGRATION PENDING
+Examples:
+- Mapbox
+- OpenAI
+- native camera/GPS/motion
+- push-provider configuration
+
+C. PRE-RELEASE VALIDATION
+Examples:
+- signed iOS/Android universal links
+- production matterrealm.com callback hosting
+
+D. OPTIONAL / NON-BLOCKING CLEANUP
+
+Do not classify future external integration work as a Supabase failure.
+
+==================================================
+FINAL REPORT
+==================================================
+
+Return:
+
+## FINAL SUPABASE STATUS
+PASS / FAIL
+
+## DATABASE
+PASS/FAIL
+
+## RLS & SECURITY
+PASS/FAIL
+
+## AUTH
+PASS/FAIL
+
+## STORAGE
+PASS/FAIL
+
+## INTEREST BUBBLES
+PASS/FAIL
+
+## QUEST INTEGRATION
+PASS/FAIL
+
+## HUNT INTEGRATION
+PASS/FAIL
+
+## SUPER ADMIN
+PASS/FAIL
+
+## PRODUCTION WORKER
+PASS/FAIL
+
+## SECRET BOUNDARIES
+PASS/FAIL
+
+## CONNECTED TESTS
+PASS/FAIL
+
+## SUPABASE BLOCKERS
+List every remaining true Supabase blocker.
+If none:
+NONE
+
+## EXTERNAL INTEGRATIONS STILL PENDING
+List them separately.
+
+## PRE-RELEASE VALIDATION STILL PENDING
+List them separately.
+
+## OPTIONAL CLEANUP
+List separately.
+
+If there are no remaining true Supabase blockers, state exactly:
+
+SUPABASE BUILD 1 INTEGRATION: COMPLETE
+
+Do not begin Mapbox or modify another external integration.
