@@ -34,6 +34,14 @@ BEGIN
     RETURN jsonb_build_object('ok', FALSE, 'code', 'self_request');
   END IF;
 
+  -- Serialize all requests for this pair on its canonical profile row.
+  -- Without a pair-level lock, opposite sends can both miss the reverse
+  -- request and create two pending rows instead of auto-accepting one.
+  PERFORM id
+  FROM profiles
+  WHERE id = canonical_pair_a(v_viewer, v_target)
+  FOR UPDATE;
+
   -- Block checks
   IF are_users_blocked(v_viewer, v_target) THEN
     RETURN jsonb_build_object('ok', FALSE, 'code', 'blocked');

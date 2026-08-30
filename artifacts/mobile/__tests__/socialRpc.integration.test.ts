@@ -293,6 +293,86 @@ describeIntegration('Social RPC contracts', () => {
     // A blocked user is excluded from public search in the other direction.
     await expect(social.searchPublicUsers(viewer.username)).resolves.toEqual([]);
   });
+
+  test('opposite friend requests atomically become one friendship', async () => {
+    const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
+    const firstUser = await createTestUser('viewer', suffix);
+    const secondUser = await createTestUser('target', suffix);
+    const firstClient = testAnonClient();
+    const secondClient = testAnonClient();
+
+    try {
+      await Promise.all([
+        signInClientAs(firstClient, firstUser),
+        signInClientAs(secondClient, secondUser),
+      ]);
+
+      const results = await Promise.all([
+        firstClient.rpc('send_friend_request', {
+          p_target_username: secondUser.username,
+          p_source_context: 'search',
+        }),
+        secondClient.rpc('send_friend_request', {
+          p_target_username: firstUser.username,
+          p_source_context: 'search',
+        }),
+      ]);
+      results.forEach(({ error }) => {
+        if (error) throw error;
+      });
+
+      const responses = results.map(({ data }) => data as {
+        ok?: boolean;
+        code?: string;
+        state?: string;
+      });
+      expect(responses).toHaveLength(2);
+      responses.forEach((response) => {
+        expect(response.ok).toBe(true);
+      });
+      expect(responses.map((response) => response.code).sort()).toEqual([
+        'auto_accepted',
+        'sent',
+      ]);
+      expect(responses.map((response) => response.state).sort()).toEqual([
+        'friends',
+        'outgoing_request',
+      ]);
+
+      const pair = [firstUser.id, secondUser.id].sort();
+      const { data: friendships, error: friendshipError } = await adminClient
+        .from('friendships')
+        .select('id, status, user_id_a, user_id_b')
+        .eq('user_id_a', pair[0])
+        .eq('user_id_b', pair[1])
+        .eq('status', 'active');
+      if (friendshipError) throw friendshipError;
+      expect(friendships).toHaveLength(1);
+
+      const { data: pendingRequests, error: pendingError } = await adminClient
+        .from('friend_requests')
+        .select('id')
+        .in('requester_id', [firstUser.id, secondUser.id])
+        .in('recipient_id', [firstUser.id, secondUser.id])
+        .eq('status', 'pending');
+      if (pendingError) throw pendingError;
+      expect(pendingRequests).toEqual([]);
+
+      const { data: acceptanceNotifications, error: notificationError } = await adminClient
+        .from('notifications')
+        .select('id, user_id, type')
+        .in('user_id', [firstUser.id, secondUser.id])
+        .eq('type', 'friend_request_accepted');
+      if (notificationError) throw notificationError;
+      expect(acceptanceNotifications).toHaveLength(1);
+    } finally {
+      await Promise.all([firstClient.auth.signOut(), secondClient.auth.signOut()]);
+      const { error: secondDeleteError } = await adminClient.auth.admin.deleteUser(secondUser.id);
+      if (secondDeleteError) throw secondDeleteError;
+      const { error: firstDeleteError } = await adminClient.auth.admin.deleteUser(firstUser.id);
+      if (firstDeleteError) throw firstDeleteError;
+    }
+  }, 30_000);
 });
 
 describeLiveMobile('Social RPC missing-session boundary', () => {

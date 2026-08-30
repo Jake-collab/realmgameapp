@@ -11,6 +11,12 @@ description: Prompt 16 social layer — public profiles, friendships, friend req
 
 **Reverse request → auto-accept** — when A requests B while B already has a pending request to A, the `send_friend_request` RPC atomically accepts both sides. Handled server-side only.
 
+**Opposite-request serialization** — `send_friend_request` locks the canonical profile row before checking or writing requests, so simultaneous reverse sends cannot both miss each other.
+
+**Why:** A directional unique index prevents duplicate same-direction requests but cannot serialize opposite directions; the canonical row gives both calls one deadlock-free pair lock.
+
+**How to apply:** Preserve the pair lock whenever changing the send/auto-accept transaction, and keep the live race test aligned with its one-friendship/zero-pending invariant.
+
 **`blocked_me` never exposed to client** — the client receives `'unavailable'` for both "not found" and "blocked by target"; the 7th relationship state exists only server-side.
 
 **Statistics hidden by default** — `show_statistics = FALSE`; users must explicitly opt-in to show public stats.
