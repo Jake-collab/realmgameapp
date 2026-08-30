@@ -1,0 +1,1293 @@
+WORLDS BUILD 1 — STAGE 2 REVENUE + MEMBERSHIP + COLLECTIBLES
+SUPABASE + APPLICATION IMPLEMENTATION
+
+Stage 1 is complete.
+
+Canonical specification:
+artifacts/mobile/docs/REVENUE_STAGE_1_SPEC.md
+
+Project constitution:
+artifacts/mobile/docs/PROJECT_CONSTITUTION.md
+
+This Stage 2 task must IMPLEMENT the revenue product architecture defined in Stage 1.
+
+IMPORTANT:
+
+DO:
+- implement the application features
+- implement Supabase schema changes
+- create forward migrations
+- apply them to the linked production Supabase project
+- implement RLS / RPCs / ledgers / jobs / admin controls
+- build UI for membership comparison, allowances, credits, badges, collection, marketplace configuration
+- test connected production behavior with disposable data
+- preserve existing Quest/Hunt/QVAC/QAVS security
+
+DO NOT:
+- connect Stripe
+- connect Apple In-App Purchase
+- connect Google Play Billing
+- configure payment secrets
+- create live products/prices
+- implement seller payout-provider onboarding
+- start Mapbox
+- weaken QVAC/QAVS or existing Quest/Hunt authorization
+
+Stage 2 must be PAYMENT-PROVIDER-NEUTRAL.
+
+==================================================
+1. INSPECT CURRENT IMPLEMENTATION FIRST
+==================================================
+
+Before changing anything:
+
+Inspect:
+
+- REVENUE_STAGE_1_SPEC.md
+- PROJECT_CONSTITUTION.md
+- current Supabase migrations through the latest applied migration
+- current Quest assignment and participation model
+- current Hunt / Drop model
+- current points ledgers
+- current Admin architecture
+- existing scheduled worker/maintenance architecture
+- current Supabase RLS patterns
+- current transaction/audit patterns
+
+Do not duplicate existing infrastructure unnecessarily.
+
+Use the next unused canonical migration number(s).
+
+Never edit already-applied production migrations.
+
+==================================================
+2. CANONICAL MEMBERSHIP MODEL
+==================================================
+
+Implement one Worlds Membership covering Quest + Hunt.
+
+Plans:
+
+FREE
+
+MEMBER_MONTHLY
+$4.99/month
+
+MEMBER_YEARLY
+$44.99/year
+
+Do not make payment-provider product IDs canonical membership IDs.
+
+Create provider-neutral internal membership/entitlement state.
+
+The system must be able to represent:
+
+- free
+- active membership
+- canceled but active until period end
+- expired
+- payment pending
+- grace period if later needed
+- revoked
+- refunded/reversed if later needed
+
+Do not trust client-provided membership state.
+
+Membership must eventually be driven by trusted payment events in Stage 3.
+
+For Stage 2, create safe server/admin/testing mechanisms to simulate trusted entitlement state.
+
+==================================================
+3. QUEST ALLOWANCES
+==================================================
+
+Implement server-authoritative access allowances.
+
+FREE:
+
+Monthly Quests:
+10 per applicable monthly period/drop.
+
+Geo-Quests:
+1 per week.
+
+Daily/Personalized Quest:
+1 per week.
+
+MEMBER:
+
+Monthly Quests:
+50 per applicable monthly period/drop.
+
+Geo-Quests:
+2 per week.
+
+Daily/Personalized Quest:
+1 per day.
+
+Do not create a separate Personal Quest category.
+
+The existing Daily Quest remains personalized through Interest Bubbles.
+
+Membership changes access frequency/quantity only.
+
+QVAC/QAVS verification requirements remain unchanged.
+
+A membership user must not receive weaker verification.
+
+==================================================
+4. QUEST ACCESS / CONSUMPTION AUTHORITY
+==================================================
+
+Determine from current architecture whether allowance should be enforced:
+
+- at assignment
+- at activation/start
+- at claim/open
+- or another canonical server event
+
+Choose the architecture least likely to create duplicate/race issues.
+
+The backend must be authoritative.
+
+Users must not be able to:
+
+- repeatedly request assignments to exceed quota
+- alter period counters
+- manipulate device time
+- reinstall/sign out to reset allowance
+
+Use server-side period calculation.
+
+==================================================
+5. HUNT WEEKLY DROP ALLOWANCE
+==================================================
+
+Implement:
+
+FREE:
+2 included Drop creations per week.
+
+MEMBER:
+5 included Drop creations per week.
+
+Hunting/finding remains unlimited.
+
+The weekly Drop allowance must be server-authoritative.
+
+Use server-side timestamps.
+
+Do not store only a client counter.
+
+The user's current state must be derivable/auditable.
+
+==================================================
+6. EXTRA DROP CREDITS
+==================================================
+
+Implement canonical packs as definitions:
+
+$1.99 → 5 credits
+$4.99 → 15 credits
+$9.99 → 35 credits
+
+No checkout yet.
+
+Implement a provider-neutral Drop Credit ledger.
+
+Credits must:
+
+- be account-bound
+- never expire
+- be granted only by trusted backend/admin/test mechanisms
+- never be client-self-grantable
+- be consumed atomically
+- remain auditable
+- support reversals/adjustments
+- support Stage 3 payment event linkage
+
+One credit = one additional Drop creation.
+
+Consumption order:
+
+1. Included weekly allowance first.
+2. Extra Drop Credit only when included weekly allowance is exhausted.
+
+Do NOT consume a paid credit while included weekly allowance remains.
+
+==================================================
+7. DROP CREATION AUTHORIZATION
+==================================================
+
+Create one authoritative Drop-creation operation/RPC/server path.
+
+It must atomically determine:
+
+- membership state
+- current weekly included allowance
+- whether included allowance remains
+- Drop Credit balance
+- correct allowance source to consume
+
+Then:
+
+- authorize creation
+- consume correct resource
+- create the Drop
+- record audit/ledger state
+
+Prevent races such as two simultaneous Drop creations consuming the final included allowance or one Drop Credit twice.
+
+If no included allowance and no credit:
+
+Return a structured entitlement failure suitable for UI upsell.
+
+==================================================
+8. USER ALLOWANCE SUMMARY
+==================================================
+
+Expose an authorized server-derived summary such as:
+
+- membership plan
+- membership status
+- included Drops used this week
+- included Drops remaining
+- weekly Drop limit
+- Extra Drop Credit balance
+- Quest allowance availability
+
+Do not expose payment secrets/provider-sensitive data.
+
+This should drive UI.
+
+==================================================
+9. MEMBERSHIP COMPARISON UI
+==================================================
+
+Implement a clear Membership screen/modal.
+
+FREE:
+
+QUEST
+- 10 Monthly Quests
+- 1 Geo-Quest/week
+- 1 Daily/Personalized Quest/week
+
+HUNT
+- 2 Drop creations/week
+- Unlimited hunting
+
+WORLDS MEMBERSHIP
+
+$4.99/month
+or
+$44.99/year
+
+QUEST
+- 50 Monthly Quests
+- 2 Geo-Quests/week
+- 1 Daily/Personalized Quest/day
+
+HUNT
+- 5 Drop creations/week
+- Unlimited hunting
+
+Extra Drop Credits:
+
+$1.99 → 5
+$4.99 → 15
+$9.99 → 35
+
+Buttons may exist as non-live checkout placeholders for Stage 3.
+
+They must not fabricate purchase success.
+
+==================================================
+10. PASSIVE UPSELL
+==================================================
+
+For FREE users:
+
+Quest UI:
+At/near the end of available Quest inventory, show a subdued message:
+
+“More Quests available with Worlds Membership.”
+
+or equivalent.
+
+Hunt UI:
+Near Drop creation allowance/action show:
+
+“Create up to 5 Drops each week with Worlds Membership, or use Extra Drop Credits for additional Drops.”
+
+Do not use repeated intrusive popups.
+
+Do not show upgrade messaging unnecessarily to active members.
+
+==================================================
+11. DROP CREATION — FIND LIMIT
+==================================================
+
+Extend Drop creation so creators can choose:
+
+Find limit:
+- numeric quantity
+OR
+- Unlimited
+
+This is the maximum number of successful unique users who may FIND the Drop.
+
+Track authoritative remaining/consumed find capacity.
+
+When exhausted:
+
+- stop new finds
+- remove/hide Drop from active discovery
+- preserve historical records
+- preserve badge records
+- preserve collectible ownership
+- preserve transactions
+
+Concurrency must prevent over-claiming final find slots.
+
+Do not trust a client-side count.
+
+==================================================
+12. COLLECTIBLE ACQUISITION LIMIT
+==================================================
+
+This is independent of Find limit.
+
+Creator chooses:
+
+Collectible acquisition limit:
+- numeric quantity
+OR
+- Unlimited
+
+If sold/acquired out:
+
+- collectible becomes Sold Out
+- Drop can remain findable if find allowance remains
+- successful finds still earn Find Badge
+- no further collectible acquisition
+
+Prevent two users from acquiring the final unit concurrently.
+
+==================================================
+13. DROP DEACTIVATION / MANUAL DELETE
+==================================================
+
+Implement creator-controlled soft-deactivation.
+
+Creator can deactivate their own active Drop.
+
+Do NOT destructively erase records needed for:
+
+- existing badges
+- collectible ownership
+- purchases
+- seller accounting
+- audit history
+
+Deactivation must:
+
+- remove from active Hunt discovery
+- block new finds
+- block new collectible acquisition/purchase
+- retain historical relationships
+
+Admin must also be able to deactivate/moderate Drops.
+
+==================================================
+14. FIND BADGES
+==================================================
+
+Implement permanent Find Badges.
+
+Every successful verified Drop find awards one badge.
+
+Badge is earned regardless of collectible acquisition.
+
+Do not award duplicate badge for the same user + Drop unless current Hunt rules explicitly allow repeatable findings.
+
+Badge record should snapshot enough immutable information to remain meaningful if the Drop is later modified/deactivated.
+
+Include at least:
+
+- user
+- Drop reference
+- Drop/display name snapshot
+- rarity snapshot where applicable
+- earned timestamp
+- relevant creator/display attribution snapshot where appropriate
+
+Do not store unnecessary private exact location in public badge display data.
+
+==================================================
+15. BADGE UI
+==================================================
+
+Implement an accessible Badges list/gallery without adding unnecessary bottom navigation.
+
+Prefer integration into:
+
+- My Hunts
+- Progress
+- Profile
+
+depending on current UI architecture.
+
+Show:
+
+- badge / rarity
+- Drop name
+- date earned
+- useful type/rarity label
+
+Do not show the collectible image merely because the badge exists if the user never acquired the collectible.
+
+==================================================
+16. COLLECTIBLE MODEL
+==================================================
+
+Implement collectible metadata separate from Drop find state.
+
+A collectible can be:
+
+FREE
+or
+PAID
+
+Fields/architecture should support:
+
+- display name
+- image/media reference
+- creator
+- price
+- currency
+- availability
+- rarity
+- active/sold-out/deactivated state
+- quantity cap or Unlimited
+- acquisition count
+- marketplace eligibility
+
+Use integer minor currency units.
+
+Paid minimum:
+$1.00 equivalent in configured launch currency.
+
+Support admin-configurable maximum/safety price.
+
+==================================================
+17. FREE COLLECTIBLE ACQUISITION
+==================================================
+
+For $0 collectibles:
+
+After valid Drop find, user can acquire/claim collectible.
+
+Acquisition must be server-authoritative.
+
+Validate:
+
+- user found Drop
+- collectible active
+- quantity remains
+- user is eligible
+- no duplicate ownership where disallowed
+
+Atomically decrement/acquire finite quantity.
+
+Add ownership to Collection.
+
+==================================================
+18. PAID COLLECTIBLE — STAGE 2 BEHAVIOR
+==================================================
+
+Do NOT process real payment yet.
+
+Implement payment-ready state.
+
+If collectible price > $0:
+
+- user may Find Drop and earn badge
+- collectible should show purchase option
+- UI may enter pending checkout flow
+- DO NOT create final paid ownership from client action alone
+
+Create provider-neutral purchase/order transaction architecture.
+
+Ownership becomes final only from a trusted confirmed transaction state.
+
+For Stage 2 tests, use privileged test/admin payment-confirmation mechanisms.
+
+==================================================
+19. COLLECTION OWNERSHIP
+==================================================
+
+Implement canonical ownership records.
+
+Collection contains only acquired collectibles.
+
+Ownership should support:
+
+- free acquisition
+- paid acquisition
+- refunded/revoked state
+- historical transaction reference
+- acquisition timestamp
+
+If a paid purchase is fully refunded/reversed:
+
+- revoke paid collectible access/ownership
+- preserve historical transaction
+- preserve Find Badge
+
+Deleting/deactivating the Drop must not delete legitimate ownership.
+
+==================================================
+20. COLLECTION UI
+==================================================
+
+Implement Collection within existing Hunt/Profile/My Hunts architecture.
+
+Do not add unnecessary bottom tab.
+
+Show for acquired collectibles:
+
+- collectible image
+- collectible name
+- rarity
+- creator attribution where appropriate
+- acquisition date
+- free or purchased state
+
+Do not show paid collectible image as permanently owned in Collection if the user only found the Drop but did not acquire it.
+
+==================================================
+21. LIFETIME HUNT STATISTICS
+==================================================
+
+Track/display distinct totals:
+
+- Drops Found
+- Find Badges Earned
+- Collectibles Acquired
+- Drops Created
+
+Do not merge these concepts.
+
+Prefer derivation from authoritative records where practical instead of unsafe mutable counters.
+
+==================================================
+22. UNIVERSAL RARITY
+==================================================
+
+Implement system-derived collectible rarity:
+
+UNIQUE
+1 available
+
+LEGENDARY
+2–5
+
+EPIC
+6–20
+
+RARE
+21–50
+
+UNCOMMON
+51–100
+
+COMMON
+101+ or Unlimited
+
+Creator cannot choose rarity.
+
+Rarity should be derived from original collectible scarcity when published.
+
+Snapshot rarity for historical ownership/badges.
+
+If policy thresholds change later, historical badges/collection entries should retain original rarity snapshot.
+
+For Drops without collectibles, support optional Find rarity based on Find limit only if current UI/product architecture benefits from it.
+
+Do not conflate Find rarity with collectible rarity.
+
+==================================================
+23. MARKETPLACE TRANSACTION MODEL
+==================================================
+
+Implement provider-neutral financial transaction records.
+
+Must support:
+
+- created
+- pending
+- confirmed
+- failed
+- canceled
+- refunded
+- partially_refunded
+- disputed
+- chargeback/reversed
+- other necessary terminal states
+
+Use existing project enum/style conventions where appropriate.
+
+Transaction record must support:
+
+- buyer
+- seller
+- collectible
+- internal transaction/order ID
+- provider type
+- provider transaction ID nullable until Stage 3
+- gross amount
+- currency
+- platform fee amount
+- seller economic share
+- processor/store fee placeholders or later reconciliation fields
+- tax placeholder/amount if needed
+- refund amount
+- seller payable impact
+- timestamps
+- immutable/auditable event history
+
+Do not store sensitive card information.
+
+==================================================
+24. WORLDS 30% PLATFORM FEE
+==================================================
+
+Implement canonical platform-fee calculation:
+
+30% of collectible gross sale price.
+
+Intended seller economic share before external payment/store/tax effects:
+
+70%.
+
+Use integer money arithmetic.
+
+Do not use floating point.
+
+Do not hard-code assumptions that the seller always receives exactly 70% cash after external fees.
+
+Record enough information to reconcile:
+
+- gross
+- Worlds fee
+- processor/store fees
+- taxes
+- refunds
+- seller payable
+
+Platform fee percentage should eventually be admin-configurable.
+
+Default launch value:
+30%.
+
+==================================================
+25. SELLER ECONOMIC / PAYABLE LEDGER
+==================================================
+
+Implement provider-neutral seller accounting.
+
+Do NOT implement actual payout.
+
+Track:
+
+- pending seller earnings
+- available/eligible payable where architecture requires
+- adjustments
+- refunds/reversals
+- payout status/reference placeholder
+
+Use an append-only or auditable ledger pattern.
+
+Users cannot modify their own seller balance.
+
+==================================================
+26. SELLER STATUS
+==================================================
+
+Implement provider-neutral seller status such as:
+
+- not_onboarded
+- onboarding_required
+- pending
+- active
+- restricted
+- disabled
+
+Do NOT connect Stripe Connect yet.
+
+A user creating only free collectibles does not need payout onboarding.
+
+When creator selects PAID collectible:
+
+UI must indicate that seller payout setup will be required before paid listing can become fully sale-enabled.
+
+Stage 2 may mark listing as pending seller setup.
+
+==================================================
+27. PAID LISTING FEE DISCLOSURE
+==================================================
+
+Before publishing/enabling a paid collectible, show clearly:
+
+“Worlds charges a 30% platform fee on collectible sales.”
+
+Require explicit acknowledgement.
+
+Record server-side acknowledgement if current legal/audit architecture supports it.
+
+Do not hide fee disclosure.
+
+==================================================
+28. REFUND / REVERSAL ARCHITECTURE
+==================================================
+
+Implement trusted refund/reversal handling independent of payment provider.
+
+Support:
+
+- full refund
+- partial refund
+- chargeback
+- reversal
+
+Full paid collectible refund should normally:
+
+- mark transaction refunded/reversed
+- revoke active paid collectible ownership
+- adjust seller payable
+- adjust platform accounting
+- preserve Find Badge
+- preserve immutable transaction/audit record
+
+Partial refund:
+
+Do not necessarily revoke ownership automatically unless business rules later require it.
+
+Architecture must support partial monetary adjustment.
+
+Client cannot issue trusted refund state directly.
+
+==================================================
+29. PAYMENT EVENT / AUDIT LEDGER
+==================================================
+
+Create an immutable or append-only event history for significant financial transitions.
+
+Examples:
+
+- membership granted
+- membership revoked
+- Drop Credits granted
+- Drop Credit consumed
+- purchase created
+- purchase confirmed
+- refund
+- chargeback
+- seller balance adjustment
+- collectible ownership granted
+- ownership revoked
+
+Use current audit infrastructure where possible rather than duplicating systems.
+
+==================================================
+30. PROVIDER-NEUTRAL EXTERNAL IDENTIFIERS
+==================================================
+
+Plan/store external IDs without making them canonical business IDs.
+
+Support future:
+
+APPLE
+GOOGLE
+STRIPE
+OTHER_APPROVED
+
+Do not expose provider secrets.
+
+Provider transaction identifiers may be stored server-side for reconciliation.
+
+==================================================
+31. ADMIN — REVENUE CONFIGURATION
+==================================================
+
+Implement Admin controls/architecture for:
+
+- membership plan definitions / allowance values
+- Quest allowance values
+- weekly Drop limits
+- Drop Credit pack definitions
+- collectible paid minimum
+- collectible maximum/safety price
+- platform fee percentage
+- rarity thresholds
+- seller status
+- transaction visibility
+- refunds/reversals
+- suspicious marketplace activity
+- Drop deactivation/moderation
+
+If allowing live config changes would make historical accounting unsafe, snapshot canonical values at transaction/publication time.
+
+Critical financial config changes must be audited.
+
+==================================================
+32. ADMIN — FINANCIAL SAFETY
+==================================================
+
+Admin UI must never display:
+
+- full card numbers
+- CVV
+- provider secret keys
+
+Stage 3 payment secrets will remain server-side.
+
+Admin changes to:
+
+- credits
+- membership
+- seller balances
+- refunds
+- fee configuration
+
+must require existing Admin authorization and audit logging.
+
+==================================================
+33. RLS
+==================================================
+
+Enable RLS on every new application table.
+
+Test explicitly.
+
+Users may access only authorized personal data.
+
+Users must not be able to:
+
+- grant themselves membership
+- grant themselves credits
+- alter allowance state
+- directly create confirmed transactions
+- alter seller payable
+- alter platform fees
+- fabricate ownership
+- fabricate refunds
+- read other users' private financial records
+- manipulate collectible remaining quantity
+- manipulate badge ownership
+
+Use trusted RPC/server paths for protected transitions.
+
+==================================================
+34. ATOMICITY / CONCURRENCY
+==================================================
+
+Explicitly test concurrent:
+
+- final weekly included Drop allowance
+- final Drop Credit consumption
+- final Find slot
+- final collectible quantity
+- duplicate free collectible claim
+- duplicate paid confirmation
+- duplicate refund webhook-equivalent event simulation
+- repeated membership event simulation
+
+No double spending.
+
+No duplicate ownership.
+
+No duplicate credits.
+
+No duplicate ledger awards.
+
+Use database locks/constraints/idempotency appropriately.
+
+==================================================
+35. PERIOD / RESET LOGIC
+==================================================
+
+Weekly and daily/monthly allowance periods must use server-side time.
+
+Do not depend on client timezone/device clock for entitlement enforcement.
+
+Define canonical period boundary behavior.
+
+Preserve user-friendly UI dates separately if needed.
+
+Use existing scheduled worker only when an actual reset job is necessary.
+
+Prefer deriving usage by period when safer than mutating/resetting counters.
+
+==================================================
+36. PRIVACY
+==================================================
+
+Do not retain unnecessary payment information.
+
+Do not put provider secrets in mobile.
+
+Do not expose another user's:
+
+- transaction history
+- seller balance
+- payout state
+- private purchase data
+
+Public creator attribution may remain public where intended.
+
+Financial details remain private/admin-authorized.
+
+==================================================
+37. EXISTING QVAC / QAVS
+==================================================
+
+Run regression coverage proving:
+
+- Quest verification methods unchanged
+- membership cannot bypass QVAC
+- membership cannot bypass QAVS
+- purchasing credits does not alter Quest verification
+- activity tracking remains protected
+- Quest points remain server-authoritative
+
+==================================================
+38. EXISTING HUNT SECURITY
+==================================================
+
+Do not weaken:
+
+- hidden authoritative coordinates
+- Drop collection authorization
+- placement verification
+- Hunt Points security
+- existing private evidence controls
+
+A paid collectible purchase must never reveal hidden Hunt data improperly.
+
+==================================================
+39. NO PAY-TO-WIN POINTS
+==================================================
+
+Membership:
+does not directly grant Quest Points or Hunt Points.
+
+Drop Credits:
+do not grant Hunt Points.
+
+Buying collectible:
+does not itself grant bonus Hunt Points.
+
+Any normal Hunt completion points must come from existing legitimate Hunt rules independently.
+
+==================================================
+40. STAGE 2 PAYMENT PLACEHOLDERS
+==================================================
+
+Where checkout buttons are necessary for UI:
+
+They may show:
+
+“Payment setup coming in Stage 3”
+
+or use a safe internal test state.
+
+Do not simulate a successful purchase to ordinary users.
+
+For connected production testing, use service-role/admin-only disposable trusted test transitions.
+
+==================================================
+41. MIGRATIONS
+==================================================
+
+Create new forward migrations using the next unused canonical numbers.
+
+Do not modify 001–070 or any already-applied migration.
+
+Apply Stage 2 migrations to the linked production Supabase project through the CLI.
+
+After applying:
+
+Run linked migration parity verification.
+
+Local and production must match exactly.
+
+==================================================
+42. CONNECTED TEST SUITE
+==================================================
+
+Build and run disposable connected-production tests covering at minimum:
+
+MEMBERSHIP
+- free state
+- member entitlement
+- cancel/expiry-ready state
+- client cannot self-promote
+
+QUEST
+- free allowances
+- member allowances
+- period enforcement
+- no QVAC/QAVS bypass
+
+HUNT ALLOWANCES
+- 2 free/week
+- 5 member/week
+- included allowance consumed before credits
+- exhausted allowance blocked
+- credit fallback works
+- concurrency works
+
+DROP CREDITS
+- grant
+- consume
+- no expiration
+- reversal/adjustment
+- no client self-grant
+
+FIND LIMIT
+- finite find cap
+- unlimited
+- final-slot concurrency
+- Drop disappears/deactivates after exhaustion
+
+COLLECTIBLE LIMIT
+- finite
+- unlimited
+- sold-out behavior
+- find still works if collectible exhausted
+- final-unit concurrency
+
+BADGES
+- awarded on successful find
+- retained when collectible declined
+- retained when Drop deactivated
+- retained after paid refund
+
+FREE COLLECTIBLE
+- valid acquisition
+- duplicate rejection
+- quantity protection
+
+PAID COLLECTIBLE
+- pending order
+- trusted confirmation simulation
+- ownership only after confirmation
+- fake client confirmation denied
+
+REFUNDS
+- full refund
+- ownership revoke
+- badge retention
+- seller ledger reversal
+- idempotent repeat refund
+
+SELLER
+- free listing without onboarding
+- paid listing requires seller status
+- seller cannot modify own payable
+
+MARKETPLACE
+- 30% fee calculation
+- integer money arithmetic
+- transaction audit
+- cross-user privacy
+
+ADMIN
+- authorized actions work
+- ordinary users denied
+- changes audited
+
+==================================================
+43. APPLICATION TESTS
+==================================================
+
+Run:
+
+- mobile tests
+- API tests
+- Admin tests
+- TypeScript checks
+- existing Quest/Hunt regression
+- QVAC/QAVS regression
+
+Fix regressions introduced by Stage 2.
+
+Do not start unrelated cleanup.
+
+==================================================
+44. UI VALIDATION
+==================================================
+
+Inspect the implemented mobile flows:
+
+Membership:
+- comparison screen
+- passive Quest upsell
+- Hunt allowance upsell
+- Drop Credit balance
+
+Drop creation:
+- weekly allowance
+- find limit
+- collectible limit
+- free/paid choice
+- price
+- fee disclosure
+- seller setup state
+- rarity preview
+
+Finding:
+- Find Badge award
+- collectible availability
+- free claim
+- paid purchase placeholder
+- Sold Out
+
+Collection:
+- acquired collectibles only
+
+Badges:
+- every earned Find Badge
+
+Ensure UI remains consistent with current Worlds design.
+
+Do not unnecessarily rearrange bottom navigation.
+
+==================================================
+45. STAGE 2 FINAL AUDIT
+==================================================
+
+After implementation, run a dedicated Stage 2 audit.
+
+Return:
+
+STAGE 2 REVENUE IMPLEMENTATION STATUS:
+PASS / FAIL
+
+MIGRATIONS:
+[list]
+
+PRODUCTION MIGRATION PARITY:
+PASS/FAIL
+State exact local and production range.
+
+MEMBERSHIP / ENTITLEMENTS:
+PASS/FAIL
+
+QUEST ALLOWANCES:
+PASS/FAIL
+
+HUNT DROP ALLOWANCES:
+PASS/FAIL
+
+DROP CREDITS:
+PASS/FAIL
+
+DROP FIND LIMIT:
+PASS/FAIL
+
+COLLECTIBLE QUANTITY:
+PASS/FAIL
+
+BADGES:
+PASS/FAIL
+
+COLLECTION:
+PASS/FAIL
+
+RARITY:
+PASS/FAIL
+
+MARKETPLACE TRANSACTION MODEL:
+PASS/FAIL
+
+30% PLATFORM FEE ACCOUNTING:
+PASS/FAIL
+
+SELLER ACCOUNTING:
+PASS/FAIL
+
+REFUND / REVERSAL MODEL:
+PASS/FAIL
+
+ADMIN:
+PASS/FAIL
+
+RLS / SECURITY:
+PASS/FAIL
+
+ATOMICITY / CONCURRENCY:
+PASS/FAIL
+
+QVAC / QAVS REGRESSION:
+PASS/FAIL
+
+HUNT SECURITY REGRESSION:
+PASS/FAIL
+
+MOBILE TESTS:
+PASS/FAIL
+State count.
+
+API TESTS:
+PASS/FAIL
+
+ADMIN TESTS:
+PASS/FAIL
+
+CONNECTED PRODUCTION TESTS:
+PASS/FAIL
+
+TRUE STAGE 2 BLOCKERS:
+[list or NONE]
+
+STAGE 3 INFORMATION REQUIRED:
+List ONLY actual external-provider information/actions now needed for:
+
+1. Worlds Membership payments
+2. Extra Drop Credit purchases
+3. paid collectible purchases
+4. creator/seller payouts
+5. refunds/disputes
+6. Apple compliance/payment configuration
+7. Google compliance/payment configuration
+8. Stripe/other payment-provider configuration
+
+For each required item give:
+
+WHAT I NEED
+WHERE TO FIND IT
+WHERE TO PUT IT
+SECRET? YES/NO
+WHY IT IS NEEDED
+WHAT HAPPENS AFTER I PROVIDE IT
+
+Do not ask for credentials that are not actually needed.
+
+Do not print existing secrets.
+
+PRE-RELEASE VALIDATION:
+List native/store/payment items that genuinely cannot be completed until Stage 3 or signed builds.
+
+OPTIONAL CLEANUP:
+Only non-blocking items.
+
+If and ONLY if Stage 2 is fully implemented and there are zero true blockers, end exactly with:
+
+STAGE 2 REVENUE + SUPABASE IMPLEMENTATION: COMPLETE
+READY FOR STAGE 3 PAYMENT CONNECTIONS
+
+Do not begin Stage 3 automatically.
+Do not start Mapbox.
