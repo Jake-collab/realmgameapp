@@ -68,4 +68,20 @@ describe("Supabase migration filename preflight", () => {
       checkSource.indexOf("run_supabase start"),
     );
   });
+
+  test("method verification remains server-owned and atomic", () => {
+    const source = fs.readFileSync(
+      path.resolve(__dirname, "../supabase/migrations/065_quest_method_verification.sql"),
+      "utf8",
+    );
+
+    expect(source).toContain("IF auth.uid() <> p_user_id THEN");
+    expect(source).toContain("verification_earliest_completion_at > NOW()");
+    expect(source).toContain("Approved camera proof is required.");
+    expect(source).toContain("Validated GPS proof is required.");
+    expect(source).toContain("Integrity confirmation is required.");
+    expect(source).toContain("ON CONFLICT (idempotency_key) DO NOTHING");
+    expect(source).toContain("REVOKE UPDATE ON quest_participations FROM anon, authenticated");
+    expect(source).toContain("GRANT EXECUTE ON FUNCTION complete_quest(UUID, UUID, TEXT) TO authenticated");
+  });
 });
