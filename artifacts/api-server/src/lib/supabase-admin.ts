@@ -1,5 +1,14 @@
 type SupabaseResponse<T> = { data: T | null; error: string | null };
 
+const canonicalStorageBuckets = new Set([
+  'avatars',
+  'quest-media',
+  'hunt-media',
+  'custom-game-media',
+  'proof-submissions',
+  'moderation-quarantine',
+]);
+
 function config() {
   const url = process.env.SUPABASE_URL?.replace(/\/$/, '');
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -83,4 +92,53 @@ export async function createSupabaseStorageSignedUrl(
   }
   if (/^https?:\/\//i.test(payload.signedURL)) return payload.signedURL;
   return `${credentials.url}/storage/v1${payload.signedURL.startsWith('/') ? '' : '/'}${payload.signedURL}`;
+}
+
+export type SupabaseStorageDeleteResult = 'deleted' | 'missing';
+
+function validateStorageObjectReference(bucket: string, objectPath: string) {
+  if (
+    !canonicalStorageBuckets.has(bucket)
+    || objectPath.length === 0
+    || objectPath.length > 1024
+    || objectPath.startsWith('/')
+    || objectPath.includes('\\')
+    || objectPath.split('/').some(segment => segment.length === 0 || segment === '.' || segment === '..')
+  ) {
+    throw new Error('Supabase Storage object reference is invalid.');
+  }
+}
+
+/**
+ * Remove one object through the service-role Storage API.
+ *
+ * The Storage API's remove endpoint accepts a list of paths. Sending one path
+ * keeps the operation idempotent while using the same API contract as the
+ * Supabase client. A 404 is a successful "already gone" outcome.
+ */
+export async function deleteSupabaseStorageObject(
+  bucket: string,
+  objectPath: string,
+): Promise<SupabaseStorageDeleteResult> {
+  const credentials = config();
+  if (!credentials) throw new Error('Supabase trusted access is unavailable.');
+  validateStorageObjectReference(bucket, objectPath);
+
+  const response = await fetch(
+    `${credentials.url}/storage/v1/object/${encodeURIComponent(bucket)}`,
+    {
+      method: 'DELETE',
+      headers: {
+        apikey: credentials.key,
+        authorization: `Bearer ${credentials.key}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ prefixes: [objectPath] }),
+    },
+  );
+  if (response.status === 404) return 'missing';
+  if (!response.ok) {
+    throw new Error(`Supabase Storage deletion failed with status ${response.status}.`);
+  }
+  return 'deleted';
 }

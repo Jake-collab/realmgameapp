@@ -21,6 +21,7 @@ const serverEnvironmentSchema = z.object({
   SCHEDULER_ENABLED: z.enum(["true", "false"]).default("false"),
   SCHEDULER_INTERVAL_SECONDS: z.coerce.number().int().positive().default(60),
   SCHEDULER_MAINTENANCE_INTERVAL_SECONDS: z.coerce.number().int().positive().default(3600),
+  MODERATION_MEDIA_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
 });
 
 export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema>;

@@ -53,7 +53,7 @@ printf '%s\n' "$migration_json" > "$MIGRATION_JSON"
 node - "$MIGRATION_JSON" <<'NODE'
 const fs = require('node:fs');
 const { migrations } = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-const expected = Array.from({ length: 56 }, (_, index) => String(index + 1).padStart(3, '0'));
+const expected = Array.from({ length: 57 }, (_, index) => String(index + 1).padStart(3, '0'));
 
 if (migrations.length !== expected.length) {
   throw new Error(`Expected ${expected.length} migrations; received ${migrations.length}.`);
@@ -66,7 +66,7 @@ for (const version of expected) {
   }
 }
 
-console.log('Migration parity passed for canonical migrations 001–056.');
+console.log('Migration parity passed for canonical migrations 001–057.');
 NODE
 
 run_supabase db dump --linked --schema public --file "$SCHEMA_DUMP" >/dev/null

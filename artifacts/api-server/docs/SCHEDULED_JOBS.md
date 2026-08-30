@@ -26,10 +26,12 @@ when a provider request must be retried.
 | Quest participation expiry | Mark eligible overdue participations expired | `expire_quest_participations()` | Hourly maintenance pass | API worker | Idempotent status and deadline predicate | Implemented |
 | Validation coordinate retention | Remove exact coordinates after 90 days while retaining result metadata | `purge_expired_validation_coordinates()` | Hourly maintenance pass | API worker | Idempotent null/purged predicate | Implemented |
 | Ephemeral session cleanup | Remove expired, unconsumed verification, collection, placement, and creator-sweep sessions | `purge_expired_ephemeral_sessions()` | Hourly maintenance pass | API worker | Deletes only unconsumed expired rows; existing `RESTRICT` FKs protect evidence | Implemented |
+| Rejected private-media Storage cleanup | Soft-delete eligible rejected media rows, remove their private Storage objects, and retain moderation evidence | `list_moderation_retention_candidates()`, `claim_moderation_retention_candidate()`, `complete_moderation_retention_candidate()` and Storage API | Hourly maintenance pass | API worker | Service-role eligibility checks, per-object lease, retryable failures, missing-object success | Implemented |
 
-Maintenance is called through `run_scheduled_maintenance()`, which invokes
-only the functions listed above. `SCHEDULER_MAINTENANCE_INTERVAL_SECONDS`
-defaults to 3600 seconds.
+Database maintenance is called through `run_scheduled_maintenance()`. The API
+worker then runs the storage-aware rejected-media cleanup in the same hourly
+maintenance pass. `SCHEDULER_MAINTENANCE_INTERVAL_SECONDS` defaults to 3600
+seconds, and `MODERATION_MEDIA_RETENTION_DAYS` defaults to 30 days.
 
 ## Explicitly not active in Build 1
 
@@ -37,9 +39,6 @@ These categories were audited and are not silently claimed as production jobs:
 
 - Moderation retry/recovery: moderation decisions are synchronous/manual and
   there is no durable moderation work queue.
-- Rejected-media Storage deletion: the database exposes bounded candidates
-  through `list_moderation_retention_candidates()`, but no worker currently
-  deletes Storage objects. No deletion job is registered.
 - Hunt lifecycle transitions, stale Hunt sessions, and leaderboard
   recalculation: no current scheduled implementation or documented Build 1
   worker contract exists.
@@ -53,7 +52,9 @@ artifact uses the public Supabase URL/anonymous key contract and contains no
 service-role credential path.
 
 Each cycle logs processed work, recovery counts, delivery outcomes,
-maintenance results, overlap skips, and failures. The worker refuses to start
+maintenance results (including rejected-media candidate, deletion, missing,
+failure, and skipped counts plus bounded error details), overlap skips, and
+failures. The worker refuses to start
 in production without trusted Supabase configuration. In-app notification
 history is materialized before push delivery, and provider failure never
 removes that history.

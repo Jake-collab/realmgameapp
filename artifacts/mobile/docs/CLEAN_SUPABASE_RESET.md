@@ -38,7 +38,7 @@ mismatch.
 requires `SUPABASE_DB_PASSWORD` in the environment and verifies:
 
 - remote migration parity for every canonical migration from `001` through
-  `049`;
+  `057`;
 - the core Quest completion and Hunt Drop authorization RPCs;
 - RLS enabled on `quests` and `hunts`, plus a non-empty RLS policy set.
 

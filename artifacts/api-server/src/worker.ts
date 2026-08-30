@@ -37,7 +37,7 @@ const run = async () => {
     let maintenance: unknown = null;
     const maintenanceIntervalMs = environment.SCHEDULER_MAINTENANCE_INTERVAL_SECONDS * 1000;
     if (Date.now() - lastMaintenanceAt >= maintenanceIntervalMs) {
-      maintenance = await notificationStore.runMaintenance();
+      maintenance = await notificationStore.runMaintenance(environment.MODERATION_MEDIA_RETENTION_DAYS);
       lastMaintenanceAt = Date.now();
     }
     logger.info({ processed: results.length, recovered, delivery, maintenance }, "Scheduled worker cycle complete");

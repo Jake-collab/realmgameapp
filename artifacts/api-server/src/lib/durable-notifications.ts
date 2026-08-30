@@ -7,7 +7,13 @@ import {
   type PushNotificationProvider,
   type NotificationCategory,
 } from "./notifications";
-import { supabaseAdminConfigured, supabaseAdminRequest, supabaseAdminRpc } from "./supabase-admin";
+import {
+  deleteSupabaseStorageObject,
+  supabaseAdminConfigured,
+  supabaseAdminRequest,
+  supabaseAdminRpc,
+  type SupabaseStorageDeleteResult,
+} from "./supabase-admin";
 
 type JsonObject = Record<string, unknown>;
 
@@ -45,9 +51,36 @@ type ClaimedDelivery = {
   lease_token: string;
 };
 
+type ModerationRetentionCandidate = {
+  media_id: string;
+  bucket: string;
+  storage_path: string;
+  reason: string;
+};
+
+type ClaimedModerationRetentionCandidate = {
+  media_id: string;
+  bucket: string;
+  storage_path: string;
+  lease_token: string;
+  attempt_count: number;
+};
+
+type ModerationRetentionSummary = {
+  candidates: number;
+  claimed: number;
+  deleted: number;
+  missing: number;
+  failed: number;
+  skipped: number;
+  errors: Array<{ mediaId: string; error: string }>;
+};
+
 const MAX_EVENT_ATTEMPTS = 5;
 const MAX_DELIVERY_ATTEMPTS = 3;
 const LEASE_SECONDS = 300;
+const DEFAULT_MODERATION_MEDIA_RETENTION_DAYS = 30;
+const RETENTION_RETRY_DELAY_MINUTES = 15;
 
 function categoryFor(type: string): NotificationCategory {
   return type.startsWith("HUNT_") ? "hunt" :
@@ -344,9 +377,118 @@ export class SupabaseNotificationStore {
     return summary;
   }
 
-  async runMaintenance(): Promise<JsonObject> {
+  async runMaintenance(
+    moderationMediaRetentionDays = DEFAULT_MODERATION_MEDIA_RETENTION_DAYS,
+  ): Promise<JsonObject> {
     this.assertReliableWorkerStorage();
-    return supabaseAdminRpc<JsonObject>("run_scheduled_maintenance");
+    if (!Number.isInteger(moderationMediaRetentionDays) || moderationMediaRetentionDays <= 0) {
+      throw new Error("Moderation media retention must be a positive number of days.");
+    }
+    const maintenance = await supabaseAdminRpc<JsonObject>("run_scheduled_maintenance");
+    const moderationMedia = await this.runModerationMediaCleanup(moderationMediaRetentionDays);
+    return { ...maintenance, moderation_media: moderationMedia };
+  }
+
+  private async runModerationMediaCleanup(retentionDays: number): Promise<ModerationRetentionSummary> {
+    const rejectedBefore = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000).toISOString();
+    const candidates = await supabaseAdminRpc<ModerationRetentionCandidate[]>(
+      "list_moderation_retention_candidates",
+      {
+        p_rejected_before: rejectedBefore,
+        p_exact_location_before: null,
+      },
+    );
+    const summary: ModerationRetentionSummary = {
+      candidates: candidates.length,
+      claimed: 0,
+      deleted: 0,
+      missing: 0,
+      failed: 0,
+      skipped: 0,
+      errors: [],
+    };
+
+    for (const candidate of candidates) {
+      let claimed: ClaimedModerationRetentionCandidate | undefined;
+      try {
+        const rows = await supabaseAdminRpc<ClaimedModerationRetentionCandidate[]>(
+          "claim_moderation_retention_candidate",
+          {
+            p_media_id: candidate.media_id,
+            p_rejected_before: rejectedBefore,
+            p_worker_id: this.workerId,
+            p_lease_seconds: LEASE_SECONDS,
+          },
+        );
+        claimed = rows[0];
+        if (!claimed) {
+          summary.skipped++;
+          continue;
+        }
+        summary.claimed++;
+      } catch (error) {
+        summary.failed++;
+        this.recordModerationCleanupError(summary, candidate.media_id, error);
+        continue;
+      }
+
+      let outcome: SupabaseStorageDeleteResult;
+      try {
+        outcome = await deleteSupabaseStorageObject(claimed.bucket, claimed.storage_path);
+      } catch (error) {
+        summary.failed++;
+        this.recordModerationCleanupError(summary, claimed.media_id, error);
+        try {
+          await this.completeModerationRetentionCandidate(claimed, "failed", error);
+        } catch (completionError) {
+          this.recordModerationCleanupError(summary, claimed.media_id, completionError);
+        }
+        continue;
+      }
+
+      try {
+        const completion = await this.completeModerationRetentionCandidate(claimed, outcome, null);
+        if (completion.status !== "completed") {
+          throw new Error(`Moderation media cleanup completion was ${completion.status}.`);
+        }
+        if (outcome === "missing") summary.missing++;
+        else summary.deleted++;
+      } catch (error) {
+        summary.failed++;
+        this.recordModerationCleanupError(summary, claimed.media_id, error);
+      }
+    }
+    return summary;
+  }
+
+  private recordModerationCleanupError(
+    summary: ModerationRetentionSummary,
+    mediaId: string,
+    error: unknown,
+  ) {
+    if (summary.errors.length >= 50) return;
+    summary.errors.push({
+      mediaId,
+      error: error instanceof Error ? error.message : "moderation_media_cleanup_failed",
+    });
+  }
+
+  private async completeModerationRetentionCandidate(
+    candidate: ClaimedModerationRetentionCandidate,
+    outcome: SupabaseStorageDeleteResult | "failed",
+    error: unknown,
+  ): Promise<{ status: string }> {
+    return supabaseAdminRpc<{ status: string }>("complete_moderation_retention_candidate", {
+      p_media_id: candidate.media_id,
+      p_lease_token: candidate.lease_token,
+      p_outcome: outcome,
+      p_error: error instanceof Error
+        ? error.message
+        : error
+          ? "moderation_media_cleanup_failed"
+          : null,
+      p_retry_minutes: RETENTION_RETRY_DELAY_MINUTES,
+    });
   }
 
   private async failEvent(claimed: ClaimedEvent, error: unknown) {
