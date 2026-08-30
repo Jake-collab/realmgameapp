@@ -1,0 +1,72 @@
+Before we proceed to Mapbox, give me the final closure report for QVAC + QAVS.
+
+Do not make new changes unless you discover a real blocker.
+
+Confirm the CURRENT implemented feature set, not just the database state.
+
+Report exactly:
+
+QVAC IMPLEMENTED METHODS:
+[List every verification method currently implemented in production code.]
+
+QAVS IMPLEMENTED ACTIVITY FEATURES:
+[List every activity metric/capability currently implemented, including any of:
+- duration
+- distance
+- GPS route/activity samples
+- steps
+- pause/resume
+- activity integrity checks
+- speed/impossible-movement checks
+- GPS accuracy handling
+Only list what actually exists.]
+
+COMBINED VERIFICATION SUPPORT:
+Confirm whether a Quest can require multiple methods together and which combinations are supported.
+
+SERVER-AUTHORITATIVE ENFORCEMENT:
+PASS/FAIL
+Confirm players cannot change assigned methods, thresholds, timestamps, verification results, completion state, or points.
+
+ACTIVITY PRIVACY / RETENTION:
+PASS/FAIL
+Confirm raw activity-location samples are cleaned up under migration 069 while required derived verification data is retained.
+
+SECURITY REPAIRS:
+PASS/FAIL
+Confirm migration 070 closes:
+- cross-user duplicate-sample/derived-distance disclosure
+- overly permissive speed validation caused by accuracy tolerance
+
+SUPABASE MIGRATION PARITY:
+PASS/FAIL
+State exact local and production migration range and confirm both match through migration 070 with no drift.
+
+QVAC CONNECTED TESTS:
+PASS/FAIL
+
+QAVS CONNECTED TESTS:
+PASS/FAIL
+
+POINTS / COMPLETION ATOMICITY:
+PASS/FAIL
+
+RLS / CROSS-USER PRIVACY:
+PASS/FAIL
+
+FULL MOBILE REGRESSION:
+PASS/FAIL
+State final passing test count.
+
+TRUE QVAC/QAVS SUPABASE BLOCKERS:
+[NONE or exact blockers]
+
+FEATURES INTENTIONALLY DEFERRED:
+[List anything not implemented yet that is expected later, especially anything dependent on Mapbox, native device builds, background activity APIs, or later integrations.]
+
+If there are zero blockers, end exactly with:
+
+QVAC + QAVS IMPLEMENTATION: COMPLETE
+QVAC + QAVS SUPABASE DELTA: COMPLETE
+SUPABASE REMAINS BUILD 1 COMPLETE
+READY FOR MAPBOX
