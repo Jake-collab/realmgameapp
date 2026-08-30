@@ -1,0 +1,166 @@
+Run ONE FINAL COMPLETE Supabase Build 1 production audit for Worlds.
+
+All previously identified blockers have now been corrected, including:
+
+- Migration 057
+- Friend-request production RPC
+- Migration parity / duplicate 059
+- RLS on the previously unprotected application tables
+- service_role moderation/integrity privileges
+- scheduler/queue-health privileges
+- latest production worker deployment
+- Auth signup email retest
+- Auth password-reset email retest
+
+The most recent Auth email retest returned:
+
+AUTH EMAIL RETEST: PASS
+
+Do not modify anything during this audit unless necessary to perform disposable testing.
+Do not start Mapbox or any other external integration.
+
+Audit the ACTUAL connected production Supabase project and current production deployment.
+
+Verify:
+
+1. DATABASE / MIGRATION PARITY
+- Local and remote migration histories match.
+- No duplicate migration numbers remain.
+- No unapplied canonical migrations remain.
+- verify:linked-supabase passes.
+- Required Quest, Hunt, Social, Interest, moderation, retention, notification, Storage and points objects exist.
+
+2. RLS & SECURITY
+- RLS is enabled on every application table that requires it.
+- Specifically recheck:
+  enforcement_events
+  integrity_policy_versions
+  integrity_risk_snapshots
+  moderation_policy_versions
+  notification_deliveries
+  notification_events
+  scheduled_notifications
+- Anonymous and ordinary users cannot access protected internal/private data.
+- Cross-user access is denied.
+- Hidden Hunt coordinates remain protected.
+- Private proof/media remains protected.
+- Users cannot directly manipulate points.
+- Users cannot self-promote.
+- Trusted server/service_role access remains functional.
+
+3. AUTH
+- Signup works.
+- Verification email delivery works.
+- Login/logout works.
+- Session restoration works.
+- Password-reset email request works.
+- New accounts default to active user.
+- Admin authorization remains protected.
+- Do not classify signed-build deep-link testing or matterrealm.com hosting as Supabase blockers.
+
+4. STORAGE
+- Canonical buckets exist.
+- Required buckets remain private.
+- Owner access works.
+- Anonymous/cross-user private access is denied.
+- Approved public-facing media follows the intended approval mechanism.
+- Retention cleanup functionality works.
+
+5. INTEREST BUBBLES
+- Canonical pool exists.
+- User selections persist/replace correctly.
+- Unauthorized modification is denied.
+- Daily Quest personalization can consume selections.
+
+6. QUEST
+- Connected production Quest lifecycle passes.
+- Proof authorization passes.
+- Point awarding is server-authoritative and idempotent.
+- Cross-user/direct-write attacks are denied.
+
+7. HUNT
+- Connected production Hunt authorization passes.
+- Exact/private Drop coordinates remain protected.
+- Collection validation and duplicate protection work.
+- Hunt Points remain server-authoritative.
+- Placement/private evidence boundaries remain protected.
+
+8. SOCIAL
+- Friend requests work.
+- Duplicate/concurrent requests are handled correctly.
+- Reverse-request behavior works.
+- Accept/reject/cancel behavior works where supported.
+- Social RLS boundaries pass.
+
+9. SUPER ADMIN
+- Exactly one intended active super_admin exists.
+- Ordinary users cannot self-promote or change roles.
+- Admin authorization works.
+- Role changes remain auditable.
+
+10. WORKER / NOTIFICATIONS
+- Current production worker is running.
+- One active worker identity is observed.
+- Heartbeat appears.
+- Queue-health appears.
+- service_role queue reads work.
+- Notification claim/recovery RPCs work.
+- Maintenance RPCs work.
+- No unintended duplicate scheduler ownership exists.
+
+11. MODERATION / INTEGRITY
+- service_role can perform all required moderation/integrity persistence operations.
+- Recheck:
+  enforcement_events
+  integrity_policy_versions
+  integrity_risk_snapshots
+  moderation_policy_versions
+- Ordinary/anonymous clients remain denied.
+
+12. SECRET BOUNDARIES
+- Supabase service-role credentials remain server-only.
+- Mobile contains only intended public Supabase configuration.
+- No privileged secrets are exposed.
+- Do not print secret values.
+
+13. CONNECTED PRODUCTION REGRESSION TEST
+Run the broadest safe connected production regression suite available.
+
+Use disposable data where necessary and clean it up afterward.
+
+Return:
+
+FINAL SUPABASE STATUS: PASS or FAIL
+
+Then provide PASS/FAIL for:
+- Database / Migration Parity
+- RLS & Security
+- Auth
+- Storage
+- Interest Bubbles
+- Quest
+- Hunt
+- Social
+- Super Admin
+- Worker / Notifications
+- Moderation / Integrity
+- Secret Boundaries
+- Connected Tests
+
+Then:
+
+TRUE SUPABASE BLOCKERS:
+[None, or exact blockers]
+
+PRE-RELEASE VALIDATION:
+[List deferred signed-build/domain/native checks separately.]
+
+OPTIONAL CLEANUP:
+[List only genuinely non-blocking items.]
+
+If and ONLY if there are zero true Supabase blockers, end exactly with:
+
+SUPABASE BUILD 1 FINAL AUDIT: PASS
+SUPABASE BUILD 1 INTEGRATION: COMPLETE
+
+Do not start Mapbox.
