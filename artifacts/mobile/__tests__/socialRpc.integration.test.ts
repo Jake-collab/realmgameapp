@@ -134,6 +134,15 @@ describeIntegration('Social RPC contracts', () => {
     });
     expect(sentResult.requestId).toEqual(expect.any(String));
 
+    // The active-pair rule is a partial unique index. A repeated send should
+    // return the existing request instead of raising a database conflict.
+    await expect(social.sendFriendRequest(target.username, 'search')).resolves.toEqual({
+      ok: true,
+      code: 'request_exists',
+      requestId: sentResult.requestId,
+      state: 'outgoing_request',
+    });
+
     const sentRequests = await social.fetchSentFriendRequests();
     expect(sentRequests).toEqual([
       expect.objectContaining({

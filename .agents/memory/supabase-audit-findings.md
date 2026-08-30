@@ -28,3 +28,9 @@ Check both local filenames and the linked migration ledger before choosing a new
 **Why:** The scheduler privilege migration occupied 058 while the friend-request repair was being prepared, so the repair needed the next available version.
 
 **How to apply:** Re-list migrations immediately before pushing and move the new migration to the next unused version rather than reusing a collision.
+
+Applied Supabase migrations should remain immutable; ship corrections to an already-recorded migration as a new forward migration.
+
+**Why:** Rewriting an applied migration can make local history diverge from the linked project and can prevent a clean, auditable deployment.
+
+**How to apply:** Preserve the original migration, add the corrected object definition in the next numbered migration, push it with the linked CLI, and verify remote parity afterward.
