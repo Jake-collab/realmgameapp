@@ -94,6 +94,7 @@ function AdminQuestCreateForm({ data, onCreated }: { data: AdminData; onCreated:
     if (draft.type === 'geo' && !draft.methods.includes('gps')) { setMessage('Geo Quests require GPS verification.'); return; }
     if (draft.methods.includes('gps') && draft.type !== 'geo') { setMessage('GPS verification is only available for Geo Quests.'); return; }
     if (draft.methods.includes('timer') && (!draft.requiredDurationMinutes || draft.requiredDurationMinutes < 1)) { setMessage('Timer duration must be at least 1 minute.'); return; }
+    if (draft.methods.includes('timer') && !draft.methods.includes('integrity_confirmation')) { setMessage('Timer Quests require final integrity confirmation.'); return; }
     data.createQuest.mutate(draft, {
       onSuccess: () => onCreated(),
       onError: (error) => setMessage(error instanceof Error ? error.message : 'Could not create Quest.'),
@@ -118,7 +119,7 @@ function AdminQuestCreateForm({ data, onCreated }: { data: AdminData; onCreated:
 
 const verificationOptions: Array<{ value: QuestVerificationUpdate['methods'][number]; label: string }> = [
   { value: 'camera', label: 'Camera' }, { value: 'gps', label: 'GPS location' },
-  { value: 'timer', label: 'Timer' }, { value: 'integrity_confirmation', label: 'Integrity only' },
+  { value: 'timer', label: 'Timer' }, { value: 'integrity_confirmation', label: 'Integrity confirmation' },
 ];
 
 function QuestVerificationEditor({ quest, data }: { quest: any; data: AdminData }) {
@@ -142,6 +143,7 @@ function QuestVerificationEditor({ quest, data }: { quest: any; data: AdminData 
     setMessage('');
     if (!methods.length) { setMessage('Choose a method.'); return; }
     if (methods.includes('timer') && (!Number(duration) || Number(duration) < 1)) { setMessage('Timer must be at least 1 minute.'); return; }
+    if (methods.includes('timer') && !methods.includes('integrity_confirmation')) { setMessage('Timer Quests require final integrity confirmation.'); return; }
     if (methods.includes('gps') && quest.type !== 'geo') { setMessage('GPS is only available for Geo Quests.'); return; }
     data.updateQuestVerification.mutate({ id: quest.id, update: { methods, requiredDurationMinutes: methods.includes('timer') ? Number(duration) : null, locationRequired: methods.includes('gps') } }, {
       onSuccess: () => setMessage('Saved.'), onError: (error) => setMessage(error instanceof Error ? error.message : 'Unable to save.'),

@@ -347,7 +347,7 @@ router.get("/admin/quests", requireAdmin("admin.quests.read"), async (req, res) 
   try {
     const [rows, total] = await Promise.all([
       adminRead<Array<Record<string, unknown>>>(`quests?select=id,title,quest_type,status,difficulty,points_reward,source_type,updated_at,verification_methods,required_duration_minutes,location_requirement_type&order=updated_at.desc&offset=${offset}&limit=${query.pageSize}${filters}`).catch(() =>
-        adminRead<Array<Record<string, unknown>>>(`quests?select=id,title,quest_type,status,difficulty,points_reward,source_type,updated_at&order=updated_at.desc&offset=${offset}&limit=${query.pageSize}${filters}`),
+        adminRead<Array<Record<string, unknown>>>(`quests?select=id,title,quest_type,status,difficulty,points_reward,source_type,updated_at,verification_methods,required_duration_minutes,location_requirement_type&order=updated_at.desc&offset=${offset}&limit=${query.pageSize}${filters}`),
       ),
       adminCount(`quests?select=id${filters}`),
     ]);
@@ -370,6 +370,9 @@ const QuestVerificationUpdate = z.object({
   const timer = value.methods.includes("timer");
   if (timer && (!value.requiredDurationMinutes || value.requiredDurationMinutes < 1)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["requiredDurationMinutes"], message: "A timer duration of at least 1 minute is required." });
+  }
+  if (timer && !value.methods.includes("integrity_confirmation")) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["methods"], message: "Timer verification requires a final integrity confirmation." });
   }
   if (!timer && value.requiredDurationMinutes != null) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["requiredDurationMinutes"], message: "Duration is only valid with the timer method." });
@@ -394,6 +397,9 @@ const CreateAdminQuest = z.object({
 }).strict().superRefine((value, ctx) => {
   if (value.methods.includes("timer") && (!value.requiredDurationMinutes || value.requiredDurationMinutes < 1)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["requiredDurationMinutes"], message: "A timer duration of at least 1 minute is required." });
+  }
+  if (value.methods.includes("timer") && !value.methods.includes("integrity_confirmation")) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["methods"], message: "Timer verification requires a final integrity confirmation." });
   }
   if (!value.methods.includes("timer") && value.requiredDurationMinutes != null) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["requiredDurationMinutes"], message: "Duration is only valid with the timer method." });

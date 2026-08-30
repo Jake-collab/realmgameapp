@@ -33,13 +33,14 @@ describe("AI Quest safety boundary", () => {
       description: "Spend time observing a public place safely and record what you notice.",
       quest_type: "daily", difficulty: "easy", estimated_duration_minutes: 20, recommended_points: canonicalQuestPoints.easy,
       category: "observation", interest_bubble_ids: [interest], objectives: ["Observe the setting."],
-      verification_methods: ["timer"], required_duration_minutes: 10,
+      verification_methods: ["timer", "integrity_confirmation"], required_duration_minutes: 10,
       proof_type: "none", proof_instructions: "", safety_notes: ["Stay in a safe public area."],
       accessibility_notes: [], location_requirement: "none",
       reasoning_metadata: { difficulty_reason: "Short activity", points_reason: "Canonical easy points", proof_reason: "Timer verification" },
     });
     assert.equal(inspectCandidate(base, "daily").valid, true);
     assert.equal(inspectCandidate({ ...base, required_duration_minutes: 0 }, "daily").valid, false);
+    assert.equal(inspectCandidate({ ...base, verification_methods: ["timer"] }, "daily").valid, false);
     assert.equal(inspectCandidate({ ...base, verification_methods: ["gps"], required_duration_minutes: null }, "daily").valid, false);
     assert.equal(inspectCandidate({ ...base, verification_methods: ["integrity_confirmation"], proof_type: "photo" }, "daily").valid, false);
     assert.equal(inspectCandidate({ ...base, verification_methods: ["integrity_confirmation", "timer"], required_duration_minutes: 10 }, "daily").valid, true);

@@ -84,4 +84,21 @@ describe("Supabase migration filename preflight", () => {
     expect(source).toContain("REVOKE UPDATE ON quest_participations FROM anon, authenticated");
     expect(source).toContain("GRANT EXECUTE ON FUNCTION complete_quest(UUID, UUID, TEXT) TO authenticated");
   });
+
+  test("audit repairs enforce timed integrity and the canonical proof-media join", () => {
+    const baseSource = fs.readFileSync(
+      path.resolve(__dirname, "../supabase/migrations/065_quest_method_verification.sql"),
+      "utf8",
+    );
+    const repairSource = fs.readFileSync(
+      path.resolve(__dirname, "../supabase/migrations/066_quest_verification_audit_repairs.sql"),
+      "utf8",
+    );
+
+    expect(baseSource).toContain("JOIN proof_media pm ON pm.submission_id = ps.id");
+    expect(repairSource).toContain("quests_timer_requires_integrity");
+    expect(repairSource).toContain("'integrity_confirmation' = ANY(verification_methods)");
+    expect(repairSource).toContain("'pm.proof_id = ps.id'");
+    expect(repairSource).toContain("'pm.submission_id = ps.id'");
+  });
 });

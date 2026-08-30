@@ -19,10 +19,11 @@ describe('method-driven Quest verification', () => {
     })).toEqual(['timer', 'integrity_confirmation']);
   });
 
-  it('keeps legacy camera and GPS quests readable during migration', () => {
+  it('keeps legacy proof rules without inventing server-owned requirements', () => {
     expect(getQuestVerificationMethods({ ...baseQuest, proof_type: 'photo' })).toEqual(['camera']);
     expect(getQuestVerificationMethods({ ...baseQuest, proof_type: 'location' })).toEqual(['gps']);
-    expect(getQuestVerificationMethods(baseQuest)).toEqual(['integrity_confirmation']);
+    expect(getQuestVerificationMethods(baseQuest)).toEqual([]);
+    expect(getQuestVerificationMethods({ ...baseQuest, proof_type: 'text' })).toEqual([]);
   });
 
   it('does not let a client clock change server-declared timer readiness', () => {

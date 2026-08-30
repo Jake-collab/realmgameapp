@@ -151,7 +151,7 @@ const defaultPrompt = (type: QuestGenerationType): PromptVersion => ({
   contentInstructions: defaultText(type),
   safetyInstructions: "Do not require trespassing, unsafe activity, private information, or unverifiable access claims.",
   pointInstructions: "Recommend points only; the platform's deterministic validator and staff review decide the final reward.",
-  proofInstructions: "Choose one or more verification_methods from camera, gps, timer, and integrity_confirmation. Use camera only for independently observable visual evidence, gps only with an approximate or precise location_requirement, and timer only with a positive required_duration_minutes. An integrity_confirmation-only Quest must use proof_type none and have empty proof_instructions; never request irrelevant media or proof. Composite methods are allowed only when every method has an independently verifiable requirement. Retain proof_type for legacy clients and never return QR proof.",
+  proofInstructions: "Choose one or more verification_methods from camera, gps, timer, and integrity_confirmation. Use camera only for independently observable visual evidence, gps only with an approximate or precise location_requirement, and timer only with a positive required_duration_minutes plus integrity_confirmation. An integrity_confirmation-only Quest must use proof_type none and have empty proof_instructions; never request irrelevant media or proof. Composite methods are allowed only when every method has an independently verifiable requirement. Retain proof_type for legacy clients and never return QR proof.",
   outputFormat: "Return one JSON object matching the generated Quest schema, including a non-empty verification_methods array and required_duration_minutes (a positive integer for timer Quests, otherwise null).",
   active: true,
   createdAt: new Date(0).toISOString(),
@@ -316,6 +316,9 @@ export function inspectCandidate(candidate: GeneratedQuest, type: QuestGeneratio
   }
   if (methods.includes("timer") && (!Number.isInteger(candidate.required_duration_minutes) || (candidate.required_duration_minutes ?? 0) <= 0)) {
     diagnostics.push("Timer verification requires a positive required duration in minutes.");
+  }
+  if (methods.includes("timer") && !methods.includes("integrity_confirmation")) {
+    diagnostics.push("Timer verification requires a final integrity confirmation.");
   }
   if (!methods.includes("timer") && candidate.required_duration_minutes !== null) {
     diagnostics.push("A required duration may only be supplied for timer verification.");

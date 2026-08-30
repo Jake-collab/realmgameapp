@@ -21,7 +21,9 @@ export function getQuestVerificationMethods(
   if (quest.verification_methods?.length) return quest.verification_methods;
   if (quest.proof_type === 'photo' || quest.proof_type === 'video') return ['camera'];
   if (quest.proof_type === 'location' || quest.location_requirement_type !== 'none') return ['gps'];
-  return ['integrity_confirmation'];
+  // NULL means this is a legacy Quest. Do not invent a server-owned integrity
+  // requirement that confirm_quest_integrity will correctly reject.
+  return [];
 }
 
 export function objectiveNeedsVerification(objective: Pick<QuestObjectiveRow, 'proof_type' | 'location_requirement_type'>) {

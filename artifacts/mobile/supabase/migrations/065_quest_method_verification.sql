@@ -253,7 +253,7 @@ BEGIN
     IF 'camera' = ANY(v_methods) AND NOT EXISTS (
       SELECT 1
       FROM proof_submissions ps
-      JOIN proof_media pm ON pm.proof_id = ps.id
+      JOIN proof_media pm ON pm.submission_id = ps.id
       WHERE ps.quest_participation_id = p_participation_id
         AND ps.submission_type IN ('photo', 'video')
         AND (

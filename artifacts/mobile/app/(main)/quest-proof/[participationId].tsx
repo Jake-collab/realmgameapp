@@ -58,6 +58,7 @@ import { attachProofMedia } from '@/features/quests/repositories/proof.repositor
 import { completeQuest } from '@/features/quests/services/questCompletion.service';
 import { confirmQuestIntegrityRequirement } from '@/features/quests/services/questVerification.service';
 import { formatRemainingTimer, getQuestVerificationMethods, verificationLabel } from '@/features/quests/utils/questVerification';
+import { submitGeoValidation } from '@/features/quest-map/repositories/questMap.repository';
 
 // ─── Header ───────────────────────────────────────────────────────────────────
 
@@ -119,7 +120,12 @@ export default function QuestProofScreen() {
   const [textResponse, setTextResponse] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [locationCaptured, setLocationCaptured] = useState(false);
-  const [capturedLocation, setCapturedLocation] = useState<{ latitude: number; longitude: number; accuracy: number | null } | null>(null);
+  const [capturedLocation, setCapturedLocation] = useState<{
+    latitude: number;
+    longitude: number;
+    accuracy: number | null;
+    capturedAt: string;
+  } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [integrityConfirmedLocally, setIntegrityConfirmedLocally] = useState(false);
@@ -219,8 +225,32 @@ export default function QuestProofScreen() {
           Alert.alert('Not ready to complete', completion.error?.message ?? 'The Quest requirements are not complete.');
           return;
         }
+        const keys = getSubmitProofInvalidationKeys(user.id, questId, participationId);
+        await Promise.all(keys.map(key => queryClient.invalidateQueries({ queryKey: key })));
         setSubmitted(true);
         return;
+      }
+
+      // Device coordinates are supporting evidence only. A GPS method is
+      // satisfied exclusively by the server-side validator, which reads the
+      // private Quest geometry and records the trusted completion attempt.
+      if (requiresGps && capturedLocation) {
+        const validation = await submitGeoValidation({
+          participationId,
+          latitude: capturedLocation.latitude,
+          longitude: capturedLocation.longitude,
+          horizontalAccuracyMeters: capturedLocation.accuracy ?? 2_001,
+          capturedAt: capturedLocation.capturedAt,
+          requestId: `quest-completion:${participationId}:${capturedLocation.capturedAt}`,
+          validationType: 'completion',
+        });
+        if (validation.result !== 'validated') {
+          Alert.alert(
+            'Location not verified',
+            validation.userMessage ?? 'Your location could not be verified. Please capture it again.',
+          );
+          return;
+        }
       }
 
       // 1. Create draft
@@ -278,7 +308,7 @@ export default function QuestProofScreen() {
   }, [
     canSubmit, participationId, user, submissionType, requiresText, textResponse,
     questId, queryClient, capturedLocation, requiresCamera, requiresIntegrity,
-    integrityConfirmed, confirmIntegrity, hasEvidenceInput,
+    integrityConfirmed, confirmIntegrity, hasEvidenceInput, requiresGps,
   ]);
 
   // ── Submitted state ─────────────────────────────────────────────────────────
@@ -478,6 +508,9 @@ export default function QuestProofScreen() {
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,
                     accuracy: position.coords.accuracy,
+                    capturedAt: position.timestamp
+                      ? new Date(position.timestamp).toISOString()
+                      : new Date().toISOString(),
                   });
                   setLocationCaptured(true);
                 } catch {
