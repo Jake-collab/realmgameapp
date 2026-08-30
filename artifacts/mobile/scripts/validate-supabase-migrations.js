@@ -48,6 +48,11 @@ function getCanonicalMigrations(migrationsDir) {
   return canonical;
 }
 
+function formatMigrationValidationError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return `Migration filename preflight failed: ${message}`;
+}
+
 if (require.main === module) {
   try {
     const migrationsDir = process.argv[2];
@@ -64,10 +69,9 @@ if (require.main === module) {
       `Migration filename preflight passed for ${canonical.length} canonical migrations (${first}–${last}).`,
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(`Migration filename preflight failed: ${message}`);
+    console.error(formatMigrationValidationError(error));
     process.exitCode = 1;
   }
 }
 
-module.exports = { getCanonicalMigrations };
+module.exports = { formatMigrationValidationError, getCanonicalMigrations };

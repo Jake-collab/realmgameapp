@@ -53,34 +53,43 @@ fi
 printf '%s\n' "$migration_json" > "$MIGRATION_JSON"
 node - "$MIGRATION_JSON" "$MIGRATIONS_DIR" "$SCRIPT_DIR/validate-supabase-migrations.js" <<'NODE'
 const fs = require('node:fs');
-const { migrations } = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 const migrationsDir = process.argv[3];
-const { getCanonicalMigrations } = require(process.argv[4]);
+const {
+  formatMigrationValidationError,
+  getCanonicalMigrations,
+} = require(process.argv[4]);
 
-if (!Array.isArray(migrations)) {
-  throw new Error('Supabase CLI returned an invalid migration list.');
-}
+try {
+  const { migrations } = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 
-const canonical = getCanonicalMigrations(migrationsDir);
-
-if (migrations.length !== canonical.length) {
-  throw new Error(`Expected ${canonical.length} canonical migrations; received ${migrations.length} linked migrations.`);
-}
-
-for (let index = 0; index < canonical.length; index += 1) {
-  const expected = canonical[index].version;
-  const entry = migrations[index];
-  if (!entry || entry.local !== expected || entry.remote !== expected) {
-    const actual = entry
-      ? `local ${entry.local ?? '<none>'}, remote ${entry.remote ?? '<none>'}`
-      : 'no linked migration';
-    throw new Error(`Migration parity mismatch at position ${index + 1}: expected ${expected}, received ${actual}.`);
+  if (!Array.isArray(migrations)) {
+    throw new Error('Supabase CLI returned an invalid migration list.');
   }
-}
 
-const first = canonical[0].version;
-const last = canonical[canonical.length - 1].version;
-console.log(`Migration parity passed for ${canonical.length} canonical migrations (${first}–${last}).`);
+  const canonical = getCanonicalMigrations(migrationsDir);
+
+  if (migrations.length !== canonical.length) {
+    throw new Error(`Expected ${canonical.length} canonical migrations; received ${migrations.length} linked migrations.`);
+  }
+
+  for (let index = 0; index < canonical.length; index += 1) {
+    const expected = canonical[index].version;
+    const entry = migrations[index];
+    if (!entry || entry.local !== expected || entry.remote !== expected) {
+      const actual = entry
+        ? `local ${entry.local ?? '<none>'}, remote ${entry.remote ?? '<none>'}`
+        : 'no linked migration';
+      throw new Error(`Migration parity mismatch at position ${index + 1}: expected ${expected}, received ${actual}.`);
+    }
+  }
+
+  const first = canonical[0].version;
+  const last = canonical[canonical.length - 1].version;
+  console.log(`Migration parity passed for ${canonical.length} canonical migrations (${first}–${last}).`);
+} catch (error) {
+  console.error(formatMigrationValidationError(error));
+  process.exitCode = 1;
+}
 NODE
 
 run_supabase db dump --linked --schema public --file "$SCHEMA_DUMP" >/dev/null

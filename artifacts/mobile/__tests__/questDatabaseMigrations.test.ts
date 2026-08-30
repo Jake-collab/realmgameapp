@@ -23,6 +23,69 @@ function withMigrationFixture(files, callback) {
   }
 }
 
+function withLinkedVerificationFixture(files, callback) {
+  const fixtureRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), "linked-supabase-verification-"),
+  );
+  const mobileDir = path.join(fixtureRoot, "mobile");
+  const scriptsDir = path.join(mobileDir, "scripts");
+  const migrationsDir = path.join(mobileDir, "supabase", "migrations");
+  const metadataDir = path.join(mobileDir, "supabase", ".temp");
+  const binDir = path.join(fixtureRoot, "bin");
+  const migrationResponsePath = path.join(
+    fixtureRoot,
+    "migration-response.json",
+  );
+
+  fs.mkdirSync(scriptsDir, { recursive: true });
+  fs.mkdirSync(migrationsDir, { recursive: true });
+  fs.mkdirSync(metadataDir, { recursive: true });
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.copyFileSync(
+    path.resolve(__dirname, "../scripts/verify-linked-supabase.sh"),
+    path.join(scriptsDir, "verify-linked-supabase.sh"),
+  );
+  fs.copyFileSync(
+    path.resolve(__dirname, "../scripts/validate-supabase-migrations.js"),
+    path.join(scriptsDir, "validate-supabase-migrations.js"),
+  );
+  fs.writeFileSync(path.join(metadataDir, "project-ref"), "fixture-project\n");
+  fs.writeFileSync(migrationResponsePath, '{"migrations":[]}\n');
+  for (const file of files) {
+    fs.writeFileSync(path.join(migrationsDir, file), "-- fixture\n");
+  }
+
+  const fakeNpxPath = path.join(binDir, "npx");
+  fs.writeFileSync(
+    fakeNpxPath,
+    `#!/usr/bin/env bash
+case "$*" in
+  *"migration list --linked"*)
+    cat "${migrationResponsePath}"
+    ;;
+  *)
+    echo "Unexpected fake Supabase command: $*" >&2
+    exit 1
+    ;;
+esac
+`,
+    { mode: 0o755 },
+  );
+
+  try {
+    return callback({
+      env: {
+        ...process.env,
+        PATH: `${binDir}:${process.env.PATH}`,
+        SUPABASE_DB_PASSWORD: "fixture-password",
+      },
+      scriptPath: path.join(scriptsDir, "verify-linked-supabase.sh"),
+    });
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
 describe("Supabase migration filename preflight", () => {
   test("accepts a valid migration history in canonical order", () => {
     withMigrationFixture(
@@ -89,6 +152,49 @@ describe("Supabase migration filename preflight", () => {
         process.execPath,
         [validatorPath, migrationsDir],
         { encoding: "utf8" },
+      );
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        "Migration filename preflight failed:",
+      );
+      expect(result.stderr).toContain(
+        "NNN_description.sql (for example, 001_create_users.sql)",
+      );
+      expect(result.stderr).toContain("1_first.sql");
+      expect(result.stderr).not.toContain("at getCanonicalMigrations");
+      expect(result.stderr).not.toContain("Error:");
+    });
+  });
+
+  test("reports concise actionable errors from linked verification", () => {
+    withLinkedVerificationFixture(
+      ["001_first.sql", "001_second.sql"],
+      ({ env, scriptPath }) => {
+        const result = childProcess.spawnSync(
+          "bash",
+          [scriptPath],
+          { encoding: "utf8", env },
+        );
+
+        expect(result.status).toBe(1);
+        expect(result.stderr).toContain(
+          "Migration filename preflight failed:",
+        );
+        expect(result.stderr).toContain(
+          "Duplicate canonical migration version 001: 001_first.sql and 001_second.sql.",
+        );
+        expect(result.stderr).toContain("Rename one file");
+        expect(result.stderr).not.toContain("at getCanonicalMigrations");
+        expect(result.stderr).not.toContain("Error:");
+      },
+    );
+
+    withLinkedVerificationFixture(["1_first.sql"], ({ env, scriptPath }) => {
+      const result = childProcess.spawnSync(
+        "bash",
+        [scriptPath],
+        { encoding: "utf8", env },
       );
 
       expect(result.status).toBe(1);
