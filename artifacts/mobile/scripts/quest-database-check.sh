@@ -10,9 +10,18 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 MIGRATIONS_DIR="$MOBILE_DIR/supabase/migrations"
 ENV_FILE="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/quest-supabase.env"
-STORAGE_VERSION_FILE="$MOBILE_DIR/supabase/.temp/storage-version"
-STORAGE_VERSION_BACKUP="${ENV_FILE}.storage-version"
-STORAGE_VERSION_MOVED=false
+LOCAL_METADATA_DIR="$MOBILE_DIR/supabase/.temp"
+LOCAL_METADATA_BACKUP="${ENV_FILE}.metadata"
+LOCAL_METADATA_MOVED=false
+LOCAL_METADATA_FILES=(
+  storage-version
+  linked-project.json
+  gotrue-version
+  pooler-url
+  postgres-version
+  cli-latest
+  project-ref
+)
 SUPABASE_STARTED=false
 SUPABASE_CLI_VERSION="${SUPABASE_CLI_VERSION:-2.115.0}"
 
@@ -23,9 +32,14 @@ cleanup() {
       run_supabase stop --no-backup
     ) || echo "Warning: failed to remove disposable Supabase containers." >&2
   fi
-  if [[ "$STORAGE_VERSION_MOVED" == true ]]; then
-    rm -f "$STORAGE_VERSION_FILE"
-    mv "$STORAGE_VERSION_BACKUP" "$STORAGE_VERSION_FILE"
+  if [[ "$LOCAL_METADATA_MOVED" == true ]]; then
+    for metadata_file in "${LOCAL_METADATA_FILES[@]}"; do
+      if [[ -f "$LOCAL_METADATA_BACKUP/$metadata_file" ]]; then
+        rm -f "$LOCAL_METADATA_DIR/$metadata_file"
+        mv "$LOCAL_METADATA_BACKUP/$metadata_file" "$LOCAL_METADATA_DIR/$metadata_file"
+      fi
+    done
+    rmdir "$LOCAL_METADATA_BACKUP" 2>/dev/null || true
   fi
   rm -f "$ENV_FILE"
 }
@@ -71,13 +85,16 @@ else
 fi
 
 cd "$MOBILE_DIR"
-# A linked hosted project can leave an ignored storage-version marker in the
-# local .temp directory. It is not part of this disposable project's config
-# and can name a migration absent from the locally selected Storage image.
-if [[ -f "$STORAGE_VERSION_FILE" ]]; then
-  mv "$STORAGE_VERSION_FILE" "$STORAGE_VERSION_BACKUP"
-  STORAGE_VERSION_MOVED=true
-fi
+# Generated Supabase metadata can point at the linked hosted project's service
+# versions or internal migrations. Keep all of it out of this disposable
+# provisioning run, then restore it in cleanup.
+mkdir -p "$LOCAL_METADATA_BACKUP"
+for metadata_file in "${LOCAL_METADATA_FILES[@]}"; do
+  if [[ -f "$LOCAL_METADATA_DIR/$metadata_file" ]]; then
+    mv "$LOCAL_METADATA_DIR/$metadata_file" "$LOCAL_METADATA_BACKUP/$metadata_file"
+  fi
+done
+LOCAL_METADATA_MOVED=true
 # Delete any volume from an interrupted prior run before provisioning the
 # disposable project. `supabase start` then applies every migration to the
 # fresh database as part of initialization.
@@ -120,6 +137,9 @@ done
 
 echo "Running Quest RPC and RLS contracts against the disposable database."
 pnpm exec jest --runInBand __tests__/questRpc.integration.test.ts
+
+echo "Running moderator cleanup operator actions against the disposable database."
+pnpm exec jest --runInBand __tests__/moderationMediaRetention.integration.test.ts
 
 echo "Running rejected-media Storage access and retention contracts against the disposable database."
 pnpm --filter @workspace/api-server test

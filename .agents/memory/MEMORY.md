@@ -24,6 +24,7 @@
 - [Compatibility alert recovery](compatibility-alert-recovery.md) — retry idempotent GitHub alert operations, but never blindly retry issue creation after an ambiguous response.
 - [Reusable workflow contracts](reusable-workflow-contracts.md) — failure reporters need static checks in the reusable callee and every local caller permission handoff.
 - [Hosted Supabase reset](hosted-supabase-schema-mismatch.md) — this project required a scoped public-schema reset; the CLI’s linked reset reaches Auth-owned objects and fails.
+- [Disposable Supabase metadata](disposable-supabase-metadata.md) — isolate all generated linked-project markers before local disposable startup.
 - [Storage RLS policy evaluation](storage-rls-policy-evaluation.md) — anonymous policies must not invoke creator-only helpers behind a short-circuit condition.
 - [Storage retention integration](storage-retention-integration.md) — batch-remove reports missing objects as HTTP 200 with an empty list; isolate linked Storage metadata in local harnesses.
 - [Moderation retention classification](moderation-retention-classification.md) — distinguish retryable cleanup failures from blocked reference drift with persisted state, not error wording.

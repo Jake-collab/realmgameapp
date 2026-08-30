@@ -110,7 +110,11 @@ async function createBucket(targetBucket = retentionBucket): Promise<void> {
     body: JSON.stringify({ id: targetBucket, name: targetBucket, public: false }),
   });
   const detail = response.ok ? "" : await response.text();
-  if (!response.ok && response.status !== 409 && !detail.includes("BucketAlreadyExists")) {
+  const bucketAlreadyExists = response.status === 409
+    || detail.includes("BucketAlreadyExists")
+    || detail.includes('"statusCode":"409"')
+    || detail.includes('"error":"Duplicate"');
+  if (!response.ok && !bucketAlreadyExists) {
     throw new Error(`Could not create Storage bucket: ${response.status} ${detail.slice(0, 500)}`);
   }
   bucketCreated = true;
@@ -593,7 +597,10 @@ describeIntegration("rejected media Storage retention", () => {
     const media = await queryMedia(fixture);
     assert.equal(media.visibility, "public");
     assert.equal(media.moderation_status, "approved");
-    assert.equal(media.deleted_at, withdrawnAt);
+    assert.equal(
+      new Date(media.deleted_at as string).toISOString(),
+      new Date(withdrawnAt).toISOString(),
+    );
     await assertStorageReadDenied(fixture, authorization, "Anonymous client");
   });
 
@@ -621,12 +628,14 @@ describeIntegration("rejected media Storage retention", () => {
 
     const result = await store.runMaintenance(30);
     assert.deepEqual(result.moderation_media, {
-      candidates: accessFixtures.length,
+      // The earlier reference-drift fixture remains visible as a blocked
+      // candidate and is deliberately counted as skipped.
+      candidates: accessFixtures.length + 1,
       claimed: accessFixtures.length,
       deleted: accessFixtures.length,
       missing: 0,
       failed: 0,
-      skipped: 0,
+      skipped: 1,
       errors: [],
     });
     for (const fixture of accessFixtures) {
