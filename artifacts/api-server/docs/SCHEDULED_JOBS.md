@@ -70,4 +70,5 @@ for pending, retrying, completed, and blocked reference states, plus the latest
 bounded error summaries. The response deliberately excludes bucket names,
 Storage paths, signed URLs, and media bytes. A `missing` deletion outcome is a
 successful terminal result; a failed deletion remains retryable, while a
-reference-change error is blocked for manual review.
+reference changes are persisted as a blocked classification for manual review,
+independent of the operator-facing error wording.

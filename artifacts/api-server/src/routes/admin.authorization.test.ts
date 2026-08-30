@@ -14,7 +14,6 @@ const identities: Record<string, { id: string; role: string }> = {
   admin: { id: "staff-admin", role: "admin" },
 };
 const testMediaId = "11111111-1111-4111-8111-111111111111";
-const blockedRetentionError = "Media Storage reference changed; manual review required.";
 const retentionRows = [
   {
     media_id: "22222222-2222-4222-8222-222222222222",
@@ -24,6 +23,7 @@ const retentionRows = [
     next_attempt_at: null,
     storage_delete_outcome: null,
     storage_deleted_at: null,
+    failure_classification: null,
     last_error: null,
     created_at: "2026-08-30T00:00:00.000Z",
     updated_at: "2026-08-30T00:10:00.000Z",
@@ -40,6 +40,7 @@ const retentionRows = [
     next_attempt_at: "2026-08-30T02:00:00.000Z",
     storage_delete_outcome: null,
     storage_deleted_at: null,
+    failure_classification: "retryable",
     last_error: "Supabase Storage deletion failed for proof-submissions/retry-user/proof/retry.png with status 503. Source URL: https://storage.example.test/object/retry-user/proof/retry.png",
     created_at: "2026-08-30T00:00:00.000Z",
     updated_at: "2026-08-30T01:00:00.000Z",
@@ -56,6 +57,7 @@ const retentionRows = [
     next_attempt_at: null,
     storage_delete_outcome: "deleted",
     storage_deleted_at: "2026-08-30T01:01:00.000Z",
+    failure_classification: null,
     last_error: null,
     created_at: "2026-08-30T00:00:00.000Z",
     updated_at: "2026-08-30T01:01:00.000Z",
@@ -72,6 +74,7 @@ const retentionRows = [
     next_attempt_at: null,
     storage_delete_outcome: "missing",
     storage_deleted_at: "2026-08-30T01:11:00.000Z",
+    failure_classification: null,
     last_error: null,
     created_at: "2026-08-30T00:00:00.000Z",
     updated_at: "2026-08-30T01:11:00.000Z",
@@ -88,7 +91,8 @@ const retentionRows = [
     next_attempt_at: null,
     storage_delete_outcome: null,
     storage_deleted_at: null,
-    last_error: blockedRetentionError,
+    failure_classification: "blocked_reference",
+    last_error: "Storage reference no longer matches the moderation record; review required.",
     created_at: "2026-08-30T00:00:00.000Z",
     updated_at: "2026-08-30T01:12:00.000Z",
     bucket: "custom-game-media",
@@ -144,9 +148,11 @@ describe("admin moderation authorization", () => {
       if (req.url?.startsWith("/rest/v1/media_retention_cleanups")) {
         const url = new URL(req.url, "http://supabase.test");
         const status = url.searchParams.get("status")?.replace(/^eq\./, "");
+        const failureClassification = url.searchParams.get("failure_classification")?.replace(/^eq\./, "");
         const lastError = url.searchParams.get("last_error")?.replace(/^eq\./, "");
         const matchingRows = retentionRows.filter((row) =>
           (!status || row.status === status)
+          && (!failureClassification || row.failure_classification === failureClassification)
           && (!lastError || row.last_error === lastError),
         );
         if (req.headers.prefer === "count=exact") {
@@ -359,7 +365,7 @@ describe("admin moderation authorization", () => {
     assert.deepEqual(states.get(retentionRows[4]!.media_id), {
       state: "blocked",
       deletionOutcome: null,
-      lastError: blockedRetentionError,
+      lastError: "Storage reference no longer matches the moderation record; review required.",
     });
 
     for (const row of retentionRows) {

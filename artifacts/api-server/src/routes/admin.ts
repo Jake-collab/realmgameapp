@@ -60,6 +60,10 @@ import { persistIntegritySnapshot, persistModerationResult } from "../lib/supaba
 import { ExpoPushProvider, NoopPushProvider, NotificationStore, renderNotification, type NotificationEvent } from "../lib/notifications";
 import { SupabaseNotificationStore } from "../lib/durable-notifications";
 import {
+  MODERATION_RETENTION_FAILURE_CLASSIFICATION,
+  type ModerationRetentionFailureClassification,
+} from "../lib/moderation-retention";
+import {
   createSupabaseStorageSignedUrl,
   supabaseAdminConfigured,
   supabaseAdminRequest,
@@ -121,8 +125,6 @@ async function adminCount(path: string) {
   return range ? Number(range.split("/")[1]) || 0 : 0;
 }
 
-const blockedRetentionReferenceError = "Media Storage reference changed; manual review required.";
-
 type MediaRetentionCleanupRow = {
   media_id: string;
   status: "pending" | "processing" | "failed" | "completed";
@@ -131,13 +133,19 @@ type MediaRetentionCleanupRow = {
   next_attempt_at: string | null;
   storage_delete_outcome: "deleted" | "missing" | null;
   storage_deleted_at: string | null;
+  failure_classification: ModerationRetentionFailureClassification | null;
   last_error: string | null;
   created_at: string;
   updated_at: string;
 };
 
-function retentionCleanupState(row: Pick<MediaRetentionCleanupRow, "status" | "last_error">) {
-  if (row.last_error === blockedRetentionReferenceError) return "blocked" as const;
+function retentionCleanupState(
+  row: Pick<MediaRetentionCleanupRow, "status" | "failure_classification">,
+) {
+  if (
+    row.status === "failed"
+    && row.failure_classification === MODERATION_RETENTION_FAILURE_CLASSIFICATION.BLOCKED_REFERENCE
+  ) return "blocked" as const;
   if (row.status === "completed") return "completed" as const;
   if (row.status === "pending") return "pending" as const;
   return "retrying" as const;
@@ -438,7 +446,9 @@ router.get("/admin/diagnostics", requireAdmin("admin.diagnostics.read"), async (
 
 router.get("/admin/moderation/media-retention", requireAdmin("moderation.read"), async (_req, res) => {
   try {
-    const blockedFilter = `status=eq.failed&last_error=eq.${encodeURIComponent(blockedRetentionReferenceError)}`;
+    const blockedFilter = `status=eq.failed&failure_classification=eq.${
+      MODERATION_RETENTION_FAILURE_CLASSIFICATION.BLOCKED_REFERENCE
+    }`;
     const [pending, processing, failed, completed, blocked, rows] = await Promise.all([
       adminCount("media_retention_cleanups?status=eq.pending"),
       adminCount("media_retention_cleanups?status=eq.processing"),
@@ -446,7 +456,7 @@ router.get("/admin/moderation/media-retention", requireAdmin("moderation.read"),
       adminCount("media_retention_cleanups?status=eq.completed"),
       adminCount(`media_retention_cleanups?${blockedFilter}`),
       adminRead<MediaRetentionCleanupRow[]>(
-        "media_retention_cleanups?select=media_id,status,attempt_count,lease_acquired_at,next_attempt_at,storage_delete_outcome,storage_deleted_at,last_error,created_at,updated_at&order=updated_at.desc&limit=100",
+        "media_retention_cleanups?select=media_id,status,attempt_count,lease_acquired_at,next_attempt_at,storage_delete_outcome,storage_deleted_at,failure_classification,last_error,created_at,updated_at&order=updated_at.desc&limit=100",
       ),
     ]);
     const retrying = processing + Math.max(0, failed - blocked);

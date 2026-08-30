@@ -23,10 +23,44 @@ CREATE TABLE IF NOT EXISTS media_retention_cleanups (
   next_attempt_at      TIMESTAMPTZ,
   storage_delete_outcome TEXT CHECK (storage_delete_outcome IN ('deleted', 'missing')),
   storage_deleted_at   TIMESTAMPTZ,
+  failure_classification TEXT CHECK (
+    failure_classification IN ('blocked_reference', 'retryable')
+  ),
   last_error           TEXT,
   created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Keep this migration safe for databases that already created the table from
+-- an earlier version of the cleanup contract. The message comparison is only
+-- a one-time legacy backfill; all new state is classified by the RPCs below.
+ALTER TABLE media_retention_cleanups
+  ADD COLUMN IF NOT EXISTS failure_classification TEXT;
+
+UPDATE media_retention_cleanups
+SET failure_classification = CASE
+  WHEN status = 'failed'
+    AND last_error = 'Media Storage reference changed; manual review required.'
+    THEN 'blocked_reference'
+  WHEN status = 'failed' THEN 'retryable'
+  ELSE NULL
+END
+WHERE failure_classification IS NULL;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'media_retention_cleanups_failure_classification_check'
+      AND conrelid = 'public.media_retention_cleanups'::regclass
+  ) THEN
+    ALTER TABLE media_retention_cleanups
+      ADD CONSTRAINT media_retention_cleanups_failure_classification_check
+      CHECK (failure_classification IN ('blocked_reference', 'retryable'));
+  END IF;
+END;
+$$;
 
 ALTER TABLE media_retention_cleanups ENABLE ROW LEVEL SECURITY;
 
@@ -140,6 +174,7 @@ BEGIN
       UPDATE media_retention_cleanups
       SET status = 'failed',
           next_attempt_at = NULL,
+          failure_classification = 'blocked_reference',
           last_error = 'Media Storage reference changed; manual review required.',
           lease_token = NULL,
           lease_acquired_at = NULL
@@ -152,11 +187,11 @@ BEGIN
   INSERT INTO media_retention_cleanups (
     media_id, bucket, storage_path, status, attempt_count,
     lease_token, lease_acquired_at, next_attempt_at,
-    storage_delete_outcome, storage_deleted_at, last_error
+    storage_delete_outcome, storage_deleted_at, failure_classification, last_error
   )
   VALUES (
     p_media_id, v_media.bucket, v_media.storage_path, 'processing', 1,
-    v_lease, NOW(), NULL, NULL, NULL, NULL
+    v_lease, NOW(), NULL, NULL, NULL, NULL, NULL
   )
   ON CONFLICT ON CONSTRAINT media_retention_cleanups_pkey DO UPDATE SET
     bucket = EXCLUDED.bucket,
@@ -167,6 +202,7 @@ BEGIN
     lease_acquired_at = EXCLUDED.lease_acquired_at,
     next_attempt_at = NULL,
     storage_delete_outcome = NULL,
+    failure_classification = NULL,
     last_error = NULL;
 
   -- Soft-delete only after the retention boundary and all eligibility checks
@@ -186,7 +222,8 @@ CREATE OR REPLACE FUNCTION complete_moderation_retention_candidate(
   p_lease_token UUID,
   p_outcome TEXT,
   p_error TEXT DEFAULT NULL,
-  p_retry_minutes INTEGER DEFAULT 15
+  p_retry_minutes INTEGER DEFAULT 15,
+  p_failure_classification TEXT DEFAULT NULL
 ) RETURNS JSONB
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE
@@ -195,7 +232,9 @@ BEGIN
   IF auth.role() <> 'service_role' THEN RAISE EXCEPTION 'trusted worker required'; END IF;
   IF p_media_id IS NULL OR p_lease_token IS NULL
      OR p_outcome NOT IN ('deleted', 'missing', 'failed')
-     OR p_retry_minutes < 1 OR p_retry_minutes > 1440 THEN
+     OR p_retry_minutes < 1 OR p_retry_minutes > 1440
+     OR (p_outcome = 'failed' AND p_failure_classification IS DISTINCT FROM 'retryable')
+     OR (p_outcome <> 'failed' AND p_failure_classification IS NOT NULL) THEN
     RAISE EXCEPTION 'invalid moderation retention completion';
   END IF;
 
@@ -222,6 +261,7 @@ BEGIN
         next_attempt_at = NOW() + make_interval(mins => p_retry_minutes),
         lease_token = NULL,
         lease_acquired_at = NULL,
+        failure_classification = p_failure_classification,
         last_error = LEFT(COALESCE(NULLIF(TRIM(p_error), ''), 'Storage deletion failed.'), 1000)
     WHERE media_id = p_media_id;
   ELSE
@@ -232,6 +272,7 @@ BEGIN
         lease_acquired_at = NULL,
         storage_delete_outcome = p_outcome,
         storage_deleted_at = NOW(),
+        failure_classification = NULL,
         last_error = NULL
     WHERE media_id = p_media_id;
     PERFORM log_admin_action(

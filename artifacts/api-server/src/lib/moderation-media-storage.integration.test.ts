@@ -406,6 +406,7 @@ describeIntegration("rejected media Storage retention", () => {
     const cleanup = await queryCleanup(fixture);
     assert.equal(cleanup.status, "completed");
     assert.equal(cleanup.storage_delete_outcome, "deleted");
+    assert.equal(cleanup.failure_classification, null);
     const cases = await rest<JsonObject[]>(
       `moderation_cases?select=id,decision&id=eq.${fixture.moderationCaseId}`,
     );
@@ -432,6 +433,7 @@ describeIntegration("rejected media Storage retention", () => {
     const cleanup = await queryCleanup(fixture);
     assert.equal(cleanup.status, "completed");
     assert.equal(cleanup.storage_delete_outcome, "missing");
+    assert.equal(cleanup.failure_classification, null);
     assert.equal((await queryMedia(fixture)).moderation_status, "rejected");
   });
 
@@ -462,6 +464,7 @@ describeIntegration("rejected media Storage retention", () => {
 
     const retryable = await queryCleanup(fixture);
     assert.equal(retryable.status, "failed");
+    assert.equal(retryable.failure_classification, "retryable");
     assert.equal(retryable.attempt_count, 1);
     assert.equal(typeof retryable.next_attempt_at, "string");
     assert.equal(retryable.last_error, "Supabase Storage deletion failed with status 503.");
@@ -486,6 +489,49 @@ describeIntegration("rejected media Storage retention", () => {
     assert.equal(completed.status, "completed");
     assert.equal(completed.attempt_count, 2);
     assert.equal(completed.storage_delete_outcome, "deleted");
+    assert.equal(completed.failure_classification, null);
+  });
+
+  it("persists reference drift as a blocked classification", async () => {
+    const fixture = await createFixture(false);
+    await rest<void>("media_retention_cleanups", {
+      method: "POST",
+      headers: { ...headers, prefer: "return=minimal" },
+      body: JSON.stringify({
+        media_id: fixture.mediaId,
+        bucket: fixture.bucket,
+        storage_path: fixture.path,
+        status: "failed",
+        attempt_count: 1,
+        next_attempt_at: new Date(Date.now() - 1_000).toISOString(),
+        failure_classification: "retryable",
+        last_error: "previous transient failure",
+      }),
+    });
+    await rest<void>(`media_assets?id=eq.${fixture.mediaId}`, {
+      method: "PATCH",
+      headers: { ...headers, prefer: "return=minimal" },
+      body: JSON.stringify({
+        storage_path: `${fixture.path}.changed`,
+        updated_at: new Date(Date.now() - 31 * 24 * 60 * 60 * 1000).toISOString(),
+      }),
+    });
+
+    const result = await store.runMaintenance(30);
+    assert.deepEqual(result.moderation_media, {
+      candidates: 1,
+      claimed: 0,
+      deleted: 0,
+      missing: 0,
+      failed: 0,
+      skipped: 1,
+      errors: [],
+    });
+    const blocked = await queryCleanup(fixture);
+    assert.equal(blocked.status, "failed");
+    assert.equal(blocked.failure_classification, "blocked_reference");
+    assert.equal(blocked.next_attempt_at, null);
+    assert.equal(blocked.last_error, "Media Storage reference changed; manual review required.");
   });
 
   it("denies rejected private media to anonymous and ordinary clients while trusted cleanup removes it", async () => {

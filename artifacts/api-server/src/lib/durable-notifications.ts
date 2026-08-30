@@ -14,6 +14,9 @@ import {
   supabaseAdminRpc,
   type SupabaseStorageDeleteResult,
 } from "./supabase-admin";
+import {
+  MODERATION_RETENTION_FAILURE_CLASSIFICATION,
+} from "./moderation-retention";
 
 type JsonObject = Record<string, unknown>;
 
@@ -521,6 +524,9 @@ export class SupabaseNotificationStore {
     outcome: SupabaseStorageDeleteResult | "failed",
     error: unknown,
   ): Promise<{ status: string }> {
+    const failureClassification = outcome === "failed"
+      ? MODERATION_RETENTION_FAILURE_CLASSIFICATION.RETRYABLE
+      : null;
     return supabaseAdminRpc<{ status: string }>("complete_moderation_retention_candidate", {
       p_media_id: candidate.media_id,
       p_lease_token: candidate.lease_token,
@@ -531,6 +537,7 @@ export class SupabaseNotificationStore {
           ? "moderation_media_cleanup_failed"
           : null,
       p_retry_minutes: RETENTION_RETRY_DELAY_MINUTES,
+      p_failure_classification: failureClassification,
     });
   }
 
