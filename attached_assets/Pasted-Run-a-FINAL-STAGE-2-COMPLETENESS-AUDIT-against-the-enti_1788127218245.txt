@@ -1,0 +1,179 @@
+Run a FINAL STAGE 2 COMPLETENESS AUDIT against the entire canonical Stage 2 revenue implementation prompt and:
+
+artifacts/mobile/docs/REVENUE_STAGE_1_SPEC.md
+artifacts/mobile/docs/PROJECT_CONSTITUTION.md
+
+This is an audit/fix task.
+
+Do not assume Task #88 being marked complete means Stage 2 is complete.
+
+Check EVERY Stage 2 requirement individually against the actual code, Supabase schema, linked production database, RLS, RPCs/functions, application UI, Admin UI, API behavior, ledgers, concurrency protections, and tests.
+
+Specifically verify all of the following are actually implemented and working:
+
+1. Provider-neutral Worlds Membership/entitlement architecture.
+2. $4.99 monthly and $44.99 yearly plan definitions.
+3. Free vs Member Quest allowances.
+4. Free 2/week vs Member 5/week Drop creation allowances.
+5. Server-authoritative daily/weekly/monthly periods.
+6. Extra Drop Credit packs and permanent credit ledger.
+7. Included weekly Drops consumed before purchased credits.
+8. Atomic Drop creation authorization.
+9. Membership/allowance summary available to mobile UI.
+10. Membership comparison UI.
+11. Passive Quest and Hunt membership upsells.
+12. Separate Drop Find limit with numeric + Unlimited.
+13. Drop removed from active discovery when Find limit is exhausted.
+14. Separate collectible acquisition quantity with numeric + Unlimited.
+15. Sold-out collectible does not prevent remaining users from finding the Drop.
+16. Creator soft-deactivation/manual deletion.
+17. Historical data survives Drop deactivation.
+18. Permanent Find Badge for every valid successful find.
+19. Badge remains even if collectible is not acquired.
+20. Badge remains after Drop deletion/deactivation.
+21. Badge remains after paid collectible refund/reversal.
+22. Badge gallery/list UI.
+23. Collectible model separate from Find Badge.
+24. Free collectible acquisition.
+25. Paid collectible payment-ready state without fake client-authoritative payment.
+26. Collection contains only legitimately acquired collectibles.
+27. Collection UI.
+28. Drops Found / Badges Earned / Collectibles Acquired / Drops Created statistics.
+29. Automatic rarity calculation and immutable rarity snapshots.
+30. $0 free collectible and paid collectible pricing.
+31. $1 minimum paid price.
+32. Admin-configurable maximum price.
+33. 30% Worlds marketplace fee.
+34. Integer/minor-unit money calculations.
+35. Provider-neutral marketplace transaction/order model.
+36. Seller economic-share accounting.
+37. Seller payable/earnings ledger.
+38. Provider-neutral seller onboarding/status.
+39. Paid-listing 30% fee disclosure and acknowledgement.
+40. Refund/reversal/chargeback architecture.
+41. Full refund revokes paid collectible ownership but NOT Find Badge.
+42. Partial refund accounting support.
+43. Financial/payment event audit history.
+44. Provider-neutral Apple/Google/Stripe external-ID architecture.
+45. Revenue Admin controls.
+46. Admin financial authorization/auditing.
+47. RLS on every new applicable table.
+48. Client cannot self-grant membership.
+49. Client cannot self-grant Drop Credits.
+50. Client cannot fabricate confirmed purchases.
+51. Client cannot fabricate ownership/refunds/seller earnings.
+52. Atomic/concurrency protection for final weekly Drop allowance.
+53. Atomic/concurrency protection for final Drop Credit.
+54. Atomic/concurrency protection for final Find slot.
+55. Atomic/concurrency protection for final collectible unit.
+56. Duplicate purchase/confirmation/refund idempotency.
+57. Cross-user financial privacy.
+58. QVAC regression passes.
+59. QAVS regression passes.
+60. Existing Hunt security regression passes.
+61. No pay-to-win points introduced.
+62. Mobile tests pass.
+63. API tests pass.
+64. Admin tests pass.
+65. TypeScript checks pass.
+66. Connected Supabase tests pass.
+67. All new forward migrations are applied to the linked production Supabase project.
+68. Local migration history exactly matches production.
+69. No existing applied migrations were modified.
+70. No Stripe, Apple Billing, Google Billing, seller payout provider, or Mapbox integration was prematurely started.
+
+IMPORTANT:
+
+For every failed or partially implemented Stage 2 requirement:
+
+FIX IT NOW if it can be fixed within Stage 2 without requiring an external payment-provider connection.
+
+Create any necessary new forward migrations rather than modifying already-applied migrations.
+
+Apply required migrations to the linked production Supabase project.
+
+Run the relevant tests again after fixes.
+
+Do not classify something as a Stage 3 dependency merely because real payments are not connected.
+
+Stage 2 should already contain all provider-neutral product functionality and payment-ready architecture that can exist before the actual payment providers are connected.
+
+Only actual external-provider requirements belong in Stage 3.
+
+At the end, provide this exact audit:
+
+STAGE 2 FINAL COMPLETENESS AUDIT
+
+REQUIREMENTS CHECKED:
+70 / 70
+
+FULLY IMPLEMENTED:
+[number]
+
+FIXED DURING THIS AUDIT:
+[number + concise list]
+
+DEFERRED TO STAGE 3:
+[list only legitimate external payment-provider dependencies]
+
+FAILED / INCOMPLETE:
+[list or NONE]
+
+MIGRATIONS CREATED:
+[list]
+
+LOCAL MIGRATION RANGE:
+[list/range]
+
+PRODUCTION MIGRATION RANGE:
+[list/range]
+
+MIGRATION PARITY:
+PASS / FAIL
+
+RLS / SECURITY:
+PASS / FAIL
+
+ATOMICITY / CONCURRENCY:
+PASS / FAIL
+
+MOBILE TESTS:
+PASS / FAIL
+[count]
+
+API TESTS:
+PASS / FAIL
+[count]
+
+ADMIN TESTS:
+PASS / FAIL
+[count]
+
+QVAC:
+PASS / FAIL
+
+QAVS:
+PASS / FAIL
+
+HUNT SECURITY:
+PASS / FAIL
+
+CONNECTED PRODUCTION TESTS:
+PASS / FAIL
+
+TRUE BLOCKERS:
+[list or NONE]
+
+Do not report COMPLETE merely because tests pass.
+
+COMPLETE means all 70 requirements were individually inspected and every Stage 2 requirement that does not genuinely depend on an external payment provider is implemented, migrated, secured, and tested.
+
+If anything remains incomplete, state exactly what remains and DO NOT declare Stage 2 complete.
+
+If everything is complete and the only remaining work genuinely requires Stage 3 external payment connections, end exactly with:
+
+STAGE 2 REVENUE + SUPABASE IMPLEMENTATION: COMPLETE
+READY FOR STAGE 3 PAYMENT CONNECTIONS
+
+Do not begin Stage 3.
+Do not start Mapbox.
