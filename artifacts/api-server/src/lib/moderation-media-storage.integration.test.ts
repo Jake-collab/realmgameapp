@@ -28,6 +28,11 @@ type Fixture = {
   path: string;
   moderationCaseId: string;
 };
+type MediaFixtureState = {
+  visibility: "private" | "public";
+  moderationStatus: "approved" | "rejected";
+  moderationReason: string;
+};
 
 const testUrl = process.env.QUEST_TEST_SUPABASE_URL ?? "";
 const testAnonKey = process.env.QUEST_TEST_SUPABASE_ANON_KEY ?? "";
@@ -166,7 +171,15 @@ async function listedObjectPaths(targetBucket: string, prefix: string): Promise<
   return rows.map((row) => row.name);
 }
 
-async function createFixture(hasObject: boolean, targetBucket = retentionBucket): Promise<Fixture> {
+async function createFixture(
+  hasObject: boolean,
+  targetBucket = retentionBucket,
+  state: MediaFixtureState = {
+    visibility: "private",
+    moderationStatus: "rejected",
+    moderationReason: "disposable integration fixture",
+  },
+): Promise<Fixture> {
   const user = await createUser();
   const suffix = randomUUID();
   // Use the production folder shapes for owner-scoped policies. Reads below
@@ -203,9 +216,9 @@ async function createFixture(hasObject: boolean, targetBucket = retentionBucket)
       mime_type: "image/jpeg",
       file_size: 4,
       purpose: "moderation_test",
-      visibility: "private",
-      moderation_status: "rejected",
-      moderation_reason: "disposable integration fixture",
+      visibility: state.visibility,
+      moderation_status: state.moderationStatus,
+      moderation_reason: state.moderationReason,
       created_at: oldTimestamp,
       updated_at: oldTimestamp,
     }),
@@ -214,20 +227,22 @@ async function createFixture(hasObject: boolean, targetBucket = retentionBucket)
   if (!mediaId) throw new Error("Media fixture was not created.");
   fixture.mediaId = mediaId;
 
-  const moderationCases = await rest<Array<{ id: string }>>("moderation_cases?select=id", {
-    method: "POST",
-    headers: { ...headers, prefer: "return=representation" },
-    body: JSON.stringify({
-      entity_type: "media",
-      entity_id: mediaId,
-      status: "closed",
-      decision: "content_removed",
-      decision_reason: "disposable integration fixture",
-    }),
-  });
-  const moderationCaseId = moderationCases[0]?.id;
-  if (!moderationCaseId) throw new Error("Moderation evidence fixture was not created.");
-  fixture.moderationCaseId = moderationCaseId;
+  if (state.moderationStatus === "rejected") {
+    const moderationCases = await rest<Array<{ id: string }>>("moderation_cases?select=id", {
+      method: "POST",
+      headers: { ...headers, prefer: "return=representation" },
+      body: JSON.stringify({
+        entity_type: "media",
+        entity_id: mediaId,
+        status: "closed",
+        decision: "content_removed",
+        decision_reason: state.moderationReason,
+      }),
+    });
+    const moderationCaseId = moderationCases[0]?.id;
+    if (!moderationCaseId) throw new Error("Moderation evidence fixture was not created.");
+    fixture.moderationCaseId = moderationCaseId;
+  }
   return fixture;
 }
 
@@ -271,6 +286,30 @@ async function assertStorageReadDenied(
     response.status >= 400 && response.status < 500,
     `${clientLabel} received a server error instead of an access denial for ${fixture.bucket}/${fixture.path} (HTTP ${response.status}).`,
   );
+}
+
+async function assertStorageReadAllowed(
+  fixture: Fixture,
+  authorization: string,
+  clientLabel: string,
+): Promise<void> {
+  const response = await fetch(
+    `${apiUrl}/storage/v1/object/${encodeURIComponent(fixture.bucket)}/${encodeStoragePath(fixture.path)}`,
+    {
+      headers: {
+        apikey: testAnonKey,
+        authorization,
+      },
+    },
+  );
+  const body = new Uint8Array(await response.arrayBuffer());
+  assert.equal(
+    response.ok,
+    true,
+    `${clientLabel} could not read approved ${fixture.bucket}/${fixture.path} (HTTP ${response.status}).`,
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual([...body], [0xff, 0xd8, 0xff, 0xd9]);
 }
 
 async function queryMedia(fixture: Fixture): Promise<JsonObject> {
@@ -532,6 +571,30 @@ describeIntegration("rejected media Storage retention", () => {
     assert.equal(blocked.failure_classification, "blocked_reference");
     assert.equal(blocked.next_attempt_at, null);
     assert.equal(blocked.last_error, "Media Storage reference changed; manual review required.");
+  });
+
+  it("revokes an approved media path immediately when its record is withdrawn", async () => {
+    const fixture = await createFixture(true, "quest-media", {
+      visibility: "public",
+      moderationStatus: "approved",
+      moderationReason: "disposable approved-media fixture",
+    });
+    const authorization = `Bearer ${testAnonKey}`;
+
+    await assertStorageReadAllowed(fixture, authorization, "Anonymous client");
+
+    const withdrawnAt = new Date().toISOString();
+    await rest<void>(`media_assets?id=eq.${fixture.mediaId}`, {
+      method: "PATCH",
+      headers: { ...headers, prefer: "return=minimal" },
+      body: JSON.stringify({ deleted_at: withdrawnAt }),
+    });
+
+    const media = await queryMedia(fixture);
+    assert.equal(media.visibility, "public");
+    assert.equal(media.moderation_status, "approved");
+    assert.equal(media.deleted_at, withdrawnAt);
+    await assertStorageReadDenied(fixture, authorization, "Anonymous client");
   });
 
   it("denies rejected private media to anonymous and ordinary clients while trusted cleanup removes it", async () => {
