@@ -1,0 +1,196 @@
+Finish ALL remaining Supabase Build 1 blockers in one pass.
+
+The latest final audit found that everything currently passes except production migration parity and the features contained in migrations 062 and 063.
+
+CURRENT STATE
+
+Local canonical migrations:
+001–063
+
+Production migrations:
+001–061
+
+Missing from production:
+062
+063
+
+Known consequences:
+
+Migration 062 missing:
+- moderate_media_retention_cleanup is absent
+- operator-resolution columns are absent from media_retention_cleanups
+- moderation/integrity retention operator actions cannot be fully validated
+
+Migration 063 missing:
+- latest serialized send_friend_request implementation is not present in production
+- current social tests pass, but production is not in canonical migration parity and the latest concurrency protection is not deployed
+
+Everything else from the previous final audit currently passes:
+- RLS/security
+- Auth
+- Storage
+- Interest Bubbles
+- Quest
+- Hunt
+- Social current behavior
+- Super Admin
+- Worker/notifications
+- service-role security
+- secret boundaries
+- connected tests
+
+DO NOT START MAPBOX.
+
+==================================================
+STEP 1 — VERIFY MIGRATIONS 062 AND 063
+==================================================
+
+Inspect the current canonical local migrations 062 and 063.
+
+Confirm:
+- both are valid forward migrations
+- neither conflicts with already-applied production migrations
+- their numbering is unique
+- no migration-history collision remains
+- they are the exact migrations intended for production
+
+Do not edit older applied migrations.
+
+==================================================
+STEP 2 — APPLY BOTH TO PRODUCTION
+==================================================
+
+Using the already-linked Supabase CLI:
+
+Apply migration 062 and migration 063 to the connected production Supabase project in canonical order.
+
+Do not ask me to paste SQL manually if the CLI can apply them.
+
+If the CLI reports production already contains equivalent objects but the migration ledger is incomplete, reconcile it safely without fabricating migration history.
+
+==================================================
+STEP 3 — VERIFY MIGRATION 062
+==================================================
+
+After applying 062, verify production now contains:
+
+- moderate_media_retention_cleanup
+- all operator-resolution columns expected on media_retention_cleanups
+- all related retention functions/RPCs/indexes/policies from migration 062
+
+Test the production retention/operator flow with disposable data.
+
+Verify:
+- trusted service_role can perform required moderation-retention operations
+- ordinary authenticated users cannot invoke protected operator actions
+- anonymous users cannot invoke them
+- retention candidate claim/completion behavior still works
+- operator action is auditable
+- private-media-only retention contract remains enforced
+- no existing moderation/integrity flow regresses
+
+Clean up disposable data afterward.
+
+==================================================
+STEP 4 — VERIFY MIGRATION 063
+==================================================
+
+After applying 063, verify the production send_friend_request function is the canonical serialized implementation.
+
+Test with disposable authenticated users:
+
+- User A sends to User B → succeeds
+- concurrent duplicate requests do not create duplicates
+- opposite-direction concurrent requests behave correctly
+- reverse request handling is deterministic
+- accept works
+- reject works if supported
+- cancel works if supported
+- unrelated users cannot modify requests
+- RLS remains enforced
+- authenticated Social regression passes
+
+Clean up disposable users/data afterward.
+
+==================================================
+STEP 5 — MIGRATION PARITY
+==================================================
+
+Run:
+
+verify:linked-supabase
+
+Confirm:
+
+- local migrations = 001–063
+- production migrations = 001–063
+- no duplicate migration numbers
+- no unapplied canonical migration
+- no unexpected remote-only migration
+- migration parity passes cleanly
+
+==================================================
+STEP 6 — FINAL COMPLETE SUPABASE REGRESSION
+==================================================
+
+Immediately after 062 and 063 are verified, rerun the COMPLETE Supabase Build 1 production audit.
+
+Do not make unrelated changes during this audit.
+
+Recheck:
+
+DATABASE / MIGRATION PARITY
+RLS & SECURITY
+AUTH
+STORAGE
+INTEREST BUBBLES
+QUEST
+HUNT
+SOCIAL
+SUPER ADMIN
+WORKER / NOTIFICATIONS
+MODERATION / INTEGRITY
+SECRET BOUNDARIES
+CONNECTED TESTS
+
+Use the actual connected production Supabase project and current production deployment.
+
+Run the broadest safe production regression suite and clean up disposable data afterward.
+
+==================================================
+FINAL RESPONSE
+==================================================
+
+Return:
+
+FINAL SUPABASE STATUS: PASS / FAIL
+
+Database / Migration Parity: PASS/FAIL
+RLS & Security: PASS/FAIL
+Auth: PASS/FAIL
+Storage: PASS/FAIL
+Interest Bubbles: PASS/FAIL
+Quest: PASS/FAIL
+Hunt: PASS/FAIL
+Social: PASS/FAIL
+Super Admin: PASS/FAIL
+Worker / Notifications: PASS/FAIL
+Moderation / Integrity: PASS/FAIL
+Secret Boundaries: PASS/FAIL
+Connected Tests: PASS/FAIL
+
+TRUE SUPABASE BLOCKERS:
+[exact blockers, or NONE]
+
+PRE-RELEASE VALIDATION:
+Keep signed-build, native-device, matterrealm.com, Mapbox, and other external-service work separate from Supabase blockers.
+
+OPTIONAL CLEANUP:
+[only genuinely non-blocking items]
+
+If migrations 062 and 063 are applied, migration parity passes, all regression categories pass, and there are zero true Supabase blockers, end exactly with:
+
+SUPABASE BUILD 1 FINAL AUDIT: PASS
+SUPABASE BUILD 1 INTEGRATION: COMPLETE
+
+Do not start Mapbox.
