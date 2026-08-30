@@ -23,7 +23,11 @@ function withMigrationFixture(files, callback) {
   }
 }
 
-function withLinkedVerificationFixture(files, callback) {
+function withLinkedVerificationFixture(
+  files,
+  callback,
+  migrationResponse = '{"migrations":[]}\n',
+) {
   const fixtureRoot = fs.mkdtempSync(
     path.join(os.tmpdir(), "linked-supabase-verification-"),
   );
@@ -50,7 +54,7 @@ function withLinkedVerificationFixture(files, callback) {
     path.join(scriptsDir, "validate-supabase-migrations.js"),
   );
   fs.writeFileSync(path.join(metadataDir, "project-ref"), "fixture-project\n");
-  fs.writeFileSync(migrationResponsePath, '{"migrations":[]}\n');
+  fs.writeFileSync(migrationResponsePath, migrationResponse);
   for (const file of files) {
     fs.writeFileSync(path.join(migrationsDir, file), "-- fixture\n");
   }
@@ -208,6 +212,52 @@ describe("Supabase migration filename preflight", () => {
       expect(result.stderr).not.toContain("at getCanonicalMigrations");
       expect(result.stderr).not.toContain("Error:");
     });
+  });
+
+  test("rejects malformed linked migration JSON without a Node stack trace", () => {
+    withLinkedVerificationFixture(
+      ["001_first.sql"],
+      ({ env, scriptPath }) => {
+        const result = childProcess.spawnSync(
+          "bash",
+          [scriptPath],
+          { encoding: "utf8", env },
+        );
+
+        expect(result.status).toBe(1);
+        expect(result.stderr).toContain(
+          "Migration filename preflight failed:",
+        );
+        expect(result.stderr).toContain("Unexpected token");
+        expect(result.stderr).not.toMatch(/\n\s+at /);
+        expect(result.stderr).not.toContain("Error:");
+      },
+      '{"migrations":[}\n',
+    );
+  });
+
+  test("rejects a linked migration list whose migrations field is not an array", () => {
+    withLinkedVerificationFixture(
+      ["001_first.sql"],
+      ({ env, scriptPath }) => {
+        const result = childProcess.spawnSync(
+          "bash",
+          [scriptPath],
+          { encoding: "utf8", env },
+        );
+
+        expect(result.status).toBe(1);
+        expect(result.stderr).toContain(
+          "Migration filename preflight failed:",
+        );
+        expect(result.stderr).toContain(
+          "Supabase CLI returned an invalid migration list.",
+        );
+        expect(result.stderr).not.toMatch(/\n\s+at /);
+        expect(result.stderr).not.toContain("Error:");
+      },
+      '{"migrations":{"version":"001"}}\n',
+    );
   });
 
   test("the disposable check preflights before Supabase provisioning", () => {
