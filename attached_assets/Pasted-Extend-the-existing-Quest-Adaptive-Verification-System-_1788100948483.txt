@@ -1,0 +1,490 @@
+Extend the existing Quest Adaptive Verification System (QAVS) with a new verification capability for movement-based quests that require measurable distance or activity progression.
+
+IMPORTANT CONTEXT
+
+The existing QAVS implementation has already passed its focused audit for:
+
+* camera verification
+* GPS/geofence verification
+* timer + integrity confirmation
+* integrity-only confirmation
+* composite verification
+* atomic/idempotent point awards
+* AI verification configuration
+* admin verification configuration
+* legacy Quest compatibility
+* moderation/safety preservation
+
+Do NOT rewrite, replace, or destabilize those working systems.
+
+The latest Quest verification audit passed all 18 checks and production migration 066 is applied.
+
+Preserve:
+
+* existing camera verification
+* existing server-side GPS/geofence validation
+* timer behavior
+* integrity confirmation
+* composite verification
+* point-award idempotency
+* admin configuration
+* AI generation
+* legacy Quest compatibility
+* existing safety/moderation
+* Progress/Completed cache behavior
+
+Add activity/distance verification as an extension to the same framework.
+
+1. Add New QAVS Verification Capability
+
+Add:
+
+activity_tracking
+
+This method is for Quests where completion depends on measurable physical movement rather than simply reaching a destination.
+
+Examples:
+
+* Walk 1 mile
+* Run 2 miles
+* Bike 5 miles
+* Walk 3 kilometers
+* Complete a 30-minute walk covering at least 1 mile
+* Explore a trail for 2 miles
+* Walk from point A to point B when actual movement/distance matters
+
+Do NOT use plain gps for these cases.
+
+The distinction must be:
+
+gps
+= user must reach or be within a defined geographic area.
+
+activity_tracking
+= user must accumulate a defined distance through movement.
+
+A Quest may require both if appropriate.
+
+Example:
+
+“Walk 1 mile and finish at Curtis Hixon Park”
+
+could require:
+
+activity_tracking + gps
+
+2. Quest Verification Hierarchy
+
+Update QAVS selection logic to recognize activity-based Quests.
+
+Use this conceptual decision process:
+
+1. Does completion involve producing or observing something naturally captured visually?
+    → camera
+2. Does completion primarily mean reaching a specific location/geofence?
+    → gps
+3. Does completion require traveling a measurable distance?
+    → activity_tracking
+4. Does completion primarily require spending a defined amount of time doing something?
+    → timer_confirmation
+5. If objective verification would be inappropriate, invasive, unreliable, unsafe, or meaningless:
+    → integrity_confirmation
+
+Composite methods are allowed only when multiple independent Quest requirements genuinely exist.
+
+Examples:
+
+“Walk 1 mile”
+→ activity_tracking
+
+“Visit a park”
+→ gps
+
+“Walk for 20 minutes”
+→ timer_confirmation
+
+“Walk 1 mile for at least 20 minutes”
+→ activity_tracking + timer_confirmation
+
+“Walk 1 mile and take a photo of something interesting”
+→ activity_tracking + camera
+
+“Walk 1 mile to a specific landmark”
+→ activity_tracking + gps
+
+Do not add methods unnecessarily.
+
+3. Activity Tracking Data Model
+
+Inspect the existing schema and naming conventions before modifying anything.
+
+Extend the existing verification configuration rather than creating a separate parallel Quest system.
+
+Support fields conceptually equivalent to:
+
+verification_methods
+including:
+
+* camera
+* gps
+* activity_tracking
+* timer_confirmation
+* integrity_confirmation
+
+For activity tracking, support:
+
+required_distance_meters
+
+Use meters internally as the canonical storage unit.
+
+Optionally support other metadata if useful, such as:
+
+activity_type
+Possible values:
+
+* walking
+* running
+* cycling
+* general_movement
+
+Do not require activity_type if the Quest does not need it.
+
+The UI may display miles or kilometers appropriately, but storage and validation should use a consistent canonical unit.
+
+4. How Activity Tracking Must Work
+
+Activity tracking must use device location updates to calculate actual traveled distance.
+
+Do NOT consider a single starting GPS location and ending GPS location sufficient.
+
+Do NOT calculate total distance using only:
+
+distance(start_point, end_point)
+
+because users may travel along curves/routes and because this can be inaccurate.
+
+Instead:
+
+* collect sequential valid location samples during the active Quest;
+* calculate distance between successive valid samples;
+* accumulate valid traveled distance;
+* persist enough state that activity progress is not lost when the user navigates elsewhere or the app is backgrounded, subject to platform permissions and limitations.
+
+Use geodesic/Haversine or the existing geographic utilities where appropriate.
+
+5. Prevent Obvious GPS Inflation
+
+Add reasonable validation so noisy or impossible GPS data does not artificially increase distance.
+
+At minimum consider:
+
+* location accuracy
+* timestamp between samples
+* impossible movement speeds
+* duplicate points
+* GPS jumps
+* stale readings
+
+Do not accumulate obviously invalid segments.
+
+Do not create an excessively aggressive filter that makes legitimate walking/running difficult to complete.
+
+Keep thresholds centralized/configurable rather than scattering magic numbers throughout the code.
+
+6. Server Authority
+
+Do not trust a client-supplied value such as:
+
+distance_completed = 1 mile
+
+as authoritative.
+
+The server/backend must validate or derive Quest activity progress from trusted submitted location samples/state.
+
+The client may display progress, but the authoritative completion state must remain server-controlled.
+
+Integrate this with the same protected completion architecture already used by QAVS.
+
+7. Starting an Activity Quest
+
+For activity_tracking Quests:
+
+The expanded Quest screen should clearly show the target.
+
+Example:
+
+Walk 1 mile
+
+Progress:
+
+0.42 / 1.00 mi
+
+The user should press:
+
+Start Quest
+
+before activity recording begins.
+
+Record authoritative participation/activity start information.
+
+Do not accumulate unrelated movement performed before the Quest was started.
+
+8. Completion
+
+When the required distance has been validly accumulated:
+
+mark the activity verification component as satisfied.
+
+For activity-only Quests, allow normal Quest completion according to the existing QAVS completion contract.
+
+Do NOT automatically add an integrity confirmation unless the Quest also requires one.
+
+Example:
+
+Walk 1 mile
+→ distance objectively verified
+→ completion can proceed without an extra integrity checkbox.
+
+If the Quest itself requires another element:
+
+Walk 1 mile and spend at least 20 minutes outside
+→ activity_tracking + timer_confirmation
+
+then both must succeed.
+
+If:
+
+Walk 1 mile and photograph something interesting
+→ activity_tracking + camera
+
+then both must succeed.
+
+9. Background / Navigation Behavior
+
+Activity progress should survive normal app navigation.
+
+If technically supported by the current mobile stack and permissions, activity recording should continue appropriately while the app is backgrounded.
+
+Do not silently claim full background GPS support if the platform/runtime does not currently support it.
+
+Inspect the existing Expo/React Native setup and implement the strongest reliable behavior available without introducing unnecessary infrastructure.
+
+If additional mobile permissions are required:
+
+* add them correctly;
+* explain them clearly to the user;
+* request them only when needed.
+
+Do not request continuous/background location permission merely for ordinary GPS check-in Quests.
+
+10. Privacy
+
+Activity location data should be collected only while an activity Quest is active.
+
+Do not create passive continuous user tracking.
+
+Do not collect location indefinitely after the Quest ends or is abandoned.
+
+Store only what is necessary for:
+
+* verification
+* fraud prevention
+* troubleshooting/audit needs already supported by the architecture
+
+Follow the project’s existing retention/privacy patterns.
+
+11. Safety
+
+Activity-generated Quests must not instruct users to:
+
+* walk/run/bike on unsafe roadways
+* trespass
+* use the phone while driving
+* interact with the app while cycling in a dangerous manner
+* enter restricted/private property
+* follow unsafe routes merely to satisfy distance requirements
+
+The user should not need to stare at the phone while completing the activity.
+
+12. AI Quest Generation
+
+Update the existing AI Quest-generation schema and system prompt to support activity_tracking.
+
+The AI should classify quests like:
+
+“Walk 1 mile”
+→ activity_tracking
+→ required_distance_meters approximately 1609
+
+“Run 5 kilometers”
+→ activity_tracking
+→ required_distance_meters = 5000
+
+“Visit a park”
+→ gps
+
+“Walk around a park for 1 mile”
+→ activity_tracking, and gps only if the Quest explicitly requires being at that particular park.
+
+“Walk for 20 minutes”
+→ timer_confirmation, not activity_tracking unless a distance requirement is also stated.
+
+Require valid distance metadata whenever activity_tracking is selected.
+
+Reject AI output where:
+
+* activity_tracking has no valid distance;
+* distance <= 0;
+* activity_tracking is assigned to a Quest with no actual movement requirement;
+* gps is incorrectly used as a substitute for measurable distance.
+
+Preserve the existing AI human-review workflow.
+
+13. Admin UI
+
+Extend the existing admin Quest verification controls.
+
+Add:
+
+Activity / Distance Tracking
+
+When selected, show:
+
+* required distance
+* display unit selector if useful (miles / kilometers)
+* activity type if useful
+
+Convert and store the target in canonical meters.
+
+Admin validation must reject incomplete/invalid activity tracking configuration.
+
+Composite verification should continue to work.
+
+14. User UI
+
+Display concise completion requirements.
+
+Examples:
+
+🚶 Walk 1 mile
+
+🏃 Run 2 miles
+
+🚴 Bike 5 miles
+
+During an active Quest, show progress such as:
+
+0.63 / 1.00 mi
+
+Avoid cluttering the Quest card.
+
+Detailed progress belongs in the expanded/active Quest view.
+
+15. Points and Atomic Completion
+
+Integrate activity verification into the same existing atomic completion pathway.
+
+Points must not be awarded until all required verification components have passed.
+
+Preserve existing:
+
+* participation locking
+* completed-state protections
+* ledger idempotency
+* double-tap/retry protections
+
+Do not introduce a second point-award pathway for activity Quests.
+
+16. Legacy Compatibility
+
+Do not reinterpret old Quests unexpectedly.
+
+Existing quests with NULL/legacy verification values must preserve their current behavior.
+
+Do not backfill activity_tracking onto old quests based solely on title text unless there is an explicit safe migration strategy.
+
+17. Migration
+
+The current linked migration history is 001–066.
+
+If a new database migration is required:
+
+* use the next valid migration number;
+* preserve migration ordering;
+* do not modify already-applied production migration 066;
+* verify linked migration parity afterward.
+
+18. Tests
+
+Add focused tests covering at minimum:
+
+1. Walk 1 mile → activity_tracking.
+2. Run 5 km → activity_tracking.
+3. Visit a park → GPS, not activity_tracking.
+4. Walk for 20 minutes → timer, not activity_tracking.
+5. Walk 1 mile + GPS destination → both required.
+6. Walk 1 mile + camera → both required.
+7. Distance cannot complete before target is reached.
+8. A single GPS jump does not falsely complete a Quest.
+9. Duplicate/stale samples do not inflate distance.
+10. Unrealistic speed samples are rejected/ignored.
+11. Navigation/reload preserves authoritative progress.
+12. Client cannot directly submit a fake completed distance.
+13. Activity completion does not duplicate point awards.
+14. Existing QAVS camera/GPS/timer/integrity tests continue passing.
+15. Existing legacy Quest behavior remains unchanged.
+
+19. Do Not Introduce an External Fitness Provider Yet
+
+Do NOT add Apple Health, HealthKit, Google Fit, Strava, Fitbit, Garmin, or another third-party fitness API as part of this change.
+
+Implement QAVS activity tracking using the application’s existing mobile location capabilities first.
+
+Structure the implementation cleanly enough that a health/activity provider could potentially be added later without replacing the QAVS contract.
+
+20. Existing Audit Limitation
+
+The prior QAVS audit identified one remaining infrastructure limitation:
+
+Automated live RPC/RLS scenarios against a freshly provisioned disposable Supabase environment are currently blocked by the previously identified local Supabase startup limitation.
+
+Do NOT attempt to hide or incorrectly mark that issue as solved unless you actually resolve the Supabase startup problem.
+
+This activity-tracking implementation should still run every available relevant API/mobile/admin/unit/integration test.
+
+If the existing follow-up test task can now test the new activity tracking RPC/RLS paths too, extend that task appropriately.
+
+21. Final Validation
+
+After implementation:
+
+1. Apply any required migration.
+2. Verify linked Supabase migration parity.
+3. Run mobile typecheck.
+4. Run focused mobile tests.
+5. Run API tests.
+6. Run API typecheck.
+7. Run admin typecheck.
+8. Run admin production build.
+9. Run all existing QAVS tests to confirm no regression.
+10. Run the new activity-tracking tests.
+11. Fix implementation-caused failures.
+
+Then report:
+
+* files changed
+* migration added, if any
+* activity tracking architecture
+* distance calculation method
+* GPS noise/spoof-resistance rules
+* server-authoritative validation
+* mobile permissions/background behavior
+* AI changes
+* admin changes
+* user UI changes
+* composite verification behavior
+* tests run and results
+* whether all previous QAVS tests still pass
+* remaining limitations
+
+Do not claim platform/background-location behavior was tested if it was not actually tested on the relevant device/runtime.
