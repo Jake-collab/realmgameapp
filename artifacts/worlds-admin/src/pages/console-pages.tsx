@@ -602,9 +602,10 @@ export function OperationsPage({ data }: { data: AdminData }) {
   const isQuestLane = location.startsWith('/quests/');
   const queues = data.reviewQueues.data?.queues;
   const relevantQueues = queues?.filter((item: any) => item.title.toLowerCase().includes(config.label.toLowerCase().split(' ')[0]) || item.category.toLowerCase().includes(config.label.toLowerCase().split(' ')[0]));
+  const revenue = location === '/hunts' ? data.revenue.data : undefined;
   return (
     <div className="page-wrap">
-      <PageHeader eyebrow={config.eyebrow} title={config.title} description={config.description} actions={<RefreshButton onClick={() => { void data.reviewQueues.refetch(); if (isQuestLane) void data.quests.refetch(); }} loading={data.reviewQueues.isFetching || (isQuestLane && data.quests.isFetching)} />} />
+      <PageHeader eyebrow={config.eyebrow} title={config.title} description={config.description} actions={<RefreshButton onClick={() => { void data.reviewQueues.refetch(); if (isQuestLane) void data.quests.refetch(); if (location === '/hunts') void data.revenue.refetch(); }} loading={data.reviewQueues.isFetching || (isQuestLane && data.quests.isFetching) || (location === '/hunts' && data.revenue.isFetching)} />} />
       <div className="content-grid" style={{ marginTop: 28 }}>
         <section className="panel">
           <div className="panel-header"><div><div className="panel-title">{config.label}</div><div className="panel-kicker">Live operational data from the platform API</div></div><span className="tag orange">Read only</span></div>
@@ -615,9 +616,79 @@ export function OperationsPage({ data }: { data: AdminData }) {
           <QueueList items={relevantQueues} loading={data.reviewQueues.isLoading} onRetry={() => void data.reviewQueues.refetch()} />
         </section>
       </div>
+      {location === '/hunts' && (
+        <section className="panel" style={{ marginTop: 18 }} data-testid="revenue-operations-panel">
+          <div className="panel-header"><div><div className="panel-title">Membership & marketplace</div><div className="panel-kicker">Provider-neutral server accounting and audited staff controls</div></div><StatusBadge status={data.session.data?.permissions.includes('admin.revenue.manage') ? 'authorized' : 'read only'} /></div>
+          {data.revenue.isLoading ? (
+            <div className="empty-state"><strong>Loading revenue controls…</strong></div>
+          ) : data.revenue.isError || !revenue ? (
+            <div className="empty-state"><AlertTriangle /><strong>Revenue operations unavailable</strong><p>No missing totals are treated as zero.</p></div>
+          ) : (
+            <>
+              <div className="content-grid">
+                <div className="metric-card"><div className="metric-label">Active memberships</div><div className="metric-value">{revenue.metrics.activeMemberships}</div></div>
+                <div className="metric-card"><div className="metric-label">Open transactions</div><div className="metric-value">{revenue.metrics.openTransactions}</div></div>
+                <div className="metric-card"><div className="metric-label">Plans</div><div className="metric-value">{revenue.plans.length}</div></div>
+                <div className="metric-card"><div className="metric-label">Audit events</div><div className="metric-value">{revenue.auditEvents.length}</div></div>
+              </div>
+              <div className="notice" style={{ marginTop: 14 }}><AlertTriangle /><span>Worlds Membership is fixed at $4.99 monthly or $44.99 yearly. Gross, platform fee, external fees, taxes, and seller payable remain separate.</span></div>
+               <RevenueOperationsControls data={data} />
+            </>
+          )}
+        </section>
+      )}
       <div className="notice" style={{ marginTop: 18 }}><AlertTriangle /><span>The console is online, but each operational dataset reports its own live service state. No missing records are treated as zero.</span></div>
     </div>
   );
+}
+
+function RevenueOperationsControls({ data }: { data: AdminData }) {
+  const revenue = data.revenue.data!;
+  const canManage = data.session.data?.authorized === true && data.session.data.permissions.includes('admin.revenue.manage');
+  const [message, setMessage] = useState('');
+  const reason = () => window.prompt('Reason (required and audited)')?.trim() || '';
+  const run = <T,>(mutation: { mutate: (input: T, options: { onSuccess: () => void; onError: (error: unknown) => void }) => void }, input: T, label: string) => {
+    if (!canManage || !window.confirm(`${label}. This operation is audited. Continue?`)) return;
+    mutation.mutate(input, { onSuccess: () => setMessage('Operation completed.'), onError: (error) => setMessage(error instanceof Error ? error.message : 'Operation was not confirmed.') });
+  };
+  const editConfig = (item: { key: string; value: Record<string, unknown> }) => {
+    const next = window.prompt(`JSON value for ${item.key}`, JSON.stringify(item.value));
+    if (next == null) return;
+    const why = reason();
+    if (!why) return;
+    try { run(data.updateRevenueConfiguration, { key: item.key, value: JSON.parse(next) as Record<string, unknown>, reason: why }, `Update ${item.key}`); }
+    catch { setMessage('Configuration must be valid JSON.'); }
+  };
+  const deactivate = () => {
+    const id = window.prompt('Drop ID (UUID)')?.trim(); const why = reason();
+    if (id && why) run(data.deactivateDrop, { id, reason: why }, `Deactivate Drop ${id}`);
+  };
+  const reverse = () => {
+    const id = window.prompt('Order ID (UUID)')?.trim();
+    const eventType = window.prompt('Operation type: refund or reversal', 'refund')?.trim();
+    const providerEventId = window.prompt('Provider event/reference ID (required for idempotency)')?.trim();
+    const amount = window.prompt('Amount in minor units (blank for full amount)')?.trim();
+    const why = reason();
+    if (id && providerEventId && why && (eventType === 'refund' || eventType === 'reversal')) run(data.reverseOrder, { id, eventType, providerEventId, amountMinor: amount ? Number(amount) : null, reason: why }, `Request ${eventType} for order ${id}`);
+    else if (eventType && eventType !== 'refund' && eventType !== 'reversal') setMessage('Operation type must be refund or reversal.');
+  };
+  const seller = (item: Record<string, unknown>) => {
+    const status = window.prompt('Status: not_started, pending, verified, restricted, or disabled', String(item.onboarding_status))?.trim();
+    const why = reason();
+    if (why && ['not_started', 'pending', 'verified', 'restricted', 'disabled'].includes(status ?? '')) run(data.updateSellerOnboarding, { userId: String(item.user_id), status: status as 'not_started' | 'pending' | 'verified' | 'restricted' | 'disabled', reason: why }, `Change seller ${String(item.user_id)} to ${status}`);
+  };
+  return <div style={{ marginTop: 16 }}>
+    {message && <div className="notice" style={{ marginBottom: 12 }}><ShieldCheck /><span>{message}</span></div>}
+    <div className="toolbar">
+      <div className="field"><span>Configuration</span><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{revenue.configuration.map((item) => <button key={item.key} className="btn btn-quiet" disabled={!canManage} onClick={() => editConfig(item)}>{item.key.replace(/_/g, ' ')}</button>)}</div></div>
+      <button className="btn btn-quiet" disabled={!canManage} onClick={deactivate}>Deactivate Drop</button>
+      <button className="btn btn-primary" disabled={!canManage} onClick={reverse}>Refund / reverse order</button>
+    </div>
+    <div className="data-table-wrap" style={{ marginTop: 12 }}><table className="data-table"><thead><tr><th>Recent transaction</th><th>State</th><th>Gross</th><th>Seller payable</th><th>Created</th></tr></thead><tbody>{revenue.transactions.slice(0, 8).map((item) => <tr key={String(item.id)}><td className="mono">{String(item.id)}</td><td><StatusBadge status={String(item.state)} /></td><td>{String(item.gross_minor)} {String(item.currency)}</td><td>{String(item.seller_payable_minor)}</td><td>{fmtDateTime(String(item.created_at))}</td></tr>)}</tbody></table></div>
+    <div className="data-table-wrap" style={{ marginTop: 12 }}><table className="data-table"><thead><tr><th>Seller</th><th>Onboarding</th><th>Provider</th><th>Updated</th><th /></tr></thead><tbody>{revenue.sellers.slice(0, 8).map((item) => <tr key={String(item.user_id)}><td className="mono">{String(item.user_id)}</td><td><StatusBadge status={String(item.onboarding_status)} /></td><td>{item.provider_name ? String(item.provider_name) : '—'}</td><td>{fmtDateTime(String(item.updated_at))}</td><td><button className="btn btn-quiet" disabled={!canManage} onClick={() => seller(item)}>Change</button></td></tr>)}</tbody></table></div>
+    <div className="data-table-wrap" style={{ marginTop: 12 }}><table className="data-table"><thead><tr><th>Audit time</th><th>Event</th><th>Entity</th><th>Details</th></tr></thead><tbody>{revenue.auditEvents.slice(0, 10).map((item) => <tr key={String(item.id)}><td>{fmtDateTime(String(item.created_at))}</td><td>{String(item.event_type)}</td><td>{String(item.entity_type)} · <span className="mono">{String(item.entity_id ?? '—')}</span></td><td>{JSON.stringify(item.details).slice(0, 160)}</td></tr>)}</tbody></table></div>
+    <div className="notice" style={{ marginTop: 12 }}><LockKeyhole /><span>Only accounting identifiers and bounded audit details are shown. Provider credentials and private Drop media are never returned.</span></div>
+  </div>;
 }
 
 type Interest = { id: string; slug: string; name: string; description?: string | null; icon_key?: string | null; sort_order: number; is_active: boolean };

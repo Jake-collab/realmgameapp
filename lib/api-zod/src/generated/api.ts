@@ -238,6 +238,117 @@ export const ListAdminHuntsResponse = zod.object({
 
 
 /**
+ * @summary Get provider-neutral revenue operations state
+ */
+export const GetAdminRevenueResponse = zod.object({
+  "plans": zod.array(zod.record(zod.string(), zod.unknown())),
+  "creditPacks": zod.array(zod.record(zod.string(), zod.unknown())),
+  "configuration": zod.array(zod.record(zod.string(), zod.unknown())),
+  "metrics": zod.record(zod.string(), zod.unknown()),
+  "transactions": zod.array(zod.record(zod.string(), zod.unknown())),
+  "sellers": zod.array(zod.record(zod.string(), zod.unknown())),
+  "auditEvents": zod.array(zod.record(zod.string(), zod.unknown())),
+  "generatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update an allowlisted revenue configuration value
+ */
+export const UpdateAdminRevenueConfigurationParams = zod.object({
+  "key": zod.enum(['platform_fee_percent', 'paid_collectible_price_limits', 'collectible_rarity_thresholds'])
+})
+
+export const updateAdminRevenueConfigurationBodyOneReasonMin = 3;
+export const updateAdminRevenueConfigurationBodyOneReasonMax = 500;
+
+
+
+export const UpdateAdminRevenueConfigurationBody = zod.object({
+  "reason": zod.string().min(updateAdminRevenueConfigurationBodyOneReasonMin).max(updateAdminRevenueConfigurationBodyOneReasonMax),
+  "confirmed": zod.literal(true),
+  "idempotencyKey": zod.string().uuid()
+}).and(zod.object({
+  "value": zod.record(zod.string(), zod.unknown())
+}))
+
+export const UpdateAdminRevenueConfigurationResponse = zod.unknown()
+
+
+/**
+ * @summary Deactivate a Drop through a trusted audited operation
+ */
+export const DeactivateAdminHuntDropParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const deactivateAdminHuntDropBodyReasonMin = 3;
+export const deactivateAdminHuntDropBodyReasonMax = 500;
+
+
+
+export const DeactivateAdminHuntDropBody = zod.object({
+  "reason": zod.string().min(deactivateAdminHuntDropBodyReasonMin).max(deactivateAdminHuntDropBodyReasonMax),
+  "confirmed": zod.literal(true),
+  "idempotencyKey": zod.string().uuid()
+})
+
+export const DeactivateAdminHuntDropResponse = zod.unknown()
+
+
+/**
+ * @summary Change seller onboarding status through a trusted audited operation
+ */
+export const UpdateAdminSellerOnboardingParams = zod.object({
+  "userId": zod.coerce.string().uuid()
+})
+
+export const updateAdminSellerOnboardingBodyOneReasonMin = 3;
+export const updateAdminSellerOnboardingBodyOneReasonMax = 500;
+
+
+
+export const UpdateAdminSellerOnboardingBody = zod.object({
+  "reason": zod.string().min(updateAdminSellerOnboardingBodyOneReasonMin).max(updateAdminSellerOnboardingBodyOneReasonMax),
+  "confirmed": zod.literal(true),
+  "idempotencyKey": zod.string().uuid()
+}).and(zod.object({
+  "status": zod.enum(['not_started', 'pending', 'verified', 'restricted', 'disabled'])
+}))
+
+export const UpdateAdminSellerOnboardingResponse = zod.unknown()
+
+
+/**
+ * @summary Request a provider-neutral order refund or reversal
+ */
+export const ReverseAdminMarketplaceOrderParams = zod.object({
+  "id": zod.coerce.string().uuid()
+})
+
+export const reverseAdminMarketplaceOrderBodyOneReasonMin = 3;
+export const reverseAdminMarketplaceOrderBodyOneReasonMax = 500;
+
+export const reverseAdminMarketplaceOrderBodyTwoProviderEventIdMax = 200;
+
+export const reverseAdminMarketplaceOrderBodyTwoAmountMinorMax = 100000000;
+
+
+
+export const ReverseAdminMarketplaceOrderBody = zod.object({
+  "reason": zod.string().min(reverseAdminMarketplaceOrderBodyOneReasonMin).max(reverseAdminMarketplaceOrderBodyOneReasonMax),
+  "confirmed": zod.literal(true),
+  "idempotencyKey": zod.string().uuid()
+}).and(zod.object({
+  "eventType": zod.enum(['refund', 'reversal']),
+  "providerEventId": zod.string().min(1).max(reverseAdminMarketplaceOrderBodyTwoProviderEventIdMax),
+  "amountMinor": zod.number().min(1).max(reverseAdminMarketplaceOrderBodyTwoAmountMinorMax).nullish()
+}))
+
+export const ReverseAdminMarketplaceOrderResponse = zod.unknown()
+
+
+/**
  * @summary Get moderation queue counts and recent cases
  */
 export const GetAdminReviewQueuesResponse = zod.object({

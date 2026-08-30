@@ -10,7 +10,10 @@ function client() {
 }
 
 export async function createHuntDraft(draft: HuntCreatorDraft): Promise<HuntCreatorDraft> {
-  const { data, error } = await client().rpc('create_hunt_draft', { p_payload: draft });
+  const { data, error } = await client().rpc('create_hunt_draft_with_allowance', {
+    p_payload: draft,
+    p_idempotency_key: `hunt-draft:${crypto.randomUUID()}`,
+  });
   if (error) throw error;
   return mapDraft(data);
 }

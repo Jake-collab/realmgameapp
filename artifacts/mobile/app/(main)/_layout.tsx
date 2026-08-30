@@ -25,6 +25,10 @@ export default function MainLayout() {
       {/* Game-mode navigators */}
       <Stack.Screen name="quest" />
       <Stack.Screen name="hunt" />
+      <Stack.Screen
+        name="membership"
+        options={{ animation: 'slide_from_right' }}
+      />
 
       {/* Quest flow screens — appear over the tab UI (no tab bar) */}
       <Stack.Screen

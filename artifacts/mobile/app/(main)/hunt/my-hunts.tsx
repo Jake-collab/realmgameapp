@@ -42,6 +42,7 @@ import { useCreatedHunts, useHuntCreator } from '@/features/hunts/hooks/useHuntC
 import { HuntFriendSelector } from '@/components/hunt/HuntFriendSelector';
 import { InvitationCard } from '@/components/hunt/InvitationCard';
 import type { MyHuntsSummaryEntry } from '@/features/hunts/types/hunt.types';
+import { RevenueAllowanceCard } from '@/features/revenue/components/RevenueAllowanceCard';
 
 // ─── Section types ────────────────────────────────────────────────────────────
 
@@ -438,6 +439,11 @@ function CreateHuntSection({ colors }: { colors: ReturnType<typeof useColors> })
 
   return (
     <View style={styles.sectionList}>
+      <RevenueAllowanceCard onMembershipPress={() => router.push('/(main)/membership' as never)} />
+      <View style={[styles.createdCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.cardTitle, { color: colors.foreground }]}>Before you publish a Drop</Text>
+        <Text style={[styles.createdSummary, { color: colors.mutedForeground }]}>Choose a positive or unlimited find limit. When it is exhausted, the Drop disappears from active discovery. Collectible quantity is separate. Paid collectibles require seller verification and include a 30% Worlds platform fee.</Text>
+      </View>
       <View style={[styles.creatorHero, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={[styles.creatorIcon, { backgroundColor: colors.hunt + '18' }]}>
           <Feather name="compass" size={26} color={colors.hunt} />

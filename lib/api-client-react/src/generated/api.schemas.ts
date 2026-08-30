@@ -9,6 +9,86 @@ export interface HealthStatus {
   status: string;
 }
 
+export type AdminRevenuePlansItem = { [key: string]: unknown };
+
+export type AdminRevenueCreditPacksItem = { [key: string]: unknown };
+
+export type AdminRevenueConfigurationItem = { [key: string]: unknown };
+
+export type AdminRevenueMetrics = { [key: string]: unknown };
+
+export type AdminRevenueTransactionsItem = { [key: string]: unknown };
+
+export type AdminRevenueSellersItem = { [key: string]: unknown };
+
+export type AdminRevenueAuditEventsItem = { [key: string]: unknown };
+
+export interface AdminRevenue {
+  plans: AdminRevenuePlansItem[];
+  creditPacks: AdminRevenueCreditPacksItem[];
+  configuration: AdminRevenueConfigurationItem[];
+  metrics: AdminRevenueMetrics;
+  transactions: AdminRevenueTransactionsItem[];
+  sellers: AdminRevenueSellersItem[];
+  auditEvents: AdminRevenueAuditEventsItem[];
+  generatedAt: string;
+  [key: string]: unknown;
+ }
+
+export interface AdminRevenueAction {
+  /**
+     * @minLength 3
+     * @maxLength 500
+     */
+  reason: string;
+  confirmed: true;
+  idempotencyKey: string;
+}
+
+export type AdminRevenueConfigurationUpdateValue = { [key: string]: unknown };
+
+export type AdminRevenueConfigurationUpdate = AdminRevenueAction & {
+  value: AdminRevenueConfigurationUpdateValue;
+};
+
+export type AdminSellerOnboardingUpdateStatus = typeof AdminSellerOnboardingUpdateStatus[keyof typeof AdminSellerOnboardingUpdateStatus];
+
+
+export const AdminSellerOnboardingUpdateStatus = {
+  not_started: 'not_started',
+  pending: 'pending',
+  verified: 'verified',
+  restricted: 'restricted',
+  disabled: 'disabled',
+} as const;
+
+export type AdminSellerOnboardingUpdate = AdminRevenueAction & {
+  status: AdminSellerOnboardingUpdateStatus;
+};
+
+export type AdminOrderReversalRequestEventType = typeof AdminOrderReversalRequestEventType[keyof typeof AdminOrderReversalRequestEventType];
+
+
+export const AdminOrderReversalRequestEventType = {
+  refund: 'refund',
+  reversal: 'reversal',
+} as const;
+
+export type AdminOrderReversalRequest = AdminRevenueAction & ({
+  eventType: AdminOrderReversalRequestEventType;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  providerEventId: string;
+  /**
+     * @minimum 1
+     * @maximum 100000000
+     * @nullable
+     */
+  amountMinor?: number | null;
+});
+
 export type AdminSessionRole = typeof AdminSessionRole[keyof typeof AdminSessionRole];
 
 

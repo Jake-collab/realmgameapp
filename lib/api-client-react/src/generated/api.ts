@@ -33,10 +33,15 @@ import type {
   AdminDiagnostics,
   AdminHuntPage,
   AdminMediaRetention,
+  AdminOrderReversalRequest,
   AdminQuestCreate,
   AdminQuestPage,
   AdminQuestVerificationUpdate,
+  AdminRevenue,
+  AdminRevenueAction,
+  AdminRevenueConfigurationUpdate,
   AdminReviewQueues,
+  AdminSellerOnboardingUpdate,
   AdminSession,
   AdminUserPage,
   ChangeAdminAiPromptVersionState200,
@@ -715,6 +720,371 @@ export function useListAdminHunts<TData = Awaited<ReturnType<typeof listAdminHun
 
 
 
+
+export const getGetAdminRevenueUrl = () => {
+
+
+
+
+  return `/api/admin/revenue`
+}
+
+/**
+ * @summary Get provider-neutral revenue operations state
+ */
+export const getAdminRevenue = async ( options?: RequestInit): Promise<AdminRevenue> => {
+
+  return customFetch<AdminRevenue>(getGetAdminRevenueUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminRevenueQueryKey = () => {
+    return [
+    `/api/admin/revenue`
+    ] as const;
+    }
+
+
+export const getGetAdminRevenueQueryOptions = <TData = Awaited<ReturnType<typeof getAdminRevenue>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminRevenue>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminRevenueQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminRevenue>>> = ({ signal }) => getAdminRevenue({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminRevenue>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminRevenueQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminRevenue>>>
+export type GetAdminRevenueQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get provider-neutral revenue operations state
+ */
+
+export function useGetAdminRevenue<TData = Awaited<ReturnType<typeof getAdminRevenue>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminRevenue>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminRevenueQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateAdminRevenueConfigurationUrl = (key: 'platform_fee_percent' | 'paid_collectible_price_limits' | 'collectible_rarity_thresholds',) => {
+
+
+
+
+  return `/api/admin/revenue/configuration/${key}`
+}
+
+/**
+ * @summary Update an allowlisted revenue configuration value
+ */
+export const updateAdminRevenueConfiguration = async (key: 'platform_fee_percent' | 'paid_collectible_price_limits' | 'collectible_rarity_thresholds',
+    adminRevenueConfigurationUpdate: AdminRevenueConfigurationUpdate, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getUpdateAdminRevenueConfigurationUrl(key),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminRevenueConfigurationUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminRevenueConfigurationMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminRevenueConfiguration>>, TError,{key: 'platform_fee_percent' | 'paid_collectible_price_limits' | 'collectible_rarity_thresholds';data: BodyType<AdminRevenueConfigurationUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminRevenueConfiguration>>, TError,{key: 'platform_fee_percent' | 'paid_collectible_price_limits' | 'collectible_rarity_thresholds';data: BodyType<AdminRevenueConfigurationUpdate>}, TContext> => {
+
+const mutationKey = ['updateAdminRevenueConfiguration'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminRevenueConfiguration>>, {key: 'platform_fee_percent' | 'paid_collectible_price_limits' | 'collectible_rarity_thresholds';data: BodyType<AdminRevenueConfigurationUpdate>}> = (props) => {
+          const {key,data} = props ?? {};
+
+          return  updateAdminRevenueConfiguration(key,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminRevenueConfigurationMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminRevenueConfiguration>>>
+    export type UpdateAdminRevenueConfigurationMutationBody = BodyType<AdminRevenueConfigurationUpdate>
+    export type UpdateAdminRevenueConfigurationMutationError = ErrorType<void>
+
+    /**
+ * @summary Update an allowlisted revenue configuration value
+ */
+export const useUpdateAdminRevenueConfiguration = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminRevenueConfiguration>>, TError,{key: 'platform_fee_percent' | 'paid_collectible_price_limits' | 'collectible_rarity_thresholds';data: BodyType<AdminRevenueConfigurationUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminRevenueConfiguration>>,
+        TError,
+        {key: 'platform_fee_percent' | 'paid_collectible_price_limits' | 'collectible_rarity_thresholds';data: BodyType<AdminRevenueConfigurationUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateAdminRevenueConfigurationMutationOptions(options));
+    }
+
+export const getDeactivateAdminHuntDropUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/hunts/drops/${id}/deactivate`
+}
+
+/**
+ * @summary Deactivate a Drop through a trusted audited operation
+ */
+export const deactivateAdminHuntDrop = async (id: string,
+    adminRevenueAction: AdminRevenueAction, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeactivateAdminHuntDropUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminRevenueAction)
+  }
+);}
+
+
+
+
+
+export const getDeactivateAdminHuntDropMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivateAdminHuntDrop>>, TError,{id: string;data: BodyType<AdminRevenueAction>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deactivateAdminHuntDrop>>, TError,{id: string;data: BodyType<AdminRevenueAction>}, TContext> => {
+
+const mutationKey = ['deactivateAdminHuntDrop'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deactivateAdminHuntDrop>>, {id: string;data: BodyType<AdminRevenueAction>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  deactivateAdminHuntDrop(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeactivateAdminHuntDropMutationResult = NonNullable<Awaited<ReturnType<typeof deactivateAdminHuntDrop>>>
+    export type DeactivateAdminHuntDropMutationBody = BodyType<AdminRevenueAction>
+    export type DeactivateAdminHuntDropMutationError = ErrorType<void>
+
+    /**
+ * @summary Deactivate a Drop through a trusted audited operation
+ */
+export const useDeactivateAdminHuntDrop = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deactivateAdminHuntDrop>>, TError,{id: string;data: BodyType<AdminRevenueAction>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deactivateAdminHuntDrop>>,
+        TError,
+        {id: string;data: BodyType<AdminRevenueAction>},
+        TContext
+      > => {
+      return useMutation(getDeactivateAdminHuntDropMutationOptions(options));
+    }
+
+export const getUpdateAdminSellerOnboardingUrl = (userId: string,) => {
+
+
+
+
+  return `/api/admin/revenue/sellers/${userId}/onboarding`
+}
+
+/**
+ * @summary Change seller onboarding status through a trusted audited operation
+ */
+export const updateAdminSellerOnboarding = async (userId: string,
+    adminSellerOnboardingUpdate: AdminSellerOnboardingUpdate, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getUpdateAdminSellerOnboardingUrl(userId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminSellerOnboardingUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateAdminSellerOnboardingMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminSellerOnboarding>>, TError,{userId: string;data: BodyType<AdminSellerOnboardingUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminSellerOnboarding>>, TError,{userId: string;data: BodyType<AdminSellerOnboardingUpdate>}, TContext> => {
+
+const mutationKey = ['updateAdminSellerOnboarding'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminSellerOnboarding>>, {userId: string;data: BodyType<AdminSellerOnboardingUpdate>}> = (props) => {
+          const {userId,data} = props ?? {};
+
+          return  updateAdminSellerOnboarding(userId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminSellerOnboardingMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminSellerOnboarding>>>
+    export type UpdateAdminSellerOnboardingMutationBody = BodyType<AdminSellerOnboardingUpdate>
+    export type UpdateAdminSellerOnboardingMutationError = ErrorType<void>
+
+    /**
+ * @summary Change seller onboarding status through a trusted audited operation
+ */
+export const useUpdateAdminSellerOnboarding = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminSellerOnboarding>>, TError,{userId: string;data: BodyType<AdminSellerOnboardingUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminSellerOnboarding>>,
+        TError,
+        {userId: string;data: BodyType<AdminSellerOnboardingUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateAdminSellerOnboardingMutationOptions(options));
+    }
+
+export const getReverseAdminMarketplaceOrderUrl = (id: string,) => {
+
+
+
+
+  return `/api/admin/revenue/orders/${id}/reversal`
+}
+
+/**
+ * @summary Request a provider-neutral order refund or reversal
+ */
+export const reverseAdminMarketplaceOrder = async (id: string,
+    adminOrderReversalRequest: AdminOrderReversalRequest, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getReverseAdminMarketplaceOrderUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminOrderReversalRequest)
+  }
+);}
+
+
+
+
+
+export const getReverseAdminMarketplaceOrderMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reverseAdminMarketplaceOrder>>, TError,{id: string;data: BodyType<AdminOrderReversalRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reverseAdminMarketplaceOrder>>, TError,{id: string;data: BodyType<AdminOrderReversalRequest>}, TContext> => {
+
+const mutationKey = ['reverseAdminMarketplaceOrder'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reverseAdminMarketplaceOrder>>, {id: string;data: BodyType<AdminOrderReversalRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reverseAdminMarketplaceOrder(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReverseAdminMarketplaceOrderMutationResult = NonNullable<Awaited<ReturnType<typeof reverseAdminMarketplaceOrder>>>
+    export type ReverseAdminMarketplaceOrderMutationBody = BodyType<AdminOrderReversalRequest>
+    export type ReverseAdminMarketplaceOrderMutationError = ErrorType<void>
+
+    /**
+ * @summary Request a provider-neutral order refund or reversal
+ */
+export const useReverseAdminMarketplaceOrder = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reverseAdminMarketplaceOrder>>, TError,{id: string;data: BodyType<AdminOrderReversalRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reverseAdminMarketplaceOrder>>,
+        TError,
+        {id: string;data: BodyType<AdminOrderReversalRequest>},
+        TContext
+      > => {
+      return useMutation(getReverseAdminMarketplaceOrderMutationOptions(options));
+    }
 
 export const getGetAdminReviewQueuesUrl = () => {
 

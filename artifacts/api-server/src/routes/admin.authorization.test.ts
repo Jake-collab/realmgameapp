@@ -406,6 +406,37 @@ describe("admin moderation authorization", () => {
     assert.equal(moderationState.getModerationStateDiagnostics().counts.quarantinedRewards, rewardsBefore);
   });
 
+  it("keeps revenue writes admin-only and rejects unconfirmed input before trusted RPCs", async () => {
+    const routes: Array<{ path: string; method: string; body: Record<string, unknown> }> = [
+      {
+        path: "/admin/revenue/configuration/platform_fee_percent",
+        method: "PATCH",
+        body: { value: { basis_points: 3000 }, reason: "test authorization", confirmed: false, idempotencyKey: "11111111-1111-4111-8111-111111111111" },
+      },
+      {
+        path: "/admin/hunts/drops/11111111-1111-4111-8111-111111111111/deactivate",
+        method: "POST",
+        body: { reason: "test authorization", confirmed: false, idempotencyKey: "11111111-1111-4111-8111-111111111111" },
+      },
+      {
+        path: "/admin/revenue/sellers/11111111-1111-4111-8111-111111111111/onboarding",
+        method: "PATCH",
+        body: { status: "verified", reason: "test authorization", confirmed: false, idempotencyKey: "11111111-1111-4111-8111-111111111111" },
+      },
+      {
+        path: "/admin/revenue/orders/11111111-1111-4111-8111-111111111111/reversal",
+        method: "POST",
+        body: { eventType: "refund", providerEventId: "test-event", reason: "test authorization", confirmed: false, idempotencyKey: "11111111-1111-4111-8111-111111111111" },
+      },
+    ];
+    for (const route of routes) {
+      const options = { method: route.method, body: JSON.stringify(route.body) };
+      assert.equal((await request(route.path, options)).status, 401);
+      assert.equal((await request(route.path, options, "moderator")).status, 403);
+      assert.equal((await request(route.path, options, "admin")).status, 400);
+    }
+  });
+
   it("keeps moderation settings writes restricted and leaves settings unchanged on denial", async () => {
     const originalSettings = structuredClone(moderationState.getModerationSettings());
     const body = JSON.stringify({ automationEnabled: !originalSettings.automationEnabled });

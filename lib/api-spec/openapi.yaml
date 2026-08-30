@@ -141,6 +141,105 @@ paths:
         "401": { description: Authentication required }
         "403": { description: Permission denied }
         "503": { description: Live data unavailable }
+  /admin/revenue:
+    get:
+      operationId: getAdminRevenue
+      tags: [admin]
+      summary: Get provider-neutral revenue operations state
+      responses:
+        "200":
+          description: Revenue catalogue, accounting, seller, and audit visibility
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminRevenue"
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "503": { description: Live data unavailable }
+  /admin/revenue/configuration/{key}:
+    patch:
+      operationId: updateAdminRevenueConfiguration
+      tags: [admin]
+      summary: Update an allowlisted revenue configuration value
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string, enum: [platform_fee_percent, paid_collectible_price_limits, collectible_rarity_thresholds] }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminRevenueConfigurationUpdate" }
+      responses:
+        "200": { description: Configuration updated and audited }
+        "400": { description: Invalid or unconfirmed request }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "503": { description: Trusted operation unavailable }
+  /admin/hunts/drops/{id}/deactivate:
+    post:
+      operationId: deactivateAdminHuntDrop
+      tags: [admin]
+      summary: Deactivate a Drop through a trusted audited operation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminRevenueAction" }
+      responses:
+        "200": { description: Drop deactivated }
+        "400": { description: Invalid or unconfirmed request }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "503": { description: Trusted operation unavailable }
+  /admin/revenue/sellers/{userId}/onboarding:
+    patch:
+      operationId: updateAdminSellerOnboarding
+      tags: [admin]
+      summary: Change seller onboarding status through a trusted audited operation
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminSellerOnboardingUpdate" }
+      responses:
+        "200": { description: Seller onboarding status changed }
+        "400": { description: Invalid or unconfirmed request }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "503": { description: Trusted operation unavailable }
+  /admin/revenue/orders/{id}/reversal:
+    post:
+      operationId: reverseAdminMarketplaceOrder
+      tags: [admin]
+      summary: Request a provider-neutral order refund or reversal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminOrderReversalRequest" }
+      responses:
+        "200": { description: Refund or reversal applied and audited }
+        "400": { description: Invalid or unconfirmed request }
+        "401": { description: Authentication required }
+        "403": { description: Permission denied }
+        "503": { description: Trusted operation unavailable }
   /admin/review-queues:
     get:
       operationId: getAdminReviewQueues
@@ -602,6 +701,50 @@ components:
           type: string
       required:
         - status
+    AdminRevenue:
+      type: object
+      additionalProperties: true
+      required: [plans, creditPacks, configuration, metrics, transactions, sellers, auditEvents, generatedAt]
+      properties:
+        plans: { type: array, items: { type: object, additionalProperties: true } }
+        creditPacks: { type: array, items: { type: object, additionalProperties: true } }
+        configuration: { type: array, items: { type: object, additionalProperties: true } }
+        metrics: { type: object, additionalProperties: true }
+        transactions: { type: array, items: { type: object, additionalProperties: true } }
+        sellers: { type: array, items: { type: object, additionalProperties: true } }
+        auditEvents: { type: array, items: { type: object, additionalProperties: true } }
+        generatedAt: { type: string, format: date-time }
+    AdminRevenueAction:
+      type: object
+      additionalProperties: false
+      required: [reason, confirmed, idempotencyKey]
+      properties:
+        reason: { type: string, minLength: 3, maxLength: 500 }
+        confirmed: { type: boolean, enum: [true] }
+        idempotencyKey: { type: string, format: uuid }
+    AdminRevenueConfigurationUpdate:
+      allOf:
+        - $ref: "#/components/schemas/AdminRevenueAction"
+        - type: object
+          required: [value]
+          properties:
+            value: { type: object, additionalProperties: true }
+    AdminSellerOnboardingUpdate:
+      allOf:
+        - $ref: "#/components/schemas/AdminRevenueAction"
+        - type: object
+          required: [status]
+          properties:
+            status: { type: string, enum: [not_started, pending, verified, restricted, disabled] }
+    AdminOrderReversalRequest:
+      allOf:
+        - $ref: "#/components/schemas/AdminRevenueAction"
+        - type: object
+          required: [eventType, providerEventId]
+          properties:
+            eventType: { type: string, enum: [refund, reversal] }
+            providerEventId: { type: string, minLength: 1, maxLength: 200 }
+            amountMinor: { type: ["integer", "null"], minimum: 1, maximum: 100000000 }
     AdminSession:
       type: object
       required: [authenticated, authorized, role, permissions]

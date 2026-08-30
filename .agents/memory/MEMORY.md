@@ -37,3 +37,4 @@
 - [Production audit parity](production-audit-parity.md) — repository migration checks are insufficient; compare linked history and live function/object presence before declaring release readiness.
 - [Quest verification boundary](quest-verification-boundary.md) — explicit methods can compose, but every trust check and point award remains server-authoritative.
 - [Quest activity verification](quest-activity-verification.md) — distance is derived from authorized sequential samples; raw routes are private, bounded, and purged after terminal participation.
+- [Revenue entitlement boundary](revenue-entitlement-boundary.md) — memberships, allowances, finds, collectibles, and marketplace money remain server-authoritative and provider-neutral.

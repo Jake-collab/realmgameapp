@@ -101,6 +101,17 @@ export type QuestVerificationUpdate = {
   locationRequired?: boolean;
 };
 
+export type RevenueAdminData = {
+  plans: Array<{ code: string; name: string; billing_cadence: string; price_minor: number; currency: string; is_active: boolean }>;
+  creditPacks: Array<{ code: string; credits: number; price_minor: number; currency: string; is_active: boolean }>;
+  configuration: Array<{ key: string; value: Record<string, unknown>; effective_at: string }>;
+  metrics: { activeMemberships: number; openTransactions: number; sellerPayableByCurrency: Record<string, number> };
+  transactions: Array<Record<string, unknown>>;
+  sellers: Array<Record<string, unknown>>;
+  auditEvents: Array<Record<string, unknown>>;
+  generatedAt: string;
+};
+
 export type AdminQuestCreate = {
   title: string;
   type: 'daily' | 'monthly' | 'geo';
@@ -179,6 +190,40 @@ export function useAdminData(mediaRetentionPage = 1, mediaRetentionSnapshot?: st
       `/api/admin/moderation/media-retention?page=${mediaRetentionPage}${mediaRetentionSnapshot ? `&snapshotAt=${encodeURIComponent(mediaRetentionSnapshot)}` : ''}`,
     ),
   });
+  const revenue = useQuery<RevenueAdminData>({
+    queryKey: ['/admin/revenue'],
+    enabled: can('admin.review.read'),
+    queryFn: () => moderationFetch<RevenueAdminData>('/api/admin/revenue'),
+  });
+  const refreshRevenue = () => void client.invalidateQueries({ queryKey: ['/admin/revenue'] });
+  const updateRevenueConfiguration = useMutation({
+    mutationFn: (input: { key: string; value: Record<string, unknown>; reason: string }) => moderationFetch(`/api/admin/revenue/configuration/${encodeURIComponent(input.key)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ value: input.value, reason: input.reason, confirmed: true, idempotencyKey: crypto.randomUUID() }),
+    }),
+    onSuccess: refreshRevenue,
+  });
+  const deactivateDrop = useMutation({
+    mutationFn: (input: { id: string; reason: string }) => moderationFetch(`/api/admin/hunts/drops/${encodeURIComponent(input.id)}/deactivate`, {
+      method: 'POST',
+      body: JSON.stringify({ reason: input.reason, confirmed: true, idempotencyKey: crypto.randomUUID() }),
+    }),
+    onSuccess: refreshRevenue,
+  });
+  const updateSellerOnboarding = useMutation({
+    mutationFn: (input: { userId: string; status: 'not_started' | 'pending' | 'verified' | 'restricted' | 'disabled'; reason: string }) => moderationFetch(`/api/admin/revenue/sellers/${encodeURIComponent(input.userId)}/onboarding`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: input.status, reason: input.reason, confirmed: true, idempotencyKey: crypto.randomUUID() }),
+    }),
+    onSuccess: refreshRevenue,
+  });
+  const reverseOrder = useMutation({
+    mutationFn: (input: { id: string; eventType: 'refund' | 'reversal'; providerEventId: string; amountMinor?: number | null; reason: string }) => moderationFetch(`/api/admin/revenue/orders/${encodeURIComponent(input.id)}/reversal`, {
+      method: 'POST',
+      body: JSON.stringify({ ...input, confirmed: true, idempotencyKey: crypto.randomUUID() }),
+    }),
+    onSuccess: refreshRevenue,
+  });
 
   const mediaRetentionAction = useMutation({
     mutationFn: (input: { mediaId: string; action: 'requeue' | 'resolve'; referenceFingerprint: string; reason: string }) => moderationFetch(`/api/admin/moderation/media-retention/${encodeURIComponent(input.mediaId)}/action`, {
@@ -204,5 +249,5 @@ export function useAdminData(mediaRetentionPage = 1, mediaRetentionSnapshot?: st
     onSuccess: () => void client.invalidateQueries({ queryKey: getListAdminQuestsQueryKey({ page: 1, pageSize: 25 }) }),
   });
 
-  return { session, dashboard, reviewQueues, users, quests, audit, diagnostics, moderation, notifications, mediaRetention, mediaRetentionAction, updateQuestVerification, createQuest };
+  return { session, dashboard, reviewQueues, users, quests, audit, diagnostics, moderation, notifications, mediaRetention, revenue, updateRevenueConfiguration, deactivateDrop, updateSellerOnboarding, reverseOrder, mediaRetentionAction, updateQuestVerification, createQuest };
 }

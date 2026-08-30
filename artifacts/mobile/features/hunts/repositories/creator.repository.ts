@@ -13,7 +13,7 @@ function mapDraft(value: any): HuntCreatorDraft {
 function client(): any { return requireSupabase() as any; }
 
 export async function createHuntDraft(idempotencyKey: string): Promise<HuntCreatorDraft> {
-  const { data, error } = await client().rpc('create_hunt_draft', { p_idempotency_key: idempotencyKey });
+  const { data, error } = await client().rpc('create_hunt_draft_with_allowance', { p_idempotency_key: idempotencyKey });
   if (error) throw error;
   return mapDraft(data);
 }
@@ -94,4 +94,28 @@ export async function uploadCreatorStopSweep(
   if (error) throw error;
   if (!data?.success) throw new Error(data?.userMessage ?? 'The safety sweep could not be verified.');
   return mediaId;
+}
+
+export interface HuntDropCommerceInput {
+  stopId: string;
+  findLimit: number | null;
+  collectibleName: string | null;
+  collectibleDescription: string | null;
+  priceMinor: number | null;
+  quantity: number | null;
+}
+
+export async function configureHuntDropCommerce(input: HuntDropCommerceInput): Promise<void> {
+  const { data, error } = await client().rpc('configure_hunt_drop_commerce', {
+    p_stop_id: input.stopId,
+    p_find_limit: input.findLimit,
+    p_collectible_name: input.collectibleName,
+    p_collectible_description: input.collectibleDescription,
+    p_image_media_id: null,
+    p_price_minor: input.priceMinor,
+    p_currency: 'USD',
+    p_quantity: input.quantity,
+  });
+  if (error) throw error;
+  if (!data?.success) throw new Error(data?.userMessage ?? 'Drop commerce settings could not be saved.');
 }

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForegroundLocation } from '@/features/maps/hooks/useForegroundLocation';
 import { collectHuntDrop, issueHuntDropCollectionSession } from '../repositories/huntDrop.repository';
 import { huntKeys } from '../queries/huntKeys';
+import { revenueKeys } from '@/features/revenue/queries/revenueKeys';
 
 export function useCollectHuntDrop(input: { participationId: string; userId: string; huntId: string }) {
   const location = useForegroundLocation();
@@ -32,6 +33,7 @@ export function useCollectHuntDrop(input: { participationId: string; userId: str
       void queryClient.invalidateQueries({ queryKey: huntKeys.activeHunt(input.participationId, input.userId) });
       void queryClient.invalidateQueries({ queryKey: huntKeys.dropSearchZones(input.participationId, input.userId) });
       void queryClient.invalidateQueries({ queryKey: huntKeys.stopProgress(input.participationId, input.userId) });
+      void queryClient.invalidateQueries({ queryKey: revenueKeys.summary(input.userId) });
     },
   });
 

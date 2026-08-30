@@ -518,6 +518,176 @@ router.get("/admin/hunts", requireAdmin("admin.review.read"), async (req, res) =
   } catch (error) { liveUnavailable(res, error, "Hunt data"); }
 });
 
+router.get("/admin/revenue", requireAdmin("admin.revenue.read"), async (_req, res) => {
+  try {
+    const [
+      plans, creditPacks, configuration, transactions, sellers, auditEvents,
+      entitlementCount, activeOrderCount, payableRows,
+    ] = await Promise.all([
+      adminRead<Array<Record<string, unknown>>>("membership_plans?select=code,name,billing_cadence,price_minor,currency,is_active&order=price_minor.asc"),
+      adminRead<Array<Record<string, unknown>>>("drop_credit_packs?select=code,credits,price_minor,currency,is_active&order=credits.asc"),
+      adminRead<Array<Record<string, unknown>>>("revenue_configuration?select=key,value,effective_at&order=key.asc"),
+      adminRead<Array<Record<string, unknown>>>("marketplace_orders?select=id,state,currency,gross_minor,platform_fee_minor,intended_seller_share_minor,processing_fee_minor,app_store_fee_minor,tax_minor,seller_payable_minor,created_at,finalized_at&order=created_at.desc&limit=25"),
+      adminRead<Array<Record<string, unknown>>>("seller_profiles?select=user_id,onboarding_status,provider_name,updated_at&order=updated_at.desc&limit=25"),
+      adminRead<Array<Record<string, unknown>>>("revenue_audit_events?select=id,entity_type,entity_id,event_type,details,created_at&order=created_at.desc&limit=50"),
+      adminCount("membership_entitlements?select=id&status=eq.active"),
+      adminCount("marketplace_orders?select=id&state=in.(pending,finalized,partially_refunded)"),
+      adminRead<Array<{ amount_minor: number | string; currency: string }>>("seller_balance_ledger?select=amount_minor,currency"),
+    ]);
+    const payableByCurrency = payableRows.reduce<Record<string, number>>((totals, row) => {
+      totals[row.currency] = (totals[row.currency] ?? 0) + Number(row.amount_minor);
+      return totals;
+    }, {});
+    res.json({
+      plans,
+      creditPacks,
+      configuration,
+      metrics: { activeMemberships: entitlementCount, openTransactions: activeOrderCount, sellerPayableByCurrency: payableByCurrency },
+      transactions,
+      sellers,
+      auditEvents: auditEvents.map((event) => ({ ...event, details: safeRevenueAuditDetails(event.details) })),
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    liveUnavailable(res, error, "Revenue operations");
+  }
+});
+
+const revenueConfigurationSchemas = {
+  platform_fee_percent: z.object({ basis_points: z.number().int().min(0).max(10_000) }).strict(),
+  paid_collectible_price_limits: z.object({
+    minimum_minor: z.number().int().min(0).max(100_000_000),
+    maximum_minor: z.number().int().min(1).max(100_000_000),
+  }).strict().refine((value) => value.maximum_minor >= value.minimum_minor, "Maximum price must not be below minimum price."),
+  collectible_rarity_thresholds: z.object({
+    UNIQUE: z.number().int().min(1),
+    LEGENDARY: z.number().int().min(1),
+    EPIC: z.number().int().min(1),
+    RARE: z.number().int().min(1),
+    UNCOMMON: z.number().int().min(1),
+  }).strict(),
+} as const;
+
+const RevenueConfigurationUpdate = z.object({
+  value: z.record(z.string(), z.unknown()),
+  reason: z.string().trim().min(3).max(500),
+  confirmed: z.literal(true),
+  idempotencyKey: z.string().uuid(),
+}).strict();
+const RevenueAction = z.object({
+  reason: z.string().trim().min(3).max(500),
+  confirmed: z.literal(true),
+  idempotencyKey: z.string().uuid(),
+}).strict();
+const SellerOnboardingUpdate = RevenueAction.extend({
+  status: z.enum(["not_started", "pending", "verified", "restricted", "disabled"]),
+}).strict();
+const OrderReversalRequest = RevenueAction.extend({
+  eventType: z.enum(["refund", "reversal"]),
+  providerEventId: z.string().trim().min(1).max(200),
+  amountMinor: z.number().int().positive().max(100_000_000).nullable().optional(),
+}).strict();
+
+function revenueWriteUnavailable(res: ExpressResponse) {
+  res.status(503).json({ error: "The trusted revenue operation is unavailable; no change was confirmed." });
+}
+
+const safeRevenueAuditFields = new Set([
+  "reason", "status", "previousStatus", "newStatus", "key", "eventType",
+  "amountMinor", "currency", "result", "deactivated", "alreadyApplied",
+]);
+function safeRevenueAuditDetails(details: unknown) {
+  if (!details || typeof details !== "object" || Array.isArray(details)) return {};
+  return Object.fromEntries(Object.entries(details).filter(([key, value]) =>
+    safeRevenueAuditFields.has(key)
+    && (typeof value === "string" || typeof value === "number" || typeof value === "boolean" || value === null),
+  ));
+}
+
+router.patch("/admin/revenue/configuration/:key", requireAdmin("admin.revenue.manage"), async (req, res) => {
+  const key = Array.isArray(req.params.key) ? req.params.key[0] : req.params.key;
+  const valueSchema = key ? revenueConfigurationSchemas[key as keyof typeof revenueConfigurationSchemas] : undefined;
+  const parsed = RevenueConfigurationUpdate.safeParse(req.body);
+  if (!valueSchema) {
+    res.status(400).json({ error: "This revenue configuration key cannot be changed." });
+    return;
+  }
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid configuration update." });
+    return;
+  }
+  const value = valueSchema.safeParse(parsed.data.value);
+  if (!value.success) { res.status(400).json({ error: value.error.issues[0]?.message ?? "Invalid configuration value." }); return; }
+  try {
+    const result = await supabaseAdminRpc<Record<string, unknown>>("admin_update_revenue_configuration", {
+      p_actor_user_id: req.adminPrincipal!.userId,
+      p_key: key,
+      p_value: value.data,
+      p_reason: parsed.data.reason,
+      p_idempotency_key: parsed.data.idempotencyKey,
+    });
+    res.json({ result });
+  } catch { revenueWriteUnavailable(res); }
+});
+
+router.post("/admin/hunts/drops/:id/deactivate", requireAdmin("admin.revenue.manage"), async (req, res) => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const parsed = RevenueAction.safeParse(req.body);
+  if (!id || !z.string().uuid().safeParse(id).success || !parsed.success) {
+    res.status(400).json({ error: !parsed.success ? parsed.error.issues[0]?.message : "A valid Drop ID is required." });
+    return;
+  }
+  try {
+    const result = await supabaseAdminRpc<Record<string, unknown>>("admin_deactivate_hunt_drop", {
+      p_actor_user_id: req.adminPrincipal!.userId,
+      p_stop_id: id,
+      p_reason: parsed.data.reason,
+      p_idempotency_key: parsed.data.idempotencyKey,
+    });
+    res.json({ result });
+  } catch { revenueWriteUnavailable(res); }
+});
+
+router.patch("/admin/revenue/sellers/:userId/onboarding", requireAdmin("admin.revenue.manage"), async (req, res) => {
+  const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
+  const parsed = SellerOnboardingUpdate.safeParse(req.body);
+  if (!userId || !z.string().uuid().safeParse(userId).success || !parsed.success) {
+    res.status(400).json({ error: !parsed.success ? parsed.error.issues[0]?.message : "A valid seller user ID is required." });
+    return;
+  }
+  try {
+    const result = await supabaseAdminRpc<Record<string, unknown>>("admin_update_seller_onboarding_status", {
+      p_actor_user_id: req.adminPrincipal!.userId,
+      p_seller_user_id: userId,
+      p_status: parsed.data.status,
+      p_reason: parsed.data.reason,
+      p_idempotency_key: parsed.data.idempotencyKey,
+    });
+    res.json({ result });
+  } catch { revenueWriteUnavailable(res); }
+});
+
+router.post("/admin/revenue/orders/:id/reversal", requireAdmin("admin.revenue.manage"), async (req, res) => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const parsed = OrderReversalRequest.safeParse(req.body);
+  if (!id || !z.string().uuid().safeParse(id).success || !parsed.success) {
+    res.status(400).json({ error: !parsed.success ? parsed.error.issues[0]?.message : "A valid order ID is required." });
+    return;
+  }
+  try {
+    const result = await supabaseAdminRpc<Record<string, unknown>>("admin_reverse_collectible_purchase", {
+      p_actor_user_id: req.adminPrincipal!.userId,
+      p_order_id: id,
+      p_event_type: parsed.data.eventType,
+      p_provider_event_id: parsed.data.providerEventId,
+      p_amount_minor: parsed.data.amountMinor ?? null,
+      p_reason: parsed.data.reason,
+      p_idempotency_key: parsed.data.idempotencyKey,
+    });
+    res.json({ result });
+  } catch { revenueWriteUnavailable(res); }
+});
+
 router.get("/admin/interests", requireAdmin("admin.quests.read"), async (_req, res) => {
   if (!supabaseAdminConfigured()) {
     res.status(503).json({ error: "Interest Bubble administration requires Supabase." });

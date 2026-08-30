@@ -3,6 +3,15 @@ import type { Difficulty, HuntPrivacy, ParticipationMode, StopCompletionMethod, 
 export type CreatorStep = 'details' | 'privacy' | 'start' | 'stops' | 'invite' | 'preview' | 'review';
 export type CreatorSaveState = 'idle' | 'saving' | 'saved' | 'saved_local' | 'unsynced' | 'error';
 export type CreatorStopType = 'location' | 'activity' | 'clue' | 'mixed';
+export type CollectibleRarity = 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'UNIQUE';
+
+export interface CreatorStopCommerce {
+  findLimit: number | null;
+  collectibleName: string;
+  collectibleDescription: string;
+  priceMinor: number;
+  quantity: number | null;
+}
 
 export interface CreatorLocation {
   label: string;
@@ -28,6 +37,7 @@ export interface CreatorStop {
   estimatedMinutes: number;
   /** Server-registered live camera sweep for the current Hunt revision. */
   sweepEvidenceMediaId?: string | null;
+  commerce?: CreatorStopCommerce;
 }
 
 export interface HuntCreatorPayload {
@@ -95,6 +105,10 @@ export function makeCreatorStop(order: number): CreatorStop {
     completionMethod: 'manual_confirmation', clueText: '', hintText: '',
     riddleAnswer: '', location: null, safetyNote: '', accessibilityNote: '',
     estimatedMinutes: 10, sweepEvidenceMediaId: null,
+    commerce: {
+      findLimit: null, collectibleName: '', collectibleDescription: '',
+      priceMinor: 0, quantity: null,
+    },
   };
 }
 
