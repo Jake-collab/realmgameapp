@@ -1,0 +1,188 @@
+Perform the FINAL Supabase Build 1 production audit for Worlds after all blocker fixes.
+
+The following have now been completed:
+- Canonical migrations through the latest production migration
+- Migration 057 private-media retention schema/RPCs
+- Friend-request production RPC fix
+- Scheduler/service_role queue-health privileges
+- Production worker republished with current queue-health and heartbeat observability
+- Super Admin bootstrap
+- Auth configuration
+- Storage security
+- Production worker deployment
+
+This is a FINAL VERIFICATION ONLY.
+
+Do not redesign working systems.
+Do not create new features.
+Do not start Mapbox or any other external integration.
+
+Audit the actual connected production Supabase project and current production deployment.
+
+Verify:
+
+1. DATABASE / MIGRATIONS
+- Local and remote migration histories are in parity.
+- All required migrations are applied cleanly.
+- No migration-number collision or unresolved migration remains.
+- Quest, Hunt, Interest, social, moderation, points, notification, retention, and storage database objects are present.
+
+2. RLS / SECURITY
+- Anonymous and ordinary users cannot access private proof/media.
+- Hidden Hunt coordinates remain protected.
+- Users cannot self-award Quest/Hunt Points.
+- Users cannot self-promote to Admin/Super Admin.
+- Users cannot alter other users’ private/social/Hunt state.
+- service_role has only the intended trusted access.
+- Admin/trusted RPC boundaries remain enforced.
+
+3. AUTH
+- Signup/login/logout work.
+- Email verification configuration is valid.
+- Password reset configuration is valid.
+- Session restoration works.
+- Admin authorization works.
+- New users default to user/active.
+- Do not treat signed mobile links or undeployed matterrealm.com callback hosting as Supabase failures; list them as pre-release validation only.
+
+4. STORAGE
+- Canonical buckets exist.
+- Sensitive buckets are private.
+- Quest/Hunt proof and 360 placement evidence remain protected.
+- Moderation/quarantine evidence remains protected.
+- Cross-user reads/writes/deletes are denied.
+- Approved public-facing media works only through the intended approval/public mechanism.
+- Retention cleanup schema/RPCs from migration 057 are present and valid.
+
+5. INTEREST BUBBLES
+- Canonical interest pool exists.
+- User selections persist and replace atomically.
+- Admin access is protected.
+- Daily Quest personalization can consume them.
+
+6. QUEST INTEGRATION
+- Quest lifecycle works against production Supabase.
+- Proof session/submission paths work.
+- Quest Point awarding remains server-authoritative.
+- Duplicate awards are prevented.
+- Quest ledger integrity works.
+- Private proof remains protected.
+
+7. HUNT INTEGRATION
+- Hunt lifecycle works.
+- Private authoritative coordinates remain protected.
+- Search/clue/collection state works.
+- Collection protection works.
+- Hunt Point awarding remains server-authoritative.
+- Duplicate collections are prevented.
+- Placement/moderation/private evidence structures work.
+
+8. SOCIAL
+- send_friend_request now works in production.
+- Concurrent duplicate requests do not create duplicates.
+- Reverse request behavior works.
+- Accept/reject/cancel flows work where supported.
+- RLS prevents unrelated users from modifying requests.
+- The authenticated social round-trip passes.
+
+9. SUPER ADMIN
+- Exactly one intended active super_admin exists.
+- Ordinary users remain non-admin.
+- Client self-promotion is impossible.
+- Admin authorization works.
+- Role changes remain audited.
+
+10. PRODUCTION WORKER
+- Production API is healthy.
+- Current worker build is running.
+- queue-health fields appear in logs.
+- heartbeat fields appear in logs.
+- Only one active worker identity owns scheduled work.
+- Notification claim RPCs work.
+- Maintenance RPCs work.
+- service_role queue-health reads work.
+- Anonymous/authenticated users remain denied.
+- Worker restart/recovery/logging remain valid.
+- No duplicate pg_cron scheduler ownership exists.
+
+11. SECRET BOUNDARIES
+- Mobile contains only intended public Supabase configuration.
+- SUPABASE_SERVICE_ROLE_KEY remains server-only.
+- No privileged secret is exposed to the Expo/mobile bundle.
+- Do not print secret values.
+
+12. CONNECTED PRODUCTION TESTS
+Run the broadest safe connected validation possible using disposable test data where needed.
+
+Validate:
+Auth
+→ Profile
+→ Interest Bubbles
+→ Quest
+→ Quest authorization/points
+→ Hunt
+→ Hunt authorization/points
+→ Social
+→ Storage
+→ Super Admin authorization
+→ Worker/database interaction
+
+Clean up disposable data afterward where safe.
+
+Return ONLY:
+
+## FINAL SUPABASE STATUS
+PASS / FAIL
+
+## DATABASE
+PASS/FAIL
+
+## RLS & SECURITY
+PASS/FAIL
+
+## AUTH
+PASS/FAIL
+
+## STORAGE
+PASS/FAIL
+
+## INTEREST BUBBLES
+PASS/FAIL
+
+## QUEST
+PASS/FAIL
+
+## HUNT
+PASS/FAIL
+
+## SOCIAL
+PASS/FAIL
+
+## SUPER ADMIN
+PASS/FAIL
+
+## PRODUCTION WORKER
+PASS/FAIL
+
+## SECRET BOUNDARIES
+PASS/FAIL
+
+## CONNECTED TESTS
+PASS/FAIL
+
+## TRUE SUPABASE BLOCKERS
+List any remaining true Supabase blockers.
+If none:
+NONE
+
+## PRE-RELEASE VALIDATION
+List only deferred release-time checks such as signed mobile links or production callback hosting.
+
+## OPTIONAL CLEANUP
+List only non-blocking cleanup.
+
+If there are no remaining true Supabase blockers, state exactly:
+
+SUPABASE BUILD 1 INTEGRATION: COMPLETE
+
+Do not start Mapbox.
