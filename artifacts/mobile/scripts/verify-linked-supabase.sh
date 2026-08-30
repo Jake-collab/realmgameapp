@@ -8,6 +8,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+MIGRATIONS_DIR="$MOBILE_DIR/supabase/migrations"
 SUPABASE_CLI_VERSION="${SUPABASE_CLI_VERSION:-2.115.0}"
 SCHEMA_DUMP="$(mktemp "${TMPDIR:-/tmp}/worlds-linked-schema.XXXXXX.sql")"
 MIGRATION_JSON="$(mktemp "${TMPDIR:-/tmp}/worlds-linked-migrations.XXXXXX.json")"
@@ -50,44 +51,17 @@ if [[ -z "$migration_json" ]]; then
 fi
 
 printf '%s\n' "$migration_json" > "$MIGRATION_JSON"
-node - "$MIGRATION_JSON" "$MOBILE_DIR/supabase/migrations" <<'NODE'
+node - "$MIGRATION_JSON" "$MIGRATIONS_DIR" "$SCRIPT_DIR/validate-supabase-migrations.js" <<'NODE'
 const fs = require('node:fs');
-const path = require('node:path');
 const { migrations } = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 const migrationsDir = process.argv[3];
+const { getCanonicalMigrations } = require(process.argv[4]);
 
 if (!Array.isArray(migrations)) {
   throw new Error('Supabase CLI returned an invalid migration list.');
 }
 
-const migrationFiles = fs.readdirSync(migrationsDir)
-  .filter((file) => file.endsWith('.sql'))
-  .sort((left, right) => {
-    const leftVersion = Number(left.match(/^(\d+)_/)?.[1] ?? Number.MAX_SAFE_INTEGER);
-    const rightVersion = Number(right.match(/^(\d+)_/)?.[1] ?? Number.MAX_SAFE_INTEGER);
-    return leftVersion - rightVersion || left.localeCompare(right);
-  });
-
-if (migrationFiles.length === 0) {
-  throw new Error(`No SQL migrations found in ${migrationsDir}.`);
-}
-
-const canonical = migrationFiles.map((file) => {
-  const match = /^(\d{3})_.+\.sql$/.exec(file);
-  if (!match) {
-    throw new Error(`Migration filename must start with a three-digit version: ${path.join(migrationsDir, file)}`);
-  }
-  return { file, version: match[1] };
-});
-
-const seenVersions = new Map();
-for (const { file, version } of canonical) {
-  const previous = seenVersions.get(version);
-  if (previous) {
-    throw new Error(`Duplicate canonical migration version ${version}: ${previous} and ${file}.`);
-  }
-  seenVersions.set(version, file);
-}
+const canonical = getCanonicalMigrations(migrationsDir);
 
 if (migrations.length !== canonical.length) {
   throw new Error(`Expected ${canonical.length} canonical migrations; received ${migrations.length} linked migrations.`);

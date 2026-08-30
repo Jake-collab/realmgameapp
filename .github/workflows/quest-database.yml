@@ -10,11 +10,13 @@ on:
       - ".github/workflows/quest-database.yml"
       - ".github/scripts/report-quest-database-candidate-failure.js"
       - "artifacts/mobile/__tests__/questDatabaseAlert.test.ts"
+      - "artifacts/mobile/__tests__/questDatabaseMigrations.test.ts"
       - "artifacts/mobile/__tests__/questRpc.integration.test.ts"
       - "artifacts/mobile/features/quests/**"
       - "artifacts/mobile/lib/supabase/**"
       - "artifacts/mobile/package.json"
       - "artifacts/mobile/scripts/quest-database-check.sh"
+      - "artifacts/mobile/scripts/validate-supabase-migrations.js"
       - "artifacts/mobile/scripts/verify-linked-supabase.sh"
       - "artifacts/mobile/docs/CLEAN_SUPABASE_RESET.md"
       - "artifacts/mobile/supabase/**"
@@ -29,11 +31,13 @@ on:
       - ".github/workflows/quest-database.yml"
       - ".github/scripts/report-quest-database-candidate-failure.js"
       - "artifacts/mobile/__tests__/questDatabaseAlert.test.ts"
+      - "artifacts/mobile/__tests__/questDatabaseMigrations.test.ts"
       - "artifacts/mobile/__tests__/questRpc.integration.test.ts"
       - "artifacts/mobile/features/quests/**"
       - "artifacts/mobile/lib/supabase/**"
       - "artifacts/mobile/package.json"
       - "artifacts/mobile/scripts/quest-database-check.sh"
+      - "artifacts/mobile/scripts/validate-supabase-migrations.js"
       - "artifacts/mobile/scripts/verify-linked-supabase.sh"
       - "artifacts/mobile/docs/CLEAN_SUPABASE_RESET.md"
       - "artifacts/mobile/supabase/**"
@@ -77,6 +81,9 @@ jobs:
       - name: Test candidate failure alert grouping
         run: pnpm --filter @workspace/mobile exec jest --runInBand __tests__/questDatabaseAlert.test.ts
 
+      - name: Test migration filename preflight
+        run: pnpm --filter @workspace/mobile exec jest --runInBand __tests__/questDatabaseMigrations.test.ts
+
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
         with:
@@ -112,6 +119,9 @@ jobs:
 
       - name: Install JavaScript dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Test migration filename preflight
+        run: pnpm --filter @workspace/mobile exec jest --runInBand __tests__/questDatabaseMigrations.test.ts
 
       - name: Set up candidate Supabase CLI
         uses: supabase/setup-cli@v1

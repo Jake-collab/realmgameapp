@@ -8,12 +8,38 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 MOBILE_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+MIGRATIONS_DIR="$MOBILE_DIR/supabase/migrations"
 ENV_FILE="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/quest-supabase.env"
 STORAGE_VERSION_FILE="$MOBILE_DIR/supabase/.temp/storage-version"
 STORAGE_VERSION_BACKUP="${ENV_FILE}.storage-version"
 STORAGE_VERSION_MOVED=false
 SUPABASE_STARTED=false
 SUPABASE_CLI_VERSION="${SUPABASE_CLI_VERSION:-2.115.0}"
+
+cleanup() {
+  if [[ "$SUPABASE_STARTED" == true ]]; then
+    (
+      cd "$MOBILE_DIR"
+      run_supabase stop --no-backup
+    ) || echo "Warning: failed to remove disposable Supabase containers." >&2
+  fi
+  if [[ "$STORAGE_VERSION_MOVED" == true ]]; then
+    rm -f "$STORAGE_VERSION_FILE"
+    mv "$STORAGE_VERSION_BACKUP" "$STORAGE_VERSION_FILE"
+  fi
+  rm -f "$ENV_FILE"
+}
+trap cleanup EXIT
+
+if [[ ! -f "$MOBILE_DIR/supabase/config.toml" ]]; then
+  echo "Missing artifacts/mobile/supabase/config.toml." >&2
+  exit 1
+fi
+
+# Validate the checked-in history before invoking the Supabase CLI. This keeps
+# malformed and colliding versions from reaching disposable database
+# provisioning, and uses the same validator as the hosted-project check.
+node "$SCRIPT_DIR/validate-supabase-migrations.js" "$MIGRATIONS_DIR"
 
 if command -v supabase >/dev/null 2>&1; then
   SUPABASE_CMD=(supabase)
@@ -42,26 +68,6 @@ if [[ "$SUPABASE_CLI_VERSION" == "latest" ]]; then
   echo "Testing candidate Supabase CLI ${CLI_VERSION} (resolved from latest)."
 else
   echo "Testing Supabase CLI ${CLI_VERSION}."
-fi
-
-cleanup() {
-  if [[ "$SUPABASE_STARTED" == true ]]; then
-    (
-      cd "$MOBILE_DIR"
-      run_supabase stop --no-backup
-    ) || echo "Warning: failed to remove disposable Supabase containers." >&2
-  fi
-  if [[ "$STORAGE_VERSION_MOVED" == true ]]; then
-    rm -f "$STORAGE_VERSION_FILE"
-    mv "$STORAGE_VERSION_BACKUP" "$STORAGE_VERSION_FILE"
-  fi
-  rm -f "$ENV_FILE"
-}
-trap cleanup EXIT
-
-if [[ ! -f "$MOBILE_DIR/supabase/config.toml" ]]; then
-  echo "Missing artifacts/mobile/supabase/config.toml." >&2
-  exit 1
 fi
 
 cd "$MOBILE_DIR"
