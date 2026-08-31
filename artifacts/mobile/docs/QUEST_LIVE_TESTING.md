@@ -126,6 +126,24 @@ the `Quest RPC and RLS contracts` check. Do not select the advisory
 `Report candidate Supabase CLI incompatibility` jobs instead; those jobs do
 not run on pull requests and are not release gates.
 
+The repository release-readiness command queries both classic branch
+protection and the effective rules for `main`. Run it from a maintainer session
+before publishing:
+
+```bash
+gh auth status
+pnpm release-readiness
+```
+
+The authenticated GitHub identity needs repository **Administration: read**
+access because GitHub does not expose classic branch protection to a workflow's
+built-in `GITHUB_TOKEN`. Authenticate with `gh`, or provide a short-lived
+fine-grained `GH_TOKEN` through the release environment's secret manager. Never
+store that token in this repository. The check treats an unprotected branch, a
+renamed check, an advisory candidate, or an API authorization failure as a
+release blocker. Its failure message lists the exact check to restore and the
+protection configuration that needs review.
+
 ### Verifying the required check
 
 After adding or changing the Social RPC race coverage, open a pull request
