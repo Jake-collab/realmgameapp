@@ -64,8 +64,10 @@ Do not replace the pin with `latest`. To deliberately update it:
    migration or test produces a failed candidate check.
 3. For a local candidate check, set `SUPABASE_CLI_VERSION` to an exact
    candidate and run `pnpm test:quest-database` from `artifacts/mobile`.
-   `SUPABASE_CLI_VERSION=latest` is also supported when the locally installed
-   CLI is the candidate you want to exercise.
+   The harness resolves that requested version through `npx` before considering
+   any globally installed CLI, so an older global binary cannot override the
+   candidate. `SUPABASE_CLI_VERSION=latest` exercises the latest package
+   resolved by `npx`.
 4. Only after the candidate check passes, change both the release workflow pin
    and the harness default to that exact version, update this documented
    version, and rerun the pinned check. Do not promote `latest` as the release
