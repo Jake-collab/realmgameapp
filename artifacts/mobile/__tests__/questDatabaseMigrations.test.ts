@@ -308,7 +308,7 @@ describe("Supabase migration filename preflight", () => {
       'node "$SCRIPT_DIR/validate-supabase-migrations.js" "$MIGRATIONS_DIR"',
     );
     expect(checkSource.indexOf("validate-supabase-migrations.js")).toBeLessThan(
-      checkSource.indexOf("run_supabase --agent yes start"),
+      checkSource.indexOf("run_supabase start"),
     );
   });
 
@@ -337,6 +337,22 @@ describe("Supabase migration filename preflight", () => {
     expect(workflowSource).toContain(`version: ${harnessPin}`);
   });
 
+  test("the disposable harness resolves the requested CLI before any global binary", () => {
+    const checkSource = fs.readFileSync(
+      path.resolve(__dirname, "../scripts/quest-database-check.sh"),
+      "utf8",
+    );
+
+    const npxSelection = checkSource.indexOf(
+      'SUPABASE_CMD=(npx --yes "supabase@${SUPABASE_CLI_VERSION}")',
+    );
+    const globalSelection = checkSource.indexOf("SUPABASE_CMD=(supabase)");
+
+    expect(npxSelection).toBeGreaterThan(-1);
+    expect(globalSelection).toBeGreaterThan(-1);
+    expect(npxSelection).toBeLessThan(globalSelection);
+  });
+
   test("the disposable check gates readiness on Auth instead of aggregate Docker health", () => {
     const checkSource = fs.readFileSync(
       path.resolve(__dirname, "../scripts/quest-database-check.sh"),
@@ -344,7 +360,7 @@ describe("Supabase migration filename preflight", () => {
     );
 
     expect(checkSource).toContain(
-      'run_supabase --agent yes start --ignore-health-check > "$START_OUTPUT_FILE"',
+      'run_supabase start --ignore-health-check > "$START_OUTPUT_FILE"',
     );
     expect(checkSource).not.toContain("run_supabase status");
     expect(checkSource).toContain(

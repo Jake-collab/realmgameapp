@@ -55,10 +55,13 @@ fi
 # provisioning, and uses the same validator as the hosted-project check.
 node "$SCRIPT_DIR/validate-supabase-migrations.js" "$MIGRATIONS_DIR"
 
-if command -v supabase >/dev/null 2>&1; then
-  SUPABASE_CMD=(supabase)
-elif command -v npx >/dev/null 2>&1; then
+# Prefer the package-manager-resolved CLI so an older global binary cannot
+# silently override the checked-in pin. This matches the version checked by
+# the release workflow and keeps local verification reproducible.
+if command -v npx >/dev/null 2>&1; then
   SUPABASE_CMD=(npx --yes "supabase@${SUPABASE_CLI_VERSION}")
+elif command -v supabase >/dev/null 2>&1; then
+  SUPABASE_CMD=(supabase)
 else
   echo "Quest database check requires the Supabase CLI." >&2
   exit 1
@@ -104,7 +107,7 @@ SUPABASE_STARTED=true
 # service is still completing first-run setup. Ask the successful start command
 # for its local credentials directly, then verify the Auth endpoint ourselves
 # below and fail closed if it never becomes available.
-run_supabase --agent yes start --ignore-health-check > "$START_OUTPUT_FILE"
+run_supabase start --ignore-health-check > "$START_OUTPUT_FILE"
 
 read_local_value() {
   node -e '
