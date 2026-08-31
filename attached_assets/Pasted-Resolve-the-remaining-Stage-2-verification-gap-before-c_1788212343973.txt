@@ -1,0 +1,97 @@
+Resolve the remaining Stage 2 verification gap before continuing Stage 3.
+
+The current-state reverification found no Stage 2 regression, but only 69/70 requirements could be fully verified because the connected disposable Supabase RPC/RLS/revenue suites could not execute due to Docker/Podman/Supabase CLI availability.
+
+Your goal is NOT to modify Stage 2 product behavior unless a genuine defect is discovered.
+
+Your goal is to obtain the missing authoritative verification.
+
+1. Investigate the current Replit environment and determine the best supported way to execute the required isolated/disposable Supabase tests.
+
+2. Do not run destructive or mutation tests against production Supabase.
+
+3. If Docker/Podman cannot run in this environment, determine whether the same Stage 2 connected verification can be safely executed using:
+   - an isolated Supabase test project/database,
+   - an existing supported remote disposable database workflow,
+   - or another equivalent isolated environment already supported by this repository.
+
+4. Do not weaken, skip, mock away, or rewrite the security/concurrency assertions merely to make them pass.
+
+5. Run the missing Stage 2 connected suites covering:
+   - RPC authorization
+   - RLS
+   - cross-user financial privacy
+   - membership authority
+   - Drop Credit authority
+   - collectible ownership authority
+   - refund/reversal authority
+   - seller ledger authority
+   - idempotency
+   - final weekly Drop allowance concurrency
+   - final Drop Credit concurrency
+   - final Find-slot concurrency
+   - final collectible-unit concurrency
+   - Stage 2 revenue/security connected tests
+
+6. Preserve production as read-only during this verification.
+
+7. Do not apply Stage 3 migration 074 merely to complete Stage 2 testing.
+
+8. Do not modify migrations 001–073.
+
+9. If a genuine Stage 2 defect is discovered, stop and report it before making a material architecture change. Small corrective fixes may be proposed, but clearly identify them.
+
+10. After the connected verification succeeds, rerun the necessary regression checks and report:
+
+STAGE 2 FINAL VERIFICATION GAP RESOLUTION
+
+CONNECTED STAGE 2 TESTS:
+PASS / FAIL
+[count]
+
+RPC AUTHORIZATION:
+PASS / FAIL
+
+RLS:
+PASS / FAIL
+
+CROSS-USER FINANCIAL PRIVACY:
+PASS / FAIL
+
+IDEMPOTENCY:
+PASS / FAIL
+
+ATOMICITY / CONCURRENCY:
+PASS / FAIL
+
+QVAC:
+PASS / FAIL
+
+QAVS:
+PASS / FAIL
+
+HUNT SECURITY:
+PASS / FAIL
+
+MIGRATIONS 001–073 UNMODIFIED:
+PASS / FAIL
+
+STAGE 2 MIGRATION PARITY 001–073:
+PASS / FAIL
+
+STAGE 2 REQUIREMENTS NOW VERIFIED:
+X / 70
+
+STAGE 2 PRODUCT DEFECTS DISCOVERED:
+[list or NONE]
+
+TRUE STAGE 2 BLOCKERS:
+[list or NONE]
+
+Do not include Stage 3 migration 074 as a Stage 2 blocker.
+
+If and only if the connected verification passes and all 70 Stage 2 requirements are now verified, end exactly:
+
+STAGE 2 FINAL VERIFICATION: 70 / 70 PASS
+STAGE 2 IS COMPLETELY VERIFIED
+SAFE TO CONTINUE STAGE 3
