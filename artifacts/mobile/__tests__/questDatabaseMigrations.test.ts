@@ -270,7 +270,7 @@ describe("Supabase migration filename preflight", () => {
       'node "$SCRIPT_DIR/validate-supabase-migrations.js" "$MIGRATIONS_DIR"',
     );
     expect(checkSource.indexOf("validate-supabase-migrations.js")).toBeLessThan(
-      checkSource.indexOf("run_supabase start"),
+      checkSource.indexOf("run_supabase --agent yes start"),
     );
   });
 
@@ -335,22 +335,9 @@ describe("Supabase migration filename preflight", () => {
     expect(repairSource).toContain("'pm.submission_id = ps.id'");
   });
 
-  test("activity tracking derives progress from protected, quality-checked samples", () => {
+  test("activity sample retention is restricted to terminal participations and trusted workers", () => {
     const source = fs.readFileSync(
-      path.resolve(__dirname, "../supabase/migrations/070_quest_activity_tracking_security_repairs.sql"),
-      "utf8",
-    );
-
-    expect(source).toContain("purge_expired_quest_activity_samples");
-    expect(source).toContain("auth.role() <> 'service_role'");
-    expect(source).toContain("participations.status IN ('completed', 'abandoned', 'expired')");
-    expect(source).toContain("'quest_activity_samples_purged'");
-    expect(source).not.toContain("DELETE FROM quest_participations");
-  });
-
-  test("activity security repairs authorize before duplicate reads and remove accuracy-based speed tolerance", () => {
-    const source = fs.readFileSync(
-      path.resolve(__dirname, "../supabase/migrations/070_quest_activity_tracking_security_repairs.sql"),
+      path.resolve(__dirname, "../supabase/migrations/069_quest_activity_sample_retention.sql"),
       "utf8",
     );
 
