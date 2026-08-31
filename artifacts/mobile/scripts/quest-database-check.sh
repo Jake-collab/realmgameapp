@@ -131,6 +131,12 @@ export SOCIAL_TEST_SUPABASE_URL="$API_URL"
 export SOCIAL_TEST_SUPABASE_ANON_KEY="$ANON_KEY"
 export SOCIAL_TEST_SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
 export SOCIAL_TEST_REQUIRE_INTEGRATION=true
+export TASK88_TEST_SUPABASE_URL="$API_URL"
+export TASK88_TEST_SUPABASE_ANON_KEY="$ANON_KEY"
+export TASK88_TEST_SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
+export HUNT_DROP_TEST_SUPABASE_URL="$API_URL"
+export HUNT_DROP_TEST_SUPABASE_ANON_KEY="$ANON_KEY"
+export HUNT_DROP_TEST_SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
 export QUEST_TEST_DB_URL="$DB_URL"
 export SUPABASE_URL="$API_URL"
 export SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY"
@@ -157,6 +163,12 @@ pnpm exec jest --runInBand __tests__/questVerification.integration.test.ts
 
 echo "Running activity tracking validation, persistence, and idempotency contracts against the disposable database."
 pnpm exec jest --runInBand __tests__/questActivityTracking.integration.test.ts
+
+echo "Running direct Hunt Drop authorization contracts against the disposable database."
+pnpm exec jest --runInBand __tests__/huntDropAuthorization.integration.test.ts
+
+echo "Running membership, allowance, Drop Credit, collectible, refund, privacy, and seller ledger contracts against the disposable database."
+pnpm exec jest --runInBand __tests__/membershipAllowancesCollectibles.integration.test.ts
 
 echo "Running moderator cleanup operator actions against the disposable database."
 pnpm exec jest --runInBand __tests__/moderationMediaRetention.integration.test.ts

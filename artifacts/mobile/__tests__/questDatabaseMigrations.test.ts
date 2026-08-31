@@ -368,6 +368,36 @@ describe("Supabase migration filename preflight", () => {
     );
   });
 
+  test("the disposable check wires every connected Stage 2 suite to the same isolated project", () => {
+    const checkSource = fs.readFileSync(
+      path.resolve(__dirname, "../scripts/quest-database-check.sh"),
+      "utf8",
+    );
+
+    for (const variable of [
+      "TASK88_TEST_SUPABASE_URL",
+      "TASK88_TEST_SUPABASE_ANON_KEY",
+      "TASK88_TEST_SUPABASE_SERVICE_ROLE_KEY",
+      "HUNT_DROP_TEST_SUPABASE_URL",
+      "HUNT_DROP_TEST_SUPABASE_ANON_KEY",
+      "HUNT_DROP_TEST_SUPABASE_SERVICE_ROLE_KEY",
+    ]) {
+      expect(checkSource).toContain(`export ${variable}=`);
+    }
+
+    for (const suite of [
+      "__tests__/questRpc.integration.test.ts",
+      "__tests__/socialRpc.integration.test.ts",
+      "__tests__/questVerification.integration.test.ts",
+      "__tests__/questActivityTracking.integration.test.ts",
+      "__tests__/huntDropAuthorization.integration.test.ts",
+      "__tests__/membershipAllowancesCollectibles.integration.test.ts",
+      "__tests__/moderationMediaRetention.integration.test.ts",
+    ]) {
+      expect(checkSource).toContain(`pnpm exec jest --runInBand ${suite}`);
+    }
+  });
+
   test("method verification remains server-owned and atomic", () => {
     const source = fs.readFileSync(
       path.resolve(__dirname, "../supabase/migrations/070_quest_activity_tracking_security_repairs.sql"),

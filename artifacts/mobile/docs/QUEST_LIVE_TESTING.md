@@ -12,7 +12,8 @@ QUEST_TEST_SUPABASE_SERVICE_ROLE_KEY=
 
 The release check uses a disposable local Supabase database. CI removes any
 previous test volume, starts the database from `supabase/config.toml`, applies
-every checked-in migration, runs the Quest and Social RPC/RLS suites, and
+every checked-in migration, runs the Quest, Social, verification, activity,
+Hunt authorization, revenue, and moderation-retention connected suites, and
 deletes its Docker volumes after the test. No Supabase project, database
 credentials, or CI secrets are required.
 

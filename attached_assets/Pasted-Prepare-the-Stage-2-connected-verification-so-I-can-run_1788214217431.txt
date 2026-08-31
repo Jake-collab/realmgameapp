@@ -1,0 +1,102 @@
+Prepare the Stage 2 connected verification so I can run it through GitHub Actions manually.
+
+Do NOT continue Stage 3 yet.
+Do NOT modify Stage 2 product behavior unless a genuine defect is discovered.
+Do NOT modify migrations 001–073.
+
+You already determined that:
+- the Replit nested Docker runtime cannot run the disposable Supabase suites because of setns failures
+- GitHub Actions is the supported authoritative environment
+- the corrected test harness now resolves Supabase CLI 2.116.0 correctly
+- Stage 2 remains at 69/70 verified until this workflow passes
+
+Now do the following:
+
+1. Inspect the existing GitHub Actions workflow that runs the disposable Supabase / connected verification suites.
+
+2. Confirm whether the current workflow already executes all required Stage 2 connected verification, including:
+   - RPC authorization
+   - RLS
+   - cross-user financial privacy
+   - membership authority
+   - Drop Credit authority
+   - collectible ownership authority
+   - refund/reversal authority
+   - seller ledger authority
+   - idempotency
+   - final weekly Drop allowance concurrency
+   - final Drop Credit concurrency
+   - final Find-slot concurrency
+   - final collectible-unit concurrency
+   - QVAC connected checks
+   - QAVS connected checks
+   - Hunt security connected checks
+   - Stage 2 revenue/security connected tests
+
+3. If the workflow does not cover all of those, update it so it does.
+
+4. Make sure the GitHub Actions environment uses:
+   - a compatible Docker runtime
+   - Supabase CLI 2.116.0
+   - an isolated/disposable Supabase instance
+   - no mutation against production Supabase
+
+5. Make sure the corrected CLI-selection logic from the current workspace is included in the files that need to be committed.
+
+6. Run every local validation that does NOT require the failing nested Docker environment.
+
+7. Do not fake, skip, weaken, or mock the missing connected assertions.
+
+8. Then give me the exact GitHub instructions I need to perform manually.
+
+Use this exact output format:
+
+STAGE 2 GITHUB VERIFICATION PREPARATION
+
+WORKFLOW FILE:
+[path]
+
+WORKFLOW NAME:
+[name]
+
+WORKFLOW STATUS:
+READY / NEEDS CHANGES
+
+CHANGES MADE:
+[list or NONE]
+
+FILES THAT MUST BE COMMITTED:
+[list]
+
+SECRETS REQUIRED BY GITHUB ACTIONS:
+[list or NONE]
+
+IMPORTANT:
+Do not print secret values.
+
+MANUAL GITHUB STEPS:
+Give me exact click-by-click instructions starting from opening my repository on GitHub.
+
+If a manual workflow_dispatch button is available, tell me exactly:
+Actions
+→ [workflow name]
+→ Run workflow
+→ branch to select
+→ Run workflow
+
+If the workflow runs automatically on push instead, tell me that instead.
+
+EXPECTED SUCCESS RESULT:
+Tell me exactly what job/check names must show green.
+
+IF IT FAILS:
+Tell me exactly which log sections I should copy back into Replit.
+
+FINAL STAGE 2 SUCCESS CRITERIA:
+The workflow must prove the previously unverified connected requirement and allow the final status to become:
+
+STAGE 2 FINAL VERIFICATION: 70 / 70 PASS
+STAGE 2 IS COMPLETELY VERIFIED
+SAFE TO CONTINUE STAGE 3
+
+Do not start or continue Stage 3 during this task.

@@ -436,6 +436,93 @@ describeIntegration("Task 88 membership, allowances, and collectibles", () => {
     expect(ledger.data!.filter((row) => row.event_type === "consume")).toHaveLength(1);
   });
 
+  test("serializes the final included weekly Drop allowance", async () => {
+    const priming = await secondClient.rpc("consume_drop_creation_allowance", {
+      p_idempotency_key: `weekly-prime-${suffix()}`,
+    });
+    expect(priming.error).toBeNull();
+    expect(priming.data).toMatchObject({
+      success: true,
+      alreadyConsumed: false,
+      source: "included_weekly",
+    });
+
+    const results = await Promise.all([
+      secondClient.rpc("consume_drop_creation_allowance", {
+        p_idempotency_key: `weekly-race-a-${suffix()}`,
+      }),
+      secondClient.rpc("consume_drop_creation_allowance", {
+        p_idempotency_key: `weekly-race-b-${suffix()}`,
+      }),
+    ]);
+    const successful = results.filter(
+      (result) => !result.error && result.data?.success === true,
+    );
+    const exhausted = results.filter(
+      (result) =>
+        !result.error &&
+        result.data?.success === false &&
+        result.data?.reasonCode === "DROP_ALLOWANCE_EXHAUSTED",
+    );
+    expect(successful).toHaveLength(1);
+    expect(successful[0].data.source).toBe("included_weekly");
+    expect(exhausted).toHaveLength(1);
+
+    const consumptions = await admin
+      .from("drop_creation_consumptions")
+      .select("source")
+      .eq("user_id", secondPlayer.id);
+    expect(consumptions.error).toBeNull();
+    expect(consumptions.data).toHaveLength(2);
+    expect(consumptions.data!.every((row) => row.source === "included_weekly")).toBe(true);
+  });
+
+  test("serializes the final Drop Credit under concurrent consumption", async () => {
+    const grant = await admin.rpc("grant_extra_drop_credits", {
+      p_user_id: secondPlayer.id,
+      p_quantity: 1,
+      p_idempotency_key: `race-credit-grant-${suffix()}`,
+      p_provider_name: "task88-test",
+      p_provider_event_id: `race-credit-event-${suffix()}`,
+      p_reason: "Task 88 connected concurrency test",
+    });
+    expect(grant.error).toBeNull();
+
+    const results = await Promise.all([
+      secondClient.rpc("consume_drop_creation_allowance", {
+        p_idempotency_key: `credit-race-a-${suffix()}`,
+      }),
+      secondClient.rpc("consume_drop_creation_allowance", {
+        p_idempotency_key: `credit-race-b-${suffix()}`,
+      }),
+    ]);
+    const successful = results.filter(
+      (result) =>
+        !result.error &&
+        result.data?.success === true &&
+        result.data?.source === "extra_credit",
+    );
+    const exhausted = results.filter(
+      (result) =>
+        !result.error &&
+        result.data?.success === false &&
+        result.data?.reasonCode === "DROP_ALLOWANCE_EXHAUSTED",
+    );
+    expect(successful).toHaveLength(1);
+    expect(exhausted).toHaveLength(1);
+
+    const ledger = await admin
+      .from("drop_credit_ledger")
+      .select("quantity_delta, event_type")
+      .eq("user_id", secondPlayer.id);
+    expect(ledger.error).toBeNull();
+    expect(ledger.data).toHaveLength(2);
+    expect(ledger.data).toEqual(expect.arrayContaining([
+      { quantity_delta: 1, event_type: "grant" },
+      { quantity_delta: -1, event_type: "consume" },
+    ]));
+  });
+
   test("serializes the final allowed find", async () => {
     const [firstSession, secondSession] = await Promise.all([
       issueSession(firstClient, finalFindDrop.participationIds[0], finalFindDrop.stopId),
@@ -630,13 +717,38 @@ describeIntegration("Task 88 membership, allowances, and collectibles", () => {
     expect(secondRefund.error).toBeNull();
     expect(excessiveRefund.error?.message).toMatch(/invalid_reversal_amount/i);
 
-    const events = await admin
-      .from("marketplace_transaction_events")
-      .select("event_type, amount_minor")
-      .eq("order_id", winningOrderId)
-      .in("event_type", ["refund", "partial_refund", "chargeback", "reversal"]);
+    const [events, sellerLedger, buyerLedger] = await Promise.all([
+      admin
+        .from("marketplace_transaction_events")
+        .select("event_type, amount_minor")
+        .eq("order_id", winningOrderId)
+        .in("event_type", ["refund", "partial_refund", "chargeback", "reversal"]),
+      sellerClient
+        .from("seller_balance_ledger")
+        .select("amount_minor, currency, event_type")
+        .eq("order_id", winningOrderId)
+        .order("created_at", { ascending: true }),
+      firstClient
+        .from("seller_balance_ledger")
+        .select("amount_minor, currency, event_type")
+        .eq("order_id", winningOrderId),
+    ]);
     expect(events.error).toBeNull();
     expect(events.data!.reduce((sum, event) => sum + event.amount_minor, 0)).toBe(900);
+    expect(sellerLedger.error).toBeNull();
+    expect(sellerLedger.data).toHaveLength(3);
+    expect(sellerLedger.data!.map((entry) => ({
+      amount_minor: entry.amount_minor,
+      currency: entry.currency,
+      event_type: entry.event_type,
+    })).sort((left, right) => left.amount_minor - right.amount_minor)).toEqual([
+      { amount_minor: -350, currency: "USD", event_type: "refund" },
+      { amount_minor: -280, currency: "USD", event_type: "refund" },
+      { amount_minor: 700, currency: "USD", event_type: "sale" },
+    ]);
+    expect(sellerLedger.data!.reduce((sum, entry) => sum + entry.amount_minor, 0)).toBe(70);
+    expect(buyerLedger.error).toBeNull();
+    expect(buyerLedger.data).toEqual([]);
   });
 
   test("keeps owner commerce private while exposing only safe public Drop detail", async () => {

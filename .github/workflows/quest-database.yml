@@ -13,6 +13,11 @@ on:
       - "artifacts/mobile/__tests__/questDatabaseMigrations.test.ts"
       - "artifacts/mobile/__tests__/questRpc.integration.test.ts"
       - "artifacts/mobile/__tests__/socialRpc.integration.test.ts"
+      - "artifacts/mobile/__tests__/questVerification.integration.test.ts"
+      - "artifacts/mobile/__tests__/questActivityTracking.integration.test.ts"
+      - "artifacts/mobile/__tests__/huntDropAuthorization.integration.test.ts"
+      - "artifacts/mobile/__tests__/membershipAllowancesCollectibles.integration.test.ts"
+      - "artifacts/mobile/__tests__/moderationMediaRetention.integration.test.ts"
       - "artifacts/mobile/features/quests/**"
       - "artifacts/mobile/features/social/**"
       - "artifacts/mobile/lib/supabase/**"
@@ -36,6 +41,11 @@ on:
       - "artifacts/mobile/__tests__/questDatabaseMigrations.test.ts"
       - "artifacts/mobile/__tests__/questRpc.integration.test.ts"
       - "artifacts/mobile/__tests__/socialRpc.integration.test.ts"
+      - "artifacts/mobile/__tests__/questVerification.integration.test.ts"
+      - "artifacts/mobile/__tests__/questActivityTracking.integration.test.ts"
+      - "artifacts/mobile/__tests__/huntDropAuthorization.integration.test.ts"
+      - "artifacts/mobile/__tests__/membershipAllowancesCollectibles.integration.test.ts"
+      - "artifacts/mobile/__tests__/moderationMediaRetention.integration.test.ts"
       - "artifacts/mobile/features/quests/**"
       - "artifacts/mobile/features/social/**"
       - "artifacts/mobile/lib/supabase/**"
@@ -53,7 +63,7 @@ on:
       supabase_cli_version:
         description: "Candidate Supabase CLI version (for example 2.116.0 or latest)"
         required: false
-        default: latest
+        default: 2.116.0
         type: string
 
 permissions:
@@ -98,7 +108,7 @@ jobs:
           # artifacts/mobile/docs/QUEST_LIVE_TESTING.md.
           version: 2.116.0
 
-      - name: Apply migrations and run Quest contracts
+      - name: Apply migrations and run all Stage 2 connected contracts
         run: bash artifacts/mobile/scripts/quest-database-check.sh
 
   quest-database-candidate:
