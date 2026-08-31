@@ -25,3 +25,14 @@ a policy or application regression.
 **How to apply:** Keep this infrastructure issue separate from Storage policy
 assertions, and rerun the disposable suite only after the CLI/image pairing is
 known to provision cleanly.
+
+The disposable harness also relies on the pinned CLI's `--agent` start flag; an
+older installed CLI can pass version discovery when explicitly overridden but
+still fail before containers start because that flag is absent.
+
+**Why:** Version selection and command compatibility are separate gates, so a
+candidate run must verify both before interpreting a database-suite result.
+
+**How to apply:** Check `supabase start --help` for the required flags and
+ensure Docker or Podman is available before treating the disposable suite as a
+product regression.

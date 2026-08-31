@@ -1,0 +1,106 @@
+Before continuing Stage 3, perform one final independent verification that Stage 2 is COMPLETELY finished and that nothing done since the Stage 2 audit has broken, bypassed, or changed its architecture.
+
+Do not implement new Stage 3 functionality during this check.
+
+Verify all 70 Stage 2 requirements again against the CURRENT codebase and CURRENT linked production Supabase — do not rely only on the previous audit report.
+
+Specifically verify:
+
+- all 70/70 Stage 2 requirements remain implemented
+- migrations 001–073 still exist and previously applied migrations have not been modified
+- local and production Supabase migration histories still match
+- migrations 071–073 remain forward-only
+- membership/entitlement architecture remains provider-neutral
+- authoritative allowance catalogue comes from the database
+- Quest Free/Member allowances are correct
+- Hunt Free 2/week and Member 5/week allowances are correct
+- Drop Credit packs, permanent ledger, and consumption ordering are correct
+- Drop creation authorization remains atomic
+- Find limits and collectible acquisition limits remain separate and atomic
+- Find Badges remain permanent
+- collectible ownership remains separate from badges
+- rarity calculation/snapshots remain correct
+- 30% Worlds marketplace fee and seller accounting remain correct
+- refund/reversal architecture remains correct
+- payment/provider external-ID architecture remains provider-neutral
+- seller payable architecture remains intact
+- Admin revenue controls remain intact
+- RLS and cross-user financial privacy remain secure
+- clients cannot self-grant membership, credits, purchases, ownership, refunds, seller earnings, or payout status
+- payment/refund idempotency protections remain intact
+- concurrency protections remain intact
+- QVAC still passes
+- QAVS still passes
+- Hunt security still passes
+- no pay-to-win points were introduced
+- no Stage 3 work has weakened Stage 2 security or authority boundaries
+
+Run the relevant current tests again, including connected production Supabase tests where applicable.
+
+Report exactly:
+
+STAGE 2 CURRENT-STATE REVERIFICATION
+
+REQUIREMENTS VERIFIED:
+X / 70
+
+FAILED / REGRESSED:
+[list or NONE]
+
+FIXES REQUIRED:
+[list or NONE]
+
+LOCAL MIGRATION RANGE:
+001–XXX
+
+PRODUCTION MIGRATION RANGE:
+001–XXX
+
+MIGRATION PARITY:
+PASS / FAIL
+
+MIGRATIONS 001–073 UNMODIFIED:
+PASS / FAIL
+
+RLS / SECURITY:
+PASS / FAIL
+
+ATOMICITY / CONCURRENCY:
+PASS / FAIL
+
+REVENUE ARCHITECTURE:
+PASS / FAIL
+
+QVAC:
+PASS / FAIL
+
+QAVS:
+PASS / FAIL
+
+HUNT SECURITY:
+PASS / FAIL
+
+MOBILE TESTS:
+PASS / FAIL
+[count]
+
+API TESTS:
+PASS / FAIL
+[count]
+
+ADMIN TESTS:
+PASS / FAIL
+[count]
+
+CONNECTED PRODUCTION TESTS:
+PASS / FAIL
+[count]
+
+TRUE STAGE 2 BLOCKERS:
+[list or NONE]
+
+If and only if all 70 requirements remain complete and there are no Stage 2 blockers, end exactly with:
+
+STAGE 2 CURRENT-STATE REVERIFICATION: PASS
+STAGE 2 REMAINS COMPLETE
+SAFE TO CONTINUE STAGE 3
