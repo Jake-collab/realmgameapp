@@ -260,6 +260,44 @@ describe("Supabase migration filename preflight", () => {
     );
   });
 
+  test.each([
+    [
+      "local",
+      '{"migrations":[{"remote":"001"}]}\n',
+      "local <none>, remote 001",
+    ],
+    [
+      "remote",
+      '{"migrations":[{"local":"001"}]}\n',
+      "local 001, remote <none>",
+    ],
+  ])(
+    "rejects a linked migration entry with a missing %s version",
+    (_versionType, migrationResponse, receivedVersions) => {
+      withLinkedVerificationFixture(
+        ["001_first.sql"],
+        ({ env, scriptPath }) => {
+          const result = childProcess.spawnSync(
+            "bash",
+            [scriptPath],
+            { encoding: "utf8", env },
+          );
+
+          expect(result.status).toBe(1);
+          expect(result.stderr).toContain(
+            "Migration filename preflight failed:",
+          );
+          expect(result.stderr).toContain(
+            `Migration parity mismatch at position 1: expected 001, received ${receivedVersions}.`,
+          );
+          expect(result.stderr).not.toMatch(/\n\s+at /);
+          expect(result.stderr).not.toContain("Error:");
+        },
+        migrationResponse,
+      );
+    },
+  );
+
   test("the disposable check preflights before Supabase provisioning", () => {
     const checkSource = fs.readFileSync(
       path.resolve(__dirname, "../scripts/quest-database-check.sh"),
