@@ -61,6 +61,8 @@ if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_A
 if (!process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN) warnings.push("Mapbox public token is not configured; native map checks are blocked.");
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) warnings.push("Server Supabase credentials are not configured; trusted DB/storage/job checks are blocked.");
 if (!process.env.EXPO_ACCESS_TOKEN) warnings.push("Expo push credentials are not configured; delivery checks are blocked.");
+if (!process.env.EXPO_PUBLIC_REVENUECAT_TEST_API_KEY || !process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY || !process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY) warnings.push("RevenueCat public app keys are incomplete; mobile checkout and restore are unavailable.");
+if (!process.env.REVENUECAT_WEBHOOK_AUTHORIZATION) warnings.push("RevenueCat webhook authorization is not configured; purchases cannot update server-owned entitlements or ledgers.");
 for (const warning of warnings) console.warn(`BLOCKED ${warning}`);
 
 if (failures.length) {

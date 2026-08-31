@@ -38,3 +38,12 @@ This checklist records actions that cannot be completed from the repository. Do 
 - [ ] Set exact `CORS_ORIGINS` for deployed admin origins; do not use wildcard CORS in production.
 - [ ] Follow `docs/DEPLOYMENT_CONTRACT.md` for separate API, admin, and worker processes.
 - [ ] Deploy API and admin with separate environment values, then verify `/api/healthz` and `/api/readiness`.
+
+## RevenueCat and store release
+
+- [x] Create the Worlds RevenueCat project, Test Store catalog, membership entitlement, and current offering.
+- [ ] Store `REVENUECAT_WEBHOOK_AUTHORIZATION` as a server-only Replit Secret and configure the same Authorization header on `https://worlds-game-app.replit.app/api/webhooks/revenuecat`.
+- [ ] Publish migration 074 and the updated API before enabling the RevenueCat webhook.
+- [ ] After the first TestFlight and Play internal-test builds, sync the monthly/yearly membership, Drop Credit, and supported Collectible price-tier products into App Store Connect and Google Play.
+- [ ] Exercise monthly/yearly purchase, all three credit packs, paid Collectible, restore, refund, expiration, billing issue, account switch, and webhook retry on signed physical-device builds.
+- [ ] Enroll in Apple’s Small Business Program if eligible before launch: https://developer.apple.com/app-store/small-business-program/enroll/

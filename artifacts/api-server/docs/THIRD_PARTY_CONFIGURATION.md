@@ -11,8 +11,21 @@ The API readiness endpoint reports `ready`, `degraded`, `disabled`, `missing_con
 | AI Quest generation | `AI_API_URL`, `AI_API_KEY`, `AI_MODEL` | None | Generation disabled; no fake candidates |
 | Moderation | `MODERATION_*` | None | Manual review mode; no automatic approval |
 | Push | `EXPO_ACCESS_TOKEN` | Native app identity and permission config | In-app notifications remain authoritative; push is unavailable |
+| RevenueCat | `REVENUECAT_WEBHOOK_AUTHORIZATION` | `EXPO_PUBLIC_REVENUECAT_TEST_API_KEY`, `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY`, `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` | Checkout is unavailable and no entitlement, credit, or collectible is granted |
 
 AI and automated moderation are optional for consumer startup. Missing required Supabase server configuration is a failed production readiness state. Notification delivery never grants gameplay authority.
+
+## RevenueCat clarification
+
+The production webhook is
+`https://worlds-game-app.replit.app/api/webhooks/revenuecat`. RevenueCat must
+send the exact server-only `REVENUECAT_WEBHOOK_AUTHORIZATION` value in its
+`Authorization` header. A mobile SDK purchase callback is never an entitlement
+grant: verified provider events call the trusted Supabase adapter, which writes
+the existing immutable membership, credit, marketplace, seller, and audit
+ledgers. App Store and Play Store products still need to be synced after the
+first signed/TestFlight builds; the configured Test Store supports preview
+purchase testing.
 
 ## Moderation clarification
 

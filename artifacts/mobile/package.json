@@ -76,6 +76,7 @@
     "nativewind": "^4.2.6",
     "react-hook-form": "^7.81.0",
     "react-native-url-polyfill": "^4.0.0",
+    "react-native-purchases": "^9.6.8",
     "tailwindcss": "catalog:",
     "zustand": "^5.0.14"
   }

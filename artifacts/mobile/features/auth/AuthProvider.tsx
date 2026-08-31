@@ -41,6 +41,7 @@ import { offlineStorage } from '@/features/offline/storage/offlineStorage';
 import { getPushInstallationId, unregisterCurrentDevice } from '@/features/notifications/push.service';
 import type { AuthUser } from '@/types/auth.types';
 import type { ProfileRow } from '@/lib/supabase/database.types';
+import { logoutRevenueCat } from '@/features/revenue/services/revenueCat';
 
 // ─── State machine ────────────────────────────────────────────────────────────
 
@@ -416,6 +417,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Must happen before the session is cleared: the device RPC is owner-scoped.
       await getPushInstallationId().then(unregisterCurrentDevice).catch(() => undefined);
     }
+    await logoutRevenueCat();
 
     // Clear local state before attempting the network request. This keeps a
     // failed or unavailable remote sign-out from leaving private data visible.

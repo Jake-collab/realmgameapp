@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, Linking, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { Button } from '@/components/ui/Button';
@@ -8,7 +8,8 @@ import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
 import { useClaimFreeCollectible, useCreateCollectiblePurchaseIntent, useRevenueSummary } from '@/features/revenue/hooks/useRevenueSummary';
 import type { RevenueSummary } from '@/features/revenue/types/revenue.types';
-import { MEMBERSHIP_PLANS, DROP_CREDIT_PACKS } from '@/features/revenue/types/revenue.types';
+import { useRevenueCatOfferings, useRevenueCatPurchase, useRevenueCatRestore } from '@/features/revenue/hooks/useRevenueCat';
+import { packageForCode, packageForOrder, type StorePackage } from '@/features/revenue/services/revenueCat';
 
 const allowanceLabels: Record<string, string> = {
   quest_monthly: 'Monthly Quests',
@@ -22,8 +23,18 @@ export default function MembershipScreen() {
   const summary = useRevenueSummary();
   const freeClaim = useClaimFreeCollectible();
   const purchaseIntent = useCreateCollectiblePurchaseIntent();
+  const offerings = useRevenueCatOfferings();
+  const storePurchase = useRevenueCatPurchase();
+  const restore = useRevenueCatRestore();
   const current = summary.data?.planCode ?? 'free';
   const refreshSummary = useCallback(() => { void summary.refetch(); }, [summary]);
+  useEffect(() => {
+    if (!storePurchase.isSuccess) return;
+    // RevenueCat's client acknowledgement is not ownership. Keep the neutral
+    // summary fresh while the provider webhook finalizes the server record.
+    const timer = setInterval(() => { void summary.refetch(); }, 5_000);
+    return () => clearInterval(timer);
+  }, [storePurchase.isSuccess, summary]);
   return (
     <ScrollView
       style={{ backgroundColor: colors.background }}
@@ -62,33 +73,39 @@ export default function MembershipScreen() {
           </View>
         </View>
       )}
-      <Text style={[styles.section, { color: colors.mutedForeground }]}>Compare plans</Text>
-      {MEMBERSHIP_PLANS.map((plan) => (
-        <View key={plan.code} style={[styles.plan, { backgroundColor: colors.card, borderColor: plan.code === current ? colors.primary : colors.border }]}>
+      <Text style={[styles.section, { color: colors.mutedForeground }]}>Membership</Text>
+      {['worlds_monthly', 'worlds_yearly'].map((code) => {
+        const pkg = packageForCode(offerings.data ?? [], code);
+        const annual = code === 'worlds_yearly';
+        return (
+        <View key={code} style={[styles.plan, { backgroundColor: colors.card, borderColor: code === current ? colors.primary : colors.border }]}>
           <View style={styles.planTop}>
-            <Text style={[styles.planName, { color: colors.foreground }]}>{plan.name}</Text>
-            <Text style={[styles.price, { color: colors.primary }]}>{plan.price}</Text>
+            <Text style={[styles.planName, { color: colors.foreground }]}>Worlds Membership</Text>
+            <Text style={[styles.price, { color: colors.primary }]}>{pkg?.product.priceString ?? 'Loading price…'}</Text>
           </View>
-          <Text style={[styles.planDetail, { color: colors.mutedForeground }]}>{plan.detail}</Text>
+          <Text style={[styles.planDetail, { color: colors.mutedForeground }]}>{annual ? 'The same member benefits with annual billing.' : 'More Quest access and more weekly Drop creation.'}</Text>
           <Text style={[styles.benefit, { color: colors.foreground }]}>
-            {plan.code === 'free' ? '10 Monthly · 1 Geo / week · 2 Drop creations / week' : '50 Monthly · 2 Geo / week · 5 Drop creations / week'}
+            50 Monthly · 2 Geo / week · 5 Drop creations / week
           </Text>
-          <Text style={[styles.benefit, { color: colors.foreground }]}>
-            {plan.code === 'free' ? '1 Daily / Personalized Quest / week' : '1 Daily / Personalized Quest / day'}
-          </Text>
-          {plan.code === current && <Text style={[styles.currentBadge, { color: colors.primary }]}>Current plan</Text>}
+          <Text style={[styles.benefit, { color: colors.foreground }]}>1 Daily / Personalized Quest / day</Text>
+          {code === current ? <Text style={[styles.currentBadge, { color: colors.primary }]}>Current plan</Text> : (
+            <PurchaseButton pkg={pkg} purchase={storePurchase} colors={colors} label={`Choose ${annual ? 'yearly' : 'monthly'}`} />
+          )}
         </View>
-      ))}
+        );
+      })}
       <Text style={[styles.section, { color: colors.mutedForeground }]}>Extra Drop Credits</Text>
       <Text style={[styles.planDetail, { color: colors.mutedForeground }]}>Credits are separate from your included weekly balance and never expire. Included Drops are consumed first.</Text>
       <View style={styles.creditRow}>
-        {DROP_CREDIT_PACKS.map((pack) => (
-          <View key={pack.code} style={[styles.credit, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.creditCount, { color: colors.foreground }]}>{pack.credits}</Text>
+        {['drop_credits_5', 'drop_credits_15', 'drop_credits_35'].map((code) => {
+          const pkg = packageForCode(offerings.data ?? [], code);
+          return <View key={code} style={[styles.credit, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.creditCount, { color: colors.foreground }]}>{code.split('_').pop()}</Text>
             <Text style={[styles.creditLabel, { color: colors.mutedForeground }]}>credits</Text>
-            <Text style={[styles.creditPrice, { color: colors.primary }]}>{pack.price}</Text>
+            <Text style={[styles.creditPrice, { color: colors.primary }]}>{pkg?.product.priceString ?? 'Loading…'}</Text>
+            <PurchaseButton pkg={pkg} purchase={storePurchase} colors={colors} label="Buy" />
           </View>
-        ))}
+        })}
       </View>
       {summary.data && (
         <>
@@ -110,6 +127,8 @@ export default function MembershipScreen() {
                 badge={badge}
                 freeClaim={freeClaim}
                 purchaseIntent={purchaseIntent}
+                packages={offerings.data ?? []}
+                storePurchase={storePurchase}
                 colors={colors}
               />
             </View>
@@ -125,7 +144,21 @@ export default function MembershipScreen() {
           ))}
         </>
       )}
-      <Text style={[styles.note, { color: colors.mutedForeground }]}>Payment provider setup is not active yet. No purchase is completed from this screen.</Text>
+      {offerings.isError && <View style={styles.error}><Text style={[styles.planDetail, { color: colors.destructive }]}>{offerings.error instanceof Error ? offerings.error.message : 'Could not load store prices.'}</Text><Button variant="outline" onPress={() => void offerings.refetch()}>Retry store</Button></View>}
+      <Text style={[styles.note, { color: colors.mutedForeground }]}>Subscriptions automatically renew unless canceled at least 24 hours before the current period ends. Payment is charged to your App Store or Google Play account. Manage or cancel in your store account settings.</Text>
+      <Button
+        variant="outline"
+        loading={restore.isPending}
+        onPress={() => {
+          restore.reset();
+          void restore.mutateAsync().then(() => summary.refetch());
+        }}
+      >
+        Restore Purchases
+      </Button>
+      {restore.isSuccess && <Text style={[styles.note, { color: colors.hunt }]}>Purchases restored. Membership access may take a moment to verify.</Text>}
+      {restore.isError && <Text style={[styles.note, { color: colors.destructive }]}>Restore failed. Check your connection and retry.</Text>}
+      <View style={styles.links}><Text onPress={() => void Linking.openURL('https://matterrealm.com/terms')} style={[styles.link, { color: colors.primary }]}>Terms</Text><Text onPress={() => void Linking.openURL('https://matterrealm.com/privacy')} style={[styles.link, { color: colors.primary }]}>Privacy</Text><Text onPress={() => void Linking.openURL('https://matterrealm.com/support')} style={[styles.link, { color: colors.primary }]}>Support</Text></View>
     </ScrollView>
   );
 }
@@ -134,12 +167,36 @@ type Badge = RevenueSummary['findBadges'][number];
 type ClaimMutation = ReturnType<typeof useClaimFreeCollectible>;
 type PurchaseMutation = ReturnType<typeof useCreateCollectiblePurchaseIntent>;
 
-function CollectibleAction({ badge, freeClaim, purchaseIntent, colors }: {
+function PurchaseButton({ pkg, purchase, colors, label }: { pkg?: StorePackage; purchase: ReturnType<typeof useRevenueCatPurchase>; colors: ReturnType<typeof useColors>; label: string }) {
+  const [cancelled, setCancelled] = useState(false);
+  const isCurrent = purchase.variables?.pkg.identifier === pkg?.identifier;
+  const error = isCurrent && purchase.isError ? purchase.error : null;
+  const isCancelled = Boolean(error && typeof error === 'object' && 'userCancelled' in error && (error as { userCancelled?: boolean }).userCancelled);
+  return (
+    <View style={{ gap: spacing[1] }}>
+      {isCurrent && purchase.isSuccess && <Text style={[styles.note, { color: colors.primary }]}>Purchase submitted. We’re waiting for verification to update your membership.</Text>}
+      {(cancelled || isCancelled) && <Text style={[styles.note, { color: colors.mutedForeground }]}>Purchase cancelled. No charge was completed.</Text>}
+      {error && !isCancelled && <Text style={[styles.note, { color: colors.destructive }]}>{error instanceof Error ? error.message : 'Purchase could not be completed.'}</Text>}
+      <Button fullWidth variant="outline" disabled={!pkg} loading={isCurrent && purchase.isPending} onPress={() => {
+        setCancelled(false);
+        if (!pkg) return;
+        purchase.mutate({ pkg }, { onError: (cause) => setCancelled(Boolean(cause && typeof cause === 'object' && 'userCancelled' in cause && (cause as { userCancelled?: boolean }).userCancelled)) });
+      }}>{error && !isCancelled ? `Retry ${label}` : label}</Button>
+    </View>
+  );
+}
+
+function CollectibleAction({ badge, freeClaim, purchaseIntent, packages, storePurchase, colors }: {
   badge: Badge;
   freeClaim: ClaimMutation;
   purchaseIntent: PurchaseMutation;
+  packages: StorePackage[];
+  storePurchase: ReturnType<typeof useRevenueCatPurchase>;
   colors: ReturnType<typeof useColors>;
 }) {
+  const [paidOrderId, setPaidOrderId] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [cancelled, setCancelled] = useState(false);
   if (!badge.collectibleId) return <Text style={[styles.planDetail, { color: colors.mutedForeground }]}>No collectible offered</Text>;
   if (badge.ownershipStatus === 'active') return <Text style={[styles.currentBadge, { color: colors.hunt }]}>Already owned</Text>;
   if (badge.saleStatus === 'deactivated') return <Text style={[styles.currentBadge, { color: colors.mutedForeground }]}>Deactivated</Text>;
@@ -153,7 +210,7 @@ function CollectibleAction({ badge, freeClaim, purchaseIntent, colors }: {
     ? freeClaim.variables === badge.id
     : purchaseIntent.variables?.findBadgeId === badge.id;
   const error = isCurrent && mutation.isError ? mutation.error : null;
-  const success = isCurrent && mutation.isSuccess;
+  const success = isFree ? isCurrent && mutation.isSuccess : Boolean(paidOrderId);
 
   if (success) {
     if (isFree) {
@@ -161,7 +218,7 @@ function CollectibleAction({ badge, freeClaim, purchaseIntent, colors }: {
         {freeClaim.data?.alreadyOwned ? 'Already owned' : 'Free collectible claimed'}
       </Text>;
     }
-    return <Text style={[styles.planDetail, { color: colors.primary }]}>Purchase intent created. Payment is pending and no collectible has been added yet.</Text>;
+    return <Text style={[styles.planDetail, { color: colors.primary }]}>Purchase submitted for verification. Payment is pending and no collectible has been added yet.</Text>;
   }
 
   const price = badge.priceMinor == null
@@ -171,18 +228,35 @@ function CollectibleAction({ badge, freeClaim, purchaseIntent, colors }: {
     <View style={{ gap: spacing[2] }}>
       <Text style={[styles.price, { color: isFree ? colors.hunt : colors.primary }]}>{isFree ? 'Free' : price ?? 'Price unavailable'}</Text>
       {error && <Text style={[styles.planDetail, { color: colors.destructive }]}>{error instanceof Error ? error.message : 'Please try again.'}</Text>}
+      {paymentError && <Text style={[styles.planDetail, { color: colors.destructive }]}>{paymentError}</Text>}
+      {cancelled && <Text style={[styles.planDetail, { color: colors.mutedForeground }]}>Purchase cancelled. Your collectible was not added.</Text>}
       <Button
         fullWidth
         variant="outline"
-        loading={isCurrent && mutation.isPending}
+        loading={(isCurrent && mutation.isPending) || (!isFree && storePurchase.isPending)}
         disabled={!isFree && badge.priceMinor == null}
-        onPress={() => isFree
-          ? freeClaim.mutate(badge.id)
-          : purchaseIntent.mutate({ findBadgeId: badge.id, idempotencyKey: crypto.randomUUID() })}
+        onPress={() => {
+          if (isFree) {
+            freeClaim.mutate(badge.id);
+            return;
+          }
+          setPaymentError(null);
+          setCancelled(false);
+          void purchaseIntent.mutateAsync({ findBadgeId: badge.id, idempotencyKey: crypto.randomUUID() })
+            .then((order) => {
+              const pkg = packageForOrder(packages, order.grossMinor, order.currency);
+              if (!pkg) throw new Error('This collectible price is not available in the store. Please try again later.');
+              return storePurchase.mutateAsync({ pkg, orderId: order.orderId }).then(() => setPaidOrderId(order.orderId));
+            })
+            .catch((cause: unknown) => {
+              if (cause && typeof cause === 'object' && 'userCancelled' in cause && (cause as { userCancelled?: boolean }).userCancelled) setCancelled(true);
+              else setPaymentError(cause instanceof Error ? cause.message : 'Purchase could not be completed. Please try again.');
+            });
+        }}
       >
-        {error ? `Retry ${isFree ? 'free claim' : 'Purchase Intent'}` : isFree ? 'Claim Free collectible' : 'Create Purchase Intent'}
+        {error || paymentError ? `Retry ${isFree ? 'free claim' : 'purchase'}` : isFree ? 'Claim Free collectible' : 'Buy collectible'}
       </Button>
-      {!isFree && <Text style={[styles.note, { color: colors.mutedForeground }]}>This only creates a provider-neutral intent. Purchase completion happens through the payment provider.</Text>}
+      {!isFree && <Text style={[styles.note, { color: colors.mutedForeground }]}>A provider-neutral intent and server order are created before checkout. The store purchase is linked to that order and your Collection updates only after provider webhook verification.</Text>}
     </View>
   );
 }
@@ -215,4 +289,6 @@ const styles = StyleSheet.create({
   creditPrice: { fontFamily: fontFamily.bold, fontSize: fontSize.sm, marginTop: spacing[2] },
   note: { fontFamily: fontFamily.regular, fontSize: fontSize.xs, lineHeight: 18, marginTop: spacing[2] },
   error: { borderWidth: 1, borderRadius: radius.lg, padding: spacing[3], gap: spacing[2] },
+  links: { flexDirection: 'row', gap: spacing[4], marginTop: spacing[1] },
+  link: { fontFamily: fontFamily.medium, fontSize: fontSize.xs, textDecorationLine: 'underline' },
 });

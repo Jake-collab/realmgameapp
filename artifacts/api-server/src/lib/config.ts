@@ -22,6 +22,7 @@ const serverEnvironmentSchema = z.object({
   SCHEDULER_INTERVAL_SECONDS: z.coerce.number().int().positive().default(60),
   SCHEDULER_MAINTENANCE_INTERVAL_SECONDS: z.coerce.number().int().positive().default(3600),
   MODERATION_MEDIA_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
+  REVENUECAT_WEBHOOK_AUTHORIZATION: z.string().optional(),
 });
 
 export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema>;
@@ -38,6 +39,9 @@ export function readServerEnvironment(raw: NodeJS.ProcessEnv = process.env): Ser
     }
     if (result.data.MODERATION_AUTOMATION_ENABLED === "true" && !result.data.MODERATION_API_KEY) {
       throw new Error("Production moderation automation requires MODERATION_API_KEY.");
+    }
+    if (!result.data.REVENUECAT_WEBHOOK_AUTHORIZATION || result.data.REVENUECAT_WEBHOOK_AUTHORIZATION.length < 16) {
+      throw new Error("Production requires REVENUECAT_WEBHOOK_AUTHORIZATION with at least 16 characters for verified RevenueCat events.");
     }
   }
   return result.data;
@@ -68,11 +72,13 @@ export function serverReadiness(raw: NodeJS.ProcessEnv = process.env): {
     ? Boolean(env.MODERATION_API_KEY)
     : false;
   const push = Boolean(env.EXPO_ACCESS_TOKEN);
+  const revenueCat = Boolean(env.REVENUECAT_WEBHOOK_AUTHORIZATION && env.REVENUECAT_WEBHOOK_AUTHORIZATION.length >= 16);
   const checks: ReadinessCheck[] = [
     { name: "Supabase trusted access", ...configured(supabase, supabase ? "Server credentials are configured; live connectivity is not tested by this check." : "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for trusted operations.", false) },
     { name: "AI generation", ...configured(ai, ai ? "Provider credentials are configured; generation is still draft-only." : "AI is disabled until AI_API_KEY and AI_MODEL are configured.") },
     { name: "Automated moderation", ...configured(moderation, moderation ? "Automation is configured; human review remains authoritative." : env.MODERATION_AUTOMATION_ENABLED === "true" ? "Automation is enabled but provider credentials are incomplete." : "Manual moderation mode is active.") },
     { name: "Push delivery", ...configured(push, push ? "Expo server credentials are configured; device delivery requires a native build." : "Push delivery is disabled until EXPO_ACCESS_TOKEN is configured.") },
+    { name: "RevenueCat verified events", ...configured(revenueCat, revenueCat ? "Webhook Authorization secret is configured; provider delivery reconciliation remains operational." : "RevenueCat webhook ingestion is disabled until REVENUECAT_WEBHOOK_AUTHORIZATION is configured.") },
     {
       name: "Scheduled jobs",
       status: env.SCHEDULER_ENABLED === "true" && supabase ? "ready" : "missing_config",

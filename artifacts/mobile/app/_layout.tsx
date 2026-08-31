@@ -40,6 +40,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { openNotificationTarget } from '@/features/notifications/deepLinks';
 import { useOfflineLifecycle } from '@/features/offline/hooks/useOfflineLifecycle';
+import { useRevenueCatIdentity } from '@/features/revenue/hooks/useRevenueCat';
 
 // Prevent the native splash from auto-hiding.
 // We will hide it manually once auth state is resolved.
@@ -122,6 +123,7 @@ function RootLayoutNav() {
   useOfflineLifecycle();
   const { user } = useAuthContext();
   usePushDeviceLifecycle(user?.id);
+  useRevenueCatIdentity();
 
   useEffect(() => {
     let removeListener: (() => void) | undefined;
