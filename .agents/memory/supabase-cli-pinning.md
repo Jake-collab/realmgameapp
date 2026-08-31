@@ -36,3 +36,14 @@ candidate run must verify both before interpreting a database-suite result.
 **How to apply:** Check `supabase start --help` for the required flags and
 ensure Docker or Podman is available before treating the disposable suite as a
 product regression.
+
+Replit's nested Docker runtime can start the Supabase Postgres container but
+reject Docker health-check execs with a `setns` runtime error, preventing Auth
+and the other local services from becoming reachable.
+
+**Why:** A successful Postgres initialization is not equivalent to a runnable
+Supabase stack when nested container exec is restricted.
+
+**How to apply:** Keep production read-only and use the repository's GitHub
+Actions disposable-database job for authoritative connected verification when
+the Replit Docker runtime cannot execute container health checks.
