@@ -1,0 +1,81 @@
+The Git panel shows PUSH_REJECTED even after I pressed Pull and then Push.
+
+The remote is origin/main, and Replit says:
+“The push was rejected by the remote. This is usually because the remote has commits that aren't in the local repository.”
+
+Current Git UI also shows:
+- origin/main
+- 126 commits not pushed to remote
+- last fetched just now
+- no uncommitted changes
+
+Please safely reconcile the local branch with origin/main WITHOUT losing any of the current Replit Agent commits and WITHOUT force-pushing.
+
+Do this carefully:
+
+1. Inspect:
+   - git status
+   - current branch
+   - git remote -v
+   - git log --oneline --decorate --graph --all for the relevant recent history
+   - how far local HEAD is ahead/behind origin/main
+
+2. Fetch origin.
+
+3. Determine whether the safest operation is:
+   - rebase local commits onto origin/main, or
+   - merge origin/main into the current branch.
+
+Prefer a clean rebase if safe, but do not rewrite or discard work if there is any uncertainty.
+
+4. If there are conflicts:
+   - resolve them conservatively
+   - preserve the current Stage 2 verification changes
+   - preserve all current application work
+   - do not delete remote changes just to make the merge succeed
+
+5. After reconciliation, run:
+   - git status
+   - the relevant Stage 2 workflow/preflight checks that do not require Docker
+   - confirm the five Stage 2 verification files are still present and correct
+
+6. Then push normally to origin/main.
+
+DO NOT:
+- use git push --force
+- use git push --force-with-lease
+- reset --hard to origin/main
+- discard the 126 local commits
+- delete or overwrite the remote branch
+- continue Stage 3 during this task
+
+At the end, report:
+
+GIT RECONCILIATION STATUS:
+PASS / FAIL
+
+LOCAL BRANCH:
+[name]
+
+REMOTE BRANCH:
+origin/main
+
+LOCAL AHEAD:
+[number]
+
+LOCAL BEHIND:
+[number]
+
+METHOD USED:
+rebase / merge / other
+
+CONFLICTS:
+[list or NONE]
+
+PUSH:
+PASS / FAIL
+
+STAGE 2 VERIFICATION FILES PRESERVED:
+PASS / FAIL
+
+If the push cannot be completed safely, stop and tell me the exact blocker instead of forcing it.
