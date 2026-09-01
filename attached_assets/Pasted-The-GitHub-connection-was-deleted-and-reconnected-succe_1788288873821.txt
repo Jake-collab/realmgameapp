@@ -1,0 +1,80 @@
+The GitHub connection was deleted and reconnected successfully in Replit Settings, but Push is STILL rejected.
+
+The repository history has already been verified as safe:
+- branch: main
+- origin/main
+- local ahead: 127 commits
+- local behind: 0
+- no conflicts
+- no rebase/merge needed
+- do NOT force-push
+
+The previous terminal-level push error was:
+
+remote: Invalid username or token.
+Password authentication is not supported for Git operations.
+fatal: Authentication failed for 'https://github.com/Jake-collab/realmgameapp.git/'
+
+I have now disconnected and reauthorized GitHub in the Replit UI, but the repo still appears to be using invalid/stale Git credentials.
+
+Please diagnose and FIX the repository authentication configuration without asking me to paste a GitHub token into chat.
+
+Inspect:
+
+1. git remote -v
+2. git config --show-origin --get-regexp 'credential|remote\.origin'
+3. current credential helper configuration
+4. whether origin contains embedded/stale credentials
+5. whether this repo is using an old HTTPS token instead of Replit's current GitHub OAuth connection
+6. whether Replit's connected GitHub credential can actually authorize writes to Jake-collab/realmgameapp
+7. whether the GitHub authorization has repository write permission
+
+If the origin URL contains stale credentials, replace it with the clean canonical remote:
+
+https://github.com/Jake-collab/realmgameapp.git
+
+Then configure/use Replit's current authenticated GitHub connection through the supported Replit credential mechanism.
+
+DO NOT:
+- ask me to paste a personal access token into chat
+- create a new repository
+- change branches
+- reset commits
+- rebase
+- merge unnecessarily
+- force push
+- discard any of the 127 local commits
+- continue Stage 3
+
+After fixing authentication, attempt ONE normal:
+
+git push origin main
+
+Then report exactly:
+
+GITHUB CONNECTION:
+PASS / FAIL
+
+REMOTE URL:
+[redact any credentials if present]
+
+AUTH METHOD:
+[Replit OAuth / credential helper / other]
+
+WRITE PERMISSION TO REPOSITORY:
+PASS / FAIL
+
+LOCAL AHEAD:
+[number]
+
+LOCAL BEHIND:
+[number]
+
+PUSH RESULT:
+PASS / FAIL
+
+If PUSH FAILS, include the exact terminal error returned by GitHub.
+
+If the blocker is that the Replit GitHub OAuth connection lacks repository write permission, give me the exact UI path in GitHub/Replit to grant that permission.
+
+Do not make any unrelated code changes.
