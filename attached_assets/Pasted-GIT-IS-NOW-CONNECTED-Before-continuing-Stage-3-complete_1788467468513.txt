@@ -1,0 +1,347 @@
+GIT IS NOW CONNECTED.
+
+Before continuing Stage 3, complete the final Stage 2 verification through GitHub Actions and do not skip any required connected test.
+
+CURRENT STATE:
+
+- Stage 2 implementation previously passed 69/70 requirements locally/read-only.
+- The only remaining unverified requirement was the connected disposable Supabase verification suite.
+- Replit's nested Docker environment could not execute it because of setns/container health-check failures.
+- The authoritative GitHub Actions workflow was prepared at:
+
+.github/workflows/quest-database.yml
+
+Workflow name:
+
+Quest database contracts
+
+- The connected suites now include:
+  - RPC authorization
+  - RLS
+  - cross-user financial privacy
+  - membership authority
+  - Drop Credit authority
+  - collectible ownership authority
+  - refund/reversal authority
+  - seller ledger authority
+  - idempotency
+  - final weekly Drop allowance concurrency
+  - final Drop Credit concurrency
+  - final Find-slot concurrency
+  - final collectible quantity concurrency
+  - QVAC connected tests
+  - QAVS connected tests
+  - Hunt security connected tests
+  - Stage 2 revenue/security connected tests
+
+==================================================
+PHASE A — PUSH CURRENT VERIFICATION WORK
+==================================================
+
+1. Confirm the current branch is main.
+
+2. Confirm origin/main is the correct remote.
+
+3. Confirm all required Stage 2 verification changes are committed.
+
+4. Confirm these files are present:
+
+- .github/workflows/quest-database.yml
+- artifacts/mobile/__tests__/membershipAllowancesCollectibles.integration.test.ts
+- artifacts/mobile/__tests__/questDatabaseMigrations.test.ts
+- artifacts/mobile/docs/QUEST_LIVE_TESTING.md
+- artifacts/mobile/scripts/quest-database-check.sh
+
+5. Push the current main branch normally to GitHub.
+
+DO NOT:
+- force push
+- reset
+- rewrite migration history
+- modify migrations 001–073
+- continue Stage 3 before Stage 2 verification passes
+
+==================================================
+PHASE B — RUN AUTHORITATIVE GITHUB ACTIONS TEST
+==================================================
+
+After the push succeeds:
+
+Run or trigger the GitHub Actions workflow:
+
+Quest database contracts
+
+Use:
+
+Supabase CLI candidate version:
+2.116.0
+
+The workflow must run on the newly pushed commit.
+
+The following jobs must succeed:
+
+- Quest RPC and RLS contracts
+- Candidate Supabase CLI compatibility
+
+The following core workflow steps must succeed:
+
+- Test migration filename preflight
+- Set up Supabase CLI
+- Apply migrations and run all Stage 2 connected contracts
+
+A candidate incompatibility/reporting job may be skipped when compatibility succeeds if that is the workflow's intended behavior.
+
+==================================================
+PHASE C — VERIFY RESULTS
+==================================================
+
+Do not rely only on GitHub's overall green icon.
+
+Inspect the actual connected test output and confirm that the disposable Supabase environment executed the required connected assertions.
+
+Confirm specifically:
+
+- RPC authorization passed
+- RLS passed
+- cross-user financial privacy passed
+- membership authority passed
+- Drop Credit authority passed
+- collectible ownership authority passed
+- refund/reversal authority passed
+- seller ledger authority passed
+- seller-only ledger visibility passed
+- buyer denial passed
+- refund accounting passed
+- idempotency passed
+- weekly Drop final-slot race passed
+- final Drop Credit race passed
+- final collectible quantity race passed
+- final Find-slot race passed
+- QVAC connected checks passed
+- QAVS connected checks passed
+- Hunt security connected checks passed
+- Stage 2 revenue/security connected suite passed
+
+Also rerun/confirm current:
+
+- Mobile tests
+- API tests
+- Admin tests
+- TypeScript checks
+- migration filename preflight
+
+==================================================
+PHASE D — FINAL STAGE 2 REPORT
+==================================================
+
+Report exactly:
+
+STAGE 2 FINAL AUTHORITATIVE VERIFICATION
+
+GITHUB PUSH:
+PASS / FAIL
+
+GITHUB WORKFLOW:
+PASS / FAIL
+
+WORKFLOW COMMIT:
+[commit SHA]
+
+QUEST RPC / RLS:
+PASS / FAIL
+
+CROSS-USER FINANCIAL PRIVACY:
+PASS / FAIL
+
+MEMBERSHIP AUTHORITY:
+PASS / FAIL
+
+DROP CREDIT AUTHORITY:
+PASS / FAIL
+
+COLLECTIBLE OWNERSHIP:
+PASS / FAIL
+
+REFUNDS / REVERSALS:
+PASS / FAIL
+
+SELLER LEDGER:
+PASS / FAIL
+
+IDEMPOTENCY:
+PASS / FAIL
+
+WEEKLY DROP CONCURRENCY:
+PASS / FAIL
+
+DROP CREDIT CONCURRENCY:
+PASS / FAIL
+
+FIND-SLOT CONCURRENCY:
+PASS / FAIL
+
+COLLECTIBLE-QUANTITY CONCURRENCY:
+PASS / FAIL
+
+QVAC CONNECTED:
+PASS / FAIL
+
+QAVS CONNECTED:
+PASS / FAIL
+
+HUNT SECURITY CONNECTED:
+PASS / FAIL
+
+MIGRATIONS 001–073 UNMODIFIED:
+PASS / FAIL
+
+STAGE 2 MIGRATION PARITY 001–073:
+PASS / FAIL
+
+MOBILE TESTS:
+PASS / FAIL
+[count]
+
+API TESTS:
+PASS / FAIL
+[count]
+
+ADMIN TESTS:
+PASS / FAIL
+[count]
+
+STAGE 2 REQUIREMENTS VERIFIED:
+X / 70
+
+TRUE STAGE 2 BLOCKERS:
+[list or NONE]
+
+If and only if everything passes, end:
+
+STAGE 2 FINAL VERIFICATION: 70 / 70 PASS
+STAGE 2 IS COMPLETELY VERIFIED
+
+==================================================
+PHASE E — ONLY AFTER 70/70, RESUME STAGE 3
+==================================================
+
+If Stage 2 reaches 70/70 PASS, immediately resume the existing Stage 3 payment implementation task from its current state.
+
+Do NOT redesign Stage 1 or Stage 2.
+
+Stage 3 must continue with:
+
+1. RevenueCat for Apple/Google native digital purchases where appropriate.
+2. Stripe / Stripe Connect for eligible web checkout, seller onboarding, marketplace payouts, refunds, disputes, and reconciliation.
+3. Provider-neutral internal Stage 2 architecture remains canonical.
+
+Before implementing additional payment code, inspect the current Stage 3 work already present, including migration 074 and any RevenueCat-related changes.
+
+Do not duplicate already-written Stage 3 code.
+
+==================================================
+STAGE 3 ORDER
+==================================================
+
+Continue in this order:
+
+1. RevenueCat connection and webhook verification.
+2. Apple product architecture.
+3. Google Play product architecture.
+4. Worlds Membership:
+   - $4.99/month
+   - $44.99/year
+5. Extra Drop Credits:
+   - $1.99 → 5
+   - $4.99 → 15
+   - $9.99 → 35
+6. Trusted server-side purchase verification.
+7. Trusted provider events/webhooks.
+8. Refund/revocation handling.
+9. Paid collectible payment-routing decision.
+10. Stripe Connect seller onboarding.
+11. Seller payable/payout integration.
+12. Refund/dispute/reconciliation integration.
+13. Admin payment controls.
+14. Signed-build payment testing.
+15. Final Stage 3 audit.
+
+Do NOT start Mapbox.
+
+==================================================
+IMPORTANT — PAID COLLECTIBLES
+==================================================
+
+Do not assume RevenueCat automatically solves creator-defined collectible pricing.
+
+Membership and fixed Drop Credit products map cleanly to predefined store products.
+
+Creator-set paid collectibles may require a different compliant architecture.
+
+Before implementing paid collectible checkout:
+
+- analyze current Apple requirements
+- analyze current Google Play requirements
+- analyze RevenueCat capabilities
+- analyze Stripe/Connect eligibility
+- preserve arbitrary creator pricing if legally and technically possible
+
+If native app-store billing cannot reasonably support arbitrary creator-defined prices, report the exact constraint before changing the product model.
+
+Do not invent a store-policy workaround.
+
+==================================================
+OWNER INPUTS
+==================================================
+
+When external setup is required, stop at the appropriate point and ask me for ONE provider/action at a time.
+
+Use this format:
+
+ITEM:
+[required item]
+
+PROVIDER:
+RevenueCat / Apple / Google / Stripe
+
+WHERE TO GET IT:
+[exact click path]
+
+VALUE TYPE:
+secret / non-secret ID / configuration action
+
+WHERE IT GOES:
+[exact environment/configuration location]
+
+WHY:
+[short explanation]
+
+Never print existing secrets.
+
+Do not ask me to paste secrets into chat if Replit provides a secure secrets field.
+
+==================================================
+STAGE 3 CURRENT GATE
+==================================================
+
+If RevenueCat is already connected, inspect the connection and continue from the next missing requirement.
+
+For the RevenueCat webhook:
+
+- identify the exact Worlds production webhook URL
+- use REVENUECAT_WEBHOOK_AUTHORIZATION as the server-side shared authorization value
+- do not expose that value
+- support Sandbox + Production testing appropriately
+- make webhook processing idempotent
+- reject invalid authorization
+- do not grant purchases based only on client state
+
+If Stage 2 passes and Stage 3 can resume, report:
+
+STAGE 2 FINAL VERIFICATION: 70 / 70 PASS
+STAGE 2 IS COMPLETELY VERIFIED
+STAGE 3 RESUMED
+
+Then tell me the FIRST external setup item I need to complete.
+
+Do not start Mapbox.
