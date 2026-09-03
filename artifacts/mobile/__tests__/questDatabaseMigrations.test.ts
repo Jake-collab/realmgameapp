@@ -360,7 +360,7 @@ describe("Supabase migration filename preflight", () => {
     );
 
     expect(checkSource).toContain(
-      'run_supabase start --ignore-health-check > "$START_OUTPUT_FILE"',
+      'run_supabase start --ignore-health-check --output json > "$START_OUTPUT_FILE"',
     );
     expect(checkSource).not.toContain("run_supabase status");
     expect(checkSource).toContain(

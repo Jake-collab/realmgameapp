@@ -107,7 +107,7 @@ SUPABASE_STARTED=true
 # service is still completing first-run setup. Ask the successful start command
 # for its local credentials directly, then verify the Auth endpoint ourselves
 # below and fail closed if it never becomes available.
-run_supabase start --ignore-health-check > "$START_OUTPUT_FILE"
+run_supabase start --ignore-health-check --output json > "$START_OUTPUT_FILE"
 
 read_local_value() {
   node -e '
