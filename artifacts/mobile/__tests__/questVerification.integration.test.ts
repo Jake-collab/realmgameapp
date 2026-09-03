@@ -418,7 +418,11 @@ describeIntegration("Quest method verification against disposable Supabase", () 
     );
     const approved = await admin
       .from("proof_submissions")
-      .update({ status: "approved", moderation_status: "approved" })
+      .update({
+        status: "approved",
+        moderation_status: "approved",
+        moderation_review_required: false,
+      })
       .eq("id", approvedWithoutMedia.proofId);
     expect(approved.error).toBeNull();
 
@@ -437,7 +441,11 @@ describeIntegration("Quest method verification against disposable Supabase", () 
 
     const approvedAttachedProof = await admin
       .from("proof_submissions")
-      .update({ status: "approved", moderation_status: "approved" })
+      .update({
+        status: "approved",
+        moderation_status: "approved",
+        moderation_review_required: false,
+      })
       .eq("id", pendingWithMedia.proofId);
     expect(approvedAttachedProof.error).toBeNull();
 
