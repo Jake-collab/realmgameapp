@@ -73,11 +73,13 @@ BEGIN
 
   IF v_credits IS NOT NULL THEN
     IF upper(COALESCE(p_currency, '')) <> 'USD' OR p_amount_minor IS NULL
-      OR p_amount_minor <> CASE p_product_id
-        WHEN 'drop_credits_5' THEN 199
-        WHEN 'drop_credits_15' THEN 499
-        ELSE 999
-      END THEN
+      OR p_amount_minor <> (
+        CASE p_product_id
+          WHEN 'drop_credits_5' THEN 199
+          WHEN 'drop_credits_15' THEN 499
+          ELSE 999
+        END
+      ) THEN
       RAISE EXCEPTION 'revenuecat_product_amount_mismatch';
     END IF;
     IF p_event_type IN ('INITIAL_PURCHASE', 'NON_RENEWING_PURCHASE') THEN
