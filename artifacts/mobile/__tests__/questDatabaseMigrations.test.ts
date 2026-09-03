@@ -360,9 +360,11 @@ describe("Supabase migration filename preflight", () => {
     );
 
     expect(checkSource).toContain(
-      'run_supabase start --ignore-health-check --output-format json --output json > "$START_OUTPUT_FILE"',
+      'run_supabase start --ignore-health-check >/dev/null',
     );
-    expect(checkSource).not.toContain("run_supabase status");
+    expect(checkSource).toContain(
+      'run_supabase status --output json > "$START_OUTPUT_FILE"',
+    );
     expect(checkSource).toContain(
       'curl --fail --silent --show-error "$API_URL/auth/v1/health"',
     );
