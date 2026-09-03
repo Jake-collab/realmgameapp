@@ -150,6 +150,15 @@ async function createCameraProof(
   attachMedia: boolean,
 ): Promise<{ proofId: string; mediaId: string }> {
   const suffix = uniqueSuffix();
+  const session = await client.rpc("issue_quest_proof_verification_session", {
+    p_participation_id: participationId,
+    p_user_id: owner.id,
+    p_evidence_kind: "photo",
+  });
+  if (session.error || !session.data) {
+    throw session.error ?? new Error("Could not create camera verification session.");
+  }
+
   const media = await admin
     .from("media_assets")
     .insert({
@@ -179,6 +188,7 @@ async function createCameraProof(
       status: "submitted",
       moderation_status: "pending",
       submitted_at: new Date().toISOString(),
+      verification_session_id: session.data,
     })
     .select("id")
     .single();
