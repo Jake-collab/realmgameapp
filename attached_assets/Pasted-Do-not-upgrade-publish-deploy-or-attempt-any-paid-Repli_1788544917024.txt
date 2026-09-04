@@ -1,0 +1,101 @@
+Do not upgrade, publish, deploy, or attempt any paid Replit integration.
+
+Stage 1 is complete.
+Stage 2 is complete and 70/70 verified.
+Stage 3 free-mode/local implementation has now reached the external-provider boundary.
+
+Create the definitive external-connection checklist for completing Stage 3.
+
+Audit the CURRENT repository and configuration and report only what remains externally.
+
+Cover these systems separately:
+
+1. RevenueCat
+2. Public Worlds API/backend deployment
+3. Apple App Store Connect
+4. Google Play Console
+5. Stripe
+6. Stripe Connect
+
+For each system report:
+
+STATUS:
+CONNECTED / PARTIALLY CONNECTED / NOT CONNECTED
+
+ALREADY IMPLEMENTED:
+[current code/configuration already present]
+
+OWNER ACTIONS REMAINING:
+[exact external account/dashboard actions]
+
+IDS / CONFIGURATION REMAINING:
+[list without printing secrets]
+
+CODE THAT CAN ONLY BE COMPLETED AFTER CONNECTION:
+[list]
+
+LIVE TESTING THAT CAN ONLY BE COMPLETED AFTER CONNECTION:
+[list]
+
+DEPENDS ON PUBLIC API:
+YES / NO
+
+DEPENDS ON SIGNED MOBILE BUILD:
+YES / NO
+
+DEPENDS ON REPLIT PAID FEATURE:
+YES / NO / ONLY IF USING REPLIT'S BUILT-IN CONNECTOR
+
+IMPORTANT:
+
+For Stripe, explicitly determine whether the existing code can be connected manually using Stripe API credentials stored securely in environment variables WITHOUT using Replit's paid one-click Stripe integration.
+
+Do not expose or request secret values during this audit.
+
+For RevenueCat, distinguish:
+- provider connection
+- webhook configuration
+- public webhook delivery
+- signed-device purchase validation
+
+For Apple and Google, list the exact products still needing creation for:
+- $4.99 monthly Worlds Membership
+- $44.99 yearly Worlds Membership
+- $1.99 → 5 Drop Credits
+- $4.99 → 15 Drop Credits
+- $9.99 → 35 Drop Credits
+
+For Stripe Connect, distinguish:
+- Stripe platform connection
+- Connect activation
+- seller onboarding
+- connected accounts
+- payouts
+- refunds/disputes
+- reconciliation
+
+Also identify anything ELSE required to complete Stage 3 that is not in those six systems.
+
+Do not change code.
+Do not start Stage 4/Mapbox.
+Do not consume deployment credits.
+
+End with:
+
+STAGE 1:
+COMPLETE / INCOMPLETE
+
+STAGE 2:
+COMPLETE / INCOMPLETE
+
+STAGE 3 LOCAL IMPLEMENTATION:
+COMPLETE / INCOMPLETE
+
+STAGE 3 EXTERNAL CONNECTIONS REMAINING:
+[number]
+
+STAGE 3 LIVE VALIDATION REMAINING:
+[list]
+
+NEXT SINGLE RECOMMENDED OWNER ACTION:
+[action]
