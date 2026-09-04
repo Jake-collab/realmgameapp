@@ -1,0 +1,369 @@
+Continue Stage 3 in FREE MODE ONLY.
+
+IMPORTANT:
+Do NOT publish, republish, deploy, or trigger any Replit action that consumes deployment/publishing credits.
+Do NOT start Mapbox.
+Do NOT redo Stage 2.
+Do NOT modify migrations 001–073.
+Preserve migrations 074–075.
+
+CURRENT STATE:
+- Stage 2 is fully verified 70/70.
+- RevenueCat is connected.
+- RevenueCat webhook code exists.
+- REVENUECAT_WEBHOOK_AUTHORIZATION is configured server-side.
+- Live RevenueCat webhook delivery is PENDING API PUBLICATION.
+- Stripe has NOT been connected yet.
+- Stripe Connect has NOT been started yet.
+
+GOAL:
+Finish every Stage 3 implementation, audit, code path, configuration preparation, provider mapping, test, and admin/security task that can be completed WITHOUT a publicly deployed API and WITHOUT consuming Replit deployment credits.
+
+==================================================
+PHASE 1 — CURRENT STAGE 3 AUDIT
+==================================================
+
+Inspect the current Stage 3 work and report exactly what is already implemented versus still pending.
+
+Verify:
+- RevenueCat client integration state
+- RevenueCat server verification path
+- RevenueCat webhook handler
+- webhook authorization checking
+- idempotency
+- membership product mapping architecture
+- Drop Credit product mapping architecture
+- refund/revocation architecture
+- seller/payment provider-neutral architecture
+- migration 074 purpose/state
+- migration 075 purpose/state
+- Admin payment/reconciliation readiness
+- current Stripe code, if any
+- current Apple/Google configuration placeholders, if any
+
+Do not make duplicate implementations.
+
+==================================================
+PHASE 2 — REVENUECAT FREE-MODE COMPLETION
+==================================================
+
+Complete everything possible locally for RevenueCat.
+
+Implement/verify:
+- trusted server-side purchase event normalization
+- client purchase state never directly grants entitlements
+- idempotent processing
+- membership mapping
+- Drop Credit mapping
+- refund/revocation mapping
+- sandbox vs production separation
+- provider transaction/event IDs
+- error handling
+- retry-safe behavior
+- Admin visibility
+- unit/integration tests that do not require live webhook delivery
+
+Mark only live external delivery validation as:
+
+PENDING API PUBLICATION
+
+Do not attempt to publish.
+
+==================================================
+PHASE 3 — APPLE PRODUCT ARCHITECTURE
+==================================================
+
+Prepare the full Apple-side architecture without requiring live App Store publication.
+
+Define/configure the internal mappings for:
+
+Worlds Membership:
+- monthly $4.99
+- yearly $44.99
+
+Extra Drop Credits:
+- $1.99 → 5
+- $4.99 → 15
+- $9.99 → 35
+
+Prepare:
+- canonical internal product IDs
+- Apple product-ID mapping configuration
+- entitlement/subscription mapping
+- consumable mapping
+- transaction verification expectations
+- refund/revocation handling
+- environment separation
+
+Do NOT invent production App Store Connect IDs if they do not exist.
+
+If owner action is required in App Store Connect, record it as pending.
+
+==================================================
+PHASE 4 — GOOGLE PLAY PRODUCT ARCHITECTURE
+==================================================
+
+Prepare the Google Play architecture for:
+
+Worlds Membership:
+- monthly $4.99
+- yearly $44.99
+
+Extra Drop Credits:
+- $1.99 → 5
+- $4.99 → 15
+- $9.99 → 35
+
+Prepare:
+- internal product mapping
+- subscription/base-plan mapping
+- one-time product mapping
+- purchase token/order identity
+- refund/revocation mapping
+- acknowledgement/consumption requirements
+- sandbox/test environment separation
+
+Do NOT invent live Play Console IDs.
+
+Record required owner actions as pending.
+
+==================================================
+PHASE 5 — PAID COLLECTIBLE PAYMENT DESIGN
+==================================================
+
+Do NOT assume RevenueCat alone solves creator-set arbitrary pricing.
+
+Complete the Stage 3 architecture analysis for user-created paid collectibles.
+
+Determine the compliant routing model considering:
+- Apple native digital-goods rules
+- Google Play digital-goods rules
+- RevenueCat capabilities
+- Stripe / Stripe Connect
+- creator-defined arbitrary prices
+- marketplace seller payout requirements
+
+Do not silently change the Stage 2 product rule.
+
+If arbitrary creator pricing is incompatible with a native-store route, document the exact constraint and preserve a configurable compliant routing model.
+
+Do not fake a completed live payment path.
+
+==================================================
+PHASE 6 — STRIPE / STRIPE CONNECT PREPARATION
+==================================================
+
+Stripe is NOT connected yet.
+
+Prepare everything possible BEFORE connection.
+
+Audit whether any Stripe code/config already exists.
+
+If none exists, create only provider-safe infrastructure that does not require secrets, including:
+- Stripe provider adapter interface
+- payment routing hooks
+- marketplace transaction mapping
+- Connect seller-account status mapping
+- payout state mapping
+- refund/dispute event normalization
+- webhook event type mapping
+- reconciliation model
+- Admin display support
+- environment variable definitions with no secret values
+- tests using mocks/fakes where appropriate
+
+Do NOT connect Stripe yet unless the connection can be completed without deployment/publishing credits and without requiring me to expose secrets in chat.
+
+Do NOT create fake secret values.
+
+==================================================
+PHASE 7 — STRIPE CONNECT SELLER ARCHITECTURE
+==================================================
+
+Prepare the seller lifecycle:
+
+- not_onboarded
+- onboarding_required
+- pending
+- active
+- restricted
+- disabled
+
+Prepare:
+- account ID mapping
+- onboarding session creation interface
+- account status sync interface
+- payout-enabled state
+- payable balance mapping
+- transfer/payout mapping
+- refund/dispute reversal handling
+- Admin visibility
+- cross-user authorization tests
+
+Do not collect identity documents or bank details directly in Worlds.
+
+==================================================
+PHASE 8 — REFUNDS / DISPUTES / RECONCILIATION
+==================================================
+
+Finish all provider-neutral implementation possible locally for:
+
+- full refund
+- partial refund
+- revocation
+- dispute opened
+- dispute won
+- dispute lost
+- chargeback
+- payout failure
+- seller adjustment
+- reconciliation mismatch
+
+Ensure:
+- Find Badge remains
+- paid collectible ownership revokes on full refund/reversal
+- seller payable adjusts correctly
+- audit history remains
+- duplicate provider events remain idempotent
+
+==================================================
+PHASE 9 — ADMIN / SECURITY
+==================================================
+
+Verify or complete:
+
+- payment provider shown per transaction
+- external transaction IDs
+- membership purchase state
+- Drop Credit purchase state
+- collectible purchase state
+- refund/dispute state
+- seller onboarding state
+- seller payable/payout state
+- reconciliation issues
+- no provider secrets exposed
+
+Security:
+- user purchase routes require auth
+- seller routes only allow self-management
+- Admin routes require Admin auth
+- webhook handlers rely on provider verification
+- clients cannot self-grant any paid state
+
+==================================================
+PHASE 10 — TESTING
+==================================================
+
+Run every Stage 3 test possible without live deployment.
+
+Include:
+- mobile tests
+- API tests
+- Admin tests
+- TypeScript checks
+- RevenueCat normalization tests
+- membership grant/revoke tests
+- Drop Credit grant/reversal tests
+- duplicate event/idempotency tests
+- collectible transaction tests
+- seller ledger tests
+- refund/dispute tests
+- cross-user financial privacy tests
+- Stage 2 regression tests
+- QVAC
+- QAVS
+- Hunt security
+
+Do not claim live provider validation if it has not occurred.
+
+==================================================
+PHASE 11 — FREE-MODE STAGE 3 FINAL REPORT
+==================================================
+
+Report exactly:
+
+STAGE 3 FREE-MODE IMPLEMENTATION STATUS:
+PASS / PARTIAL / FAIL
+
+REVENUECAT LOCAL IMPLEMENTATION:
+PASS / FAIL
+
+REVENUECAT LIVE WEBHOOK DELIVERY:
+PENDING API PUBLICATION / PASS / FAIL
+
+APPLE ARCHITECTURE:
+PASS / FAIL
+
+APPLE OWNER SETUP STILL REQUIRED:
+[list or NONE]
+
+GOOGLE ARCHITECTURE:
+PASS / FAIL
+
+GOOGLE OWNER SETUP STILL REQUIRED:
+[list or NONE]
+
+PAID COLLECTIBLE PAYMENT DESIGN:
+PASS / FAIL / PENDING PROVIDER DECISION
+
+STRIPE CONNECTED:
+YES / NO
+
+STRIPE PREPARATION:
+PASS / FAIL
+
+STRIPE CONNECT PREPARATION:
+PASS / FAIL
+
+SELLER ONBOARDING ARCHITECTURE:
+PASS / FAIL
+
+REFUNDS / DISPUTES:
+PASS / FAIL
+
+RECONCILIATION:
+PASS / FAIL
+
+ADMIN:
+PASS / FAIL
+
+RLS / SECURITY:
+PASS / FAIL
+
+MIGRATIONS:
+[list]
+
+MOBILE TESTS:
+PASS / FAIL
+[count]
+
+API TESTS:
+PASS / FAIL
+[count]
+
+ADMIN TESTS:
+PASS / FAIL
+[count]
+
+CONNECTED LIVE PROVIDER TESTS:
+PENDING / PASS / FAIL
+
+REMAINING ITEMS THAT REQUIRE PUBLIC DEPLOYMENT:
+[list]
+
+REMAINING ITEMS THAT REQUIRE OWNER PROVIDER SETUP:
+[list]
+
+REMAINING ITEMS THAT REQUIRE STRIPE CONNECTION:
+[list]
+
+TRUE BLOCKERS TO FULL STAGE 3 COMPLETION:
+[list or NONE]
+
+Do not attempt deployment.
+
+If all non-deployment Stage 3 work is complete, end exactly:
+
+STAGE 3 FREE-MODE IMPLEMENTATION: COMPLETE
+LIVE PROVIDER VALIDATION REMAINS PENDING
+DO NOT START MAPBOX
