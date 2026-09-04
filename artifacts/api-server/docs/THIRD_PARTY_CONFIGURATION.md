@@ -24,8 +24,9 @@ send the exact server-only `REVENUECAT_WEBHOOK_AUTHORIZATION` value in its
 grant: verified provider events call the trusted Supabase adapter, which writes
 the existing immutable membership, credit, marketplace, seller, and audit
 ledgers. Publish migrations 074–075 and the updated API before enabling this
-webhook. App Store and Play Store products still need to be synced after the
-first signed/TestFlight builds; the configured Test Store supports preview
+webhook. Live RevenueCat webhook delivery testing is **PENDING API
+PUBLICATION**. App Store and Play Store products still need to be synced after
+the first signed/TestFlight builds; the configured Test Store supports preview
 purchase testing.
 
 ## Moderation clarification
