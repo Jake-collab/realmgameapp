@@ -22,6 +22,7 @@ async function buildAll() {
       path.resolve(artifactDir, "src/lib/notifications.test.ts"),
       path.resolve(artifactDir, "src/lib/supabase-admin.test.ts"),
       path.resolve(artifactDir, "src/lib/moderation-media-storage.integration.test.ts"),
+      path.resolve(artifactDir, "src/payments/payments.test.ts"),
       path.resolve(artifactDir, "src/routes/admin.authorization.test.ts"),
     ],
     platform: "node",

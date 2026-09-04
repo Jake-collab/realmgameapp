@@ -107,8 +107,10 @@ export type RevenueAdminData = {
   configuration: Array<{ key: string; value: Record<string, unknown>; effective_at: string }>;
   allowanceConfiguration: Array<{ planCode: string; allowanceKind: string; limit: number; period: string }>;
   metrics: { activeMemberships: number; openTransactions: number; sellerPayableByCurrency: Record<string, number> };
-  transactions: Array<Record<string, unknown> & { events: Array<{ id: string; eventType: string; amountMinor: number; createdAt: string }> }>;
+  transactions: Array<Record<string, unknown> & { events: Array<{ id: string; eventType: string; amountMinor: number; providerName: string | null; providerEventId: string | null; createdAt: string }> }>;
   sellers: Array<Record<string, unknown>>;
+  externalEvents: Array<{ id: string; providerName: string; providerEventId: string; eventKind: string; subjectType: string; subjectId: string; receivedAt: string }>;
+  reconciliation: { receivedEvents: number; providers: Record<string, number>; latestReceivedAt: string | null };
   suspiciousActivity: Array<{ orderId: string; state: string; eventCount: number; createdAt: string; reason: string }>;
   auditEvents: Array<Record<string, unknown>>;
   generatedAt: string;

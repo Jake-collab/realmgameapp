@@ -274,7 +274,7 @@ describe("admin moderation authorization", () => {
         ]));
         return;
       }
-      if (/^\/rest\/v1\/(membership_plans|drop_credit_packs|revenue_configuration|marketplace_orders|seller_profiles|revenue_audit_events|marketplace_transaction_events|membership_entitlements|seller_balance_ledger)/.test(req.url ?? "")) {
+      if (/^\/rest\/v1\/(membership_plans|drop_credit_packs|revenue_configuration|marketplace_orders|seller_profiles|revenue_audit_events|marketplace_transaction_events|revenue_external_events|membership_entitlements|seller_balance_ledger)/.test(req.url ?? "")) {
         if (req.headers.prefer === "count=exact") res.setHeader("content-range", "0-0/0");
         res.end("[]");
         return;
@@ -459,12 +459,16 @@ describe("admin moderation authorization", () => {
     assert.equal(revenue.status, 200);
     const revenueBody = await revenue.json() as {
       allowanceConfiguration: Array<{ planCode: string; allowanceKind: string; limit: number; period: string }>;
+      externalEvents: unknown[];
+      reconciliation: { receivedEvents: number; providers: Record<string, number>; latestReceivedAt: string | null };
     };
     assert.deepEqual(revenueBody.allowanceConfiguration, [
       { planCode: "free", allowanceKind: "quest_personalized_daily", limit: 7, period: "iso_week_utc" },
       { planCode: "worlds_monthly", allowanceKind: "quest_personalized_daily", limit: 3, period: "utc_day" },
       { planCode: "worlds_yearly", allowanceKind: "hunt_drop_creation_weekly", limit: 9, period: "iso_week_utc" },
     ]);
+    assert.deepEqual(revenueBody.externalEvents, []);
+    assert.deepEqual(revenueBody.reconciliation, { receivedEvents: 0, providers: {}, latestReceivedAt: null });
   });
 
   it("keeps moderation settings writes restricted and leaves settings unchanged on denial", async () => {

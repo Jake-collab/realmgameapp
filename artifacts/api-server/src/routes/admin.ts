@@ -522,15 +522,16 @@ router.get("/admin/revenue", requireAdmin("admin.revenue.read"), async (_req, re
   try {
     const [
       plans, creditPacks, configuration, transactions, sellers, auditEvents,
-      transactionEvents, entitlementCount, activeOrderCount, payableRows, allowanceRows,
+      transactionEvents, externalEvents, entitlementCount, activeOrderCount, payableRows, allowanceRows,
     ] = await Promise.all([
       adminRead<Array<Record<string, unknown>>>("membership_plans?select=code,name,billing_cadence,price_minor,currency,is_active&order=price_minor.asc"),
       adminRead<Array<Record<string, unknown>>>("drop_credit_packs?select=code,credits,price_minor,currency,is_active&order=credits.asc"),
       adminRead<Array<Record<string, unknown>>>("revenue_configuration?select=key,value,effective_at&order=key.asc"),
-      adminRead<Array<Record<string, unknown>>>("marketplace_orders?select=id,state,currency,gross_minor,platform_fee_minor,intended_seller_share_minor,processing_fee_minor,app_store_fee_minor,tax_minor,seller_payable_minor,created_at,finalized_at&order=created_at.desc&limit=25"),
+      adminRead<Array<Record<string, unknown>>>("marketplace_orders?select=id,state,currency,gross_minor,platform_fee_minor,intended_seller_share_minor,processing_fee_minor,app_store_fee_minor,tax_minor,seller_payable_minor,provider_name,provider_transaction_id,created_at,finalized_at&order=created_at.desc&limit=25"),
       adminRead<Array<Record<string, unknown>>>("seller_profiles?select=user_id,onboarding_status,provider_name,updated_at&order=updated_at.desc&limit=25"),
       adminRead<Array<Record<string, unknown>>>("revenue_audit_events?select=id,entity_type,entity_id,event_type,details,created_at&order=created_at.desc&limit=50"),
-      adminRead<Array<Record<string, unknown>>>("marketplace_transaction_events?select=id,order_id,event_type,amount_minor,created_at&order=created_at.desc&limit=100"),
+      adminRead<Array<Record<string, unknown>>>("marketplace_transaction_events?select=id,order_id,event_type,amount_minor,provider_name,provider_event_id,created_at&order=created_at.desc&limit=100"),
+      adminRead<Array<Record<string, unknown>>>("revenue_external_events?select=id,provider_name,provider_event_id,event_kind,subject_type,subject_id,received_at&order=received_at.desc&limit=100"),
       adminCount("membership_entitlements?select=id&status=eq.active"),
       adminCount("marketplace_orders?select=id&state=in.(pending,finalized,partially_refunded)"),
       adminRead<Array<{ amount_minor: number | string; currency: string }>>("seller_balance_ledger?select=amount_minor,currency"),
@@ -557,9 +558,34 @@ router.get("/admin/revenue", requireAdmin("admin.revenue.read"), async (_req, re
         ...order,
         events: transactionEvents
           .filter((event) => event.order_id === order.id)
-          .map(({ id, event_type, amount_minor, created_at }) => ({ id, eventType: event_type, amountMinor: amount_minor, createdAt: created_at })),
+          .map(({ id, event_type, amount_minor, provider_name, provider_event_id, created_at }) => ({
+            id,
+            eventType: event_type,
+            amountMinor: amount_minor,
+            providerName: provider_name ?? null,
+            providerEventId: provider_event_id ?? null,
+            createdAt: created_at,
+          })),
       })),
       sellers,
+      externalEvents: externalEvents.map((event) => ({
+        id: event.id,
+        providerName: event.provider_name,
+        providerEventId: event.provider_event_id,
+        eventKind: event.event_kind,
+        subjectType: event.subject_type,
+        subjectId: event.subject_id,
+        receivedAt: event.received_at,
+      })),
+      reconciliation: {
+        receivedEvents: externalEvents.length,
+        providers: externalEvents.reduce<Record<string, number>>((counts, event) => {
+          const provider = String(event.provider_name);
+          counts[provider] = (counts[provider] ?? 0) + 1;
+          return counts;
+        }, {}),
+        latestReceivedAt: externalEvents[0]?.received_at ?? null,
+      },
       suspiciousActivity: suspiciousRevenueActivity(transactions, transactionEvents),
       auditEvents: auditEvents.map((event) => ({ ...event, details: safeRevenueAuditDetails(event.details) })),
       generatedAt: new Date().toISOString(),

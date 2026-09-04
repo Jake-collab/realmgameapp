@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { DROP_CREDIT_PACKS, MEMBERSHIP_PLANS } from '../features/revenue/types/revenue.types';
+import { DROP_CREDIT_PACKS, MEMBERSHIP_PLANS, STORE_PRODUCT_MAPPINGS } from '../features/revenue/types/revenue.types';
 
 describe('Stage 2 revenue contracts', () => {
   const migration071 = fs.readFileSync(
@@ -19,6 +19,15 @@ describe('Stage 2 revenue contracts', () => {
     ]);
     expect(migration071).toContain("('worlds_monthly', 'Worlds Membership', 'monthly', 499, 'USD')");
     expect(migration071).toContain("('worlds_yearly', 'Worlds Membership', 'yearly', 4499, 'USD')");
+  });
+
+  test('keeps store IDs owner-configured while RevenueCat uses the canonical codes', () => {
+    expect(STORE_PRODUCT_MAPPINGS.revenuecat.worlds_monthly).toBe('worlds_monthly');
+    expect(STORE_PRODUCT_MAPPINGS.revenuecat.drop_credits_35).toBe('drop_credits_35');
+    expect(Object.values(STORE_PRODUCT_MAPPINGS.apple)).toEqual([null, null, null, null, null]);
+    expect(Object.values(STORE_PRODUCT_MAPPINGS.googlePlay)).toEqual([null, null, null, null, null]);
+    expect(MEMBERSHIP_PLANS.find((plan) => plan.code === 'worlds_monthly')?.priceMinor).toBe(499);
+    expect(DROP_CREDIT_PACKS.find((pack) => pack.code === 'drop_credits_15')?.priceMinor).toBe(499);
   });
 
   test('resolves UTC periods and consumes included Drops before credits', () => {
