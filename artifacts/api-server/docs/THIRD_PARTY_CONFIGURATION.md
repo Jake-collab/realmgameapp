@@ -23,7 +23,8 @@ send the exact server-only `REVENUECAT_WEBHOOK_AUTHORIZATION` value in its
 `Authorization` header. A mobile SDK purchase callback is never an entitlement
 grant: verified provider events call the trusted Supabase adapter, which writes
 the existing immutable membership, credit, marketplace, seller, and audit
-ledgers. App Store and Play Store products still need to be synced after the
+ledgers. Publish migrations 074–075 and the updated API before enabling this
+webhook. App Store and Play Store products still need to be synced after the
 first signed/TestFlight builds; the configured Test Store supports preview
 purchase testing.
 

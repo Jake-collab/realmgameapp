@@ -1,0 +1,112 @@
+STAGE 2 IS NOW CLOSED.
+
+The authoritative GitHub Actions verification passed:
+
+STAGE 2 FINAL VERIFICATION: 70 / 70 PASS
+STAGE 2 IS COMPLETELY VERIFIED
+SAFE TO CONTINUE STAGE 3
+
+Authoritative successful run:
+33805131757
+
+Successful tested commit:
+bafbcad
+
+Current repository HEAD:
+119ea65
+
+Do not perform another general Stage 2 audit unless Stage 3 changes something that directly affects Stage 2 behavior.
+
+Now RESUME the existing Stage 3 payment implementation from exactly where it stopped.
+
+IMPORTANT:
+Do not restart Stage 3 from scratch.
+Inspect all Stage 3 work already created, including migration 074 and the current RevenueCat integration state, and continue from the next unfinished requirement.
+
+Canonical payment architecture remains:
+
+1. RevenueCat for native Apple/Google digital purchases where appropriate.
+2. Stripe / Stripe Connect for eligible web checkout, marketplace seller onboarding, seller payouts, refunds/disputes, and reconciliation.
+3. The provider-neutral Stage 2 database/accounting architecture remains authoritative.
+
+Payment categories remain separate:
+
+- Worlds Membership
+  - $4.99/month
+  - $44.99/year
+
+- Extra Drop Credits
+  - $1.99 → 5
+  - $4.99 → 15
+  - $9.99 → 35
+
+- creator-created paid collectibles
+
+- seller payouts
+
+Before making additional changes:
+
+1. Inspect current Stage 3 implementation state.
+2. Identify exactly what is already implemented.
+3. Identify exactly what remains.
+4. Confirm migration 074's current purpose/state.
+5. Account for migration 075 without modifying it.
+6. Confirm RevenueCat's current connection state.
+7. Confirm whether the RevenueCat webhook endpoint already exists.
+8. Confirm whether REVENUECAT_WEBHOOK_AUTHORIZATION is already configured without printing its value.
+9. Determine the next external owner action actually required.
+
+Then continue Stage 3 until you reach the FIRST external setup item that requires my action.
+
+Do not ask me for several providers' credentials at once.
+
+When owner action is required, STOP and give me exactly ONE item using:
+
+ITEM:
+[what I need to do/provide]
+
+PROVIDER:
+RevenueCat / Apple / Google / Stripe
+
+WHERE TO GET IT:
+[exact click-by-click location]
+
+VALUE TYPE:
+secret / non-secret ID / configuration action
+
+WHERE IT GOES:
+[exact Replit/Supabase/provider location]
+
+WHY:
+[brief explanation]
+
+CURRENT STAGE 3 STATUS:
+[what is already implemented]
+
+AFTER THIS:
+[what you will do once I provide/complete it]
+
+SECURITY:
+Never print existing secret values.
+Do not ask me to paste sensitive credentials into normal chat if Replit provides a secure Secrets field.
+
+For RevenueCat specifically:
+
+- trusted server verification must remain authoritative
+- webhook processing must be idempotent
+- client purchase state must never directly grant membership, credits, or ownership
+- identify the exact production webhook URL I need to enter into RevenueCat
+- REVENUECAT_WEBHOOK_AUTHORIZATION must be verified server-side
+- support Sandbox and Production appropriately
+
+IMPORTANT FOR PAID COLLECTIBLES:
+
+Do not assume RevenueCat automatically solves arbitrary creator-set collectible prices.
+
+Before implementing that payment path, separately determine the compliant Apple, Google, RevenueCat, and Stripe routing architecture.
+
+Do not silently change creator-defined pricing.
+
+Do not start Mapbox.
+
+Proceed with Stage 3 now and stop only when you reach the first genuine owner/external-provider action.

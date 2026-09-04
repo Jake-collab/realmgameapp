@@ -43,7 +43,7 @@ This checklist records actions that cannot be completed from the repository. Do 
 
 - [x] Create the Worlds RevenueCat project, Test Store catalog, membership entitlement, and current offering.
 - [ ] Store `REVENUECAT_WEBHOOK_AUTHORIZATION` as a server-only Replit Secret and configure the same Authorization header on `https://worlds-game-app.replit.app/api/webhooks/revenuecat`.
-- [ ] Publish migration 074 and the updated API before enabling the RevenueCat webhook.
+- [ ] Publish migrations 074–075 and the updated API before enabling the RevenueCat webhook.
 - [ ] After the first TestFlight and Play internal-test builds, sync the monthly/yearly membership, Drop Credit, and supported Collectible price-tier products into App Store Connect and Google Play.
 - [ ] Exercise monthly/yearly purchase, all three credit packs, paid Collectible, restore, refund, expiration, billing issue, account switch, and webhook retry on signed physical-device builds.
 - [ ] Enroll in Apple’s Small Business Program if eligible before launch: https://developer.apple.com/app-store/small-business-program/enroll/
