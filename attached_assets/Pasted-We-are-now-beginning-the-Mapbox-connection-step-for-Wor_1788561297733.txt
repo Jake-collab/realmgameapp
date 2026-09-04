@@ -1,0 +1,144 @@
+We are now beginning the Mapbox connection step for Worlds.
+
+IMPORTANT CURRENT STATE:
+
+- Stage 1 revenue specification is complete.
+- Stage 2 is complete and authoritatively verified 70/70.
+- Stage 3 local/free-mode payment implementation is complete as far as possible.
+- Remaining Stage 3 external payment connections/validation are intentionally deferred for now.
+- Do NOT modify Stage 1–3 revenue/payment architecture.
+- Do NOT start the previously prepared Map modification prompts yet.
+- Do NOT publish, republish, or deploy.
+- Do NOT consume Replit publishing/deployment credits.
+
+GOAL:
+
+Inspect the CURRENT Worlds Expo/React Native project and determine exactly what is required to connect Mapbox correctly for iOS and Android.
+
+The app will eventually use the existing previously planned Quest + Hunt map modification prompt series after this connection is complete.
+
+First audit the project. Do not guess.
+
+Inspect:
+
+- Expo SDK/version
+- Expo Router configuration
+- app.json / app.config.* configuration
+- current iOS bundle identifier
+- current Android package identifier
+- whether @rnmapbox/maps is already installed
+- whether any Mapbox config plugin already exists
+- whether any Mapbox environment variables already exist
+- whether any old Mapbox tokens/configuration are present
+- current location-permission configuration
+- current native-build/dev-build setup
+- whether EAS/native development builds are already configured
+- any existing map components or adapters
+- any current Mapbox-related tests
+
+Then determine the exact current Mapbox credentials/configuration required.
+
+Mapbox generally distinguishes:
+
+1. A PUBLIC access token beginning with `pk.`
+   - used by the mobile app at runtime to access Mapbox-hosted maps/services.
+
+2. A SECRET token beginning with `sk.`
+   - only if required by the selected native SDK/build installation.
+   - if required for SDK downloads, it must use only the necessary `Downloads:Read` scope.
+   - it must NEVER be committed to source code or exposed to the mobile runtime.
+
+Do not assume both are required until you inspect the actual current Expo/@rnmapbox setup.
+
+SECURITY:
+
+- Never ask me to paste a secret Mapbox token into normal chat.
+- If a secret token is required, tell me the exact secure Replit Secrets/environment-variable field where it belongs.
+- A public `pk.` runtime token may be configured as client-safe configuration as appropriate.
+- Use least-privilege scopes.
+- Do not expose an `sk.` token in Expo public environment variables.
+- Do not print existing secret values.
+
+Do NOT create fake token values.
+
+After the audit, STOP before implementing Mapbox and give me the FIRST Mapbox owner action I need to perform.
+
+Use exactly:
+
+MAPBOX CONNECTION AUDIT
+
+CURRENT MAPBOX STATE:
+NOT STARTED / PARTIALLY CONFIGURED / ALREADY CONNECTED
+
+@RNMAPBOX/MAPS:
+INSTALLED / NOT INSTALLED
+[current version if installed]
+
+EXPO/NATIVE BUILD REQUIREMENT:
+[exact requirement]
+
+PUBLIC MAPBOX TOKEN REQUIRED:
+YES / NO
+
+IF YES:
+
+ITEM:
+Mapbox public access token
+
+WHERE TO GET IT:
+Give me exact click-by-click instructions from logging into Mapbox.
+
+TOKEN PREFIX:
+pk.
+
+SCOPES REQUIRED:
+[list exact scopes]
+
+URL / APP RESTRICTIONS RECOMMENDED:
+[exact recommendation]
+
+WHERE IT GOES IN WORLDS:
+[exact configuration/env variable name]
+
+SECRET MAPBOX DOWNLOAD TOKEN REQUIRED:
+YES / NO
+
+IF YES:
+
+ITEM:
+Mapbox SDK download token
+
+WHERE TO GET IT:
+Give me exact click-by-click instructions from the Mapbox account.
+
+TOKEN PREFIX:
+sk.
+
+REQUIRED SECRET SCOPE:
+Downloads:Read
+
+WHERE IT GOES IN WORLDS:
+[exact secure Replit secret/env variable name]
+
+MUST NOT APPEAR IN CLIENT CODE:
+YES
+
+OTHER MAPBOX ACCOUNT CONFIGURATION REQUIRED:
+[list or NONE]
+
+SIGNED DEVELOPMENT BUILD REQUIRED FOR FINAL MAP TESTING:
+YES / NO
+Explain briefly.
+
+REPLIT PAID CONNECTOR REQUIRED:
+YES / NO
+
+REPLIT PUBLICATION/DEPLOYMENT REQUIRED JUST TO CONNECT MAPBOX:
+YES / NO
+
+NEXT ACTION AFTER I PROVIDE THE REQUIRED MAPBOX INFORMATION:
+[exact next implementation step]
+
+Do not install or modify anything yet.
+Do not start the five existing map modification prompts yet.
+Do not deploy anything.
