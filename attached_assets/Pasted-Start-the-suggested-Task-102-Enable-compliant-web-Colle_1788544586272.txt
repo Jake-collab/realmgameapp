@@ -1,0 +1,86 @@
+Start the suggested Task #102:
+
+“Enable compliant web Collectible checkout and creator payouts after Stripe setup.”
+
+Proceed with Task #102 in FREE MODE as far as possible.
+
+IMPORTANT CURRENT CONSTRAINTS:
+
+- Do NOT publish, republish, or deploy the Replit app/API.
+- Do NOT consume Replit deployment/publishing credits.
+- Do NOT start Mapbox.
+- Do NOT redo Stage 2.
+- Preserve migrations 001–075.
+- RevenueCat live webhook delivery remains PENDING API PUBLICATION.
+- Stripe is currently NOT connected.
+
+For Task #102:
+
+1. First inspect all existing Stage 3 Stripe/marketplace preparation so you do not duplicate it.
+
+2. Complete any remaining provider-neutral code, tests, routing, seller-state, reconciliation, refund/dispute, Admin, and security work that can be done before Stripe is connected.
+
+3. Determine the compliant architecture for creator-defined paid digital Collectibles across:
+   - iOS
+   - Android
+   - eligible web checkout
+
+4. Do not assume arbitrary creator-defined prices can be represented with Apple/Google native IAP.
+
+5. Do not silently change:
+   - creator-defined pricing
+   - the 30% Worlds platform fee
+   - 70% intended creator economic share before applicable external fees
+   - Find Badge behavior
+   - collectible ownership/refund behavior
+
+6. Prepare Stripe Checkout / Stripe Connect integration architecture for eligible transactions.
+
+7. Prepare seller onboarding so Stripe handles identity/KYC/bank information rather than Worlds storing sensitive financial information.
+
+8. Preserve server-authoritative:
+   - payment confirmation
+   - ownership
+   - seller payable
+   - refunds
+   - disputes
+   - reconciliation
+   - idempotency
+
+9. Run all tests possible without a live Stripe connection or public deployment.
+
+10. When the next step genuinely requires connecting Stripe, STOP.
+
+Do not fake Stripe credentials or mark Stripe functionality live before it is actually connected.
+
+At that point give me ONE external action only, using:
+
+ITEM:
+[exact thing I need to do]
+
+PROVIDER:
+Stripe
+
+WHERE TO GET IT / DO IT:
+[exact click-by-click path]
+
+VALUE TYPE:
+[secret / non-secret ID / configuration action / connection]
+
+WHERE IT GOES:
+[exact location]
+
+WHY:
+[brief reason]
+
+CURRENT TASK #102 STATUS:
+[what is already completed]
+
+AFTER THIS:
+[what you will implement after I complete the Stripe action]
+
+Do not request Apple or Google setup in the same response.
+
+Do not deploy anything.
+
+Begin Task #102 now.

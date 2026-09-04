@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { collectibleProductId, PROVIDER_PRODUCT_MAPPINGS, REVENUE_CATALOG } from "./catalog";
 import { reconciliationMatcher, reconcileExternalEvents } from "./reconciliation";
+import { selectPaymentRoute } from "./routing";
 import { canReceivePaidSales, mapDisputeStatus, mapPayoutStatus, mapSellerStatus } from "./status-mapping";
 import type { NormalizedExternalEvent, PaymentIntent, ReconciliationSubject } from "./types";
 
@@ -55,6 +56,47 @@ describe("Stage 3 provider-neutral payment preparation", () => {
     assert.equal(mapPayoutStatus({ paid: false, inTransit: false, failed: false, reversed: true }), "reversed");
     assert.equal(mapDisputeStatus({ opened: true, won: false, lost: false, reversed: false }), "opened");
     assert.equal(mapDisputeStatus({ opened: true, won: false, lost: true, reversed: false }), "lost");
+  });
+
+  it("selects only server-approved routes and fails closed for unmapped native or web products", () => {
+    assert.deepEqual(
+      selectPaymentRoute({
+        platform: "ios",
+        category: "membership",
+        productCode: "worlds_monthly",
+        providerAvailability: { apple: true },
+      }),
+      { status: "unavailable", provider: null, reason: "native_product_not_mapped" },
+    );
+    assert.deepEqual(
+      selectPaymentRoute({
+        platform: "android",
+        category: "collectible",
+        providerAvailability: { google_play: true },
+        sellerStatus: "active",
+      }),
+      { status: "unavailable", provider: null, reason: "native_product_not_mapped" },
+    );
+    assert.deepEqual(
+      selectPaymentRoute({
+        platform: "web",
+        category: "collectible",
+        productCode: "drop_credits_5",
+        providerAvailability: { stripe: true },
+        sellerStatus: "restricted",
+      }),
+      { status: "unavailable", provider: null, reason: "seller_not_eligible" },
+    );
+    assert.deepEqual(
+      selectPaymentRoute({
+        platform: "web",
+        category: "collectible",
+        productCode: "drop_credits_5",
+        providerAvailability: { stripe: true },
+        sellerStatus: "active",
+      }),
+      { status: "unavailable", provider: null, reason: "web_product_not_mapped" },
+    );
   });
 
   it("matches trusted events and identifies duplicates, unknowns, and mismatches", () => {

@@ -107,6 +107,8 @@ local-only contracts now exist under `src/payments/`:
 
 - payment intent, payment, refund, dispute, seller account, and payout states;
 - payment, seller, and payout provider ports;
+- server-controlled routing by platform, category, product mapping, provider
+  availability, and seller eligibility;
 - webhook normalization and reconciliation matcher ports;
 - conservative seller, payout, and dispute status mapping;
 - deterministic canonical catalog and collectible product-ID helpers;
@@ -137,7 +139,7 @@ trusted production path exist. No migration was added for those operations.
 ## Testing
 
 - API typecheck: PASS.
-- API test suite: PASS, 24 tests.
+- API test suite: PASS, 29 tests.
 - Mobile typecheck: PASS.
 - Mobile RevenueCat/revenue UX contract suites: PASS, 13 tests.
 - Worlds Admin typecheck: PASS.
