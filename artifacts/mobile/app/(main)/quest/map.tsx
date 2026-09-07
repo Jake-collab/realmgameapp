@@ -29,6 +29,7 @@ import {
   useColorScheme,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '@/hooks/useColors';
@@ -50,11 +51,13 @@ import {
 } from '@/features/maps/config/mapConfig';
 import {
   areBBoxesMeaningfullyDifferent,
+  bboxFromCenterRadius,
   cacheRoundLatLng,
 } from '@/features/maps/utils/geoUtils';
-import type { BoundingBox } from '@/features/maps/utils/geoUtils';
+import type { BoundingBox, LatLng } from '@/features/maps/utils/geoUtils';
 import { parseMapRegionEvent } from '@/features/maps/utils/mapboxEvents';
 import { usePersistedMapCamera } from '@/features/maps/hooks/usePersistedMapCamera';
+import { useQuestDetail } from '@/features/quests/hooks/useQuestDetail';
 
 // Quest map domain
 import { useGeoQuestViewport } from '@/features/quest-map/hooks/useGeoQuestViewport';
@@ -70,6 +73,11 @@ import type {
   BottomSheetState,
   NearbySortOrder,
   QuestMarkerData,
+} from '@/features/quest-map/types/questMap.types';
+import {
+  getQuestMapSelectionZoom,
+  matchesQuestMapStatus,
+  normalizePublicRadiusMeters,
 } from '@/features/quest-map/types/questMap.types';
 
 // ─── Inner screen (wrapped by MapProvider) ────────────────────────────────────
@@ -104,6 +112,7 @@ function QuestMapInner() {
   const [zoomLevel, setZoomLevel] = useState<number>(DEFAULT_MAP_REGION.zoomLevel);
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
+  const [userAccuracyMeters, setUserAccuracyMeters] = useState<number | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didInitialCenterRef = useRef(false);
   const cameraRef = useRef<any>(null);
@@ -111,6 +120,12 @@ function QuestMapInner() {
   const { camera: persistedCamera, isRestored, persistCamera } = usePersistedMapCamera(
     'quest',
     DEFAULT_MAP_REGION,
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      void queryClient.invalidateQueries({ queryKey: questMapKeys.all });
+    }, [queryClient]),
   );
 
   // A public viewport is useful even when the player declines location. Nearby
@@ -169,6 +184,14 @@ function QuestMapInner() {
     enabled: isReady && roundedUser !== null,
   });
 
+  // The selected Quest detail contains only the public display radius. It is
+  // never the private validation geometry and is loaded only for the focused
+  // card.
+  const selectedDetailQuery = useQuestDetail(selectedQuest?.questId);
+  const selectedPublicRadius = normalizePublicRadiusMeters(
+    selectedDetailQuery.data?.quest_locations?.[0]?.public_radius_meters,
+  );
+
   // ── Mapbox module ───────────────────────────────────────────────────────────
   const MapboxGL = getMapboxGL();
 
@@ -219,7 +242,12 @@ function QuestMapInner() {
   const handleMarkerPress = useCallback((quest: PublicGeoQuestMapItem) => {
     setSelectedQuest(quest);
     setSheetState('medium');
-  }, []);
+    cameraRef.current?.setCamera?.({
+      centerCoordinate: [quest.displayLongitude, quest.displayLatitude],
+      zoomLevel: getQuestMapSelectionZoom(zoomLevel),
+      animationDuration: 650,
+    });
+  }, [zoomLevel]);
 
   const handleDeselectQuest = useCallback(() => {
     setSelectedQuest(null);
@@ -283,6 +311,11 @@ function QuestMapInner() {
 
     setUserLat(lat);
     setUserLng(lng);
+    setUserAccuracyMeters(
+      typeof location?.coords?.accuracy === 'number' && Number.isFinite(location.coords.accuracy)
+        ? location.coords.accuracy
+        : null,
+    );
 
     // Auto-center once on first location fix
     if (!didInitialCenterRef.current && cameraRef.current?.setCamera) {
@@ -321,16 +354,44 @@ function QuestMapInner() {
 
   // ── Map is configured: render full experience ─────────────────────────────────
   // Build marker data from viewport quests
-  const markerQuests: QuestMarkerData[] = viewportQuery.quests.map(q => ({
+  const filteredViewportQuests = viewportQuery.quests.filter(q => matchesQuestMapStatus(q, filter.status));
+  const filteredNearbyQuests = nearbyQuery.sortedQuests.filter(q => matchesQuestMapStatus(q, filter.status));
+  const markerQuests: QuestMarkerData[] = filteredViewportQuests.map(q => ({
     questId:      q.questId,
     occurrenceId: q.occurrenceId,
     latitude:     q.displayLatitude,
     longitude:    q.displayLongitude,
-    status:       q.isFeatured ? 'featured' : (q.availabilityState as any),
+    status:       q.availabilityState === 'active'
+      ? 'active'
+      : q.availabilityState === 'completed'
+      ? 'completed'
+      : q.availabilityState === 'awaiting_proof'
+      ? 'awaiting_proof'
+      : q.availabilityState === 'under_review'
+      ? 'under_review'
+      : q.availabilityState === 'upcoming'
+      ? 'upcoming'
+      : q.availabilityState === 'unavailable'
+      ? 'unavailable'
+      : 'available',
     isSelected:   selectedQuest?.questId === q.questId,
     pointsReward: q.pointsReward,
     title:        q.title,
+    isFeatured:   q.isFeatured,
   }));
+  const sheetQuests = roundedUser ? filteredNearbyQuests : filteredViewportQuests;
+  const discoveryPoints = sheetQuests.reduce((sum, quest) => sum + quest.pointsReward, 0);
+  const selectedCircle = selectedQuest && selectedPublicRadius && selectedPublicRadius > 0
+    ? buildApproximateCircle(
+        selectedQuest.displayLatitude,
+        selectedQuest.displayLongitude,
+        selectedPublicRadius,
+      )
+    : null;
+  const currentUserLocation: LatLng | null =
+    userLat !== null && userLng !== null
+      ? { latitude: userLat, longitude: userLng }
+      : null;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -377,13 +438,25 @@ function QuestMapInner() {
               <QuestMarkerPin
                 marker={marker}
                 onPress={() => {
-                  const quest = viewportQuery.quests.find(q => q.questId === marker.questId);
+                   const quest = filteredViewportQuests.find(q => q.questId === marker.questId);
                   if (quest) handleMarkerPress(quest);
                 }}
                 colors={colors}
               />
             </MapboxGL.MarkerView>
           ))}
+          {selectedCircle ? (
+            <MapboxGL.ShapeSource id="selected-quest-target-area" shape={selectedCircle}>
+              <MapboxGL.FillLayer
+                id="selected-quest-target-area-fill"
+                style={{
+                  fillColor: colors.accent,
+                  fillOpacity: 0.12,
+                  fillOutlineColor: colors.accent,
+                }}
+              />
+            </MapboxGL.ShapeSource>
+          ) : null}
         </MapboxGL.MapView>
       ) : null}
 
@@ -433,6 +506,34 @@ function QuestMapInner() {
         )}
       </View>
 
+      {/* Lightweight discovery HUD — counts only public map results. */}
+      <View
+        style={[
+          styles.discoveryHud,
+          { backgroundColor: colors.card, borderColor: colors.border },
+        ]}
+        accessibilityLabel={`${sheetQuests.length} quests in this area, ${discoveryPoints} points available`}
+      >
+        <View style={[styles.discoveryIcon, { backgroundColor: colors.accent + '18' }]}>
+          <Feather name="compass" size={16} color={colors.accent} />
+        </View>
+        <View style={styles.discoveryCopy}>
+          <Text style={[styles.discoveryTitle, { color: colors.foreground }]}>
+            {sheetQuests.length} {sheetQuests.length === 1 ? 'Quest' : 'Quests'} {roundedUser ? 'nearby' : 'in view'}
+          </Text>
+          <Text style={[styles.discoverySubtitle, { color: colors.mutedForeground }]}>
+            {discoveryPoints} points available · {permissionHook.canUseLocation ? 'location on' : 'location off'}
+          </Text>
+          {viewportQuery.isFetching || nearbyQuery.isLoading ? (
+            <Text style={[styles.discoveryStatus, { color: colors.accent }]}>Updating map…</Text>
+          ) : userAccuracyMeters !== null && userAccuracyMeters > 50 ? (
+            <Text style={[styles.discoveryStatus, { color: colors.warning }]}>
+              GPS signal is approximate
+            </Text>
+          ) : null}
+        </View>
+      </View>
+
       {/* Search this area button — centered */}
       <View style={styles.searchThisAreaWrap} pointerEvents="box-none">
         <SearchThisAreaButton
@@ -462,18 +563,24 @@ function QuestMapInner() {
       <NearbyResultsSheet
         sheetState={sheetState}
         selectedQuest={selectedQuest}
-        nearbyQuests={nearbyQuery.sortedQuests}
+        nearbyQuests={sheetQuests}
         sortOrder={nearbySort}
         distanceUnit={DEFAULT_DISTANCE_UNIT}
         isLoadingNearby={nearbyQuery.isLoading}
+        isErrorNearby={nearbyQuery.isError}
+        onRetryNearby={() => void nearbyQuery.refetch()}
         activeFilterCount={activeFilterCount}
         onExpandSheet={() => setSheetState('expanded')}
         onCollapseSheet={() => setSheetState('collapsed')}
-        onSelectQuest={(q) => { setSelectedQuest(q); setSheetState('medium'); }}
+        onSelectQuest={handleMarkerPress}
         onDeselectQuest={handleDeselectQuest}
         onSortChange={setNearbySort}
         onOpenFilters={() => setIsFilterSheetVisible(true)}
         onMediaUnavailable={handleMediaUnavailable}
+        userLocation={currentUserLocation}
+        hasLocationPermission={permissionHook.canUseLocation}
+        onRequestLocationPermission={permissionHook.requestPermission}
+        publicRadiusMeters={selectedPublicRadius}
       />
 
       {/* ── Filter sheet ──────────────────────────────────────────────────── */}
@@ -511,7 +618,25 @@ function QuestMarkerPin({ marker, onPress, colors }: QuestMarkerPinProps) {
           marker.isSelected && styles.markerSelected,
         ]}
       >
-        <Feather name="map-pin" size={marker.isSelected ? 16 : 12} color={statusStyle.icon} />
+        <Feather
+          name={
+            marker.status === 'completed'
+              ? 'check'
+              : marker.status === 'active'
+              ? 'navigation'
+              : marker.status === 'awaiting_proof'
+              ? 'camera'
+              : marker.status === 'under_review'
+              ? 'clock'
+              : marker.status === 'locked'
+              ? 'lock'
+              : marker.isFeatured
+              ? 'star'
+              : 'map-pin'
+          }
+          size={marker.isSelected ? 16 : 12}
+          color={statusStyle.icon}
+        />
       </View>
     </TouchableOpacity>
   );
@@ -528,15 +653,41 @@ function getMarkerStyle(
       return { bg: colors.accent, border: colors.accent, icon: '#fff' };
     case 'completed':
       return { bg: colors.secondary, border: colors.border, icon: colors.mutedForeground };
+    case 'awaiting_proof':
+    case 'under_review':
+      return { bg: colors.secondary, border: colors.accent, icon: colors.accent };
     case 'upcoming':
       return { bg: colors.secondary, border: colors.border, icon: colors.mutedForeground };
     case 'unavailable':
+    case 'locked':
       return { bg: colors.secondary, border: colors.border, icon: colors.mutedForeground };
-    case 'featured':
-      return { bg: '#FF6B35', border: '#FF6B35', icon: '#fff' };
     default: // available
       return { bg: colors.primary, border: colors.primary, icon: colors.primaryForeground };
   }
+}
+
+function buildApproximateCircle(
+  latitude: number,
+  longitude: number,
+  radiusMeters: number,
+): GeoJSON.Feature<GeoJSON.Polygon> {
+  const safeRadius = Math.min(Math.max(radiusMeters, 1), 5_000);
+  const bounds = bboxFromCenterRadius({ latitude, longitude }, safeRadius);
+  const latitudeDelta = (bounds.north - bounds.south) / 2;
+  const longitudeDelta = (bounds.east - bounds.west) / 2;
+  const coordinates = Array.from({ length: 33 }, (_, index) => {
+    const angle = (index / 32) * Math.PI * 2;
+    return [
+      longitude + Math.cos(angle) * longitudeDelta,
+      latitude + Math.sin(angle) * latitudeDelta,
+    ];
+  });
+
+  return {
+    type: 'Feature',
+    properties: {},
+    geometry: { type: 'Polygon', coordinates: [coordinates] },
+  };
 }
 
 // ─── Search Bar ───────────────────────────────────────────────────────────────
@@ -659,6 +810,48 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     zIndex: 9,
+  },
+
+  discoveryHud: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 70 : 78,
+    left: spacing[4],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[2],
+    maxWidth: '72%',
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[3],
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 8,
+  },
+  discoveryIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  discoveryCopy: {
+    gap: 1,
+  },
+  discoveryTitle: {
+    fontFamily: fontFamily.semiBold,
+    fontSize: fontSize.sm,
+  },
+  discoverySubtitle: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+  },
+  discoveryStatus: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.xs,
   },
 
   recenterButton: {

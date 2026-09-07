@@ -115,6 +115,33 @@ export function distanceMiles(a: LatLng, b: LatLng): number {
   return haversineMeters(a, b) / METERS_PER_MILE;
 }
 
+/**
+ * Initial compass bearing from point A to point B.
+ * This is informational navigation assistance only; it is never used for
+ * Quest eligibility or completion.
+ */
+export function bearingDegrees(a: LatLng, b: LatLng): number {
+  const latitudeA = (a.latitude * Math.PI) / 180;
+  const latitudeB = (b.latitude * Math.PI) / 180;
+  const longitudeDelta = ((b.longitude - a.longitude) * Math.PI) / 180;
+
+  const y = Math.sin(longitudeDelta) * Math.cos(latitudeB);
+  const x =
+    Math.cos(latitudeA) * Math.sin(latitudeB) -
+    Math.sin(latitudeA) * Math.cos(latitudeB) * Math.cos(longitudeDelta);
+
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+export type CompassDirection = 'N' | 'NE' | 'E' | 'SE' | 'S' | 'SW' | 'W' | 'NW';
+
+/** Convert a bearing into a compact, accessible compass cue. */
+export function compassDirection(degrees: number): CompassDirection {
+  const normalized = ((degrees % 360) + 360) % 360;
+  const directions: CompassDirection[] = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  return directions[Math.round(normalized / 45) % directions.length];
+}
+
 // ─── Coordinate rounding ──────────────────────────────────────────────────────
 
 /**

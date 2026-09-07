@@ -34,6 +34,7 @@ export function useCompleteQuest(options: UseCompleteQuestOptions) {
         await Promise.all(
           keys.map(key => queryClient.invalidateQueries({ queryKey: key }))
         );
+        await queryClient.invalidateQueries({ queryKey: ['quest-map'] });
       }
       options.onSuccess?.(result);
     },

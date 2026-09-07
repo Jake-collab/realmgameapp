@@ -14,6 +14,8 @@
 
 import React, { memo, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   StyleSheet,
   Text,
@@ -25,9 +27,15 @@ import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
+import { useStartQuest } from '@/features/quests/hooks/useStartQuest';
 import { resolveQuestAction } from '@/features/quests/utils/questActionResolver';
 import { getMediaFallbackMessage } from '@/services/media/media.service';
-import { formatDistance } from '../../maps/utils/geoUtils';
+import {
+  bearingDegrees,
+  compassDirection,
+  formatDistance,
+} from '../../maps/utils/geoUtils';
+import type { LatLng } from '../../maps/utils/geoUtils';
 import type { PublicGeoQuestMapItem } from '../types/questMap.types';
 import type { DistanceUnit } from '../../maps/config/mapConfig';
 
@@ -36,6 +44,10 @@ interface QuestPreviewCardProps {
   distanceUnit?: DistanceUnit;
   onClose?: () => void;
   onMediaUnavailable?: () => void;
+  userLocation?: LatLng | null;
+  hasLocationPermission?: boolean;
+  onRequestLocationPermission?: () => Promise<unknown>;
+  publicRadiusMeters?: number | null;
 }
 
 function QuestPreviewCardComponent({
@@ -43,6 +55,10 @@ function QuestPreviewCardComponent({
   distanceUnit = 'miles',
   onClose,
   onMediaUnavailable,
+  userLocation = null,
+  hasLocationPermission = false,
+  onRequestLocationPermission,
+  publicRadiusMeters = null,
 }: QuestPreviewCardProps) {
   const colors = useColors();
   const router = useRouter();
@@ -58,8 +74,37 @@ function QuestPreviewCardComponent({
     proofStatus: null,
   });
 
-  const handlePrimaryAction = () => {
-    // Always navigate to Quest Detail — never start directly from preview
+  const startMutation = useStartQuest({
+    hasLocationPermission,
+    onSuccess: result => {
+      if (result.success && result.participation) {
+        router.replace(`/quest-active/${result.participation.id}`);
+        return;
+      }
+      Alert.alert(
+        'Could not start Quest',
+        result.error?.message ?? 'This Quest is no longer available. Refresh and try again.',
+      );
+    },
+    onError: () => {
+      Alert.alert('Could not start Quest', 'Check your connection and try again.');
+    },
+  });
+
+  const handlePrimaryAction = async () => {
+    if (startMutation.isPending) return;
+
+    if (action.actionType === 'start' && action.enabled) {
+      if (quest.requiresStartLocation && !hasLocationPermission) {
+        await onRequestLocationPermission?.();
+        return;
+      }
+      startMutation.mutate(quest.questId);
+      return;
+    }
+
+    // Detail remains the canonical route for active, proof, completed, and
+    // unavailable states because it resolves the current server state again.
     router.push({
       pathname: '/quest-detail/[questId]',
       params: {
@@ -77,6 +122,15 @@ function QuestPreviewCardComponent({
   const distanceLabel = quest.approximateDistanceMeters !== null
     ? formatDistance(quest.approximateDistanceMeters, distanceUnit)
     : null;
+  const bearing = userLocation
+    ? bearingDegrees(userLocation, {
+        latitude: quest.displayLatitude,
+        longitude: quest.displayLongitude,
+      })
+    : null;
+  const directionLabel = bearing === null ? null : compassDirection(bearing);
+  const stateLabel = getStateLabel(quest.availabilityState);
+  const isBusy = startMutation.isPending;
 
   return (
     <View
@@ -128,6 +182,12 @@ function QuestPreviewCardComponent({
               <Text style={{ color: colors.accent }}> ★</Text>
             ) : null}
           </Text>
+          <View style={styles.stateRow}>
+            <View style={[styles.stateDot, { backgroundColor: getStateColor(quest.availabilityState, colors) }]} />
+            <Text style={[styles.stateLabel, { color: getStateColor(quest.availabilityState, colors) }]}>
+              {stateLabel}
+            </Text>
+          </View>
           {quest.publicLocationName ? (
             <Text
               style={[styles.locationName, { color: colors.mutedForeground }]}
@@ -170,6 +230,9 @@ function QuestPreviewCardComponent({
         {distanceLabel ? (
           <MetaBadge icon="navigation" value={`≈ ${distanceLabel}`} colors={colors} isApproximate />
         ) : null}
+        {directionLabel ? (
+          <MetaBadge icon="compass" value={`${directionLabel} from you`} colors={colors} />
+        ) : null}
       </View>
 
       {/* Location requirement note */}
@@ -186,6 +249,15 @@ function QuestPreviewCardComponent({
         </View>
       ) : null}
 
+      {publicRadiusMeters !== null && publicRadiusMeters > 0 ? (
+        <View style={[styles.radiusNote, { backgroundColor: colors.secondary, borderColor: colors.border }]}>
+          <Feather name="target" size={12} color={colors.accent} />
+          <Text style={[styles.radiusText, { color: colors.mutedForeground }]}>
+            Approximate target area shown on the map. Completion still requires server validation.
+          </Text>
+        </View>
+      ) : null}
+
       {/* Venue hours */}
       {quest.publicVenueHoursNote ? (
         <Text style={[styles.hoursNote, { color: colors.mutedForeground }]}>
@@ -196,18 +268,35 @@ function QuestPreviewCardComponent({
       {/* Primary action */}
       <TouchableOpacity
         onPress={handlePrimaryAction}
-        style={[
-          styles.actionButton,
-          { backgroundColor: colors.primary },
-        ]}
+        disabled={isBusy || !action.enabled}
+        style={[styles.actionButton, {
+          backgroundColor: action.enabled ? colors.primary : colors.muted,
+          opacity: isBusy ? 0.75 : 1,
+        }]}
         accessibilityRole="button"
-        accessibilityLabel={`View ${quest.title}`}
+        accessibilityLabel={action.accessibilityLabel ?? action.label}
       >
-        <Text style={[styles.actionButtonText, { color: colors.primaryForeground }]}>
-          View Quest
-        </Text>
-        <Feather name="arrow-right" size={16} color={colors.primaryForeground} />
+        {isBusy ? (
+          <ActivityIndicator color={colors.primaryForeground} />
+        ) : (
+          <>
+            <Text style={[
+              styles.actionButtonText,
+              { color: action.enabled ? colors.primaryForeground : colors.mutedForeground },
+            ]}>
+              {action.label}
+            </Text>
+            {action.enabled ? (
+              <Feather name="arrow-right" size={16} color={colors.primaryForeground} />
+            ) : null}
+          </>
+        )}
       </TouchableOpacity>
+      {!action.enabled && action.disabledReason ? (
+        <Text style={[styles.disabledReason, { color: colors.mutedForeground }]}>
+          {action.disabledReason}
+        </Text>
+      ) : null}
 
       {/* Safety reminder — shown before location-required action */}
       <Text style={[styles.safetyNote, { color: colors.mutedForeground }]}>
@@ -218,6 +307,33 @@ function QuestPreviewCardComponent({
 }
 
 export const QuestPreviewCard = memo(QuestPreviewCardComponent);
+
+function getStateLabel(state: PublicGeoQuestMapItem['availabilityState']): string {
+  switch (state) {
+    case 'active': return 'In Action';
+    case 'completed': return 'Completed';
+    case 'awaiting_proof': return 'Proof required';
+    case 'under_review': return 'Under review';
+    case 'upcoming': return 'Coming soon';
+    case 'unavailable': return 'Unavailable';
+    default: return 'Available';
+  }
+}
+
+function getStateColor(
+  state: PublicGeoQuestMapItem['availabilityState'],
+  colors: ReturnType<typeof useColors>,
+): string {
+  switch (state) {
+    case 'active': return colors.accent;
+    case 'completed':
+    case 'under_review':
+    case 'awaiting_proof': return colors.mutedForeground;
+    case 'unavailable':
+    case 'upcoming': return colors.warning;
+    default: return colors.primary;
+  }
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -278,6 +394,20 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing[1],
   },
+  stateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing[1],
+  },
+  stateDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  stateLabel: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.xs,
+  },
   title: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.base,
@@ -323,6 +453,20 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     flex: 1,
   },
+  radiusNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing[2],
+    padding: spacing[2],
+    borderRadius: radius.sm,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  radiusText: {
+    flex: 1,
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    lineHeight: fontSize.xs * 1.4,
+  },
   hoursNote: {
     fontFamily: fontFamily.regular,
     fontSize: fontSize.xs,
@@ -338,6 +482,11 @@ const styles = StyleSheet.create({
   actionButtonText: {
     fontFamily: fontFamily.semiBold,
     fontSize: fontSize.base,
+  },
+  disabledReason: {
+    fontFamily: fontFamily.regular,
+    fontSize: fontSize.xs,
+    textAlign: 'center',
   },
   safetyNote: {
     fontFamily: fontFamily.regular,

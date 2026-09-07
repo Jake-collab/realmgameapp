@@ -16,6 +16,8 @@ import type { QuestStartResult } from '../types/quest.types';
 interface UseStartQuestOptions {
   onSuccess?: (result: QuestStartResult) => void;
   onError?: (error: unknown) => void;
+  /** Whether the user currently has foreground location permission. */
+  hasLocationPermission?: boolean;
 }
 
 export function useStartQuest(options: UseStartQuestOptions = {}) {
@@ -34,7 +36,7 @@ export function useStartQuest(options: UseStartQuestOptions = {}) {
                 onboarding_status: profile.onboarding_status,
               }
             : null,
-          hasLocationPermission: false, // updated by caller from location service
+          hasLocationPermission: options.hasLocationPermission ?? false,
         },
       }),
     onSuccess: async (result, questId) => {
@@ -44,6 +46,7 @@ export function useStartQuest(options: UseStartQuestOptions = {}) {
         await Promise.all(
           keys.map(key => queryClient.invalidateQueries({ queryKey: key }))
         );
+        await queryClient.invalidateQueries({ queryKey: ['quest-map'] });
       }
       options.onSuccess?.(result);
     },

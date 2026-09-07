@@ -27,6 +27,7 @@ import { fontFamily, fontSize } from '@/constants/typography';
 import { radius, spacing } from '@/constants/spacing';
 import { shadows } from '@/constants/theme';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useLocationPermission } from '@/features/maps/hooks/useLocationPermission';
 import {
   useQuestDetail,
   useQuestAvailability,
@@ -108,6 +109,7 @@ export default function QuestDetailScreen() {
   const router = useRouter();
   const colors = useColors();
   const { user } = useAuth();
+  const locationPermission = useLocationPermission();
 
   const detailQuery = useQuestDetail(questId);
   const availabilityQuery = useQuestAvailability(questId);
@@ -117,6 +119,7 @@ export default function QuestDetailScreen() {
   const availability = availabilityQuery.data;
 
   const startMutation = useStartQuest({
+    hasLocationPermission: locationPermission.canUseLocation,
     onSuccess: result => {
       setIsStarting(false);
       if (result.success && result.participation) {
@@ -160,7 +163,7 @@ export default function QuestDetailScreen() {
         }
         break;
     }
-  }, [action, quest, availability, startMutation, router]);
+  }, [action, quest, availability, startMutation, router, locationPermission.canUseLocation]);
 
   // ── Loading ────────────────────────────────────────────────────────────────
 

@@ -37,6 +37,7 @@ import type {
 import { NEARBY_SORT_LABELS } from '../types/questMap.types';
 import type { DistanceUnit } from '../../maps/config/mapConfig';
 import { formatDistance } from '../../maps/utils/geoUtils';
+import type { LatLng } from '../../maps/utils/geoUtils';
 
 interface NearbyResultsSheetProps {
   sheetState: BottomSheetState;
@@ -45,6 +46,8 @@ interface NearbyResultsSheetProps {
   sortOrder: NearbySortOrder;
   distanceUnit: DistanceUnit;
   isLoadingNearby: boolean;
+  isErrorNearby?: boolean;
+  onRetryNearby?: () => void;
   activeFilterCount: number;
   onExpandSheet: () => void;
   onCollapseSheet: () => void;
@@ -53,6 +56,10 @@ interface NearbyResultsSheetProps {
   onSortChange: (sort: NearbySortOrder) => void;
   onOpenFilters: () => void;
   onMediaUnavailable?: () => void;
+  userLocation?: LatLng | null;
+  hasLocationPermission?: boolean;
+  onRequestLocationPermission?: () => Promise<unknown>;
+  publicRadiusMeters?: number | null;
 }
 
 function NearbyResultsSheetComponent({
@@ -62,6 +69,8 @@ function NearbyResultsSheetComponent({
   sortOrder,
   distanceUnit,
   isLoadingNearby,
+  isErrorNearby = false,
+  onRetryNearby,
   activeFilterCount,
   onExpandSheet,
   onCollapseSheet,
@@ -70,6 +79,10 @@ function NearbyResultsSheetComponent({
   onSortChange,
   onOpenFilters,
   onMediaUnavailable,
+  userLocation = null,
+  hasLocationPermission = false,
+  onRequestLocationPermission,
+  publicRadiusMeters = null,
 }: NearbyResultsSheetProps) {
   const colors = useColors();
 
@@ -111,7 +124,7 @@ function NearbyResultsSheetComponent({
           <Feather name="map-pin" size={14} color={colors.mutedForeground} />
           <Text style={[styles.summaryText, { color: colors.mutedForeground }]}>
             {nearbyQuests.length > 0
-              ? `${nearbyQuests.length} Geo-Quests nearby`
+              ? `${nearbyQuests.length} Geo-Quests · ${nearbyQuests.reduce((sum, quest) => sum + quest.pointsReward, 0)} pts nearby`
               : selectedQuest
               ? selectedQuest.title
               : 'Browse Geo-Quests'}
@@ -130,6 +143,10 @@ function NearbyResultsSheetComponent({
               distanceUnit={distanceUnit}
               onClose={onDeselectQuest}
               onMediaUnavailable={onMediaUnavailable}
+              userLocation={userLocation}
+              hasLocationPermission={hasLocationPermission}
+              onRequestLocationPermission={onRequestLocationPermission}
+              publicRadiusMeters={publicRadiusMeters}
             />
           )}
 
@@ -213,6 +230,24 @@ function NearbyResultsSheetComponent({
           )}
 
           {/* Empty state */}
+          {isErrorNearby && !isLoadingNearby && (
+            <View style={styles.emptyState}>
+              <Feather name="wifi-off" size={24} color={colors.mutedForeground} />
+              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
+                Nearby results are unavailable.{'\n'}Your map markers are still safe to browse.
+              </Text>
+              {onRetryNearby ? (
+                <TouchableOpacity
+                  onPress={onRetryNearby}
+                  style={[styles.retryButton, { borderColor: colors.border }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Retry nearby quests"
+                >
+                  <Text style={[styles.retryButtonText, { color: colors.primary }]}>Retry nearby</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          )}
           {nearbyQuests.length === 0 && !isLoadingNearby && !selectedQuest && (
             <View style={styles.emptyState}>
               <Feather name="map" size={24} color={colors.mutedForeground} />
@@ -393,5 +428,15 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     textAlign: 'center',
     lineHeight: fontSize.sm * 1.6,
+  },
+  retryButton: {
+    paddingVertical: spacing[2],
+    paddingHorizontal: spacing[3],
+    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  retryButtonText: {
+    fontFamily: fontFamily.medium,
+    fontSize: fontSize.sm,
   },
 });

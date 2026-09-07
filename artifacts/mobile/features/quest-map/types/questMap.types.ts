@@ -90,6 +90,7 @@ export interface GeoQuestMapFilter {
   accessibleOnly: boolean;
   notCompleted: boolean;
   inAction: boolean;
+  status: 'all' | 'available' | 'active' | 'completed';
   indoorOutdoor: 'indoor' | 'outdoor' | 'both' | null;
   questType: 'all' | 'daily' | 'monthly';
 }
@@ -101,6 +102,7 @@ export const DEFAULT_GEO_QUEST_FILTER: GeoQuestMapFilter = {
   accessibleOnly: false,
   notCompleted: false,
   inAction: false,
+  status: 'all',
   indoorOutdoor: null,
   questType: 'all',
 };
@@ -114,9 +116,31 @@ export function countActiveFilters(filter: GeoQuestMapFilter): number {
   if (filter.accessibleOnly) count++;
   if (filter.notCompleted) count++;
   if (filter.inAction) count++;
+  if (filter.status !== 'all') count++;
   if (filter.indoorOutdoor !== null) count++;
   if (filter.questType !== 'all') count++;
   return count;
+}
+
+export function matchesQuestMapStatus(
+  quest: Pick<PublicGeoQuestMapItem, 'availabilityState'>,
+  status: GeoQuestMapFilter['status'],
+): boolean {
+  if (status === 'all') return true;
+  if (status === 'active') {
+    return ['active', 'awaiting_proof', 'under_review'].includes(quest.availabilityState);
+  }
+  return quest.availabilityState === status;
+}
+
+export function getQuestMapSelectionZoom(currentZoom: number): number {
+  return Number.isFinite(currentZoom) ? Math.max(currentZoom, 14) : 14;
+}
+
+/** Public display radii are optional and bounded before they reach map drawing. */
+export function normalizePublicRadiusMeters(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return null;
+  return Math.min(value, 5_000);
 }
 
 // ─── Nearby sort options ──────────────────────────────────────────────────────
@@ -250,6 +274,9 @@ export type QuestMarkerStatus =
   | 'completed'
   | 'upcoming'
   | 'unavailable'
+  | 'awaiting_proof'
+  | 'under_review'
+  | 'locked'
   | 'featured';
 
 export interface QuestMarkerData {
@@ -261,6 +288,7 @@ export interface QuestMarkerData {
   isSelected: boolean;
   pointsReward: number;
   title: string;
+  isFeatured: boolean;
 }
 
 // ─── Camera state ─────────────────────────────────────────────────────────────

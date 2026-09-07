@@ -93,6 +93,20 @@ function MapFilterSheetComponent({
               onToggle={() => setDraft(d => ({ ...d, inAction: !d.inAction }))}
               colors={colors}
             />
+            {([
+              { value: 'all', label: 'All states' },
+              { value: 'available', label: 'Available' },
+              { value: 'active', label: 'Active' },
+              { value: 'completed', label: 'Completed' },
+            ] as const).map(({ value, label }) => (
+              <ToggleChip
+                key={value}
+                label={label}
+                active={draft.status === value}
+                onToggle={() => setDraft(d => ({ ...d, status: value }))}
+                colors={colors}
+              />
+            ))}
           </FilterSection>
 
           {/* Quest type */}

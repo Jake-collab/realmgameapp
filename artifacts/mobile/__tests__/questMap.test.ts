@@ -36,6 +36,8 @@ import {
   bboxFromCenterRadius,
   bboxContains,
   expandBBox,
+  bearingDegrees,
+  compassDirection,
 } from '../features/maps/utils/geoUtils';
 import type { BoundingBox, LatLng } from '../features/maps/utils/geoUtils';
 
@@ -58,6 +60,9 @@ import {
   countActiveFilters,
   validationResultUserMessage,
   isValidationSuccess,
+  getQuestMapSelectionZoom,
+  matchesQuestMapStatus,
+  normalizePublicRadiusMeters,
 } from '../features/quest-map/types/questMap.types';
 import type {
   GeoQuestMapFilter,
@@ -151,6 +156,20 @@ describe('haversineMeters', () => {
 
   test('is symmetric', () => {
     expect(haversineMeters(nyc, la)).toBeCloseTo(haversineMeters(la, nyc), 0);
+  });
+});
+
+describe('direction assistance', () => {
+  test('returns cardinal bearings for simple destinations', () => {
+    const origin: LatLng = { latitude: 0, longitude: 0 };
+    expect(bearingDegrees(origin, { latitude: 1, longitude: 0 })).toBeCloseTo(0, 4);
+    expect(bearingDegrees(origin, { latitude: 0, longitude: 1 })).toBeCloseTo(90, 4);
+  });
+
+  test('normalizes compass direction at the wraparound', () => {
+    expect(compassDirection(0)).toBe('N');
+    expect(compassDirection(44)).toBe('NE');
+    expect(compassDirection(359)).toBe('N');
   });
 });
 
@@ -423,6 +442,34 @@ describe('DEFAULT_GEO_QUEST_FILTER', () => {
 
   test('difficulties default to empty (no restriction)', () => {
     expect(DEFAULT_GEO_QUEST_FILTER.difficulties).toHaveLength(0);
+  });
+});
+
+describe('Quest map state presentation', () => {
+  test('maps active proof/review states into the Active filter', () => {
+    expect(matchesQuestMapStatus({ availabilityState: 'active' }, 'active')).toBe(true);
+    expect(matchesQuestMapStatus({ availabilityState: 'awaiting_proof' }, 'active')).toBe(true);
+    expect(matchesQuestMapStatus({ availabilityState: 'under_review' }, 'active')).toBe(true);
+    expect(matchesQuestMapStatus({ availabilityState: 'completed' }, 'active')).toBe(false);
+  });
+
+  test('available and completed filters remain distinct', () => {
+    expect(matchesQuestMapStatus({ availabilityState: 'available' }, 'available')).toBe(true);
+    expect(matchesQuestMapStatus({ availabilityState: 'completed' }, 'available')).toBe(false);
+    expect(matchesQuestMapStatus({ availabilityState: 'completed' }, 'completed')).toBe(true);
+  });
+
+  test('selection focuses at least to the quest detail zoom', () => {
+    expect(getQuestMapSelectionZoom(10)).toBe(14);
+    expect(getQuestMapSelectionZoom(16)).toBe(16);
+    expect(getQuestMapSelectionZoom(Number.NaN)).toBe(14);
+  });
+
+  test('public radius is optional and bounded before drawing', () => {
+    expect(normalizePublicRadiusMeters(undefined)).toBeNull();
+    expect(normalizePublicRadiusMeters(-1)).toBeNull();
+    expect(normalizePublicRadiusMeters(250)).toBe(250);
+    expect(normalizePublicRadiusMeters(50_000)).toBe(5_000);
   });
 });
 
