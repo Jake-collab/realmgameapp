@@ -159,6 +159,9 @@ pnpm exec jest --runInBand __tests__/questRpc.integration.test.ts
 echo "Running Hunt map authorization and bounds contracts against the disposable database."
 pnpm exec jest --runInBand __tests__/huntMapSecurity.integration.test.ts
 
+echo "Running advanced Hunt helper privilege and wrapper contracts against the disposable database."
+pnpm exec jest --runInBand __tests__/huntAdvancedWorldMechanics.integration.test.ts
+
 echo "Running Social RPC contracts, including repeated opposite-direction races, against the disposable database."
 pnpm exec jest --runInBand __tests__/socialRpc.integration.test.ts
 

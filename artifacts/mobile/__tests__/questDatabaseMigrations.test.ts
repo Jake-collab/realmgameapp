@@ -390,6 +390,7 @@ describe("Supabase migration filename preflight", () => {
     for (const suite of [
       "__tests__/questRpc.integration.test.ts",
       "__tests__/socialRpc.integration.test.ts",
+      "__tests__/huntAdvancedWorldMechanics.integration.test.ts",
       "__tests__/questVerification.integration.test.ts",
       "__tests__/questActivityTracking.integration.test.ts",
       "__tests__/huntDropAuthorization.integration.test.ts",
