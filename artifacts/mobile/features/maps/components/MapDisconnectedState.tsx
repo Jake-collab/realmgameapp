@@ -21,9 +21,17 @@ import { DEV_MAP_UNAVAILABLE_MESSAGE } from '../config/mapConfig';
 
 interface MapDisconnectedStateProps {
   reason: 'token_missing' | 'module_unavailable' | 'error';
+  mapLabel?: 'Geo-Quests' | 'Hunts';
+  fallbackRoute?: '/quest/quests' | '/hunt/my-hunts';
+  onRetry?: () => void;
 }
 
-export function MapDisconnectedState({ reason }: MapDisconnectedStateProps) {
+export function MapDisconnectedState({
+  reason,
+  mapLabel = 'Geo-Quests',
+  fallbackRoute = '/quest/quests',
+  onRetry,
+}: MapDisconnectedStateProps) {
   const colors = useColors();
   const router = useRouter();
 
@@ -33,7 +41,7 @@ export function MapDisconnectedState({ reason }: MapDisconnectedStateProps) {
 
   const heading = 'Map Unavailable';
   const body = isQueryIssue
-    ? 'We could not load Hunts right now. Check your connection and try again.'
+    ? `We could not load ${mapLabel} right now. Check your connection and try again.`
     : isDev
     ? DEV_MAP_UNAVAILABLE_MESSAGE +
       (isModuleIssue
@@ -51,15 +59,27 @@ export function MapDisconnectedState({ reason }: MapDisconnectedStateProps) {
       <Text style={[styles.heading, { color: colors.foreground }]}>{heading}</Text>
       <Text style={[styles.body, { color: colors.mutedForeground }]}>{body}</Text>
 
+      {onRetry && (
+        <TouchableOpacity
+          onPress={onRetry}
+          style={[styles.button, { backgroundColor: colors.primary }]}
+          accessibilityRole="button"
+          accessibilityLabel={`Retry loading ${mapLabel}`}
+        >
+          <Feather name="refresh-cw" size={16} color={colors.primaryForeground} />
+          <Text style={[styles.buttonText, { color: colors.primaryForeground }]}>Try again</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Fallback: browse as list */}
       <TouchableOpacity
-        onPress={() => router.push('/quest/quests')}
+        onPress={() => router.push(fallbackRoute)}
         style={[styles.button, { backgroundColor: colors.secondary, borderColor: colors.border }]}
         accessibilityRole="button"
-        accessibilityLabel="Browse Geo-Quests as a list"
+        accessibilityLabel={`Browse ${mapLabel} as a list`}
       >
         <Feather name="list" size={16} color={colors.primary} />
-        <Text style={[styles.buttonText, { color: colors.primary }]}>Browse Geo-Quests as a list</Text>
+        <Text style={[styles.buttonText, { color: colors.primary }]}>Browse {mapLabel} as a list</Text>
         <Feather name="chevron-right" size={14} color={colors.primary} />
       </TouchableOpacity>
     </View>

@@ -16,7 +16,7 @@ import { requireSupabase } from '@/lib/supabase/client';
 import { normalizeError } from '@/lib/errors/normalizeError';
 import type { PublicGeoQuestMapItem, GeoQuestMapFilter, GeoValidationRequest, GeoValidationResponse } from '../types/questMap.types';
 import type { BoundingBox } from '../../maps/utils/geoUtils';
-import { isValidBoundingBox } from '../../maps/utils/geoUtils';
+import { isValidBoundingBox, isValidLatLng } from '../../maps/utils/geoUtils';
 import { VIEWPORT_RESULT_LIMIT } from '../../maps/config/mapConfig';
 
 // ─── Viewport query ───────────────────────────────────────────────────────────
@@ -39,6 +39,10 @@ export async function fetchGeoQuestViewport(
   }
 
   const client = requireSupabase();
+  const hasValidApproximateLocation =
+    approximateUserLat != null &&
+    approximateUserLng != null &&
+    isValidLatLng(approximateUserLat, approximateUserLng);
   const { data, error } = await (client.rpc as any)('get_geo_quest_viewport', {
     p_west:   bounds.west,
     p_south:  bounds.south,
@@ -53,8 +57,8 @@ export async function fetchGeoQuestViewport(
     p_difficulties:     filter.difficulties.length > 0 ? filter.difficulties : null,
     p_quest_type:       filter.questType !== 'all' ? filter.questType : null,
     p_indoor_outdoor:   filter.indoorOutdoor,
-    p_user_lat:         approximateUserLat ?? null,
-    p_user_lng:         approximateUserLng ?? null,
+    p_user_lat:         hasValidApproximateLocation ? approximateUserLat : null,
+    p_user_lng:         hasValidApproximateLocation ? approximateUserLng : null,
   });
 
   if (error) throw normalizeError(error);
@@ -73,6 +77,9 @@ export async function fetchNearbyGeoQuests(
   filter: GeoQuestMapFilter,
   limit = 30,
 ): Promise<PublicGeoQuestMapItem[]> {
+  if (!isValidLatLng(approximateLat, approximateLng)) {
+    throw new Error('Invalid approximate location');
+  }
   const client = requireSupabase();
   const { data, error } = await (client.rpc as any)('get_nearby_geo_quests', {
     p_lat:             approximateLat,
@@ -163,7 +170,9 @@ export async function searchPlaces(
     const resp = await fetch(url);
     if (!resp.ok) return [];
     const json = await resp.json();
-    return (json.features ?? []).map(mapGeocodingFeature);
+    return (json.features ?? [])
+      .map(mapGeocodingFeature)
+      .filter((suggestion: PlaceSuggestion | null): suggestion is PlaceSuggestion => suggestion !== null);
   } catch {
     return [];
   }
@@ -176,31 +185,57 @@ function mapViewportRows(
   userLat?: number,
   userLng?: number,
 ): PublicGeoQuestMapItem[] {
-  return rows.map(row => ({
-    questId:                  row.quest_id,
-    occurrenceId:             row.occurrence_id ?? null,
-    title:                    row.title ?? '',
-    shortObjective:           row.short_objective ?? '',
-    displayLatitude:          row.display_lat ?? 0,
-    displayLongitude:         row.display_lng ?? 0,
-    publicLocationName:       row.public_location_name ?? null,
-    approximateDistanceMeters: row.distance_meters ?? null,
-    pointsReward:             row.points_reward ?? 0,
-    estimatedDurationMinutes: row.estimated_duration_minutes ?? null,
-    difficulty:               row.difficulty ?? null,
-    questType:                row.quest_type ?? 'geo',
-    availabilityState:        row.availability_state ?? 'unavailable',
-    participationState:       row.participation_state ?? null,
-    thumbnailUrl:             row.thumbnail_url ?? null,
-    isFeatured:               row.is_featured ?? false,
-    accessibilitySummary:     row.accessibility_summary ?? null,
-    requiresStartLocation:    row.requires_start_location ?? false,
-    requiresCompletionLocation: row.requires_completion_location ?? false,
-    indoorOutdoor:            row.indoor_outdoor ?? null,
-    publicVenueHoursNote:     row.public_venue_hours_note ?? null,
-    availableFrom:            row.available_from ?? null,
-    expiresAt:                row.expires_at ?? null,
-  }));
+  return rows.flatMap(row => {
+    const displayLatitude = row?.display_lat;
+    const displayLongitude = row?.display_lng;
+    const questId = typeof row?.quest_id === 'string' ? row.quest_id : null;
+    const title = typeof row?.title === 'string' ? row.title.trim() : '';
+    const difficulty = ['beginner', 'intermediate', 'advanced'].includes(row?.difficulty)
+      ? row.difficulty
+      : null;
+    const questType = ['daily', 'monthly', 'geo'].includes(row?.quest_type)
+      ? row.quest_type
+      : 'geo';
+    const indoorOutdoor = ['indoor', 'outdoor', 'both'].includes(row?.indoor_outdoor)
+      ? row.indoor_outdoor
+      : null;
+    const availabilityState = [
+      'available', 'active', 'completed', 'upcoming', 'unavailable',
+      'under_review', 'awaiting_proof',
+    ].includes(row?.availability_state)
+      ? row.availability_state
+      : 'unavailable';
+
+    if (!questId || !title || !isValidLatLng(displayLatitude, displayLongitude)) {
+      return [];
+    }
+
+    return [{
+      questId,
+      occurrenceId:                 typeof row.occurrence_id === 'string' ? row.occurrence_id : null,
+      title,
+      shortObjective:               typeof row.short_objective === 'string' ? row.short_objective : '',
+      displayLatitude,
+      displayLongitude,
+      publicLocationName:           typeof row.public_location_name === 'string' ? row.public_location_name : null,
+      approximateDistanceMeters:    Number.isFinite(row.distance_meters) ? row.distance_meters : null,
+      pointsReward:                 Number.isFinite(row.points_reward) ? row.points_reward : 0,
+      estimatedDurationMinutes:     Number.isFinite(row.estimated_duration_minutes) ? row.estimated_duration_minutes : null,
+      difficulty,
+      questType,
+      availabilityState,
+      participationState:           typeof row.participation_state === 'string' ? row.participation_state : null,
+      thumbnailUrl:                 typeof row.thumbnail_url === 'string' ? row.thumbnail_url : null,
+      isFeatured:                   row.is_featured === true,
+      accessibilitySummary:         typeof row.accessibility_summary === 'string' ? row.accessibility_summary : null,
+      requiresStartLocation:        row.requires_start_location === true,
+      requiresCompletionLocation:   row.requires_completion_location === true,
+      indoorOutdoor,
+      publicVenueHoursNote:         typeof row.public_venue_hours_note === 'string' ? row.public_venue_hours_note : null,
+      availableFrom:                typeof row.available_from === 'string' ? row.available_from : null,
+      expiresAt:                    typeof row.expires_at === 'string' ? row.expires_at : null,
+    }];
+  });
 }
 
 function mapValidationResponse(row: any): GeoValidationResponse {
@@ -216,15 +251,30 @@ function mapValidationResponse(row: any): GeoValidationResponse {
   };
 }
 
-function mapGeocodingFeature(feature: any): PlaceSuggestion {
+function mapGeocodingFeature(feature: any): PlaceSuggestion | null {
   const [west, south, east, north] = feature.bbox ?? [];
-  const [lng, lat] = feature.center ?? [0, 0];
+  const [lng, lat] = feature.center ?? [];
+  const placeId = typeof feature.id === 'string' ? feature.id : '';
+  const placeName = typeof feature.place_name === 'string'
+    ? feature.place_name
+    : typeof feature.text === 'string'
+      ? feature.text
+      : '';
+  const placeType = Array.isArray(feature.place_type) && typeof feature.place_type[0] === 'string'
+    ? feature.place_type[0]
+    : null;
+  const hasValidBounds =
+    [west, south, east, north].every(value => typeof value === 'number' && Number.isFinite(value)) &&
+    isValidBoundingBox({ west, south, east, north });
+
+  if (!placeId || !placeName || !placeType || !isValidLatLng(lat, lng)) return null;
+
   return {
-    placeId:         feature.id ?? '',
-    placeName:       feature.place_name ?? feature.text ?? '',
-    placeType:       (feature.place_type ?? [])[0] ?? 'place',
+    placeId,
+    placeName,
+    placeType,
     centerLatitude:  lat,
     centerLongitude: lng,
-    boundingBox: west != null ? { west, south, east, north } : null,
+    boundingBox: hasValidBounds ? { west, south, east, north } : null,
   };
 }

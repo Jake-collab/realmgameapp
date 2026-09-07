@@ -57,8 +57,7 @@ export function useLocationPermission(): UseLocationPermissionResult {
           return 'granted';
         case ExpoLocation.PermissionStatus.DENIED:
           // Distinguish permanently blocked vs soft-denied
-          // expo-location doesn't always surface this, so treat denied as denied
-          return 'denied';
+          return permissionResponse.canAskAgain === false ? 'blocked' : 'denied';
         case ExpoLocation.PermissionStatus.UNDETERMINED:
           return 'not_determined';
         default:

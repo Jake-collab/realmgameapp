@@ -49,7 +49,7 @@ export async function fetchHuntsInViewport(
 
   // Call the migration-022 RPC for viewport queries
   const { data, error } = await supabase
-    .rpc('get_hunt_map_viewport', {
+    .rpc('get_hunt_map_viewport_secure', {
       p_west:    bounds.west,
       p_south:   bounds.south,
       p_east:    bounds.east,
@@ -71,6 +71,7 @@ export async function fetchHuntsInViewport(
   }
 
   const rows: any[] = Array.isArray(data) ? data : [];
+  const serverLimitReached = rows.length >= safeLimit;
 
   // Apply client-side participation/status filters that require userId context
   let hunts: PublicHuntMapItem[] = rows
@@ -90,7 +91,7 @@ export async function fetchHuntsInViewport(
   return {
     hunts,
     totalCount: hunts.length,
-    isLimitReached: hunts.length >= safeLimit,
+    isLimitReached: serverLimitReached,
   };
 }
 
@@ -110,11 +111,20 @@ export async function fetchNearbyHunts(
 ): Promise<PublicHuntMapItem[]> {
   const safeLimit = Math.min(Math.max(Math.floor(limit), 1), 100);
   const supabase = db();
+  const hasValidApproximateLocation =
+    approximateLat == null && approximateLng == null
+      ? true
+      : approximateLat != null &&
+        approximateLng != null &&
+        isValidLatLng(approximateLat, approximateLng);
+  if (!hasValidApproximateLocation) {
+    throw new Error('Invalid approximate location');
+  }
 
   const { data, error } = await supabase
-    .rpc('get_nearby_hunts', {
-      p_lat:                  approximateLat,
-      p_lng:                  approximateLng,
+    .rpc('get_nearby_hunts_secure', {
+      p_lat:                  approximateLat ?? null,
+      p_lng:                  approximateLng ?? null,
       p_user_id:              userId,
       p_sort:                 sortOrder,
        p_limit:                safeLimit,
@@ -150,14 +160,20 @@ export async function fetchNearbyHunts(
 // ─── Row mapper ───────────────────────────────────────────────────────────────
 
 function rowToPublicHuntMapItem(row: any): PublicHuntMapItem | null {
-  const displayLatitude = row.display_lat;
-  const displayLongitude = row.display_lng;
-  if (!isValidLatLng(displayLatitude, displayLongitude)) return null;
+  const displayLatitude = row?.display_lat;
+  const displayLongitude = row?.display_lng;
+  const huntId = typeof row?.hunt_id === 'string'
+    ? row.hunt_id
+    : typeof row?.id === 'string'
+      ? row.id
+      : null;
+  const title = typeof row?.title === 'string' ? row.title.trim() : '';
+  if (!huntId || !title || !isValidLatLng(displayLatitude, displayLongitude)) return null;
   return {
-    huntId:                   row.hunt_id ?? row.id,
+    huntId,
     occurrenceId:             row.occurrence_id ?? null,
     slug:                     row.slug ?? '',
-    title:                    row.title ?? '',
+    title,
     summary:                  row.summary ?? '',
     displayLatitude,
     displayLongitude,

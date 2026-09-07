@@ -35,6 +35,7 @@
 - [Scheduled worker architecture](scheduled-worker-architecture.md) — one trusted API worker owns durable notifications and maintenance; do not add pg_cron duplicates.
 - [Supabase audit findings](supabase-audit-findings.md) — verify live migration parity, partial-index conflict targets, and grants for tables created after privilege loops.
 - [Production audit parity](production-audit-parity.md) — repository migration checks are insufficient; compare linked history and live function/object presence before declaring release readiness.
+- [Mapbox foundation boundary](mapbox-foundation.md) — public map data stays approximate and bounded; persisted camera state is coarse; Hunt identity comes from auth.uid().
 - [Quest verification boundary](quest-verification-boundary.md) — explicit methods can compose, but every trust check and point award remains server-authoritative.
 - [Quest activity verification](quest-activity-verification.md) — distance is derived from authorized sequential samples; raw routes are private, bounded, and purged after terminal participation.
 - [Revenue entitlement boundary](revenue-entitlement-boundary.md) — memberships, allowances, finds, collectibles, and marketplace money remain server-authoritative and provider-neutral.

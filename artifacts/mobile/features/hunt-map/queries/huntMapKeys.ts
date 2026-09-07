@@ -15,7 +15,7 @@ function filterKey(f: HuntMapFilter) {
     f.startingSoon,
     f.hasSpace,
     f.participationMode,
-    f.difficulties.sort().join(','),
+    [...f.difficulties].sort().join(','),
     f.maxDurationMinutes,
     f.indoorOutdoor,
     f.accessibleOnly,

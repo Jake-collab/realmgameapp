@@ -26,6 +26,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useColorScheme,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Feather } from '@expo/vector-icons';
@@ -45,12 +46,15 @@ import {
   USER_LOCATION_ZOOM,
   VIEWPORT_DEBOUNCE_MS,
   DEFAULT_DISTANCE_UNIT,
+  MAP_STYLES,
 } from '@/features/maps/config/mapConfig';
 import {
   areBBoxesMeaningfullyDifferent,
   cacheRoundLatLng,
 } from '@/features/maps/utils/geoUtils';
 import type { BoundingBox } from '@/features/maps/utils/geoUtils';
+import { parseMapRegionEvent } from '@/features/maps/utils/mapboxEvents';
+import { usePersistedMapCamera } from '@/features/maps/hooks/usePersistedMapCamera';
 
 // Quest map domain
 import { useGeoQuestViewport } from '@/features/quest-map/hooks/useGeoQuestViewport';
@@ -97,23 +101,44 @@ function QuestMapInner() {
   // ── Camera / bounds state ───────────────────────────────────────────────────
   const [activeBounds, setActiveBounds] = useState<BoundingBox | null>(null);
   const [pendingBounds, setPendingBounds] = useState<BoundingBox | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(DEFAULT_MAP_REGION.zoomLevel);
+  const [zoomLevel, setZoomLevel] = useState<number>(DEFAULT_MAP_REGION.zoomLevel);
   const [userLat, setUserLat] = useState<number | null>(null);
   const [userLng, setUserLng] = useState<number | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didInitialCenterRef = useRef(false);
   const cameraRef = useRef<any>(null);
+  const colorScheme = useColorScheme();
+  const { camera: persistedCamera, isRestored, persistCamera } = usePersistedMapCamera(
+    'quest',
+    DEFAULT_MAP_REGION,
+  );
 
   // A public viewport is useful even when the player declines location. Nearby
   // sorting remains off until the optional foreground permission is granted.
   useEffect(() => {
+    const center = isRestored ? persistedCamera : DEFAULT_MAP_REGION;
     setActiveBounds({
-      west: DEFAULT_MAP_REGION.longitude - 0.1,
-      south: DEFAULT_MAP_REGION.latitude - 0.1,
-      east: DEFAULT_MAP_REGION.longitude + 0.1,
-      north: DEFAULT_MAP_REGION.latitude + 0.1,
+      west: center.longitude - 0.1,
+      south: center.latitude - 0.1,
+      east: center.longitude + 0.1,
+      north: center.latitude + 0.1,
     });
+  }, [isRestored]);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
   }, []);
+
+  useEffect(() => {
+    if (!isRestored || !cameraRef.current) return;
+    cameraRef.current.setCamera?.({
+      centerCoordinate: [persistedCamera.longitude, persistedCamera.latitude],
+      zoomLevel: persistedCamera.zoomLevel,
+      animationDuration: 0,
+    });
+  }, [isRestored]);
 
   // ── Filters ─────────────────────────────────────────────────────────────────
   const { filter, activeFilterCount, setFilter, clearFilters } = useMapFilters();
@@ -152,23 +177,19 @@ function QuestMapInner() {
     // Map is moving — show "search this area" once movement ends if bounds changed
   }, []);
 
-  const handleRegionDidChange = useCallback((feature: any) => {
-    const newZoom = feature?.properties?.zoomLevel ?? zoomLevel;
-    setZoomLevel(newZoom);
+  const handleRegionDidChange = useCallback((feature: unknown) => {
+    const parsed = parseMapRegionEvent(feature);
+    if (parsed.zoomLevel !== null) setZoomLevel(parsed.zoomLevel);
+    if (parsed.centerLatitude !== null && parsed.centerLongitude !== null && parsed.zoomLevel !== null) {
+      void persistCamera({
+        latitude: parsed.centerLatitude,
+        longitude: parsed.centerLongitude,
+        zoomLevel: parsed.zoomLevel,
+      });
+    }
 
-    // Extract bounds from Mapbox region change event
-    const coords = feature?.geometry?.coordinates;
-    if (!coords) return;
-
-    const [lng, lat] = coords;
-    const visibleBounds = feature?.properties?.visibleBounds;
-    if (visibleBounds) {
-      const newBounds: BoundingBox = {
-        west:  visibleBounds[0][0],
-        south: visibleBounds[1][1],
-        east:  visibleBounds[1][0],
-        north: visibleBounds[0][1],
-      };
+    if (parsed.bounds) {
+      const newBounds: BoundingBox = parsed.bounds;
       setPendingBounds(newBounds);
 
       // Show "search this area" if bounds moved meaningfully
@@ -186,7 +207,7 @@ function QuestMapInner() {
       });
       setShowSearchThisArea(false);
     }, VIEWPORT_DEBOUNCE_MS);
-  }, [activeBounds, zoomLevel]);
+  }, [activeBounds, persistCamera]);
 
   // ── Search this area ─────────────────────────────────────────────────────────
   const handleSearchThisArea = useCallback(() => {
@@ -288,6 +309,15 @@ function QuestMapInner() {
   if (isModuleUnavailable) {
     return <MapDisconnectedState reason="module_unavailable" />;
   }
+  if (viewportQuery.isError && viewportQuery.quests.length === 0) {
+    return (
+      <MapDisconnectedState
+        reason="error"
+        mapLabel="Geo-Quests"
+        onRetry={() => void viewportQuery.refetch()}
+      />
+    );
+  }
 
   // ── Map is configured: render full experience ─────────────────────────────────
   // Build marker data from viewport quests
@@ -310,6 +340,7 @@ function QuestMapInner() {
       {MapboxGL ? (
         <MapboxGL.MapView
           style={styles.map}
+          styleURL={colorScheme === 'dark' ? MAP_STYLES.dark : MAP_STYLES.light}
           logoEnabled
           attributionEnabled
           compassEnabled
@@ -320,10 +351,10 @@ function QuestMapInner() {
             ref={cameraRef}
             defaultSettings={{
               centerCoordinate: [
-                DEFAULT_MAP_REGION.longitude,
-                DEFAULT_MAP_REGION.latitude,
+                 persistedCamera.longitude,
+                 persistedCamera.latitude,
               ],
-              zoomLevel: DEFAULT_MAP_REGION.zoomLevel,
+               zoomLevel: persistedCamera.zoomLevel,
             }}
           />
 

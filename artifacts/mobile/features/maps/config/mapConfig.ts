@@ -19,9 +19,11 @@
 export const MAPBOX_ACCESS_TOKEN =
   process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN ?? '';
 
-/** True when a Mapbox token is present and non-empty */
+/** True only for a client-safe public Mapbox token. */
 export const isMapboxConfigured = (): boolean =>
-  typeof MAPBOX_ACCESS_TOKEN === 'string' && MAPBOX_ACCESS_TOKEN.trim().length > 10;
+  typeof MAPBOX_ACCESS_TOKEN === 'string' &&
+  MAPBOX_ACCESS_TOKEN.trim().startsWith('pk.') &&
+  MAPBOX_ACCESS_TOKEN.trim().length > 10;
 
 // ─── Style URLs ───────────────────────────────────────────────────────────────
 
