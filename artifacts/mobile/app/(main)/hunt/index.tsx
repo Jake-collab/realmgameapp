@@ -16,7 +16,7 @@
  * - No tab changes from within this screen.
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Platform,
   StyleSheet,
@@ -27,7 +27,7 @@ import {
   useColorScheme,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useColors } from '@/hooks/useColors';
 import { fontFamily, fontSize } from '@/constants/typography';
@@ -65,6 +65,18 @@ import { useJoinHunt } from '@/features/hunts/hooks/useJoinHunt';
 import type { PublicHuntMapItem, HuntMarkerStatus, HuntBottomSheetState, HuntNearbySortOrder } from '@/features/hunt-map/types/huntMap.types';
 import { SearchThisAreaButton } from '@/features/quest-map/components/SearchThisAreaButton';
 import { usePlaceSearch } from '@/features/quest-map/hooks/usePlaceSearch';
+import { useActiveHunt } from '@/features/hunts/hooks/useActiveHunt';
+import { useQueryClient } from '@tanstack/react-query';
+import { huntMapKeys } from '@/features/hunt-map/queries/huntMapKeys';
+import { HuntMapHud } from '@/features/hunt-map/components/HuntMapHud';
+import { HuntObjectiveMarker } from '@/features/hunt-map/components/HuntObjectiveMarker';
+import {
+  getObjectiveDirection,
+  getStopLocation,
+  resolveObjectiveMarkerStatus,
+  selectCurrentHuntStop,
+} from '@/features/hunt-map/utils/huntMapGameplay';
+import type { ActiveHunt } from '@/features/hunts/types/hunt.types';
 
 // ─── Inner screen (wrapped by MapProvider) ────────────────────────────────────
 
@@ -83,6 +95,10 @@ function HuntMapInner() {
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [showSearchThisArea, setShowSearchThisArea] = useState(false);
   const [joinTarget, setJoinTarget] = useState<PublicHuntMapItem | null>(null);
+  const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
+  const [showTrail, setShowTrail] = useState(false);
+  const [activityTrail, setActivityTrail] = useState<Array<[number, number]>>([]);
+  const queryClient = useQueryClient();
 
   // ── Camera / bounds state ────────────────────────────────────────────────
   const [activeBounds, setActiveBounds] = useState<BoundingBox | null>(null);
@@ -130,6 +146,11 @@ function HuntMapInner() {
   // ── Place search ──────────────────────────────────────────────────────────
   const searchHook = usePlaceSearch();
 
+  useFocusEffect(useCallback(() => {
+    void queryClient.invalidateQueries({ queryKey: huntMapKeys.all });
+    return undefined;
+  }, [queryClient]));
+
   // ── Approximate user location (rounded to 2dp) ────────────────────────────
   const roundedUser = userLat !== null && userLng !== null
     ? cacheRoundLatLng(userLat, userLng)
@@ -152,6 +173,51 @@ function HuntMapInner() {
     sortOrder: nearbySort,
     enabled: isReady,
   });
+
+  const activeHuntQuery = useActiveHunt({
+    participationId: selectedHunt?.participationId ?? null,
+    userId: user?.id ?? null,
+    enabled: Boolean(
+      selectedHunt?.participationId
+      && user?.id
+      && (selectedHunt.participationStatus === 'active' || selectedHunt.participationStatus === 'paused'),
+    ),
+    pollingIntervalMs: 30_000,
+  });
+  const activeHunt = activeHuntQuery.data;
+  const selectedStop = useMemo(
+    () => activeHunt ? selectCurrentHuntStop(activeHunt, selectedStopId) : null,
+    [activeHunt, selectedStopId],
+  );
+  const selectedLocation = useMemo(
+    () => getStopLocation(activeHunt?.revealedStopLocations ?? [], selectedStop?.id),
+    [activeHunt?.revealedStopLocations, selectedStop?.id],
+  );
+  const playerLocation = userLat !== null && userLng !== null
+    ? { latitude: userLat, longitude: userLng }
+    : null;
+
+  // A completion or removal on another device is reflected by the next map
+  // refresh. Keep the selected card in lockstep with that server snapshot.
+  useEffect(() => {
+    if (!selectedHunt) return;
+    const refreshed = viewportQuery.hunts.find(hunt => hunt.huntId === selectedHunt.huntId);
+    if (
+      refreshed
+      && (
+        refreshed.participationStatus !== selectedHunt.participationStatus
+        || refreshed.availabilityState !== selectedHunt.availabilityState
+      )
+    ) {
+      setSelectedHunt(refreshed);
+    }
+  }, [selectedHunt, viewportQuery.hunts]);
+
+  useEffect(() => {
+    if (activeHunt?.participationStatus === 'completed') {
+      void queryClient.invalidateQueries({ queryKey: huntMapKeys.all });
+    }
+  }, [activeHunt?.participationStatus, queryClient]);
 
   // ── Join mutation ────────────────────────────────────────────────────────
   const joinMutation = useJoinHunt();
@@ -195,13 +261,27 @@ function HuntMapInner() {
   // ── Marker selection ──────────────────────────────────────────────────────
   const handleMarkerPress = useCallback((hunt: PublicHuntMapItem) => {
     setSelectedHunt(hunt);
+    setSelectedStopId(null);
+    setActivityTrail([]);
     setSheetState('medium');
   }, []);
 
   const handleDeselectHunt = useCallback(() => {
     setSelectedHunt(null);
+    setSelectedStopId(null);
+    setActivityTrail([]);
     setSheetState('collapsed');
   }, []);
+
+  const handleObjectivePress = useCallback((stopId: string, latitude: number, longitude: number) => {
+    setSelectedStopId(stopId);
+    setSheetState('medium');
+    cameraRef.current?.setCamera?.({
+      centerCoordinate: [longitude, latitude],
+      zoomLevel: Math.max(zoomLevel, 15),
+      animationDuration: 600,
+    });
+  }, [zoomLevel]);
 
   // ── Place search ──────────────────────────────────────────────────────────
   const handlePlaceSelect = useCallback((suggestion: typeof searchHook.selectedPlace) => {
@@ -253,6 +333,13 @@ function HuntMapInner() {
     setUserLat(lat);
     setUserLng(lng);
 
+    if (activeHunt && selectedHunt?.participationId) {
+      setActivityTrail(previous => {
+        const next: Array<[number, number]> = [...previous, [lng, lat]];
+        return next.slice(-100);
+      });
+    }
+
     if (!didInitialCenterRef.current && cameraRef.current?.setCamera) {
       didInitialCenterRef.current = true;
       cameraRef.current.setCamera({
@@ -262,7 +349,7 @@ function HuntMapInner() {
       });
       setActiveBounds({ west: lng - 0.1, south: lat - 0.1, east: lng + 0.1, north: lat + 0.1 });
     }
-  }, []);
+  }, [activeHunt, selectedHunt?.participationId]);
 
   // ── Join flow ─────────────────────────────────────────────────────────────
   const handleJoinPress = useCallback((hunt: PublicHuntMapItem) => {
@@ -282,6 +369,7 @@ function HuntMapInner() {
         onSuccess: (result) => {
           setJoinTarget(null);
           if (result.success && result.participationId) {
+            void queryClient.invalidateQueries({ queryKey: huntMapKeys.all });
             router.push(`/hunt-ready/${result.participationId}`);
           }
         },
@@ -290,7 +378,7 @@ function HuntMapInner() {
         },
       }
     );
-  }, [joinTarget, user, joinMutation]);
+  }, [joinTarget, user, joinMutation, queryClient]);
 
   // ── Disconnected / unavailable ────────────────────────────────────────────
   if (isTokenMissing) return <MapDisconnectedState reason="token_missing" />;
@@ -317,6 +405,44 @@ function HuntMapInner() {
     pointsReward: h.pointsReward,
     title:       h.title,
   }));
+  const objectiveMarkers = useMemo(() => {
+    if (!activeHunt) return [];
+    return activeHunt.revealedStopLocations.flatMap(location => {
+      const stop = activeHunt.currentStops.find(candidate => candidate.id === location.stopId);
+      if (!stop) return [];
+      const current = selectCurrentHuntStop(activeHunt, selectedStopId);
+      return [{
+        ...location,
+        title: stop.title,
+        status: resolveObjectiveMarkerStatus(stop, current?.id === stop.id),
+        isSelected: selectedStop?.id === stop.id,
+      }];
+    });
+  }, [activeHunt, selectedStopId, selectedStop?.id]);
+
+  const selectedObjectiveCircle = useMemo(() => {
+    if (!selectedLocation) return null;
+    const radiusMeters = Math.min(Math.max(selectedLocation.publicRadius, 10), 5_000);
+    const latDelta = radiusMeters / 111_000;
+    const lngDelta = radiusMeters / (111_000 * Math.max(Math.cos(selectedLocation.publicLat * Math.PI / 180), 0.2));
+    return {
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        properties: {},
+        geometry: {
+          type: 'Polygon',
+          coordinates: [[
+            [selectedLocation.publicLng - lngDelta, selectedLocation.publicLat - latDelta],
+            [selectedLocation.publicLng + lngDelta, selectedLocation.publicLat - latDelta],
+            [selectedLocation.publicLng + lngDelta, selectedLocation.publicLat + latDelta],
+            [selectedLocation.publicLng - lngDelta, selectedLocation.publicLat + latDelta],
+            [selectedLocation.publicLng - lngDelta, selectedLocation.publicLat - latDelta],
+          ]],
+        },
+      }],
+    };
+  }, [selectedLocation]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -364,6 +490,50 @@ function HuntMapInner() {
                   const hunt = viewportQuery.hunts.find(h => h.huntId === m.huntId);
                   if (hunt) handleMarkerPress(hunt);
                 }}
+              />
+            </MapboxGL.MarkerView>
+          ))}
+
+          {MapboxGL.ShapeSource && selectedObjectiveCircle && (
+            <MapboxGL.ShapeSource id="hunt-selected-objective-area" shape={selectedObjectiveCircle as any}>
+              <MapboxGL.FillLayer
+                id="hunt-selected-objective-fill"
+                style={{ fillColor: colors.hunt, fillOpacity: 0.08 }}
+              />
+              <MapboxGL.LineLayer
+                id="hunt-selected-objective-line"
+                style={{ lineColor: colors.hunt, lineWidth: 1.5, lineOpacity: 0.55, lineDasharray: [2, 2] }}
+              />
+            </MapboxGL.ShapeSource>
+          )}
+
+          {MapboxGL.ShapeSource && showTrail && activityTrail.length > 1 && (
+            <MapboxGL.ShapeSource
+              id="hunt-local-activity-trail"
+              shape={{
+                type: 'Feature',
+                properties: { localOnly: true },
+                geometry: { type: 'LineString', coordinates: activityTrail },
+              }}
+            >
+              <MapboxGL.LineLayer
+                id="hunt-local-activity-trail-line"
+                style={{ lineColor: colors.hunt, lineWidth: 3, lineOpacity: 0.5, lineCap: 'round', lineJoin: 'round' }}
+              />
+            </MapboxGL.ShapeSource>
+          )}
+
+          {objectiveMarkers.map(marker => (
+            <MapboxGL.MarkerView
+              key={`objective-${marker.stopId}`}
+              coordinate={[marker.publicLng, marker.publicLat]}
+              anchor={{ x: 0.5, y: 0.5 }}
+            >
+              <HuntObjectiveMarker
+                title={marker.title}
+                status={marker.status}
+                isSelected={marker.isSelected}
+                onPress={() => handleObjectivePress(marker.stopId, marker.publicLat, marker.publicLng)}
               />
             </MapboxGL.MarkerView>
           ))}
@@ -417,6 +587,20 @@ function HuntMapInner() {
         )}
       </View>
 
+      <HuntMapHud
+        activeHunt={activeHunt}
+        selectedStop={selectedStop}
+        selectedLocation={selectedLocation}
+        playerLocation={playerLocation}
+        onOpenHunt={() => {
+          if (selectedHunt?.participationId) router.push(`/hunt-active/${selectedHunt.participationId}`);
+        }}
+        onToggleTrail={() => setShowTrail(previous => !previous)}
+        showTrail={showTrail}
+        isLoading={activeHuntQuery.isLoading}
+        isError={activeHuntQuery.isError}
+      />
+
       {/* Search this area */}
       <View style={styles.searchThisAreaWrap} pointerEvents="box-none">
         <SearchThisAreaButton
@@ -450,7 +634,7 @@ function HuntMapInner() {
         isAuthenticated={!!user}
         onExpandSheet={() => setSheetState('expanded')}
         onCollapseSheet={() => setSheetState('collapsed')}
-        onSelectHunt={h => { setSelectedHunt(h); setSheetState('medium'); }}
+         onSelectHunt={h => { setSelectedHunt(h); setSelectedStopId(null); setActivityTrail([]); setSheetState('medium'); }}
         onDeselectHunt={handleDeselectHunt}
         onSortChange={setNearbySort}
         onOpenFilters={() => setIsFilterSheetVisible(true)}

@@ -362,6 +362,26 @@ export async function fetchActiveHunt(participationId: string): Promise<ActiveHu
 
   const completedCount = authorizedProgress.filter((s: any) => s.progressStatus === 'completed').length;
 
+  const { data: locationRows } = await supabase.rpc(
+    'get_active_hunt_stop_locations',
+    { p_participation_id: participationId },
+  );
+  const revealedStopLocations = (Array.isArray(locationRows) ? locationRows : [])
+    .filter((row: any) =>
+      typeof row?.stop_id === 'string'
+      && Number.isFinite(row?.public_lat)
+      && Number.isFinite(row?.public_lng)
+      && Number.isFinite(row?.public_radius),
+    )
+    .map((row: any) => ({
+      stopId: row.stop_id,
+      publicLat: Number(row.public_lat),
+      publicLng: Number(row.public_lng),
+      publicRadius: Math.min(Math.max(Number(row.public_radius), 1), 5_000),
+      stopTitle: typeof row.stop_title === 'string' ? row.stop_title : '',
+      stopRole: row.stop_role ?? 'waypoint',
+    }));
+
   // Load hunt for total stop count + ordering
   const { data: hunt } = await supabase
     .from('hunts')
@@ -399,7 +419,7 @@ export async function fetchActiveHunt(participationId: string): Promise<ActiveHu
       reasonCode: null,
       loadingBehavior: 'spinner',
     },
-    revealedStopLocations: [], // populated from hunt_stop_geofences in a future prompt
+    revealedStopLocations,
     groupSummary: null,
   };
 }
