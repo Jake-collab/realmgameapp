@@ -58,6 +58,8 @@ import type { BoundingBox, LatLng } from '@/features/maps/utils/geoUtils';
 import { parseMapRegionEvent } from '@/features/maps/utils/mapboxEvents';
 import { usePersistedMapCamera } from '@/features/maps/hooks/usePersistedMapCamera';
 import { useQuestDetail } from '@/features/quests/hooks/useQuestDetail';
+import { useActiveQuest } from '@/features/quests/hooks/useActiveQuest';
+import { questKeys } from '@/features/quests/queries/questKeys';
 
 // Quest map domain
 import { useGeoQuestViewport } from '@/features/quest-map/hooks/useGeoQuestViewport';
@@ -67,6 +69,7 @@ import { usePlaceSearch } from '@/features/quest-map/hooks/usePlaceSearch';
 import { SearchThisAreaButton } from '@/features/quest-map/components/SearchThisAreaButton';
 import { NearbyResultsSheet } from '@/features/quest-map/components/NearbyResultsSheet';
 import { MapFilterSheet } from '@/features/quest-map/components/MapFilterSheet';
+import { QuestMapHud } from '@/features/quest-map/components/QuestMapHud';
 import { questMapKeys } from '@/features/quest-map/queries/questMapKeys';
 import type {
   PublicGeoQuestMapItem,
@@ -79,6 +82,7 @@ import {
   matchesQuestMapStatus,
   normalizePublicRadiusMeters,
 } from '@/features/quest-map/types/questMap.types';
+import { getFocusedActiveParticipation } from '@/features/quest-map/utils/questMapHud';
 
 // ─── Inner screen (wrapped by MapProvider) ────────────────────────────────────
 
@@ -125,7 +129,8 @@ function QuestMapInner() {
   useFocusEffect(
     useCallback(() => {
       void queryClient.invalidateQueries({ queryKey: questMapKeys.all });
-    }, [queryClient]),
+      void queryClient.invalidateQueries({ queryKey: questKeys.active(user?.id ?? '') });
+    }, [queryClient, user?.id]),
   );
 
   // A public viewport is useful even when the player declines location. Nearby
@@ -188,6 +193,11 @@ function QuestMapInner() {
   // never the private validation geometry and is loaded only for the focused
   // card.
   const selectedDetailQuery = useQuestDetail(selectedQuest?.questId);
+  const activeQuestQuery = useActiveQuest();
+  const selectedParticipation = getFocusedActiveParticipation(
+    selectedQuest?.questId,
+    activeQuestQuery.data ?? [],
+  );
   const selectedPublicRadius = normalizePublicRadiusMeters(
     selectedDetailQuery.data?.quest_locations?.[0]?.public_radius_meters,
   );
@@ -380,7 +390,6 @@ function QuestMapInner() {
     isFeatured:   q.isFeatured,
   }));
   const sheetQuests = roundedUser ? filteredNearbyQuests : filteredViewportQuests;
-  const discoveryPoints = sheetQuests.reduce((sum, quest) => sum + quest.pointsReward, 0);
   const selectedCircle = selectedQuest && selectedPublicRadius && selectedPublicRadius > 0
     ? buildApproximateCircle(
         selectedQuest.displayLatitude,
@@ -506,33 +515,15 @@ function QuestMapInner() {
         )}
       </View>
 
-      {/* Lightweight discovery HUD — counts only public map results. */}
-      <View
-        style={[
-          styles.discoveryHud,
-          { backgroundColor: colors.card, borderColor: colors.border },
-        ]}
-        accessibilityLabel={`${sheetQuests.length} quests in this area, ${discoveryPoints} points available`}
-      >
-        <View style={[styles.discoveryIcon, { backgroundColor: colors.accent + '18' }]}>
-          <Feather name="compass" size={16} color={colors.accent} />
-        </View>
-        <View style={styles.discoveryCopy}>
-          <Text style={[styles.discoveryTitle, { color: colors.foreground }]}>
-            {sheetQuests.length} {sheetQuests.length === 1 ? 'Quest' : 'Quests'} {roundedUser ? 'nearby' : 'in view'}
-          </Text>
-          <Text style={[styles.discoverySubtitle, { color: colors.mutedForeground }]}>
-            {discoveryPoints} points available · {permissionHook.canUseLocation ? 'location on' : 'location off'}
-          </Text>
-          {viewportQuery.isFetching || nearbyQuery.isLoading ? (
-            <Text style={[styles.discoveryStatus, { color: colors.accent }]}>Updating map…</Text>
-          ) : userAccuracyMeters !== null && userAccuracyMeters > 50 ? (
-            <Text style={[styles.discoveryStatus, { color: colors.warning }]}>
-              GPS signal is approximate
-            </Text>
-          ) : null}
-        </View>
-      </View>
+      <QuestMapHud
+        selectedQuest={selectedQuest}
+        selectedQuestDetail={selectedDetailQuery.data}
+        selectedParticipation={selectedParticipation}
+        activeCount={activeQuestQuery.data?.length ?? null}
+        nearbyCount={sheetQuests.length}
+        nearbyCountIsApproximate={!roundedUser}
+        isLoadingActive={activeQuestQuery.isLoading}
+      />
 
       {/* Search this area button — centered */}
       <View style={styles.searchThisAreaWrap} pointerEvents="box-none">
@@ -810,48 +801,6 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     zIndex: 9,
-  },
-
-  discoveryHud: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 70 : 78,
-    left: spacing[4],
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing[2],
-    maxWidth: '72%',
-    paddingVertical: spacing[2],
-    paddingHorizontal: spacing[3],
-    borderRadius: radius.lg,
-    borderWidth: StyleSheet.hairlineWidth,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 3,
-    zIndex: 8,
-  },
-  discoveryIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  discoveryCopy: {
-    gap: 1,
-  },
-  discoveryTitle: {
-    fontFamily: fontFamily.semiBold,
-    fontSize: fontSize.sm,
-  },
-  discoverySubtitle: {
-    fontFamily: fontFamily.regular,
-    fontSize: fontSize.xs,
-  },
-  discoveryStatus: {
-    fontFamily: fontFamily.medium,
-    fontSize: fontSize.xs,
   },
 
   recenterButton: {
