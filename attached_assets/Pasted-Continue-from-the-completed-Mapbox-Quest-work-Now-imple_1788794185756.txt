@@ -1,0 +1,252 @@
+Continue from the completed Mapbox Quest work.
+
+Now implement the COMPLETE Hunt Map gameplay layer.
+
+The Hunt Map is the primary Hunt discovery/gameplay surface.
+
+DO NOT create a Discover tab.
+DO NOT create separate maps for different Hunt themes.
+Use one giant Hunt map for applicable Hunt content.
+
+The existing Hunt navigation remains:
+
+* Map
+* My Hunts
+* Progress
+* Profile
+
+The Hunt map must support:
+
+* official Hunts
+* community Hunts
+* custom games
+
+Preserve existing Hunt creation, participation, invitations, My Hunts, Progress, points, moderation, and backend systems.
+
+HUNT MAP CONTENT
+
+Render applicable Hunt content from backend data.
+
+Support:
+
+* Hunt locations
+* Hunt objectives
+* drops/items where applicable
+* selected Hunt
+* selected objective
+* player position
+* objective marker states
+* Hunt-level progress
+
+Do not hard-code example Hunts into production behavior.
+
+HUNT MARKER STATES
+
+Support states such as:
+
+* available
+* ready
+* active
+* discovered
+* completed
+* locked
+* hidden/undiscovered when later reveal logic applies
+
+Not every Hunt needs every state.
+
+State must derive from the backend/participant’s actual game state.
+
+SELECTED HUNT HUD
+
+When a player is actively playing a Hunt, provide a minimal Hunt HUD.
+
+Examples:
+
+DOWNTOWN MYSTERY
+7 / 10 found
+████████░░
+3 remaining
+
+Possible additional contextual information:
+
+* points
+* time remaining when applicable
+* selected objective distance
+* current objective
+* Hunt completion percentage when mathematically valid
+
+Do not overload the map with permanent statistics.
+
+HUNT PROGRESS
+
+Implement proper Hunt-level progress.
+
+For Hunts with discrete objectives:
+
+completed objectives / required objectives
+
+Example:
+
+7 / 10
+70%
+
+Progress should update immediately after authoritative completion of an objective.
+
+When all required objectives are complete, transition the Hunt using the existing Hunt completion system.
+
+Do not allow client-side map state alone to mark a Hunt complete.
+
+DISTANCE + DIRECTION
+
+For visible/selectable Hunt objectives:
+
+* show distance
+* provide directional/bearing cue where useful
+* focus camera on selected objective
+* allow recenter on player
+
+Do not implement full turn-by-turn navigation.
+
+ACTIVITY TRAIL
+
+Add support for an optional player activity/path trail for Hunts where it is useful.
+
+IMPORTANT:
+
+* Trail must be configurable and not forced on every Hunt.
+* Do not automatically retain excessive location history.
+* Respect existing privacy/location architecture.
+* Only persist trail data if gameplay actually requires persistence.
+* If simple local visualization is sufficient, prefer that.
+
+MY HUNTS SYNCHRONIZATION
+
+Map state and My Hunts must agree.
+
+Existing My Hunts categories include:
+
+* In Action
+* Ready
+* Completed
+* Invitations
+
+Examples:
+
+* accepting an invitation should affect map availability
+* starting a Hunt should move it into In Action
+* completing a Hunt should move it to Completed
+* Hunt state should survive navigation/app restart
+* map markers should reflect the same participant state
+
+CUSTOM GAMES
+
+Custom Games must work on the same giant Hunt map.
+
+Preserve the existing creation flow.
+
+Do not create a second Custom Game map.
+
+Regular custom-game participation should use the same core map/objective components when possible.
+
+PUBLIC/OFFICIAL HUNT MODERATION
+
+Preserve existing Creator Mode/moderation distinctions.
+
+Do not allow ordinary client-side creation to bypass moderation rules for official/public/monetized content.
+
+PURCHASED DROP COMPATIBILITY
+
+Preserve architectural compatibility for purchased Hunt drops and future transaction-fee behavior.
+
+Do not implement a new payment system in this prompt if the existing payment gateway already handles it.
+
+Map state should be capable of representing paid/locked/unlocked drop availability without storing sensitive payment logic on the client.
+
+OBJECTIVE COMPLETION
+
+Integrate existing proof/verification systems where Hunt objectives use them.
+
+Potential supported methods may include:
+
+* GPS
+* photo/video
+* text
+* check-in
+* geo
+* QR/text-style scan
+* timers
+* integrity confirmation
+* QAVS/activity where configured
+
+Do not duplicate Quest verification engines when the existing shared verification system can be reused.
+
+SAFETY AND MODERATION INTEGRATION
+
+Preserve existing image/media moderation.
+
+Ensure Hunt location/media content can connect to the planned location-safety system.
+
+Do not yet build the full advanced safety scanning/360 workflow if it does not already exist, but structure location/objective data so Prompt 5 can build on it.
+
+ERROR CASES
+
+Handle:
+
+* missing objective coordinates
+* Hunt deleted or suspended
+* participant removed
+* invitation revoked
+* bad GPS
+* permission denied
+* network loss
+* duplicate completion attempt
+* stale progress
+* objective completed on another device/session
+* Hunt completes while another map objective is selected
+
+REGRESSION TEST
+
+Test complete Hunt flows:
+
+Hunt exists
+→ appears correctly
+→ player joins/accepts
+→ Hunt enters correct My Hunts state
+→ player starts
+→ objective markers appear correctly
+→ selected objective displays distance
+→ verification requirement runs
+→ objective completion persists
+→ HUD updates
+→ marker state updates
+→ final objective completion closes Hunt
+→ Hunt moves to Completed
+→ Progress/points update
+→ app restart preserves everything
+
+FINAL RESPONSE
+
+Return a PASS/FAIL/FIXED table covering:
+
+* Hunt map rendering
+* official Hunts
+* community Hunts
+* Custom Games
+* invitations
+* My Hunts synchronization
+* objective selection
+* distance
+* direction
+* progress HUD
+* marker states
+* activity trail
+* proof integration
+* objective completion
+* Hunt completion
+* points
+* duplicate prevention
+* persistence
+* safety/moderation compatibility
+* purchased-drop compatibility
+
+Fix confirmed defects before declaring this prompt complete.
