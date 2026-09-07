@@ -1,0 +1,213 @@
+We have just completed the external Mapbox connection for the existing Worlds/Realms Quest + Hunt app.
+
+Before implementing new map features, perform a careful baseline audit of the current codebase and then establish the production-ready Mapbox foundation.
+
+IMPORTANT:
+Do not rebuild working Quest, Hunt, verification, proof, points, Supabase, admin, authentication, navigation, or gameplay systems from scratch. Inspect what already exists and integrate with it. Preserve existing working logic unless a change is strictly necessary for Mapbox integration.
+
+PHASE A — EXISTING SYSTEM INVENTORY
+
+Inspect the current project and identify the existing implementation for:
+
+* Quest mode navigation:
+    * Home
+    * Quests
+    * Map
+    * Progress
+    * Profile
+* Hunt mode navigation:
+    * Map
+    * My Hunts
+    * Progress
+    * Profile
+* Existing Quest types:
+    * Daily Quest
+    * Monthly Quest Drop
+    * Geo-Quest
+* Quest initiation / Start Quest state
+* In Action quests
+* Completed quests
+* Leaderboards
+* Personal point totals
+* Hunt creation and participation state
+* Official Hunts
+* Community Hunts
+* Custom Games
+* Supabase data models and realtime/state synchronization
+* Existing server/API logic
+* Existing authentication
+* Existing admin panel
+* AI-generated Quest content
+* Camera/photo/video proof
+* Text proof
+* GPS proof
+* Geo proof
+* Integrity-only verification
+* Timer verification
+* QAVS/activity tracking if already implemented
+* Server-side Haversine/geographic validation
+* Point-award RPCs or other authoritative completion logic
+* Existing proof moderation/review
+* Existing location fields
+* Existing map-related components or placeholder map code
+* Existing Mapbox packages/configuration introduced during the external connection
+
+Produce a concise baseline table showing:
+FEATURE | CURRENT IMPLEMENTATION | FILES/COMPONENTS | KEEP/EXTEND/FIX
+
+Do not stop after reporting the inventory. Continue into implementation.
+
+PHASE B — VERIFY MAPBOX CONNECTION
+
+Verify that the newly configured Mapbox external connection works in the actual application environment.
+
+Confirm:
+
+1. Mapbox SDK/package is correctly installed for the project’s current mobile/web architecture.
+2. Required Mapbox token/config values are available through the intended environment-variable/configuration system.
+3. Secrets are not hard-coded into source files.
+4. Mapbox initializes without crashing.
+5. Quest Map screen renders a real Mapbox map.
+6. Hunt Map screen renders a real Mapbox map.
+7. The map works on the target mobile build/runtime, not only in a desktop preview.
+8. Required native configuration is present if the Mapbox package requires it.
+9. Any token/public-token distinction is handled correctly.
+10. Existing app navigation continues working after Mapbox initializes.
+
+If the current Mapbox integration is incomplete or misconfigured, fix it.
+
+PHASE C — SHARED MAP ARCHITECTURE
+
+Create or cleanly organize reusable map infrastructure rather than duplicating separate implementations.
+
+Build reusable architecture for:
+
+* Map container
+* User-location layer
+* Location permission state
+* Camera/viewport controller
+* Map marker rendering
+* Marker selection
+* Marker state styling
+* Map overlays
+* Geofence/radius overlays
+* Distance calculations for display
+* Loading state
+* Map initialization error state
+* Permission denied state
+* Location unavailable state
+* Network failure state
+* Empty-map state
+* Selected-objective state
+* Map HUD container
+* Map data fetching
+* Map state persistence where appropriate
+
+Quest and Hunt may have different gameplay layers, but should share underlying map primitives where sensible.
+
+PHASE D — LOCATION PERMISSIONS AND USER POSITION
+
+Implement reliable user-location handling.
+
+Requirements:
+
+* Ask for location permission at the appropriate time.
+* Do not repeatedly nag after denial.
+* Handle:
+    * granted
+    * denied
+    * permanently denied
+    * location services disabled
+    * temporarily unavailable location
+* Display a clear user-location indicator when permission is available.
+* Use a subtle animated/pulsing user-location marker if technically appropriate.
+* Provide a recenter/current-location control.
+* Do not treat client-reported location as authoritative for quest completion.
+* Existing server-side verification remains authoritative.
+
+Do not enable unnecessary continuous/background location collection simply because Mapbox supports it. Only collect the location needed for current gameplay/QAVS features.
+
+PHASE E — DATA MODEL INTEGRATION
+
+Map content must come from existing backend data rather than hard-coded demo markers.
+
+Review existing location schemas and extend them only where necessary.
+
+Quest map data should be capable of representing:
+
+* quest_id
+* coordinates
+* optional human-readable location name
+* target/geofence radius
+* availability
+* active state
+* completed state
+* point value
+* verification method(s)
+* start/end availability when applicable
+
+Hunt map data should be capable of representing:
+
+* hunt_id
+* objective/drop/location id
+* coordinates when visible
+* objective state
+* visibility/reveal state
+* point/reward data when appropriate
+* current participant state
+* completion state
+
+Reuse existing schema whenever possible. Use proper migrations if schema changes are required.
+
+PHASE F — PERFORMANCE AND MAP RELIABILITY
+
+Ensure:
+
+* Markers do not trigger unnecessary rerenders.
+* Large marker collections are handled efficiently.
+* Clustering may be used where appropriate for discovery-scale content, but never if it harms gameplay clarity.
+* Map does not refetch everything on every minor camera movement.
+* Navigation away from and back to a map does not unnecessarily reset important selected/active gameplay state.
+* App relaunch can restore server-backed active Quest/Hunt state.
+* Invalid/missing coordinates cannot crash the map.
+* Duplicate coordinates are handled safely.
+* Malformed backend data is skipped/logged rather than crashing the client.
+
+PHASE G — BASELINE REGRESSION TEST
+
+Before finishing this prompt, verify that introducing Mapbox has not broken the pre-existing app.
+
+Test at minimum:
+
+* authentication
+* Quest Home
+* Quest list
+* Start Quest
+* Progress screen
+* points
+* proof workflows
+* timers
+* integrity confirmation
+* GPS verification
+* QAVS/activity features if present
+* Hunt navigation
+* My Hunts
+* custom-game flow if present
+* admin access
+* Supabase/backend connection
+
+Fix any regressions caused by the Mapbox integration.
+
+FINAL RESPONSE
+
+Return:
+
+1. Baseline feature inventory.
+2. Mapbox connection status.
+3. Files changed.
+4. Database migrations made, if any.
+5. Any existing map code that was preserved or replaced and why.
+6. Regression test results.
+7. Remaining known limitations.
+
+Do not implement the advanced Quest HUD, Hunt fog-of-war, reveal mechanics, or advanced Hunt progression in this prompt. Establish the clean Mapbox foundation first.
