@@ -1,0 +1,269 @@
+Continue from the completed Hunt Map implementation.
+
+Now add ADVANCED OPTIONAL Hunt world mechanics that can make the giant map feel like an actual game world.
+
+These features MUST be configurable per Hunt/objective.
+
+Do not force fog-of-war, hidden objectives, zones, or reveal mechanics onto all Hunts.
+
+CORE FEATURES
+
+Implement:
+
+1. undiscovered/hidden objectives
+2. reveal mechanics
+3. fog-of-war style exploration where configured
+4. Hunt zones
+5. area/zone completion
+6. objective dependencies
+7. advanced Hunt progression
+8. map-state persistence
+9. moderation/safety compatibility
+
+REVEAL MODES
+
+Support configurable objective reveal behavior such as:
+
+ALWAYS_VISIBLE
+Objective appears immediately.
+
+PROXIMITY_REVEAL
+Objective becomes visible when the player enters a configured reveal radius.
+
+PREREQUISITE_REVEAL
+Objective becomes visible only after specified previous objective(s) are completed.
+
+HUNT_START_REVEAL
+Objective becomes visible once the Hunt officially begins for that player.
+
+ZONE_REVEAL
+Objective becomes visible when a zone or area is unlocked.
+
+CLUE_ONLY
+Exact marker remains hidden while the player receives limited navigation information such as:
+
+* approximate distance
+* directional clue
+* clue text
+    depending on Hunt configuration.
+
+MANUAL/ADMIN_REVEAL
+Allow an authorized creator/admin-controlled state if the existing creator architecture supports it.
+
+Do not expose hidden coordinates to the client before they should be known if doing so would defeat the reveal mechanic.
+
+Where possible, the backend should only return precise hidden objective coordinates once the player satisfies the reveal condition.
+
+FOG OF WAR
+
+Implement optional fog-of-war/exploration visualization.
+
+Requirements:
+
+* enabled per Hunt
+* does not obscure critical app controls
+* performant on mobile
+* discovered/explored areas can persist when the Hunt requires persistent exploration
+* state is participant-specific
+* cannot be trivially defeated by restarting the app
+* backend stores the minimum state needed to reconstruct meaningful persistent exploration
+
+Do not continuously store extremely granular location trails solely to draw fog-of-war if a less invasive zone/grid approach can achieve the same gameplay goal.
+
+Choose a reasonable performant approach based on the existing architecture, such as:
+
+* grid cells
+* zones
+* simplified explored polygons
+* checkpoint-based reveal state
+
+Avoid massive high-frequency coordinate tables.
+
+HUNT ZONES
+
+Allow Hunts to contain optional zones.
+
+A zone may represent:
+
+* neighborhood
+* park
+* building/public venue
+* themed game region
+* sequential stage
+
+Support:
+
+* locked
+* available
+* active
+* completed
+
+Zone progress may be derived from required objectives within that zone.
+
+Example:
+
+WATERFRONT ZONE
+4 / 6 complete
+
+When configured, completing a zone can unlock another zone.
+
+OBJECTIVE DEPENDENCIES
+
+Allow configurable prerequisite relationships.
+
+Examples:
+
+Objective B requires Objective A.
+
+Objective D requires any 2 of A/B/C.
+
+Zone 2 requires Zone 1 completion.
+
+Be careful to prevent impossible dependency loops.
+
+Add server-side validation preventing circular dependencies where appropriate.
+
+AREA COMPLETION
+
+Where a Hunt uses zones, allow a meaningful map statistic such as:
+
+2 / 4 zones complete
+
+or:
+
+Downtown Zone
+80%
+
+Only calculate percentages where mathematically valid.
+
+ADVANCED HUD
+
+The Hunt HUD may contextually display:
+
+* Hunt progress
+* current zone
+* objective progress
+* number discovered
+* number remaining
+* locked next area
+* distance/direction clue
+* points
+* timer if configured
+
+Keep it compact.
+
+Do not display everything simultaneously.
+
+MAP VISUAL STATES
+
+Ensure distinct readable states for:
+
+* hidden
+* revealed
+* active
+* completed
+* locked
+* zone complete
+
+Do not rely only on color for accessibility.
+
+HIDDEN DATA SECURITY
+
+Audit the API responses and client state.
+
+A supposedly hidden objective should not simply have hidden UI while its exact latitude/longitude remains easily available in normal client data.
+
+If current architecture sends every coordinate to the client, modify the data/API strategy so unrevealed precise coordinates can remain server-side until authorized for that participant.
+
+Do not overengineer secrecy for casual gameplay, but avoid obvious client-side leaks.
+
+SAFETY ARCHITECTURE
+
+Integrate with the existing/planned safety system.
+
+A Hunt location should support safety/moderation state such as:
+
+* pending review
+* approved
+* rejected
+* suspended
+* needs re-review
+
+Hidden/revealed status must not bypass safety approval.
+
+Future safety capabilities discussed for this product may include:
+
+* uploaded location media
+* automated placement scanning
+* 360-degree video/location review
+* risk-based safety decisions
+* possible indoor public-location approval
+
+Do not invent a completely separate safety platform. Extend the current moderation architecture so these capabilities can plug in later or use existing implementations if already present.
+
+CREATOR/ADMIN CONFIGURATION
+
+Where the current creator/admin system supports Hunt creation, add appropriate configuration controls for:
+
+* reveal mode
+* reveal radius
+* prerequisites
+* zones
+* zone order
+* fog-of-war enabled/disabled
+* trail enabled/disabled
+* hidden exact location behavior
+
+Validate configuration before publishing.
+
+Prevent creators from publishing impossible Hunt logic such as circular prerequisite chains.
+
+PERSISTENCE
+
+Test:
+
+* reveal survives navigation
+* reveal survives app restart
+* completed zones survive app restart
+* fog/exploration state restores appropriately
+* server/backend remains authoritative
+* reinstall/new device restores server-backed progress where applicable
+* no cross-user leakage of reveal state
+
+FINAL TEST FLOWS
+
+Test multiple Hunt configurations:
+
+A. Simple Hunt with all objectives visible.
+
+B. Sequential Hunt:
+A → reveals B → reveals C.
+
+C. Proximity Hunt:
+hidden marker reveals only after entering radius.
+
+D. Zone Hunt:
+complete Zone 1 → unlock Zone 2.
+
+E. Fog-of-war Hunt.
+
+F. Clue-only Hunt.
+
+G. Mixed Hunt combining zones + prerequisites + normal visible objectives.
+
+Verify simple Hunts remain simple and are not burdened with unnecessary advanced UI.
+
+FINAL RESPONSE
+
+Provide:
+
+1. Architecture implemented.
+2. Schema changes.
+3. Reveal modes implemented.
+4. Fog-of-war implementation method and why.
+5. Security check for hidden coordinates.
+6. Creator/admin controls.
+7. PASS/FAIL/FIXED table for every scenario above.
+8. Remaining limitations.
+
+Fix confirmed defects before finishing.
