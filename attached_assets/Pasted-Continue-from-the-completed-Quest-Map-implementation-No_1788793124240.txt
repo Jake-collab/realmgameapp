@@ -1,0 +1,234 @@
+Continue from the completed Quest Map implementation.
+
+Now add a polished, minimal, context-aware QUEST MAP HUD and real Quest progress indicators.
+
+The goal is to make the Quest Map feel like a live game interface without obscuring the actual map.
+
+Do not create fake progress percentages. Every displayed progress value must come from real Quest state/data.
+
+HUD DESIGN PRINCIPLES
+
+The map HUD should normally show no more than roughly three high-value pieces of information at once.
+
+Examples:
+
+* total player points
+* current/active objective progress
+* active/nearby Quest count
+
+More details should appear only when a specific Quest is selected or expanded.
+
+The HUD must be:
+
+* compact
+* readable
+* mobile-friendly
+* safe-area aware
+* collapsible/expandable if helpful
+* non-blocking for marker interaction
+* responsive across common phone sizes
+
+Do not cover large areas of the Mapbox map.
+
+QUEST PROGRESS MODELS
+
+Support different progress models depending on the actual Quest.
+
+1. DISCRETE OBJECTIVE PROGRESS
+
+Examples:
+
+4 / 5 objectives complete
+████████░░
+
+Use when a Quest has a defined number of required sub-objectives.
+
+2. DISTANCE / ACTIVITY PROGRESS
+
+Example:
+
+1.7 / 2.0 miles
+████████░░
+
+Use with QAVS/activity-based requirements where the backend has authoritative measurable progress.
+
+Could also support:
+
+* steps
+* duration
+* distance
+* other supported QAVS metrics
+
+Do not invent data that QAVS does not actually provide.
+
+3. TIMER QUEST
+
+Example:
+
+18:42 remaining
+
+If a meaningful duration percentage exists, a visual bar may accompany the timer.
+
+IMPORTANT:
+Timer expiration must still not automatically award completion or points.
+
+4. GEO/MULTI-LOCATION QUEST
+
+Example:
+
+4 / 5 locations verified
+1 location remaining
+
+Only count locations that have actually satisfied the appropriate verification state.
+
+5. SIMPLE COMPLETION PERCENTAGE
+
+Only use a percentage where there is a legitimate mathematical basis for it.
+
+Do not convert binary requirements into misleading percentages.
+
+6. VERIFICATION READINESS
+
+For quests requiring final confirmation/proof, allow the HUD to communicate states such as:
+
+* Activity requirement met
+* Awaiting photo
+* Awaiting integrity confirmation
+* Awaiting review
+* Ready to complete
+* Completion pending
+
+Do not imply points have been earned before authoritative completion succeeds.
+
+DEFAULT MAP HUD
+
+When no specific active Quest is selected, show a lightweight summary such as:
+
+* player point total
+* number of active quests
+* nearby Geo-Quest count or another useful context statistic
+
+Example concept:
+
+1,850 pts
+3 Active
+5 Nearby
+
+Do not necessarily copy this exact visual design if it conflicts with the current UI system.
+
+ACTIVE QUEST HUD
+
+When an active Quest is selected, replace/generalize the HUD with Quest-specific information.
+
+Example:
+
+PARK EXPLORER
+4 / 5
+████████░░
+1 location remaining
+
+or:
+
+CITY WALK
+1.7 / 2.0 mi
+████████░░
+
+or:
+
+SUNSET WALK
+18:42 remaining
+
+HUD values must update from actual persisted/server-backed progress.
+
+MAP MARKER + HUD SYNCHRONIZATION
+
+When Quest progress changes:
+
+* update HUD
+* update marker state where relevant
+* update selected Quest card
+* update Progress/In Action data
+* retain the correct state across navigation
+* restore correct data after app relaunch
+
+Avoid race conditions between local state and backend state.
+
+QAVS INTEGRATION
+
+Inspect the QAVS implementation already present.
+
+Integrate real QAVS progress into the HUD where relevant.
+
+Requirements:
+
+* do not duplicate the QAVS engine
+* do not create a separate activity tracker just for Mapbox
+* subscribe/read from the existing authoritative QAVS state
+* display progress clearly
+* ensure background/navigation behavior remains consistent with the current implementation
+* completion still goes through existing authoritative Quest completion logic
+
+MULTIPLE ACTIVE QUESTS
+
+If the player has multiple active quests:
+
+* do not merge unrelated progress into one fake percentage
+* provide a clear way to select/focus the active Quest
+* remember the player’s selected/focused objective when reasonable
+* allow the map to show active markers for multiple quests
+* keep the HUD focused on one active Quest at a time
+
+COMPLETION FEEDBACK
+
+After confirmed completion:
+
+* animate/update progress to complete
+* show concise completion feedback
+* show points awarded if applicable
+* change marker to Completed
+* update Progress screen
+* update point total
+* prevent duplicate completion actions
+
+Do not create excessive celebratory UI that blocks the map.
+
+ACCESSIBILITY
+
+Ensure:
+
+* progress is communicated through text as well as visual bars
+* important states do not depend only on color
+* text remains readable
+* controls have usable touch targets
+* screen-reader labels exist where appropriate
+
+REGRESSION TESTING
+
+Test:
+
+* discrete objective Quest
+* GPS-only Quest
+* Geo + photo Quest
+* timer Quest
+* integrity-only Quest
+* QAVS distance/activity Quest
+* multiple active Quests
+* completion awaiting moderation/review
+* failed completion validation
+* network interruption
+* app restart
+* Quest completed from another screen while map is open
+
+Make sure progress never incorrectly displays 100% before actual requirements are satisfied.
+
+FINAL RESPONSE
+
+Return:
+
+1. Files/components changed.
+2. All supported HUD/progress modes.
+3. Which data source powers each progress mode.
+4. PASS/FAIL/FIXED test table.
+5. Any Quest types that cannot currently display a meaningful progress bar and why.
+
+Fix confirmed defects before completing this prompt.
