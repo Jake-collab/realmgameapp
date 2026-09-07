@@ -1,0 +1,213 @@
+Continue from the completed Mapbox foundation.
+
+Now implement the COMPLETE Quest Map experience while preserving all existing Quest verification and completion systems.
+
+The Quest Map must integrate directly with the existing Daily Quest, Monthly Quest Drop, Geo-Quest, Start Quest, In Action, Completed, points, proof, QAVS, timer, integrity, Supabase, admin, and server-side verification systems.
+
+Do not replace authoritative backend logic with Mapbox/client logic.
+
+CORE QUEST MAP
+
+The Quest Map should show relevant location-based Quest content from the backend.
+
+Implement:
+
+* Geo-Quest markers
+* User current location
+* Recenter/current-location button
+* Selectable Quest markers
+* Distance from player to selected Quest
+* Quest point value
+* Quest title
+* concise quest information
+* Start Quest action when appropriate
+* active Quest state
+* completed Quest state
+* unavailable/locked state when appropriate
+* selected marker bottom sheet/card
+* map camera movement to selected marker
+* optional target-radius/geofence visualization where useful
+* clear handling when no Geo-Quests are nearby
+
+MARKER STATES
+
+Markers must visually distinguish at least:
+
+* Available
+* Active/In Action
+* Completed
+* Locked/unavailable where applicable
+
+Marker state must derive from authoritative backend/player state.
+
+Do not permanently mark something completed merely because the client locally thinks the player arrived.
+
+When a Quest is successfully completed and persisted server-side, update its marker state immediately.
+
+NEARBY QUEST DISCOVERY
+
+Add lightweight discovery information to the Quest map.
+
+Support:
+
+* nearby Quest count
+* distance to selected Quest
+* points available nearby when this can be calculated accurately
+* optionally filter/map visible Geo-Quests based on reasonable distance/search behavior
+* current player position
+
+Do not turn the map into a cluttered analytics dashboard.
+
+COMPASS / NAVIGATION ASSISTANCE
+
+When a player selects a location-based Quest, provide simple directional assistance such as:
+
+* distance
+* direction/bearing indicator or compass cue
+* recenter
+* focus selected objective
+
+Do not attempt to become a full turn-by-turn navigation application.
+
+GEOFENCE VISUALIZATION
+
+Where a Quest has a verification radius:
+
+* allow the map to display the target radius when useful
+* make clear that the displayed circle is informational
+* completion must still use authoritative server-side geographic validation
+* private geometry or anti-cheat information must remain server-side if already designed that way
+
+QUEST VERIFICATION INTEGRATION
+
+Preserve and correctly integrate ALL existing completion methods.
+
+The Quest Map must respect existing assigned verification methods rather than changing them.
+
+Support the current system for:
+
+* camera/photo/video proof
+* text proof
+* check-in/GPS
+* geo
+* timer
+* integrity-only
+* QAVS/activity-based verification
+* combinations of methods where supported
+
+CRITICAL RULES:
+
+1. GPS-only completion must NOT automatically require camera proof.
+2. Geo Quest may require GPS + photo when configured.
+3. Players cannot change the Quest’s assigned verification method.
+4. Timer expiration alone must not award points.
+5. Integrity confirmation must remain explicit where required.
+6. GPS completion must use server-authoritative validation.
+7. Quest completion and point awarding must remain atomic/server-authoritative.
+8. Client-side Mapbox distance is informational and may not substitute for completion validation.
+9. Duplicate completion must not award duplicate points.
+10. Existing moderation/review rules remain intact.
+
+START QUEST INTEGRATION
+
+When a user taps Start Quest:
+
+* persist initiation using the existing backend flow
+* Quest moves into In Action
+* marker reflects active state
+* active Quest can become the current map objective
+* relevant progress information becomes available
+* state survives navigation and app restart using server-backed data
+
+QUEST MAP FILTERING
+
+Keep filtering simple.
+
+At minimum support sensible distinction/filtering between:
+
+* available
+* active
+* completed
+
+Do not introduce a large new Discover interface.
+
+MAP/QUEST SYNCHRONIZATION
+
+Ensure changes elsewhere in the app are reflected on the map.
+
+Examples:
+
+* Start Quest from Quests page → marker becomes Active.
+* Complete Quest through verification flow → marker becomes Completed.
+* Admin disables Quest → it stops being available.
+* Quest expires → map state changes appropriately.
+* Points awarded → Quest Progress screen and map HUD data agree.
+* App restart → server state restores correctly.
+
+ERROR CASES
+
+Test and handle:
+
+* location permission denied
+* location services disabled
+* GPS inaccurate/unavailable
+* Quest missing coordinates
+* invalid radius
+* quest deleted while viewed
+* user outside geofence
+* network disconnect during check-in
+* duplicate completion attempt
+* stale map data
+* app background/foreground transition
+
+Do not falsely report Quest completion during any failure state.
+
+TESTING
+
+Perform functional regression testing against existing Quest systems.
+
+Test complete flows such as:
+
+Admin/generated Geo-Quest
+→ Player sees Quest
+→ Player starts Quest
+→ Marker becomes active
+→ Player travels into target region
+→ Required verification occurs
+→ Server validates location
+→ Other required proof/integrity checks occur
+→ Completion RPC succeeds
+→ Points awarded once
+→ Marker becomes completed
+→ Progress screen reflects completion
+→ App relaunch preserves state
+
+Also test GPS-only quests and confirm there is no camera requirement unless explicitly configured.
+
+FINAL RESPONSE
+
+Return a PASS/FAIL/FIXED table for:
+
+* Quest map rendering
+* marker loading
+* marker states
+* current location
+* selection
+* distance
+* direction
+* geofence display
+* Start Quest integration
+* GPS validation
+* GPS-only verification
+* Geo + photo verification
+* QAVS integration
+* timer integration
+* integrity integration
+* point awarding
+* duplicate prevention
+* Progress synchronization
+* app-relaunch persistence
+* denied-permission behavior
+* network error behavior
+
+Fix confirmed defects before declaring this prompt complete.
