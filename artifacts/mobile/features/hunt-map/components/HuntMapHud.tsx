@@ -56,6 +56,12 @@ export function HuntMapHud({
   const deadline = activeHunt.completionDeadline
     ? new Date(activeHunt.completionDeadline).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
     : null;
+  const activeZone = activeHunt.zones?.find(zone => zone.status === 'active' || zone.status === 'available');
+  const advanced = Boolean(
+    activeHunt.advancedConfig?.fogOfWarEnabled
+    || activeHunt.zones?.length
+    || activeHunt.discoveredStopCount !== undefined,
+  );
 
   return (
     <View
@@ -107,6 +113,9 @@ export function HuntMapHud({
           <Meta icon="award" value={`${points.toLocaleString()} pts`} colors={colors} />
         )}
         {deadline && <Meta icon="clock" value={`Until ${deadline}`} colors={colors} />}
+        {advanced && activeHunt.discoveredStopCount !== undefined && (
+          <Meta icon="eye" value={`${activeHunt.discoveredStopCount} discovered`} colors={colors} />
+        )}
         <TouchableOpacity
           onPress={onToggleTrail}
           style={[styles.trailToggle, { borderColor: showTrail ? colors.hunt : colors.border }]}
@@ -116,6 +125,20 @@ export function HuntMapHud({
           <Feather name="activity" size={13} color={showTrail ? colors.hunt : colors.mutedForeground} />
         </TouchableOpacity>
       </View>
+
+      {advanced && activeZone && (
+        <View style={[styles.zoneRow, { borderTopColor: colors.border }]}>
+          <Feather name="map" size={14} color={colors.hunt} />
+          <Text style={[styles.zoneText, { color: colors.foreground }]} numberOfLines={1}>
+            {activeZone.name}
+          </Text>
+          <Text style={[styles.zoneProgress, { color: colors.mutedForeground }]}>
+            {activeZone.required > 0 && activeZone.percent !== null
+              ? `${activeZone.completed}/${activeZone.required}`
+              : 'Area active'}
+          </Text>
+        </View>
+      )}
 
       {selectedStop && (
         <View style={[styles.objective, { borderTopColor: colors.border }]}>
@@ -190,6 +213,9 @@ const styles = StyleSheet.create({
   metaText: { fontFamily: fontFamily.regular, fontSize: 10 },
   trailToggle: { marginLeft: 'auto', width: 26, height: 26, borderRadius: radius.md, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
   objective: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: spacing[2], flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  zoneRow: { borderTopWidth: StyleSheet.hairlineWidth, paddingTop: spacing[2], flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  zoneText: { flex: 1, fontFamily: fontFamily.medium, fontSize: fontSize.xs },
+  zoneProgress: { fontFamily: fontFamily.regular, fontSize: 10 },
   objectiveCopy: { flex: 1, minWidth: 0 },
   objectiveLabel: { fontFamily: fontFamily.regular, fontSize: 10 },
   objectiveTitle: { fontFamily: fontFamily.medium, fontSize: fontSize.xs, marginTop: 1 },

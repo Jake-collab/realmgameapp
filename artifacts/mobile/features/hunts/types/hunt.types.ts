@@ -461,6 +461,44 @@ export interface ActiveHunt {
   revealedStopLocations: HuntStopPublicLocation[];
   /** Minimal group summary (participant count only — no private member data) */
   groupSummary: HuntGroupSummary | null;
+  advancedConfig?: HuntAdvancedConfig;
+  zones?: HuntZoneProgress[];
+  exploredCells?: HuntExplorationCell[];
+  discoveredStopCount?: number;
+}
+
+export type HuntRevealMode =
+  | 'ALWAYS_VISIBLE'
+  | 'PROXIMITY_REVEAL'
+  | 'PREREQUISITE_REVEAL'
+  | 'HUNT_START_REVEAL'
+  | 'ZONE_REVEAL'
+  | 'CLUE_ONLY'
+  | 'MANUAL_ADMIN_REVEAL';
+
+export interface HuntAdvancedConfig {
+  defaultRevealMode: HuntRevealMode;
+  defaultRevealRadiusMeters: number;
+  fogOfWarEnabled: boolean;
+  persistentExploration: boolean;
+  trailEnabled: boolean;
+}
+
+export interface HuntZoneProgress {
+  key: string;
+  name: string;
+  sortOrder: number;
+  status: 'locked' | 'available' | 'active' | 'completed';
+  completed: number;
+  required: number;
+  percent: number | null;
+}
+
+export interface HuntExplorationCell {
+  cellKey: string;
+  latitude: number;
+  longitude: number;
+  discoveredAt: string;
 }
 
 // ─── Public stop location ─────────────────────────────────────────────────────

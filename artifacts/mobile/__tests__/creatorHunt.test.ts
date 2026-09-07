@@ -71,4 +71,32 @@ describe('Custom Hunt creator validation', () => {
     expect(result.valid).toBe(true);
     expect(result.issues).toEqual([]);
   });
+
+  it('rejects circular objective prerequisites before the draft reaches the server', () => {
+    const first = makeCreatorStop(1);
+    const second = makeCreatorStop(2);
+    first.title = 'First objective';
+    first.clueText = 'Find the first marker';
+    second.title = 'Second objective';
+    second.clueText = 'Find the second marker';
+    first.prerequisiteStopIds = [second.id];
+    second.prerequisiteStopIds = [first.id];
+    const result = validateCreatorDraft({
+      ...CREATOR_DEFAULT_PAYLOAD,
+      title: 'A chained Hunt',
+      summary: 'A useful summary',
+      description: 'A description long enough for validation.',
+      safetyAcknowledged: true,
+      publicAccessConfirmed: true,
+      stops: [first, second],
+    });
+    expect(result.issues.some(issue => issue.code === 'dependency_cycle')).toBe(true);
+  });
+
+  it('keeps advanced mechanics opt-in for the default payload', () => {
+    expect(CREATOR_DEFAULT_PAYLOAD.defaultRevealMode).toBe('ALWAYS_VISIBLE');
+    expect(CREATOR_DEFAULT_PAYLOAD.fogOfWarEnabled).toBe(false);
+    expect(CREATOR_DEFAULT_PAYLOAD.persistentExploration).toBe(false);
+    expect(CREATOR_DEFAULT_PAYLOAD.zones).toEqual([]);
+  });
 });

@@ -66,6 +66,7 @@ import type { PublicHuntMapItem, HuntMarkerStatus, HuntBottomSheetState, HuntNea
 import { SearchThisAreaButton } from '@/features/quest-map/components/SearchThisAreaButton';
 import { usePlaceSearch } from '@/features/quest-map/hooks/usePlaceSearch';
 import { useActiveHunt } from '@/features/hunts/hooks/useActiveHunt';
+import { recordHuntExplorationSample } from '@/features/hunts/repositories/hunt.repository';
 import { useQueryClient } from '@tanstack/react-query';
 import { huntMapKeys } from '@/features/hunt-map/queries/huntMapKeys';
 import { HuntMapHud } from '@/features/hunt-map/components/HuntMapHud';
@@ -98,6 +99,7 @@ function HuntMapInner() {
   const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
   const [showTrail, setShowTrail] = useState(false);
   const [activityTrail, setActivityTrail] = useState<Array<[number, number]>>([]);
+  const lastExplorationSampleAt = useRef(0);
   const queryClient = useQueryClient();
 
   // ── Camera / bounds state ────────────────────────────────────────────────
@@ -338,6 +340,23 @@ function HuntMapInner() {
         const next: Array<[number, number]> = [...previous, [lng, lat]];
         return next.slice(-100);
       });
+      if (
+        Date.now() - lastExplorationSampleAt.current > 10_000
+        && permissionHook.canUseLocation
+      ) {
+        lastExplorationSampleAt.current = Date.now();
+        void recordHuntExplorationSample(
+          activeHunt.participationId,
+          lat,
+          lng,
+          Number(location?.coords?.accuracy ?? 50),
+        ).then(() => {
+          void activeHuntQuery.refetch();
+        }).catch(() => {
+          // Network/GPS failures remain visible through the active query state;
+          // do not turn local map movement into a false completion signal.
+        });
+      }
     }
 
     if (!didInitialCenterRef.current && cameraRef.current?.setCamera) {
@@ -444,6 +463,33 @@ function HuntMapInner() {
     };
   }, [selectedLocation]);
 
+  const exploredCellsShape = useMemo(() => {
+    if (!activeHunt?.advancedConfig?.fogOfWarEnabled || !activeHunt.exploredCells?.length) return null;
+    return {
+      type: 'FeatureCollection',
+      features: activeHunt.exploredCells
+        .filter(cell => Number.isFinite(cell.latitude) && Number.isFinite(cell.longitude))
+        .map(cell => {
+          const latDelta = 0.005;
+          const lngDelta = 0.005 / Math.max(Math.cos(cell.latitude * Math.PI / 180), 0.2);
+          return {
+            type: 'Feature',
+            properties: { cellKey: cell.cellKey },
+            geometry: {
+              type: 'Polygon',
+              coordinates: [[
+                [cell.longitude - lngDelta, cell.latitude - latDelta],
+                [cell.longitude + lngDelta, cell.latitude - latDelta],
+                [cell.longitude + lngDelta, cell.latitude + latDelta],
+                [cell.longitude - lngDelta, cell.latitude + latDelta],
+                [cell.longitude - lngDelta, cell.latitude - latDelta],
+              ]],
+            },
+          };
+        }),
+    };
+  }, [activeHunt?.advancedConfig?.fogOfWarEnabled, activeHunt?.exploredCells]);
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style="auto" />
@@ -503,6 +549,19 @@ function HuntMapInner() {
               <MapboxGL.LineLayer
                 id="hunt-selected-objective-line"
                 style={{ lineColor: colors.hunt, lineWidth: 1.5, lineOpacity: 0.55, lineDasharray: [2, 2] }}
+              />
+            </MapboxGL.ShapeSource>
+          )}
+
+          {MapboxGL.ShapeSource && exploredCellsShape && (
+            <MapboxGL.ShapeSource id="hunt-explored-cells" shape={exploredCellsShape as any}>
+              <MapboxGL.FillLayer
+                id="hunt-explored-cells-fill"
+                style={{ fillColor: colors.hunt, fillOpacity: 0.06 }}
+              />
+              <MapboxGL.LineLayer
+                id="hunt-explored-cells-line"
+                style={{ lineColor: colors.hunt, lineWidth: 1, lineOpacity: 0.22 }}
               />
             </MapboxGL.ShapeSource>
           )}

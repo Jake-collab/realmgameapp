@@ -4,6 +4,25 @@ export type CreatorStep = 'details' | 'privacy' | 'start' | 'stops' | 'invite' |
 export type CreatorSaveState = 'idle' | 'saving' | 'saved' | 'saved_local' | 'unsynced' | 'error';
 export type CreatorStopType = 'location' | 'activity' | 'clue' | 'mixed';
 export type CollectibleRarity = 'COMMON' | 'UNCOMMON' | 'RARE' | 'EPIC' | 'LEGENDARY' | 'UNIQUE';
+export type HuntRevealMode =
+  | 'ALWAYS_VISIBLE'
+  | 'PROXIMITY_REVEAL'
+  | 'PREREQUISITE_REVEAL'
+  | 'HUNT_START_REVEAL'
+  | 'ZONE_REVEAL'
+  | 'CLUE_ONLY'
+  | 'MANUAL_ADMIN_REVEAL';
+
+export interface CreatorZone {
+  key: string;
+  name: string;
+  sortOrder: number;
+  required: boolean;
+  prerequisiteZoneKeys: string[];
+  publicCenterLat: number | null;
+  publicCenterLng: number | null;
+  publicRadiusMeters: number;
+}
 
 export interface CreatorStopCommerce {
   findLimit: number | null;
@@ -38,6 +57,11 @@ export interface CreatorStop {
   /** Server-registered live camera sweep for the current Hunt revision. */
   sweepEvidenceMediaId?: string | null;
   commerce?: CreatorStopCommerce;
+  revealMode: HuntRevealMode;
+  revealRadiusMeters: number;
+  revealAfterSeconds: number | null;
+  zoneKey: string | null;
+  prerequisiteStopIds: string[];
 }
 
 export interface HuntCreatorPayload {
@@ -63,6 +87,12 @@ export interface HuntCreatorPayload {
   pointsRequested: number;
   stops: CreatorStop[];
   intendedInviteeIds: string[];
+  defaultRevealMode: HuntRevealMode;
+  defaultRevealRadiusMeters: number;
+  fogOfWarEnabled: boolean;
+  persistentExploration: boolean;
+  trailEnabled: boolean;
+  zones: CreatorZone[];
 }
 
 export interface HuntCreatorDraft {
@@ -96,6 +126,12 @@ export const CREATOR_DEFAULT_PAYLOAD: HuntCreatorPayload = {
   publicStartingArea: null, startAnywhere: true, publicMeetingInfo: '',
   safetyAcknowledged: false, publicAccessConfirmed: false, accessibilityNote: '',
   pointsRequested: 50, stops: [], intendedInviteeIds: [],
+  defaultRevealMode: 'ALWAYS_VISIBLE',
+  defaultRevealRadiusMeters: 250,
+  fogOfWarEnabled: false,
+  persistentExploration: false,
+  trailEnabled: false,
+  zones: [],
 };
 
 export function makeCreatorStop(order: number): CreatorStop {
@@ -109,12 +145,27 @@ export function makeCreatorStop(order: number): CreatorStop {
       findLimit: null, collectibleName: '', collectibleDescription: '',
       priceMinor: 0, quantity: null,
     },
+    revealMode: 'ALWAYS_VISIBLE',
+    revealRadiusMeters: 250,
+    revealAfterSeconds: null,
+    zoneKey: null,
+    prerequisiteStopIds: [],
   };
 }
 
 export function normalizeCreatorPayload(value: Partial<HuntCreatorPayload> | null | undefined): HuntCreatorPayload {
   return { ...CREATOR_DEFAULT_PAYLOAD, ...(value ?? {}),
-    stops: value?.stops ?? [], intendedInviteeIds: value?.intendedInviteeIds ?? [] };
+    stops: (value?.stops ?? []).map(stop => ({
+      ...makeCreatorStop(0),
+      ...stop,
+      revealMode: stop.revealMode ?? value?.defaultRevealMode ?? 'ALWAYS_VISIBLE',
+      revealRadiusMeters: stop.revealRadiusMeters ?? value?.defaultRevealRadiusMeters ?? 250,
+      revealAfterSeconds: stop.revealAfterSeconds ?? null,
+      zoneKey: stop.zoneKey ?? null,
+      prerequisiteStopIds: stop.prerequisiteStopIds ?? [],
+    })),
+    zones: value?.zones ?? [],
+    intendedInviteeIds: value?.intendedInviteeIds ?? [] };
 }
 
 export function validateCreatorDraft(payload: HuntCreatorPayload): DraftValidationResult {
@@ -148,6 +199,52 @@ export function validateCreatorDraft(payload: HuntCreatorPayload): DraftValidati
       issues.push({ step:'stops', code:`qr_${index}`, message:'QR/code validation is not available yet.' });
     if (stop.completionMethod !== 'manual_confirmation' && !stop.sweepEvidenceMediaId)
       issues.push({ step:'stops', code:`sweep_${index}`, message:`Capture a live camera safety sweep for stop ${index + 1}.` });
+    if (!Number.isFinite(stop.revealRadiusMeters) || stop.revealRadiusMeters < 25 || stop.revealRadiusMeters > 5000)
+      issues.push({ step:'stops', code:`reveal_radius_${index}`, message:`Use a reveal radius between 25m and 5km for stop ${index + 1}.` });
+    if (stop.revealMode === 'PROXIMITY_REVEAL' && !stop.location)
+      issues.push({ step:'stops', code:`reveal_location_${index}`, message:`A proximity-revealed stop needs a public display area.` });
+    if (stop.zoneKey && !payload.zones.some(zone => zone.key === stop.zoneKey))
+      issues.push({ step:'stops', code:`zone_${index}`, message:`Stop ${index + 1} references an unknown zone.` });
   });
+  const stopKeys = new Set(payload.stops.map(stop => stop.id));
+  const dependencies = new Map(payload.stops.map(stop => [stop.id, stop.prerequisiteStopIds]));
+  payload.stops.forEach((stop, index) => {
+    if (stop.prerequisiteStopIds.some(id => id === stop.id || !stopKeys.has(id)))
+      issues.push({ step:'stops', code:`dependency_${index}`, message:`Stop ${index + 1} has an invalid prerequisite.` });
+  });
+  const visiting = new Set<string>();
+  const visited = new Set<string>();
+  const visit = (stopId: string): boolean => {
+    if (visiting.has(stopId)) return true;
+    if (visited.has(stopId)) return false;
+    visiting.add(stopId);
+    const cycle = (dependencies.get(stopId) ?? []).some(visit);
+    visiting.delete(stopId);
+    visited.add(stopId);
+    return cycle;
+  };
+  if ([...stopKeys].some(visit))
+    issues.push({ step:'stops', code:'dependency_cycle', message:'Objective prerequisites cannot contain a circular dependency.' });
+  const zoneKeys = new Set(payload.zones.map(zone => zone.key));
+  payload.zones.forEach((zone, index) => {
+    if (!zone.key.trim() || !zone.name.trim())
+      issues.push({ step:'privacy', code:`zone_${index}`, message:`Zone ${index + 1} needs a name.` });
+    if (zone.prerequisiteZoneKeys.some(key => key === zone.key || !zoneKeys.has(key)))
+      issues.push({ step:'privacy', code:`zone_dependency_${index}`, message:`Zone ${index + 1} has an invalid prerequisite.` });
+  });
+  const zoneDependencies = new Map(payload.zones.map(zone => [zone.key, zone.prerequisiteZoneKeys]));
+  const visitingZones = new Set<string>();
+  const visitedZones = new Set<string>();
+  const visitZone = (key: string): boolean => {
+    if (visitingZones.has(key)) return true;
+    if (visitedZones.has(key)) return false;
+    visitingZones.add(key);
+    const cycle = (zoneDependencies.get(key) ?? []).some(visitZone);
+    visitingZones.delete(key);
+    visitedZones.add(key);
+    return cycle;
+  };
+  if ([...zoneKeys].some(visitZone))
+    issues.push({ step:'privacy', code:'zone_dependency_cycle', message:'Zone prerequisites cannot contain a circular dependency.' });
   return { valid: issues.length === 0, issues };
 }

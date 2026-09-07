@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { CreatorNext, CreatorStepLayout, SectionIntro, creatorStyles } from '@/components/hunt-creator/CreatorStepLayout';
 import { useCreatorDraftEditor } from '@/features/hunts/creator/useCreatorDraftEditor';
 import { useColors } from '@/hooks/useColors';
-import type { CreatorStopType } from '@/features/hunts/types/creator.types';
+import type { CreatorStopType, HuntRevealMode } from '@/features/hunts/types/creator.types';
 import * as ImagePicker from 'expo-image-picker';
 import { acknowledgePaidCollectibleFee, beginCreatorStopSweep, configureHuntDropCommerce, uploadCreatorStopSweep } from '@/features/hunts/repositories/creator.repository';
 import type { CollectibleRarity, CreatorStopCommerce } from '@/features/hunts/types/creator.types';
@@ -51,7 +51,10 @@ export default function StopEditor() {
     }catch(error){Alert.alert('Commerce settings not saved',error instanceof Error?error.message:'Please try again.');}
   };
   const captureSweep=async()=>{if(stop.id.startsWith('local-stop-')){Alert.alert('Save this stop first','Wait for the draft to save, then capture a sweep tied to this stop and Hunt version.');return;}setSweeping(true);try{const session=await beginCreatorStopSweep(id,stop.id);const permission=await ImagePicker.requestCameraPermissionsAsync();if(!permission.granted)throw new Error('Camera permission is required for a live safety sweep.');const result=await ImagePicker.launchCameraAsync({mediaTypes:ImagePicker.MediaTypeOptions.Images,allowsEditing:false,quality:0.85});if(result.canceled||!result.assets[0])return;const mediaId=await uploadCreatorStopSweep(id,session.sessionId,result.assets[0].uri);set({sweepEvidenceMediaId:mediaId});}catch(error){Alert.alert('Sweep not saved',error instanceof Error?error.message:'Please try again.');}finally{setSweeping(false)}};
-  return <CreatorStepLayout step="stops" draftId={id} saveState={c.saveState}><SectionIntro title={`Stop ${index+1}`} body="Keep this focused. Players should know what to do and how to complete it."/>
+   const revealModes: HuntRevealMode[] = ['ALWAYS_VISIBLE', 'HUNT_START_REVEAL', 'PREREQUISITE_REVEAL', 'PROXIMITY_REVEAL', 'ZONE_REVEAL', 'CLUE_ONLY', 'MANUAL_ADMIN_REVEAL'];
+   const otherStops = c.payload.stops.filter(candidate => candidate.id !== stop.id);
+   const togglePrerequisite = (otherId: string) => set({ prerequisiteStopIds: stop.prerequisiteStopIds.includes(otherId) ? stop.prerequisiteStopIds.filter(id => id !== otherId) : [...stop.prerequisiteStopIds, otherId] });
+   return <CreatorStepLayout step="stops" draftId={id} saveState={c.saveState}><SectionIntro title={`Stop ${index+1}`} body="Keep this focused. Players should know what to do and how to complete it."/>
     <Input label="Stop title" value={stop.title} onChangeText={title=>set({title})} placeholder="Find the blue door"/>
     <Input label="Instructions" value={stop.instruction} onChangeText={instruction=>set({instruction})} multiline placeholder="Look for…"/>
     <Text style={[creatorStyles.label,{color:colors.foreground,marginTop:12}]}>Stop type</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{(['location','activity','clue','mixed'] as CreatorStopType[]).map(v=><Button key={v} size="sm" variant={stop.type===v?'primary':'outline'} onPress={()=>set({type:v})}>{v}</Button>)}</View>
@@ -60,6 +63,12 @@ export default function StopEditor() {
     {stop.completionMethod!=='manual_confirmation'&&<View style={{gap:8,marginTop:12}}><Text style={{color:colors.mutedForeground}}>Safety evidence must be captured live with your camera and is tied to this stop version.</Text><Button fullWidth variant={stop.sweepEvidenceMediaId?'outline':'primary'} loading={sweeping} onPress={captureSweep}>{stop.sweepEvidenceMediaId?'Recapture live safety sweep':'Capture live safety sweep'}</Button></View>}
     <Input label="Clue" value={stop.clueText} onChangeText={clueText=>set({clueText})} multiline placeholder="Your clue appears when this stop unlocks."/>
     <Input label="Hint (optional)" value={stop.hintText} onChangeText={hintText=>set({hintText})} multiline/>
+     <Text style={[creatorStyles.label,{color:colors.foreground,marginTop:18}]}>Reveal behavior</Text>
+     <View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{revealModes.map(value=><Button key={value} size="sm" variant={stop.revealMode===value?'primary':'outline'} onPress={()=>set({revealMode:value})}>{value.replaceAll('_',' ')}</Button>)}</View>
+     <Input label="Reveal radius (meters)" keyboardType="number-pad" value={String(stop.revealRadiusMeters)} onChangeText={value=>set({revealRadiusMeters:Math.min(5000,Math.max(25,Number(value)||25))})}/>
+     <Input label="Reveal after seconds (optional)" keyboardType="number-pad" value={stop.revealAfterSeconds?.toString() ?? ''} onChangeText={value=>set({revealAfterSeconds:value.trim()===''?null:Math.max(0,Number(value)||0)})}/>
+     {!!c.payload.zones.length&&<><Text style={[creatorStyles.label,{color:colors.foreground,marginTop:12}]}>Zone</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}><Button size="sm" variant={!stop.zoneKey?'primary':'outline'} onPress={()=>set({zoneKey:null})}>No zone</Button>{c.payload.zones.map(zone=><Button key={zone.key} size="sm" variant={stop.zoneKey===zone.key?'primary':'outline'} onPress={()=>set({zoneKey:zone.key})}>{zone.name}</Button>)}</View></>}
+     {!!otherStops.length&&<><Text style={[creatorStyles.label,{color:colors.foreground,marginTop:12}]}>Prerequisite objectives</Text><Text style={{color:colors.mutedForeground}}>Selected stops must be completed before this objective reveals.</Text><View style={{flexDirection:'row',flexWrap:'wrap',gap:8}}>{otherStops.map(other=><Button key={other.id} size="sm" variant={stop.prerequisiteStopIds.includes(other.id)?'primary':'outline'} onPress={()=>togglePrerequisite(other.id)}>{other.title||'Untitled stop'}</Button>)}</View></>}
     {stop.completionMethod==='text' && <Input label="Riddle answer (private)" secure value={stop.riddleAnswer} onChangeText={riddleAnswer=>set({riddleAnswer})} placeholder="Only trusted validation can use this"/>}
     <Input label="Safety note (optional)" value={stop.safetyNote} onChangeText={safetyNote=>set({safetyNote})} multiline/>
     <Input label="Accessibility note (optional)" value={stop.accessibilityNote} onChangeText={accessibilityNote=>set({accessibilityNote})} multiline/>

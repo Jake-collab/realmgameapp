@@ -298,6 +298,12 @@ export async function fetchMyHuntsSummary(): Promise<MyHuntsSummary> {
 export async function fetchActiveHunt(participationId: string): Promise<ActiveHunt | null> {
   const supabase = db();
 
+  // This RPC refreshes participant-owned reveal timestamps before the
+  // authorized progress read. It never returns validation geometry.
+  const { data: locationRows } = await supabase.rpc('get_active_hunt_stop_locations', {
+    p_participation_id: participationId,
+  });
+
   // Load participation + stops + clues (authorized only)
   const { data: participant, error: partErr } = await supabase
     .from('hunt_participants')
@@ -321,13 +327,18 @@ export async function fetchActiveHunt(participationId: string): Promise<ActiveHu
 
   const p = participant as any;
 
-  // Only return authorized (non-locked) stops and clues
+  // Only return stops whose server-owned reveal timestamp has been granted.
+  // A completed stop is safe to retain for progress history even if a Hunt
+  // later changes its display reveal configuration.
   const authorizedProgress = (p.hunt_stop_progress ?? [])
-    .filter((prog: any) => prog.status !== 'not_started' && prog.status !== 'locked')
+    .filter((prog: any) =>
+      (prog.revealed_at !== null && prog.revealed_at !== undefined)
+      || prog.status === 'completed',
+    )
     .map((prog: any) => {
       const stop = prog.hunt_stops;
       const clue = stop?.hunt_clues?.[0] ?? null;
-      const isRevealed = prog.status !== 'not_started';
+      const isRevealed = Boolean(prog.revealed_at) || prog.status === 'completed';
 
       return {
         id: stop?.id ?? prog.hunt_stop_id,
@@ -362,10 +373,6 @@ export async function fetchActiveHunt(participationId: string): Promise<ActiveHu
 
   const completedCount = authorizedProgress.filter((s: any) => s.progressStatus === 'completed').length;
 
-  const { data: locationRows } = await supabase.rpc(
-    'get_active_hunt_stop_locations',
-    { p_participation_id: participationId },
-  );
   const revealedStopLocations = (Array.isArray(locationRows) ? locationRows : [])
     .filter((row: any) =>
       typeof row?.stop_id === 'string'
@@ -381,6 +388,20 @@ export async function fetchActiveHunt(participationId: string): Promise<ActiveHu
       stopTitle: typeof row.stop_title === 'string' ? row.stop_title : '',
       stopRole: row.stop_role ?? 'waypoint',
     }));
+
+  const { data: explorationState } = await supabase.rpc(
+    'get_hunt_exploration_state',
+    { p_participation_id: participationId },
+  );
+  const advancedConfig = explorationState?.advancedConfig
+    ? {
+        defaultRevealMode: explorationState.advancedConfig.defaultRevealMode ?? 'ALWAYS_VISIBLE',
+        defaultRevealRadiusMeters: Number(explorationState.advancedConfig.defaultRevealRadiusMeters ?? 250),
+        fogOfWarEnabled: Boolean(explorationState.advancedConfig.fogOfWarEnabled),
+        persistentExploration: Boolean(explorationState.advancedConfig.persistentExploration),
+        trailEnabled: Boolean(explorationState.advancedConfig.trailEnabled),
+      }
+    : undefined;
 
   // Load hunt for total stop count + ordering
   const { data: hunt } = await supabase
@@ -421,7 +442,40 @@ export async function fetchActiveHunt(participationId: string): Promise<ActiveHu
     },
     revealedStopLocations,
     groupSummary: null,
+    advancedConfig,
+    zones: Array.isArray(explorationState?.zones) ? explorationState.zones : [],
+    exploredCells: Array.isArray(explorationState?.exploredCells)
+      ? explorationState.exploredCells.map((cell: any) => ({
+          cellKey: String(cell.cellKey ?? cell.cell_key ?? ''),
+          latitude: Number(cell.latitude),
+          longitude: Number(cell.longitude),
+          discoveredAt: String(cell.discoveredAt ?? cell.discovered_at ?? ''),
+        }))
+      : [],
+    discoveredStopCount: authorizedProgress.length,
   };
+}
+
+/**
+ * Sends a coarse participant presence sample for optional proximity reveal and
+ * persistent exploration. The server stores at most a kilometre-scale cell,
+ * never a raw trail, and computes reveal eligibility authoritatively.
+ */
+export async function recordHuntExplorationSample(
+  participationId: string,
+  latitude: number,
+  longitude: number,
+  accuracyMeters = 50,
+) {
+  const supabase = db();
+  const { data, error } = await supabase.rpc('record_hunt_exploration_sample', {
+    p_participation_id: participationId,
+    p_latitude: latitude,
+    p_longitude: longitude,
+    p_accuracy_meters: accuracyMeters,
+  });
+  if (error) throw normalizeError(error);
+  return data as { success: boolean; reasonCode?: string; cellKey?: string };
 }
 
 // ─── Stop progress ────────────────────────────────────────────────────────────

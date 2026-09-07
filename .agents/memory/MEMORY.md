@@ -16,6 +16,7 @@
 - [Admin AI boundary](admin-ai-boundary.md) — AI credentials and generation stay server-side, fail closed without configuration, and always enter human Quest review.
 - [Moderation and integrity boundary](moderation-integrity-boundary.md) — safety automation is server-only, conservative, provider-neutral, and separate from proof validity.
 - [Canonical Hunt Drops](canonical-hunt-drops.md) — public search zones, private collection geometry, online sessions, and placement policy must remain separate.
+- [Advanced Hunt world mechanics](advanced-hunt-world-mechanics.md) — optional reveals, zones, dependencies, and coarse exploration stay participant-scoped and server-authoritative.
 - [Notification delivery boundary](notification-delivery-boundary.md) — in-app history is authoritative and independent from push provider outcomes.
 - [Offline sync boundary](offline-sync-boundary.md) — queue only safe client intents; require the active account again before each protected replay.
 - [OpenAPI codegen path](openapi-codegen-path.md) — Orval’s relative input target fails from the workspace root after cleaning generated outputs.
