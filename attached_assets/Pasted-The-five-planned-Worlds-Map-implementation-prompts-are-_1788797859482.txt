@@ -1,0 +1,115 @@
+The five planned Worlds Map implementation prompts are now complete.
+
+Before performing the final native Mapbox/device audit, verify the new database migrations introduced during the Map work.
+
+CURRENT AUTHORITATIVE BASELINE:
+
+- Stage 2 was previously verified 70/70.
+- Migrations 001–075 were previously established.
+- Map Prompt 1 introduced migration 076.
+- Map Prompt 4 introduced migration 077.
+- Map Prompt 5 introduced migration 078.
+- Do not modify historical migrations 001–075.
+- Do not start additional map feature work.
+- Do not publish/deploy or consume Replit deployment credits.
+
+TASK:
+
+Test and apply migrations 076–078 to the connected production Supabase project using the project's established safe migration workflow.
+
+Before applying them:
+
+1. Inspect migrations 076, 077, and 078.
+2. Verify they are forward-only and correctly ordered.
+3. Check for destructive operations or unintended changes.
+4. Verify their RLS, grants, SECURITY DEFINER/INVOKER behavior, search_path handling, ownership checks, and authentication boundaries.
+5. Specifically verify that Hunt private/exact coordinates and validation geometry cannot leak to unauthorized mobile clients.
+6. Verify the new map/Hunt RPCs cannot accept caller-controlled identity in a way that permits cross-user access.
+7. Verify migration 076 does not regress the previously repaired Quest verification-session security architecture.
+8. Verify migrations 077–078 preserve existing QVAC/QAVS, Quest, Hunt, revenue, moderation, and privacy behavior.
+
+If safe, apply 076–078 to the connected production Supabase project.
+
+Then verify:
+
+- local migration sequence matches production through 078
+- migrations 076, 077, and 078 are actually present remotely
+- all relevant RLS policies
+- RPC execute grants
+- authenticated vs anonymous access
+- cross-user isolation
+- hidden-coordinate privacy
+- Hunt reveal/progression authorization
+- prerequisite/dependency enforcement
+- circular-dependency protection
+- invalid radius/coordinate protection
+- existing Quest verification behavior
+- existing Hunt proof/completion behavior
+
+Run all available connected Supabase/database tests plus relevant API and mobile tests.
+
+IMPORTANT:
+
+If the connected production Supabase project cannot safely be modified or tested, STOP and report the exact blocker instead of pretending the migrations were applied.
+
+Do not modify migrations 001–078 merely to make a failing test pass. If a genuine defect is discovered, create a NEW forward-only migration beginning with 079 and explain exactly why it is necessary.
+
+Do not start a native build.
+Do not start the final Mapbox audit yet.
+Do not start new map features.
+Do not modify Stage 1–3 payment architecture.
+
+End exactly with:
+
+MAP DATABASE VERIFICATION
+
+MIGRATION 076:
+PASS / FAIL
+
+MIGRATION 077:
+PASS / FAIL
+
+MIGRATION 078:
+PASS / FAIL
+
+PRODUCTION MIGRATION PARITY:
+PASS / FAIL
+[latest migration number]
+
+RLS / AUTHORIZATION:
+PASS / FAIL
+
+PRIVATE COORDINATE SECURITY:
+PASS / FAIL
+
+QUEST REGRESSION:
+PASS / FAIL
+
+HUNT REGRESSION:
+PASS / FAIL
+
+CONNECTED DATABASE TESTS:
+PASS / FAIL / BLOCKED
+[counts]
+
+API TESTS:
+PASS / FAIL
+[counts]
+
+MOBILE TESTS:
+PASS / FAIL
+[counts]
+
+NEW REPAIR MIGRATION REQUIRED:
+YES / NO
+[number and reason if yes]
+
+MAP DATABASE STATUS:
+VERIFIED / BLOCKED
+
+BLOCKERS:
+[list or NONE]
+
+NEXT STEP:
+If everything passes, say exactly:
+READY FOR FINAL NATIVE MAPBOX AUDIT
