@@ -459,6 +459,10 @@ describe("Supabase migration filename preflight", () => {
       path.resolve(__dirname, "../supabase/migrations/080_hunt_step_status_lock_state.sql"),
       "utf8",
     );
+    const projectionRepairSource = fs.readFileSync(
+      path.resolve(__dirname, "../supabase/migrations/081_hunt_map_projection_types.sql"),
+      "utf8",
+    );
 
     expect(mapSource).toContain(
       "hsp.status::TEXT NOT IN ('not_started', 'locked', 'expired')",
@@ -477,5 +481,8 @@ describe("Supabase migration filename preflight", () => {
         `ADD VALUE IF NOT EXISTS '${state}';`,
       );
     }
+    expect(projectionRepairSource).toContain(
+      "hsg.public_radius_meters::DOUBLE PRECISION",
+    );
   });
 });

@@ -25,7 +25,7 @@ AS $$
     hs.id,
     hsg.public_lat,
     hsg.public_lng,
-    hsg.public_radius_meters,
+    hsg.public_radius_meters::DOUBLE PRECISION,
     hs.title,
     hs.stop_role::TEXT,
     hsp.status::TEXT
