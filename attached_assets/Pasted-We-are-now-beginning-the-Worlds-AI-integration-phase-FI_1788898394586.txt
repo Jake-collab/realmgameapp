@@ -1,0 +1,488 @@
+We are now beginning the Worlds AI integration phase.
+
+FIRST INTEGRATION ONLY:
+NVIDIA-hosted Quest generation.
+
+Do NOT begin content moderation.
+Do NOT begin Hunt 360 vision.
+Do NOT begin Native camera/GPS/motion work.
+Do NOT begin Push.
+Do NOT begin Support/Auth email.
+Do NOT modify Stage 1–3 payment architecture.
+Do NOT redesign the existing Quest system.
+
+CURRENT INTENDED QUEST-GENERATION PROVIDER:
+
+Provider:
+NVIDIA hosted API / NIM endpoint
+
+Model:
+nvidia/nemotron-3.5-lightning-30b-a3b
+
+Purpose:
+Generate structured Daily, Monthly, and Geo Quests for the existing Worlds Quest system.
+
+IMPORTANT:
+
+The CURRENT repository should already contain some portion of the Quest generation/admin architecture.
+
+Do not assume what exists.
+
+FIRST audit the current repository and determine exactly what is already implemented versus missing.
+
+==================================================
+A. AUDIT EXISTING QUEST GENERATION
+==================================================
+
+Inspect all current:
+
+- Admin Quest generation screens
+- Admin prompt/configuration screens
+- Quest generation services
+- API routes
+- database tables
+- Supabase RPCs
+- scheduled/background generation infrastructure
+- Daily Quest logic
+- Monthly Quest logic
+- Geo-Quest logic
+- Interest Bubble personalization
+- location/radius inputs
+- generated Quest schemas
+- Quest publishing/approval flows
+- moderation/review states
+- Quest assignment logic
+- existing OpenAI or placeholder provider code
+- environment variables
+- test coverage
+- documentation
+
+Determine whether the current app already supports:
+
+1. Daily personalized Quest generation
+2. Monthly Quest generation
+3. Geo-Quest generation
+4. Admin-editable system prompts
+5. Admin category/type configuration
+6. Admin generation preview
+7. Admin edit-before-publish
+8. Admin regenerate/retry
+9. Automatic vs manual publishing
+10. Interest Bubble conditioning
+11. location/radius conditioning
+12. Quest verification-method assignment
+13. points/reward configuration
+14. safety/location constraints
+15. generated Quest storage
+16. app-side display through existing Quest UI
+
+Do not duplicate functionality that already exists.
+
+==================================================
+B. PROVIDER ARCHITECTURE
+==================================================
+
+Use a provider-neutral Quest generation interface.
+
+The app should NOT directly call NVIDIA.
+
+Required flow:
+
+Admin / scheduler
+→ Worlds backend/API
+→ QuestGenerationProvider
+→ NVIDIA API
+→ strict structured Quest response
+→ server validation
+→ database
+→ existing Quest assignment/display system
+
+The NVIDIA API key must remain SERVER ONLY.
+
+Expected secure environment variable:
+
+NVIDIA_API_KEY
+
+Do not expose it through EXPO_PUBLIC_* variables.
+Do not send it to the mobile client.
+Do not log it.
+
+Use the NVIDIA hosted OpenAI-compatible endpoint appropriate for:
+
+nvidia/nemotron-3.5-lightning-30b-a3b
+
+Do not hardcode provider credentials.
+
+Keep the provider abstraction extensible so another model/provider could later be substituted without rewriting the Quest system.
+
+==================================================
+C. ADMIN PANEL — “TRAINING” / CONFIGURATION
+==================================================
+
+The user should NOT literally fine-tune the model from the Admin panel.
+
+Instead, the Admin panel should control the generator through structured prompt/configuration fields.
+
+Preserve any existing implementation and fill only genuine gaps.
+
+Admin should be able to configure separately:
+
+DAILY QUEST PROMPT
+- base/system instructions
+- allowed themes
+- banned themes
+- tone
+- difficulty guidance
+- duration guidance
+- verification-method guidance
+- points/reward guidance
+
+MONTHLY QUEST PROMPT
+- separate monthly instructions
+- larger/special challenge behavior
+- points guidance
+- duration guidance
+
+GEO-QUEST PROMPT
+- location-aware instructions
+- radius/location context
+- outdoor/public-space guidance where applicable
+- verification-method guidance
+
+PERSONALIZATION:
+- Interest Bubble input rules
+- number of interests supplied
+- whether interests are required
+- fallback behavior when interests are unavailable
+
+GENERATION SETTINGS:
+- model identifier
+- temperature
+- max output length
+- reasoning setting if supported
+- generation enabled/disabled
+- manual approval vs automatic publication
+- retry limit
+
+Do not expose raw API credentials in Admin.
+
+Admin configuration changes must be restricted to authorized admin roles.
+
+Audit/log meaningful configuration changes where existing Admin audit infrastructure supports it.
+
+==================================================
+D. STRICT GENERATED QUEST SCHEMA
+==================================================
+
+Do NOT accept arbitrary free-form model output directly into production Quest records.
+
+Define/use a strict validated server-side schema compatible with the CURRENT Quest database model.
+
+Generated output should include only fields actually supported by Worlds, such as where applicable:
+
+- Quest type:
+  daily
+  monthly
+  geo
+
+- title
+- short description
+- instructions/objective
+- points
+- verification methods
+- estimated duration
+- interest/category tags
+- location context when applicable
+- Geo radius when applicable
+- safety notes when applicable
+
+Verification methods must map ONLY to the existing QVAC methods:
+
+- camera
+- gps
+- timer
+- integrity_confirmation
+- activity_tracking
+
+Do NOT invent new verification types.
+
+Geo Quests must use the existing server-authoritative GPS/QVAC/QAVS architecture.
+
+The AI must never be able to:
+- directly award points
+- mark a Quest complete
+- bypass verification
+- write arbitrary SQL/database fields
+- expose private user data
+- decide authorization
+
+==================================================
+E. DAILY QUEST PERSONALIZATION
+==================================================
+
+Daily generation must use the existing Interest Bubble system.
+
+Audit the current interest storage and assignment workflow.
+
+The generator may receive only the minimum user context needed to generate a relevant Quest.
+
+Prefer category/interest labels rather than unnecessary personal information.
+
+Do not send:
+- email
+- username
+- private profile fields
+- precise location unless Geo-Quest generation explicitly requires location context
+
+If personalized Daily Quest generation currently occurs as a pool/batch rather than one model call per user, preserve the more scalable architecture.
+
+Do not create unnecessary per-user AI calls if existing assignment logic can reuse generated variants.
+
+==================================================
+F. MONTHLY QUEST GENERATION
+==================================================
+
+Monthly Quest generation must remain distinct from Daily generation.
+
+Verify:
+
+- separate Admin prompt
+- separate generation schedule/manual action
+- separate Quest type
+- current monthly assignment/availability rules
+- correct points/reward handling
+
+Do not collapse Monthly into Daily.
+
+==================================================
+G. GEO-QUEST GENERATION
+==================================================
+
+Geo-Quest generation must integrate with the current Mapbox/Geo architecture.
+
+Input may include:
+
+- city/location name
+- coordinates when legitimately required
+- generation radius
+- nearby geographic/public context available through existing systems
+
+The AI must not fabricate coordinates and silently publish them.
+
+Any generated or selected location must pass existing coordinate validation and server-side constraints.
+
+Do not use 0,0 fallback coordinates.
+
+Preserve the Mapbox and QVAC/QAVS security boundaries already implemented.
+
+==================================================
+H. GENERATION REVIEW FLOW
+==================================================
+
+Audit whether generated Quests currently require approval.
+
+Provide a safe workflow consistent with existing architecture:
+
+GENERATE
+→ VALIDATE
+→ PREVIEW
+→ ADMIN EDIT if desired
+→ APPROVE/PUBLISH
+→ EXISTING Quest distribution/assignment
+
+If automatic publishing already exists or is desired through current config, it must still pass strict schema validation and safety/business-rule validation first.
+
+Generation failures must not create malformed or partially published Quests.
+
+Support:
+
+- generation failure
+- timeout
+- malformed JSON
+- unsupported verification method
+- invalid points
+- invalid radius
+- missing required fields
+- duplicate/repetitive Quest
+- retry
+- manual fallback
+
+==================================================
+I. APP-SIDE DISPLAY
+==================================================
+
+Do NOT build a separate AI-generated Quest UI.
+
+Generated Quests must appear through the EXISTING Worlds Quest system.
+
+Verify generated:
+
+DAILY QUEST
+→ appears in the existing Daily Quest surface
+
+MONTHLY QUEST
+→ appears in Monthly Quest Drop
+
+GEO-QUEST
+→ appears in Geo-Quest listings and existing Quest Map behavior
+
+Verify compatibility with:
+
+- Home prioritized active Quest
+- Quests tab
+- Map
+- Progress
+- Start Quest
+- proof submission
+- QVAC/QAVS
+- completion
+- points
+- review/moderation state
+
+The mobile client should not need to know which AI provider created a Quest.
+
+==================================================
+J. SECURITY / ABUSE CONTROLS
+==================================================
+
+Add/preserve appropriate server-side limits for generation:
+
+- admin authorization
+- rate limiting
+- generation request deduplication
+- timeout
+- retries with limits
+- output size limits
+- schema validation
+- prompt-injection resistance for user-derived Interest Bubble/location text
+- no arbitrary tool execution
+- no model-generated HTML/script execution
+
+Treat Interest Bubble labels and location names as DATA, not trusted instructions.
+
+Do not allow generated Quest text to alter system/provider instructions.
+
+==================================================
+K. TESTS
+==================================================
+
+Add/maintain tests covering:
+
+- NVIDIA provider adapter
+- mocked successful generation
+- provider timeout/failure
+- malformed output
+- strict schema rejection
+- unsupported verification types rejected
+- invalid points rejected
+- invalid Geo radius rejected
+- no 0,0 fallback
+- Daily personalization
+- Monthly generation
+- Geo generation
+- Admin authorization
+- preview/edit/publish
+- assignment/display compatibility
+- API key remains server-only
+- provider can be replaced without changing mobile UI
+- existing Quest/QVAC/QAVS regressions
+
+Do not require real paid/provider calls for the automated test suite.
+
+==================================================
+L. CONNECTION GATE
+==================================================
+
+If NVIDIA_API_KEY is not yet configured:
+
+DO NOT invent one.
+
+Complete everything possible without it and then stop at the connection boundary.
+
+Tell me exactly:
+
+- where to obtain the NVIDIA API key
+- whether the hosted endpoint is currently available for this model
+- exact environment variable name
+- whether it belongs in Secret or Configuration
+- whether any Replit paid connector is required
+- whether deployment is required merely to test the provider from the backend
+
+Do not expose any credential.
+
+==================================================
+FINAL REPORT
+==================================================
+
+End with exactly:
+
+QUEST GENERATION INTEGRATION AUDIT
+
+EXISTING ADMIN GENERATOR:
+COMPLETE / PARTIAL / MISSING
+
+DAILY QUEST GENERATION:
+COMPLETE / PARTIAL / MISSING
+
+MONTHLY QUEST GENERATION:
+COMPLETE / PARTIAL / MISSING
+
+GEO-QUEST GENERATION:
+COMPLETE / PARTIAL / MISSING
+
+INTEREST BUBBLE PERSONALIZATION:
+PASS / NEEDS WORK
+
+ADMIN PROMPT CONFIGURATION:
+PASS / NEEDS WORK
+
+PROVIDER-NEUTRAL ADAPTER:
+PASS / NEEDS WORK
+
+NVIDIA NEMOTRON 3.5 LIGHTNING ADAPTER:
+PASS / BLOCKED ON KEY / NEEDS WORK
+
+STRICT OUTPUT VALIDATION:
+PASS / NEEDS WORK
+
+QVAC/QAVS COMPATIBILITY:
+PASS / FAIL
+
+MAPBOX/GEO COMPATIBILITY:
+PASS / FAIL
+
+APP-SIDE DISPLAY:
+PASS / NEEDS WORK
+
+SECURITY:
+PASS / NEEDS WORK
+
+TYPECHECK:
+PASS / FAIL
+
+API TESTS:
+PASS / FAIL
+[count]
+
+MOBILE TESTS:
+PASS / FAIL
+[count]
+
+NVIDIA_API_KEY PRESENT:
+YES / NO
+(do not print it)
+
+REPLIT PAID CONNECTOR REQUIRED:
+YES / NO
+
+DEPLOYMENT REQUIRED FOR INITIAL PROVIDER TEST:
+YES / NO
+
+BLOCKERS:
+[list or NONE]
+
+NEXT SINGLE OWNER ACTION:
+[action]
+
+Do not begin OpenAI Moderation.
+Do not begin Hunt 360 Vision.
