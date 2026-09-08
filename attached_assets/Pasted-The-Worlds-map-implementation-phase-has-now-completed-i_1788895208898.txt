@@ -1,0 +1,364 @@
+The Worlds map implementation phase has now completed its database gate.
+
+AUTHORITATIVE CURRENT STATE:
+
+- Mapbox connection/configuration: complete.
+- Map Prompts 1–5: implemented.
+- GitHub disposable Supabase verification: PASS.
+- Authoritative workflow run: 34264218654.
+- Migrations 001–081 apply successfully from scratch.
+- Map migrations 076–081 verified.
+- API authoritative suite: 35/35 PASS.
+- Mobile suite: 952 PASS, 75 skipped.
+- Connected mobile database contracts: 34/34 PASS.
+- Private Hunt coordinates and cross-user isolation verified.
+- No native Mapbox/device validation has been completed yet.
+
+TASK:
+
+Perform the FINAL NATIVE MAPBOX AUDIT for Worlds.
+
+This is a validation/audit task, NOT a new feature-development phase.
+
+Do not add new map concepts.
+Do not redesign Quest or Hunt.
+Do not modify Stage 1–3 payment architecture.
+Do not publish/deploy the production application.
+Do not consume Replit deployment credits unless a native development build genuinely requires a separate external build mechanism and you first report that requirement.
+
+AUDIT THE CURRENT IMPLEMENTATION ACROSS ALL FIVE MAP PROMPTS.
+
+==================================================
+A. NATIVE MAPBOX FOUNDATION
+==================================================
+
+Verify on the actual native Expo/React Native configuration:
+
+- @rnmapbox/maps initializes correctly
+- EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN is detected without printing it
+- Mapbox Expo config plugin is correct
+- iOS native configuration is correct
+- Android native configuration is correct
+- iOS bundle identifier remains correct
+- Android package identifier remains correct
+- foreground location permission configuration is correct
+- no secret Mapbox token is exposed in the client
+- light and dark Mapbox styles load correctly
+- no invalid 0,0 fallback behavior exists
+- map loading, offline, and failure states render safely
+- camera state persists appropriately
+
+If Expo Go cannot validate native Mapbox functionality, say so explicitly and use the appropriate signed/development-build validation path.
+
+==================================================
+B. QUEST MAP
+==================================================
+
+Verify the complete Quest Map behavior implemented in Prompts 1–3:
+
+- Geo-Quest markers render correctly
+- available / active / completed marker states are visually distinct
+- clustering works at appropriate zoom levels
+- marker selection focuses the camera correctly
+- current-location control works
+- recentering works
+- compass/bearing behavior works
+- nearby Quest counts are correct
+- nearby point totals are correct
+- map filters work:
+  - Available
+  - Active
+  - Completed
+- active Quest highlighting works
+- Start Quest from map works
+- Quest state refreshes after starting/completing
+- screen refocus refreshes correctly
+- no stale Quest markers remain after state changes
+
+Verify the active Quest HUD:
+
+- objective state
+- GPS status
+- activity-tracking progress
+- timer progress
+- integrity-confirmation state
+- verification-method progress
+- pending/review state
+- completion state
+
+Ensure the HUD uses real server-authoritative Quest/QVAC/QAVS data.
+
+Verify that multiple active Quests cannot incorrectly combine progress.
+
+Verify that the UI cannot display false 100% completion.
+
+==================================================
+C. QUEST LOCATION / QVAC / QAVS
+==================================================
+
+Verify actual-device behavior for:
+
+- foreground GPS acquisition
+- poor-accuracy handling
+- permission denied
+- permission later granted
+- stale GPS
+- GPS loss/recovery
+- distance-to-objective calculations
+- map radius visualization
+- server-authoritative location verification
+- activity tracking
+- foreground-only activity lifecycle
+- route/distance accumulation
+- app interruption/resume behavior
+
+Confirm map UI does NOT bypass existing QVAC/QAVS server authority.
+
+==================================================
+D. HUNT MAP
+==================================================
+
+Verify the complete Hunt Map behavior implemented in Prompts 4–5:
+
+- Hunt map loads correctly
+- official/community/custom Hunt content is represented correctly
+- unrevealed Drops do NOT expose exact coordinates
+- search areas/blobs render instead of exact hidden pins
+- public/revealed locations render only when authorized
+- objective selection works
+- camera focusing works
+- Hunt HUD works
+- distance cues work
+- compass/direction cues work
+
+Verify all objective states:
+
+- available
+- ready
+- active
+- discovered
+- completed
+- locked
+- hidden
+
+Verify reveal mechanics:
+
+- proximity reveal
+- timed reveal
+- prerequisite reveal
+- manual reveal
+- admin reveal
+
+Verify:
+
+- clue-only objectives keep exact coordinates hidden
+- prerequisite chains work
+- dependency rules work
+- circular dependency protection works
+- invalid radius protection works
+- invalid-coordinate protection works
+- fog of war works
+- exploration persistence works
+- zones render/work correctly
+- My Hunts state stays synchronized with map state
+- local activity trail remains appropriately bounded/local-only
+
+==================================================
+E. HUNT PRIVACY / SECURITY
+==================================================
+
+Reconfirm from the actual client behavior that:
+
+- hidden Drop coordinates are not present in client-visible payloads before reveal
+- private validation geometry is not exposed
+- unauthorized users cannot obtain exact coordinates
+- client-supplied user IDs cannot bypass authorization
+- secure wrapper RPCs are used
+- revealed-stop projection behavior matches migrations 076–081
+- server authority controls discovery/completion
+- mobile code cannot self-award completion or points
+
+Do not weaken any existing privacy boundary to make map rendering easier.
+
+==================================================
+F. CREATOR / ADMIN MAP TOOLING
+==================================================
+
+Verify existing creator/admin functionality introduced during the map implementation:
+
+- location selection
+- valid coordinate storage
+- public vs private geometry handling
+- Hunt placement
+- Quest placement where applicable
+- radius configuration
+- reveal configuration
+- prerequisites/dependencies
+- clue-only configuration
+- validation errors
+- no accidental 0,0 coordinate creation
+- private geometry remains hidden from normal players
+
+Verify reverse-geocoding/location labeling if implemented by the current repository.
+
+==================================================
+G. UI / UX REGRESSION
+==================================================
+
+Verify the finalized navigation remains unchanged:
+
+QUEST MODE:
+Home / Quests / Map / Progress / Profile
+
+HUNT MODE:
+Map / My Hunts / Progress / Profile
+
+Confirm:
+
+- no Discover tab was introduced
+- Quest Map remains part of Quest mode
+- Hunt Map remains the primary Hunt discovery/gameplay surface
+- top Quest/Hunt mode switching remains functional
+- map overlays do not cover essential navigation
+- safe-area handling works
+- loading/error/empty states do not trap navigation
+
+Test representative iPhone and Android layouts if the available build environment permits.
+
+==================================================
+H. PERFORMANCE / STABILITY
+==================================================
+
+Check:
+
+- map rerender loops
+- excessive GPS listeners
+- leaked location subscriptions
+- camera feedback loops
+- duplicate network requests
+- excessive marker rendering
+- clustering performance
+- unnecessary polling
+- foreground/background lifecycle issues
+- crashes when rapidly switching Quest/Hunt modes
+- crashes when permissions change while map is open
+
+Do not make speculative performance rewrites unless an actual issue is identified.
+
+==================================================
+I. REGRESSION TESTS
+==================================================
+
+After native validation, rerun:
+
+- TypeScript checks
+- relevant Mapbox/map tests
+- Quest Map tests
+- Hunt Map tests
+- API tests
+- mobile suite
+- migration/static contract tests relevant to map security
+
+Do not modify migrations 001–081.
+
+If a genuine database defect is discovered, use a NEW forward-only migration beginning with 082 and explain why.
+
+If a genuine application defect is discovered, make the smallest safe fix and rerun the affected audit section plus regressions.
+
+==================================================
+FINAL REPORT
+==================================================
+
+End with exactly:
+
+FINAL NATIVE MAPBOX AUDIT
+
+MAPBOX NATIVE INITIALIZATION:
+PASS / FAIL / BLOCKED
+
+IOS NATIVE MAP:
+PASS / FAIL / BLOCKED
+
+ANDROID NATIVE MAP:
+PASS / FAIL / BLOCKED
+
+MAPBOX TOKEN CONFIGURATION:
+PASS / FAIL
+
+LIGHT/DARK STYLES:
+PASS / FAIL / BLOCKED
+
+LOCATION PERMISSIONS:
+PASS / FAIL / BLOCKED
+
+QUEST MAP:
+PASS / FAIL / BLOCKED
+
+QUEST MARKERS / CLUSTERING:
+PASS / FAIL / BLOCKED
+
+QUEST FILTERS / CAMERA:
+PASS / FAIL / BLOCKED
+
+QUEST ACTIVE HUD:
+PASS / FAIL / BLOCKED
+
+QVAC/QAVS NATIVE LOCATION BEHAVIOR:
+PASS / FAIL / BLOCKED
+
+HUNT MAP:
+PASS / FAIL / BLOCKED
+
+HUNT SEARCH AREAS / REVEALS:
+PASS / FAIL / BLOCKED
+
+HUNT FOG / ZONES / DEPENDENCIES:
+PASS / FAIL / BLOCKED
+
+PRIVATE HUNT COORDINATE SECURITY:
+PASS / FAIL
+
+CREATOR / ADMIN MAP TOOLS:
+PASS / FAIL / BLOCKED
+
+NAVIGATION / UI REGRESSION:
+PASS / FAIL
+
+PERFORMANCE / STABILITY:
+PASS / FAIL / BLOCKED
+
+TYPECHECK:
+PASS / FAIL
+
+API TESTS:
+PASS / FAIL
+[count]
+
+MOBILE TESTS:
+PASS / FAIL
+[count]
+
+MAP TESTS:
+PASS / FAIL
+[count]
+
+NEW REPAIR MIGRATION REQUIRED:
+YES / NO
+[number/reason]
+
+APPLICATION FIXES REQUIRED:
+YES / NO
+[list]
+
+NATIVE DEVICE VALIDATION COMPLETED:
+YES / NO
+
+BLOCKERS:
+[list or NONE]
+
+MAPBOX PHASE STATUS:
+FULLY VERIFIED / BLOCKED / FIXES REQUIRED
+
+If every required map and native gate passes, end exactly:
+
+WORLDS MAPBOX PHASE: COMPLETE
