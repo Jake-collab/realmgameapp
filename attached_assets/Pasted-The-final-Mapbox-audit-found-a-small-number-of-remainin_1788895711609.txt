@@ -1,0 +1,160 @@
+The final Mapbox audit found a small number of remaining completion items.
+
+Do NOT start any new map feature phase.
+Do NOT redesign Quest or Hunt.
+Do NOT modify migrations 001–081.
+Do NOT modify Stage 1–3 payment architecture.
+
+Fix ONLY the remaining Mapbox issues identified by the final audit.
+
+REMAINING ITEMS:
+
+1. Quest marker clustering is not implemented.
+2. Signed-build Mapbox token injection has not been verified.
+3. Native iOS/Android device validation remains incomplete.
+4. Explicit offline tile packs are not implemented.
+
+TASK A — QUEST CLUSTERING
+
+Implement native Quest marker clustering using the current @rnmapbox/maps architecture.
+
+Requirements:
+
+- preserve current Quest marker states:
+  - available
+  - active
+  - completed
+- preserve current filters
+- preserve current marker selection and camera focus
+- preserve nearby counts and point totals
+- preserve active Quest HUD behavior
+- clusters should expand/zoom appropriately when selected
+- individual Quest markers should appear as zoom increases
+- do not leak any private Hunt/location data
+- do not add clustering to Hunt unless the current Hunt design requires it
+- avoid excessive rerenders
+
+Add tests for:
+- cluster creation
+- cluster expansion
+- individual marker transition
+- filters with clustered data
+- active/completed state behavior
+
+TASK B — SIGNED BUILD TOKEN CONFIGURATION
+
+Audit the current Expo/EAS/native build configuration and make sure:
+
+EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN
+
+is correctly available to signed iOS and Android builds.
+
+Do not print the token.
+
+Do not create a new secret Mapbox token unless actually required.
+
+Verify:
+- app config resolves it
+- production/development build profiles preserve it
+- no token is hardcoded
+- no token is accidentally omitted from native builds
+
+If an owner-side EAS/Expo configuration action is required, STOP and give exact instructions rather than pretending it is complete.
+
+TASK C — NATIVE DEVICE VALIDATION PREPARATION
+
+Prepare the project for the minimum native-development-build validation required for:
+
+- iOS Mapbox initialization
+- Android Mapbox initialization
+- styles
+- GPS permissions
+- recentering
+- camera gestures
+- Quest clustering
+- Quest Map
+- Hunt Map
+- QVAC/QAVS foreground GPS lifecycle
+
+Do NOT consume paid Replit deployment credits.
+
+If native validation requires:
+- EAS Build
+- Expo development build
+- Apple Developer
+- Google Play/Internal testing
+or another owner action,
+
+report exactly what is required and stop before any paid/irreversible step.
+
+TASK D — OFFLINE MAPS
+
+Do not implement explicit downloadable offline tile packs unless they were already part of the intended Worlds Build 1 requirements.
+
+Instead, audit whether Build 1 actually requires them.
+
+If not required:
+- document that normal Mapbox runtime caching is acceptable for Build 1
+- mark explicit offline tile packs as DEFERRED, not FAILED
+
+If they are genuinely required by an existing product requirement, explain the requirement before implementing them.
+
+Then rerun:
+
+- TypeScript
+- Quest Map tests
+- Hunt Map tests
+- targeted map/security tests
+- mobile suite
+- API tests
+- Expo config inspection
+
+End exactly with:
+
+MAPBOX COMPLETION REPAIR
+
+QUEST CLUSTERING:
+PASS / FAIL
+
+SIGNED BUILD TOKEN CONFIG:
+PASS / BLOCKED
+
+IOS NATIVE VALIDATION:
+PASS / BLOCKED
+
+ANDROID NATIVE VALIDATION:
+PASS / BLOCKED
+
+QVAC/QAVS NATIVE VALIDATION:
+PASS / BLOCKED
+
+OFFLINE TILE PACKS:
+NOT REQUIRED FOR BUILD 1 / IMPLEMENTED / BLOCKED
+
+TYPECHECK:
+PASS / FAIL
+
+MAP TESTS:
+PASS / FAIL
+[count]
+
+MOBILE TESTS:
+PASS / FAIL
+[count]
+
+API TESTS:
+PASS / FAIL
+[count]
+
+OWNER ACTION REQUIRED:
+YES / NO
+
+OWNER ACTION:
+[exact action or NONE]
+
+MAPBOX PHASE STATUS:
+COMPLETE / BLOCKED
+
+If all code-side requirements are complete and only physical/signed-device owner testing remains, end with:
+
+MAPBOX CODE PHASE COMPLETE — NATIVE DEVICE VALIDATION PENDING
