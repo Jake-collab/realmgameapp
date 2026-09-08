@@ -1,0 +1,212 @@
+Audit the CURRENT repository and CURRENT task results for the Worlds NVIDIA Quest-generation integration.
+
+Do not make changes yet.
+Do not start OpenAI Moderation.
+Do not start Hunt 360 Vision.
+Do not start Native camera/GPS/motion.
+Do not deploy or publish.
+
+I may have started multiple follow-up tasks, so do not rely on old task descriptions. Inspect the actual current code, migrations, tests, configuration, and recent task outputs.
+
+Determine whether the NVIDIA Quest-generation integration is now fully complete.
+
+Verify all of the following:
+
+1. NVIDIA live provider
+- NVIDIA_API_KEY is present
+- nvidia/nemotron-3.5-lightning-30b-a3b is actually callable
+- live generation succeeds
+- Daily Quest generation succeeds
+- Monthly Quest generation succeeds
+- Geo-Quest generation succeeds
+- structured output parses reliably
+- strict schema validation passes
+- timeout/retry handling works
+- the key is server-only
+
+2. Admin configuration
+- separate Daily prompt/config
+- separate Monthly prompt/config
+- separate Geo prompt/config
+- provider/model settings
+- temperature/max tokens/retry settings
+- enable/disable generation
+- manual approval vs auto-publish setting
+- admin authorization
+- configuration persisted durably in Supabase
+- prompt/config version history exists
+
+3. Generation history
+- generation attempts stored
+- provider/model stored
+- config version stored
+- status/result stored
+- retry/failure metadata stored safely
+- no secrets stored
+- approval/rejection/publication status stored
+
+4. Interest Bubble personalization
+- Daily generation uses existing Interest Bubbles
+- only minimal safe user context is sent
+- no email/username/private profile leakage
+- no-interest fallback works
+- malformed/prompt-injection-like interest text is treated as data
+
+5. Quest lifecycle
+Verify this full flow exists and works:
+
+GENERATE
+→ VALIDATE
+→ STORE DRAFT
+→ ADMIN PREVIEW
+→ OPTIONAL EDIT
+→ APPROVE
+→ PROMOTE TO NORMAL QUEST
+→ EXISTING ASSIGNMENT / DISPLAY
+
+6. Draft promotion
+- admin-only
+- idempotent
+- strict re-validation
+- supported QVAC methods only
+- invalid points rejected
+- invalid Geo radius/coordinates rejected
+- no 0,0 fallback
+- no direct point awarding/completion bypass
+- uses existing Quest tables/lifecycle
+
+7. Scheduling
+- Daily generation scheduling
+- Monthly generation scheduling
+- Geo scheduling only if intended
+- existing worker/queue reused where appropriate
+- idempotency
+- duplicate prevention
+- retry limits
+- admin visibility
+- generation-enabled switch
+
+8. App-side display
+Verify generated approved Quests appear correctly in:
+- Daily Quest surface
+- Monthly Quest Drop
+- Geo-Quest list/map
+- Home prioritized active Quest
+- Quests tab
+- Map
+- Progress
+- Start Quest
+- proof submission
+- completion
+- points
+- moderation/review state
+
+9. Regressions/security
+- QVAC/QAVS still pass
+- Mapbox/Geo still pass
+- non-admin generation rejected
+- non-admin config edit rejected
+- non-admin approval rejected
+- cross-user/private data isolation
+- provider key never returned to client
+- model output cannot inject arbitrary fields or bypass authorization
+
+10. Database
+- identify any new migrations after 081
+- confirm they are forward-only
+- confirm migration parity through the latest migration
+- run connected database verification if available
+
+11. Tests
+Report current counts for:
+- live provider smoke test
+- API tests
+- mobile tests
+- Quest generation tests
+- authorization tests
+- scheduler tests
+- database/contract tests
+- TypeScript
+
+Do not fix anything during this audit.
+
+End exactly with:
+
+NVIDIA QUEST GENERATION CURRENT-STATE AUDIT
+
+LIVE NVIDIA PROVIDER:
+PASS / FAIL / PARTIAL
+
+DAILY QUEST:
+COMPLETE / PARTIAL / MISSING
+
+MONTHLY QUEST:
+COMPLETE / PARTIAL / MISSING
+
+GEO-QUEST:
+COMPLETE / PARTIAL / MISSING
+
+ADMIN PROMPT CONFIG:
+COMPLETE / PARTIAL / MISSING
+
+PROMPT VERSION PERSISTENCE:
+COMPLETE / PARTIAL / MISSING
+
+GENERATION HISTORY:
+COMPLETE / PARTIAL / MISSING
+
+INTEREST BUBBLE PERSONALIZATION:
+COMPLETE / PARTIAL / MISSING
+
+DRAFT → QUEST PROMOTION:
+COMPLETE / PARTIAL / MISSING
+
+SCHEDULING:
+COMPLETE / PARTIAL / MISSING
+
+APP-SIDE DISPLAY:
+COMPLETE / PARTIAL / MISSING
+
+QVAC/QAVS REGRESSION:
+PASS / FAIL
+
+MAPBOX/GEO REGRESSION:
+PASS / FAIL
+
+SECURITY/AUTHORIZATION:
+PASS / FAIL / PARTIAL
+
+LATEST MIGRATION:
+[number]
+
+DATABASE VERIFICATION:
+PASS / FAIL / BLOCKED
+
+TYPECHECK:
+PASS / FAIL
+
+API TESTS:
+PASS / FAIL
+[count]
+
+MOBILE TESTS:
+PASS / FAIL
+[count]
+
+QUEST GENERATION TESTS:
+PASS / FAIL
+[count]
+
+LIVE PROVIDER TEST:
+PASS / FAIL
+
+BLOCKERS:
+[list or NONE]
+
+QUEST GENERATION STATUS:
+COMPLETE / PARTIAL / BLOCKED
+
+If COMPLETE, end exactly:
+READY FOR OPENAI CONTENT MODERATION
+
+If PARTIAL or BLOCKED, list the exact remaining items only.
