@@ -105,59 +105,72 @@ describeIntegration('Advanced Hunt helper privilege contracts', () => {
     owner = await createUser();
     await signIn();
 
-    const draft = await authenticatedClient.rpc('create_hunt_draft', {
-      p_payload: {
+    const hunt = await admin
+      .from('hunts')
+      .insert({
+        slug: `advanced-helper-${owner.id}`,
         title: 'Advanced Helper Privilege Test',
         summary: 'A disposable Hunt for helper privilege verification.',
         description: 'A disposable Hunt for helper privilege verification.',
-        pointsReward: 100,
-        estimatedDurationMinutes: 10,
+        hunt_type: 'custom',
+        status: 'draft',
+        creator_user_id: owner.id,
         privacy: 'public',
-        stopOrdering: 'ordered',
-        participationMode: 'solo',
-        startModel: 'individual',
-        defaultRevealMode: 'ALWAYS_VISIBLE',
-        defaultRevealRadiusMeters: 250,
-        fogOfWarEnabled: true,
-        persistentExploration: true,
-        trailEnabled: false,
-        zones: [
-          {
-            key: 'zone-alpha',
-            name: 'Alpha',
-            sortOrder: 0,
-            required: true,
-            prerequisiteZoneKeys: [],
-            publicCenterLat: 40.7128,
-            publicCenterLng: -74.006,
-            publicRadiusMeters: 500,
-          },
-        ],
-        stops: [
-          {
-            id: 'start-stop',
-            title: 'Start stop',
-            description: 'A disposable start stop.',
-            clueText: 'Find the marked place.',
-            hintText: '',
-            completionMethod: 'none',
-            isRequired: true,
-            publicLat: 40.7128,
-            publicLng: -74.006,
-            publicRadius: 500,
-            validationRadius: 30,
-            revealMode: 'ALWAYS_VISIBLE',
-            revealRadiusMeters: 250,
-            zoneKey: 'zone-alpha',
-            prerequisiteStopIds: [],
-          },
-        ],
-      },
-    });
-    if (draft.error || !draft.data?.id) {
-      throw draft.error ?? new Error('Could not create the advanced Hunt draft fixture.');
+        join_policy: 'open',
+        points_reward: 100,
+        estimated_duration_minutes: 10,
+        advanced_config: {
+          defaultRevealMode: 'ALWAYS_VISIBLE',
+          defaultRevealRadiusMeters: 250,
+          fogOfWarEnabled: true,
+          persistentExploration: true,
+          trailEnabled: false,
+        },
+      })
+      .select('id')
+      .single();
+    if (hunt.error || !hunt.data) {
+      throw hunt.error ?? new Error('Could not create the advanced Hunt fixture.');
     }
-    huntId = draft.data.id;
+    huntId = hunt.data.id;
+
+    const zone = await admin.from('hunt_zones').insert({
+      hunt_id: huntId,
+      zone_key: 'zone-alpha',
+      name: 'Alpha',
+      sort_order: 0,
+      is_required: true,
+      prerequisite_zone_keys: [],
+      public_center_lat: 40.7128,
+      public_center_lng: -74.006,
+      public_radius_meters: 500,
+    });
+    if (zone.error) throw zone.error;
+
+    const createdStop = await admin
+      .from('hunt_stops')
+      .insert({
+        hunt_id: huntId,
+        sort_order: 0,
+        title: 'Start stop',
+        description: 'A disposable start stop.',
+        is_ordered: true,
+        is_required: true,
+        is_hidden: false,
+        stop_role: 'start',
+        completion_method: 'location_check',
+        proof_required: false,
+        server_reveal_state: 'public',
+        creator_key: 'start-stop',
+        zone_key: 'zone-alpha',
+        reveal_mode: 'ALWAYS_VISIBLE',
+        reveal_radius_meters: 250,
+      })
+      .select('id')
+      .single();
+    if (createdStop.error || !createdStop.data) {
+      throw createdStop.error ?? new Error('Could not create the advanced Hunt stop fixture.');
+    }
 
     const stop = await admin
       .from('hunt_stops')
@@ -167,6 +180,16 @@ describeIntegration('Advanced Hunt helper privilege contracts', () => {
     if (stop.error || !stop.data) {
       throw stop.error ?? new Error('Could not load the advanced Hunt stop fixture.');
     }
+
+    const geofence = await admin.from('hunt_stop_geofences').insert({
+      hunt_stop_id: stop.data.id,
+      public_lat: 40.7128,
+      public_lng: -74.006,
+      public_radius_meters: 500,
+      validation_radius_meters: 30,
+      is_validation_zone: true,
+    });
+    if (geofence.error) throw geofence.error;
 
     const participation = await admin
       .from('hunt_participants')
