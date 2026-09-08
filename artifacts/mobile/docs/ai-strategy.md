@@ -1,88 +1,78 @@
 # AI Strategy
 
-> AI features are implemented in Build 6. This document defines the approach for AI agents working on that step.
+> Quest generation is server-side and review-gated. This document describes the
+> current NVIDIA integration boundary; moderation, Hunt vision, and native AI
+> features are separate phases.
 
 ## Principle: Server-Side Only
 
 **AI API keys are NEVER exposed to the client.**
 
-All AI calls are proxied through the Express API server (`artifacts/api-server`). The mobile app calls the API server, which calls the AI provider. This protects API keys and allows server-side rate limiting, caching, and content moderation.
+All Quest-generation calls are made by the Express API server
+(`artifacts/api-server`). The Admin panel calls authorized server routes; the
+mobile app never calls an AI provider. This protects the API key and keeps
+validation, rate limits, and review state server-authoritative.
 
 ```
-Mobile App
-  → POST /api/ai/generate-quest
-    → Express API Server
-      → OpenAI / Anthropic (with server-side key)
-        → Response streamed back to client
+Admin / scheduler
+  → POST /api/admin/ai/generate
+    → QuestGenerationProvider
+      → NVIDIA NIM chat completions
+        → strict structured Quest candidate
+          → validation
+            → human review draft
 ```
 
 ## Environment Variables (Server-Side Only)
 
 ```bash
 # In artifacts/api-server environment (NOT EXPO_PUBLIC_)
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
+AI_PROVIDER=nvidia
+NVIDIA_API_KEY=
+AI_API_URL=https://integrate.api.nvidia.com/v1/chat/completions
+AI_MODEL=nvidia/nemotron-3.5-lightning-30b-a3b
 ```
 
-## Planned AI Features
+`NVIDIA_API_KEY` is a Replit Secret or equivalent server-only secret. Never
+place it in an `EXPO_PUBLIC_*` variable, Admin configuration, mobile code,
+responses, or logs. Generation is disabled when it is absent.
 
-### 1. Quest Generation (Build 6)
-- Input: location (lat/lng), difficulty, theme
-- Output: quest title, narrative, 3-5 waypoints with clues
-- Model: GPT-4o or Claude 3.5 Sonnet
-- Cached per location grid cell to reduce cost
+## Current Quest Generation
 
-### 2. Hint System (Build 6)
-- Player requests a hint for the current quest step
-- Sends: current step, player's progress, number of hints used
-- Receives: a contextual hint (progressively more direct with each request)
-- Rate-limited: 3 hints per quest step
+The Admin AI Studio exposes separate Daily, Monthly, and Geo lanes through
+authorized `/api/admin/ai/*` routes:
 
-### 3. Narrative Content (Build 6)
-- AI-generated flavor text for quest introductions
-- Location-aware (pulls context from reverse geocoding)
-- Tone: mysterious, adventurous, world-building
+- Daily: Interest Bubble UUID inputs with fallback pool planning.
+- Monthly: independent theme and target-month inputs.
+- Geo: public location context and approximate area; exact coordinates remain a
+  staff-review concern and are never fabricated by the model.
 
-### 4. Content Moderation (Build 7)
-- User-generated content (creator-submitted quests) screened by AI
-- Checks for: inappropriate content, PII exposure, spam
-- Moderator queue for borderline cases
+Every response is parsed against the server-side generated Quest schema, checked
+against existing QVAC verification methods and canonical points, and stored as
+`pending_review` only when an authorized admin explicitly saves it for review.
+Approval does not publish a Quest or award points automatically.
 
-## API Design (openapi.yaml additions for Build 6)
+## Provider and Review Design
 
-```yaml
-paths:
-  /ai/generate-quest:
-    post:
-      operationId: generateQuest
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                latitude: { type: number }
-                longitude: { type: number }
-                difficulty: { type: string, enum: [easy, medium, hard] }
-                theme: { type: string }
-  /ai/hint:
-    post:
-      operationId: getQuestHint
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                sessionId: { type: string }
-                stepIndex: { type: number }
-                hintsUsed: { type: number }
-```
+The provider interface remains replaceable, but the default adapter is NVIDIA
+NIM at `https://integrate.api.nvidia.com/v1/chat/completions` using
+`nvidia/nemotron-3.5-lightning-30b-a3b`. Provider failures return safe generic
+errors; 408, 429, and 5xx responses are retryable within the server retry cap.
 
-## Cost Management
+The safe flow is:
 
-- Cache AI responses where possible (generated quests are reusable)
-- Use lower-cost models for hints (GPT-4o-mini, Claude Haiku)
-- Reserve expensive models for full quest generation
-- Implement rate limiting per user per day
-- Monitor usage via API server logging
+`GENERATE → VALIDATE → PREVIEW → ADMIN EDIT → SAVE FOR REVIEW → APPROVE`
+
+The existing Quest surfaces remain the eventual display path. The current
+repository does not yet provide an automated generation scheduler or a
+review-to-published-Quest promotion route; those require a later, explicit
+database/API phase and must not bypass existing Quest lifecycle RPCs.
+
+## Security and Limits
+
+- Admin permissions gate generation, prompt editing, settings, and review.
+- Generation is quota-limited and quantity-limited.
+- User-derived Interest Bubble/location values are framed as untrusted data.
+- No arbitrary tools, scripts, HTML, SQL, points awards, or completion decisions
+  are available to the model.
+- Automated moderation is not part of this integration phase.

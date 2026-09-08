@@ -7,10 +7,11 @@ const serverEnvironmentSchema = z.object({
   PORT: z.coerce.number().int().positive(),
   SUPABASE_URL: optionalUrl,
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
-  AI_PROVIDER: z.string().min(1).default("openai-compatible"),
+  AI_PROVIDER: z.string().min(1).default("nvidia"),
   AI_API_URL: optionalUrl,
   AI_API_KEY: z.string().min(1).optional(),
   AI_MODEL: z.string().min(1).optional(),
+  NVIDIA_API_KEY: z.string().min(1).optional(),
   MODERATION_PROVIDER: z.string().min(1).default("manual"),
   MODERATION_AUTOMATION_ENABLED: z.enum(["true", "false"]).default("false"),
   MODERATION_API_URL: optionalUrl,
@@ -67,7 +68,9 @@ export function serverReadiness(raw: NodeJS.ProcessEnv = process.env): {
 } {
   const env = readServerEnvironment(raw);
   const supabase = Boolean(env.SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
-  const ai = Boolean(env.AI_API_KEY && env.AI_MODEL);
+  const ai = env.AI_PROVIDER === "nvidia"
+    ? Boolean(env.NVIDIA_API_KEY)
+    : Boolean(env.AI_API_KEY && env.AI_MODEL);
   const moderation = env.MODERATION_AUTOMATION_ENABLED === "true"
     ? Boolean(env.MODERATION_API_KEY)
     : false;
@@ -75,7 +78,7 @@ export function serverReadiness(raw: NodeJS.ProcessEnv = process.env): {
   const revenueCat = Boolean(env.REVENUECAT_WEBHOOK_AUTHORIZATION && env.REVENUECAT_WEBHOOK_AUTHORIZATION.length >= 16);
   const checks: ReadinessCheck[] = [
     { name: "Supabase trusted access", ...configured(supabase, supabase ? "Server credentials are configured; live connectivity is not tested by this check." : "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY for trusted operations.", false) },
-    { name: "AI generation", ...configured(ai, ai ? "Provider credentials are configured; generation is still draft-only." : "AI is disabled until AI_API_KEY and AI_MODEL are configured.") },
+    { name: "AI generation", ...configured(ai, ai ? "Provider credentials are configured; generation is still draft-only." : env.AI_PROVIDER === "nvidia" ? "AI is disabled until NVIDIA_API_KEY is configured." : "AI is disabled until AI_API_KEY and AI_MODEL are configured.") },
     { name: "Automated moderation", ...configured(moderation, moderation ? "Automation is configured; human review remains authoritative." : env.MODERATION_AUTOMATION_ENABLED === "true" ? "Automation is enabled but provider credentials are incomplete." : "Manual moderation mode is active.") },
     { name: "Push delivery", ...configured(push, push ? "Expo server credentials are configured; device delivery requires a native build." : "Push delivery is disabled until EXPO_ACCESS_TOKEN is configured.") },
     { name: "RevenueCat verified events", ...configured(revenueCat, revenueCat ? "Webhook Authorization secret is configured; provider delivery reconciliation remains operational." : "RevenueCat webhook ingestion is disabled until REVENUECAT_WEBHOOK_AUTHORIZATION is configured.") },

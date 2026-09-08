@@ -8,12 +8,17 @@ The API readiness endpoint reports `ready`, `degraded`, `disabled`, `missing_con
 |---|---|---|---|
 | Supabase/Auth | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Consumer app stays in truthful disconnected state; staff data is unavailable |
 | Mapbox | None in API | `EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN`, optional style URLs | Map unavailable; no fake markers or coordinates |
-| AI Quest generation | `AI_API_URL`, `AI_API_KEY`, `AI_MODEL` | None | Generation disabled; no fake candidates |
+| AI Quest generation | `NVIDIA_API_KEY` (NVIDIA NIM; `AI_PROVIDER=nvidia`), optional `AI_API_URL`/`AI_MODEL` overrides | None | Generation disabled; no fake candidates |
 | Moderation | `MODERATION_*` | None | Manual review mode; no automatic approval |
 | Push | `EXPO_ACCESS_TOKEN` | Native app identity and permission config | In-app notifications remain authoritative; push is unavailable |
 | RevenueCat | `REVENUECAT_WEBHOOK_AUTHORIZATION` | `EXPO_PUBLIC_REVENUECAT_TEST_API_KEY`, `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY`, `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` | Checkout is unavailable and no entitlement, credit, or collectible is granted |
 
 AI and automated moderation are optional for consumer startup. Missing required Supabase server configuration is a failed production readiness state. Notification delivery never grants gameplay authority.
+
+Quest generation uses the server-only NVIDIA NIM OpenAI-compatible endpoint by
+default. The adapter is provider-neutral and retains an explicit
+`openai-compatible` compatibility path for controlled substitutions. The NVIDIA
+key is never exposed to Admin, mobile, API responses, or logs.
 
 ## RevenueCat clarification
 
