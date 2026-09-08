@@ -449,4 +449,22 @@ describe("Supabase migration filename preflight", () => {
     expect(source).toContain("'max_accuracy_meters', 25");
     expect(source).toContain("'accuracy_tolerance_multiplier', 0");
   });
+
+  test("Hunt lock-state repair is safe during fresh migration ordering", () => {
+    const mapSource = fs.readFileSync(
+      path.resolve(__dirname, "../supabase/migrations/077_hunt_active_stop_map_locations.sql"),
+      "utf8",
+    );
+    const repairSource = fs.readFileSync(
+      path.resolve(__dirname, "../supabase/migrations/080_hunt_step_status_lock_state.sql"),
+      "utf8",
+    );
+
+    expect(mapSource).toContain(
+      "hsp.status::TEXT NOT IN ('not_started', 'locked', 'expired')",
+    );
+    expect(repairSource).toContain(
+      "ALTER TYPE public.step_status\n  ADD VALUE IF NOT EXISTS 'locked';",
+    );
+  });
 });

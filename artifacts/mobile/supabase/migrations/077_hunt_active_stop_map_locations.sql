@@ -39,7 +39,7 @@ AS $$
   WHERE hp.id = p_participation_id
     AND hp.user_id = auth.uid()
     AND hp.status IN ('active', 'paused')
-    AND hsp.status NOT IN ('not_started', 'locked', 'expired')
+    AND hsp.status::TEXT NOT IN ('not_started', 'locked', 'expired')
     AND hsg.public_lat IS NOT NULL
     AND hsg.public_lng IS NOT NULL
   ORDER BY hs.id, hsg.is_validation_zone DESC NULLS LAST;
