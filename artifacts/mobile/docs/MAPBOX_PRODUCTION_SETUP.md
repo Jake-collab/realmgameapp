@@ -102,6 +102,9 @@ Custom styles can be created in Mapbox Studio. Set `EXPO_PUBLIC_MAPBOX_STYLE_LIG
 
 ## Offline Limitations (Build 1)
 
+- Explicit downloadable offline tile packs are not required for Build 1.
+- Normal Mapbox runtime tile caching is acceptable for Build 1; protected
+  Quest/Hunt actions still require the server.
 - Previously loaded map tiles may remain cached by Mapbox's built-in tile cache
 - No explicit offline tile download is implemented in Build 1
 - Cached Quest summaries (React Query) are shown when offline

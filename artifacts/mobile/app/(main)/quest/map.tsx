@@ -83,6 +83,12 @@ import {
   normalizePublicRadiusMeters,
 } from '@/features/quest-map/types/questMap.types';
 import { getFocusedActiveParticipation } from '@/features/quest-map/utils/questMapHud';
+import {
+  buildQuestMarkerFeatureCollection,
+  QUEST_CLUSTER_MAX_ZOOM,
+  QUEST_CLUSTER_RADIUS,
+  resolveQuestMarkerPress,
+} from '@/features/quest-map/utils/questMarkerClustering';
 
 // ─── Inner screen (wrapped by MapProvider) ────────────────────────────────────
 
@@ -120,6 +126,7 @@ function QuestMapInner() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const didInitialCenterRef = useRef(false);
   const cameraRef = useRef<any>(null);
+  const questMarkerSourceRef = useRef<any>(null);
   const colorScheme = useColorScheme();
   const { camera: persistedCamera, isRestored, persistCamera } = usePersistedMapCamera(
     'quest',
@@ -205,6 +212,45 @@ function QuestMapInner() {
   // ── Mapbox module ───────────────────────────────────────────────────────────
   const MapboxGL = getMapboxGL();
 
+  const filteredViewportQuests = React.useMemo(
+    () => viewportQuery.quests.filter(q => matchesQuestMapStatus(q, filter.status)),
+    [viewportQuery.quests, filter.status],
+  );
+  const filteredNearbyQuests = React.useMemo(
+    () => nearbyQuery.sortedQuests.filter(q => matchesQuestMapStatus(q, filter.status)),
+    [nearbyQuery.sortedQuests, filter.status],
+  );
+  const markerQuests = React.useMemo<QuestMarkerData[]>(
+    () => filteredViewportQuests.map(q => ({
+      questId: q.questId,
+      occurrenceId: q.occurrenceId,
+      latitude: q.displayLatitude,
+      longitude: q.displayLongitude,
+      status: q.availabilityState === 'active'
+        ? 'active'
+        : q.availabilityState === 'completed'
+        ? 'completed'
+        : q.availabilityState === 'awaiting_proof'
+        ? 'awaiting_proof'
+        : q.availabilityState === 'under_review'
+        ? 'under_review'
+        : q.availabilityState === 'upcoming'
+        ? 'upcoming'
+        : q.availabilityState === 'unavailable'
+        ? 'unavailable'
+        : 'available',
+      isSelected: selectedQuest?.questId === q.questId,
+      pointsReward: q.pointsReward,
+      title: q.title,
+      isFeatured: q.isFeatured,
+    })),
+    [filteredViewportQuests, selectedQuest?.questId],
+  );
+  const markerShape = React.useMemo(
+    () => buildQuestMarkerFeatureCollection(markerQuests),
+    [markerQuests],
+  );
+
   // ── Handle map region change (debounced) ────────────────────────────────────
   const handleRegionWillChange = useCallback(() => {
     // Map is moving — show "search this area" once movement ends if bounds changed
@@ -258,6 +304,39 @@ function QuestMapInner() {
       animationDuration: 650,
     });
   }, [zoomLevel]);
+
+  const handleQuestSourcePress = useCallback(async (event: {
+    features: GeoJSON.Feature[];
+    coordinates: { latitude: number; longitude: number };
+  }) => {
+    const target = resolveQuestMarkerPress(event.features?.[0]);
+    if (!target) return;
+
+    if (target.kind === 'cluster') {
+      const source = questMarkerSourceRef.current;
+      if (!source?.getClusterExpansionZoom) return;
+
+      try {
+        const expansionZoom = await source.getClusterExpansionZoom(target.feature);
+        if (!Number.isFinite(expansionZoom)) return;
+        cameraRef.current?.setCamera?.({
+          centerCoordinate: [event.coordinates.longitude, event.coordinates.latitude],
+          zoomLevel: Math.min(18, expansionZoom),
+          animationDuration: 450,
+        });
+      } catch {
+        // A native source can disappear during a style transition; keep the
+        // map usable without turning a tap into a screen-level error.
+      }
+      return;
+    }
+
+    const quest = filteredViewportQuests.find(item =>
+      item.questId === target.questId
+      && (item.occurrenceId ?? null) === target.occurrenceId,
+    );
+    if (quest) handleMarkerPress(quest);
+  }, [filteredViewportQuests, handleMarkerPress]);
 
   const handleDeselectQuest = useCallback(() => {
     setSelectedQuest(null);
@@ -363,32 +442,6 @@ function QuestMapInner() {
   }
 
   // ── Map is configured: render full experience ─────────────────────────────────
-  // Build marker data from viewport quests
-  const filteredViewportQuests = viewportQuery.quests.filter(q => matchesQuestMapStatus(q, filter.status));
-  const filteredNearbyQuests = nearbyQuery.sortedQuests.filter(q => matchesQuestMapStatus(q, filter.status));
-  const markerQuests: QuestMarkerData[] = filteredViewportQuests.map(q => ({
-    questId:      q.questId,
-    occurrenceId: q.occurrenceId,
-    latitude:     q.displayLatitude,
-    longitude:    q.displayLongitude,
-    status:       q.availabilityState === 'active'
-      ? 'active'
-      : q.availabilityState === 'completed'
-      ? 'completed'
-      : q.availabilityState === 'awaiting_proof'
-      ? 'awaiting_proof'
-      : q.availabilityState === 'under_review'
-      ? 'under_review'
-      : q.availabilityState === 'upcoming'
-      ? 'upcoming'
-      : q.availabilityState === 'unavailable'
-      ? 'unavailable'
-      : 'available',
-    isSelected:   selectedQuest?.questId === q.questId,
-    pointsReward: q.pointsReward,
-    title:        q.title,
-    isFeatured:   q.isFeatured,
-  }));
   const sheetQuests = roundedUser ? filteredNearbyQuests : filteredViewportQuests;
   const selectedCircle = selectedQuest && selectedPublicRadius && selectedPublicRadius > 0
     ? buildApproximateCircle(
@@ -437,23 +490,72 @@ function QuestMapInner() {
             />
           )}
 
-          {/* Quest markers */}
-          {markerQuests.map(marker => (
-            <MapboxGL.MarkerView
-              key={`${marker.questId}-${marker.occurrenceId ?? 'none'}`}
-              coordinate={[marker.longitude, marker.latitude]}
-              anchor={{ x: 0.5, y: 1 }}
-            >
-              <QuestMarkerPin
-                marker={marker}
-                onPress={() => {
-                   const quest = filteredViewportQuests.find(q => q.questId === marker.questId);
-                  if (quest) handleMarkerPress(quest);
-                }}
-                colors={colors}
-              />
-            </MapboxGL.MarkerView>
-          ))}
+          {/* Quest markers — native clustering keeps dense viewports performant. */}
+          <MapboxGL.ShapeSource
+            id="quest-markers"
+            ref={questMarkerSourceRef}
+            shape={markerShape}
+            cluster
+            clusterRadius={QUEST_CLUSTER_RADIUS}
+            clusterMaxZoomLevel={QUEST_CLUSTER_MAX_ZOOM}
+            onPress={handleQuestSourcePress}
+            hitbox={{ width: 44, height: 44 }}
+          >
+            <MapboxGL.CircleLayer
+              id="quest-clusters"
+              filter={['has', 'point_count'] as any}
+              style={{
+                circleColor: colors.primary,
+                circleRadius: ['step', ['get', 'point_count'], 18, 10, 22, 50, 26] as any,
+                circleStrokeColor: colors.primaryForeground,
+                circleStrokeWidth: 2,
+              }}
+            />
+            <MapboxGL.SymbolLayer
+              id="quest-cluster-count"
+              filter={['has', 'point_count'] as any}
+              style={{
+                textField: ['get', 'point_count_abbreviated'] as any,
+                textSize: 12,
+                textColor: colors.primaryForeground,
+                textAllowOverlap: true,
+                textIgnorePlacement: true,
+              }}
+            />
+            <MapboxGL.CircleLayer
+              id="quest-unclustered-points"
+              filter={['!', ['has', 'point_count']] as any}
+              style={{
+                circleColor: [
+                  'match',
+                  ['get', 'status'],
+                  'active', colors.accent,
+                  'completed', colors.secondary,
+                  'awaiting_proof', colors.secondary,
+                  'under_review', colors.secondary,
+                  'upcoming', colors.secondary,
+                  'unavailable', colors.secondary,
+                  'locked', colors.secondary,
+                  'featured', colors.primary,
+                  colors.primary,
+                ] as any,
+                circleRadius: ['case', ['get', 'isSelected'], 10, 7] as any,
+                circleStrokeColor: colors.border,
+                circleStrokeWidth: ['case', ['get', 'isSelected'], 3, 2] as any,
+              }}
+            />
+            <MapboxGL.SymbolLayer
+              id="quest-unclustered-glyph"
+              filter={['!', ['has', 'point_count']] as any}
+              style={{
+                textField: ['get', 'glyph'] as any,
+                textSize: 12,
+                textColor: colors.foreground,
+                textAllowOverlap: true,
+                textIgnorePlacement: true,
+              }}
+            />
+          </MapboxGL.ShapeSource>
           {selectedCircle ? (
             <MapboxGL.ShapeSource id="selected-quest-target-area" shape={selectedCircle}>
               <MapboxGL.FillLayer
