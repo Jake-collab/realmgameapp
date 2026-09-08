@@ -98,7 +98,13 @@ export function getQuestGenerationProvider(
           model,
           temperature: Number(environment.AI_TEMPERATURE ?? 0.4),
           max_tokens: Number(environment.AI_MAX_OUTPUT_TOKENS ?? 2000),
-          messages: [{ role: "system", content: input.prompt }],
+          messages: [
+            {
+              role: "system",
+              content: "You are the Worlds Quest JSON generator. Return exactly one JSON object matching the requested schema. Do not echo the input data, explain your answer, use markdown, or return any wrapper object.",
+            },
+            { role: "user", content: input.prompt },
+          ],
           response_format: { type: "json_object" },
         }),
         signal: input.signal,
@@ -359,6 +365,53 @@ ${JSON.stringify(trustedData)}
 </quest_generation_input_data>`;
 }
 
+export function parseStructuredProviderOutputs(content: string): unknown[] {
+  const trimmed = content.trim();
+  try {
+    return [JSON.parse(trimmed) as unknown];
+  } catch {
+    // Some OpenAI-compatible providers may add a short explanation or a
+    // markdown fence even when response_format requests a JSON object.
+  }
+
+  const outputs: unknown[] = [];
+  for (let start = 0; start < content.length; start += 1) {
+    if (content[start] !== "{") continue;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let index = start; index < content.length; index += 1) {
+      const character = content[index];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (character === "\\") escaped = true;
+        else if (character === "\"") inString = false;
+        continue;
+      }
+      if (character === "\"") {
+        inString = true;
+      } else if (character === "{") {
+        depth += 1;
+      } else if (character === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          try {
+            outputs.push(JSON.parse(content.slice(start, index + 1)) as unknown);
+          } catch {
+            // Continue scanning in case a later JSON object is valid.
+          }
+          break;
+        }
+      }
+    }
+  }
+  return outputs;
+}
+
+export function parseStructuredProviderOutput(content: string): unknown | null {
+  return parseStructuredProviderOutputs(content)[0] ?? null;
+}
+
 function fingerprint(candidate: GeneratedQuest) {
   return createHash("sha256").update(`${candidate.title}|${candidate.description}`.toLowerCase().replace(/\s+/g, " ")).digest("hex");
 }
@@ -512,7 +565,8 @@ export async function generateQuest(
     let completion: ProviderCompletion | undefined;
     for (; attemptCount <= maxRetries; attemptCount += 1) {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), Number(process.env.AI_REQUEST_TIMEOUT_MS ?? 15000));
+      const defaultTimeoutMs = process.env.AI_PROVIDER === "nvidia" ? 60000 : 15000;
+      const timer = setTimeout(() => controller.abort(), Number(process.env.AI_REQUEST_TIMEOUT_MS ?? defaultTimeoutMs));
       try {
         completion = await provider.complete({ prompt: assembled, signal: controller.signal });
       } finally {
@@ -525,10 +579,10 @@ export async function generateQuest(
       recordHistory(item);
       return { ok: false as const, status: "failed" as const, reason: item.reason };
     }
-    let rawCandidate: unknown = null;
-    try { rawCandidate = JSON.parse(completion.content); } catch { /* recorded as invalid below */ }
-    const parsed = generatedQuestSchema.safeParse(rawCandidate);
-    if (!parsed.success || parsed.data.quest_type !== type) {
+    const parsed = parseStructuredProviderOutputs(completion.content)
+      .map((candidate) => generatedQuestSchema.safeParse(candidate))
+      .find((candidate): candidate is z.SafeParseSuccess<GeneratedQuest> => candidate.success && candidate.data.quest_type === type);
+    if (!parsed) {
        recordHistory({ ...base, status: "invalid", attemptCount: Math.max(1, attemptCount), auditOutcome: "failed", reason: "Provider output failed Quest validation.", estimatedInputTokens: Math.ceil(assembled.length / 4) });
       return { ok: false as const, status: "invalid" as const, reason: "The provider returned content that failed Quest validation." };
     }

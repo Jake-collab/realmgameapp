@@ -42,3 +42,4 @@
 - [Revenue entitlement boundary](revenue-entitlement-boundary.md) — memberships, allowances, finds, collectibles, and marketplace money remain server-authoritative and provider-neutral.
 - [Payment provider preparation boundary](payment-provider-preparation.md) — local payment readiness must stay distinct from provider setup, public delivery, and signed-device validation.
 - [RevenueCat Test Store provisioning](revenuecat-test-store-provisioning.md) — connector placeholder projects may lack Test Store apps; a normal API-created project provisions one automatically.
+- [NVIDIA Quest output boundary](nvidia-quest-output-boundary.md) — hosted Nemotron smoke calls can succeed while full Quest prompts echo input or time out; never relax schema validation to compensate.
