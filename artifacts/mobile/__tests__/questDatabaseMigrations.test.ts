@@ -463,6 +463,7 @@ describe("Supabase migration filename preflight", () => {
     expect(mapSource).toContain(
       "hsp.status::TEXT NOT IN ('not_started', 'locked', 'expired')",
     );
+    expect(mapSource).not.toContain("hsg.is_validation_zone");
     expect(repairSource).toContain(
       "ALTER TYPE public.step_status\n  ADD VALUE IF NOT EXISTS 'locked';",
     );

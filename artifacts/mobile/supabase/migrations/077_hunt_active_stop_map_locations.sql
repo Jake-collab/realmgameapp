@@ -42,7 +42,7 @@ AS $$
     AND hsp.status::TEXT NOT IN ('not_started', 'locked', 'expired')
     AND hsg.public_lat IS NOT NULL
     AND hsg.public_lng IS NOT NULL
-  ORDER BY hs.id, hsg.is_validation_zone DESC NULLS LAST;
+  ORDER BY hs.id;
 $$;
 
 REVOKE ALL ON FUNCTION public.get_active_hunt_stop_locations(UUID) FROM PUBLIC;
