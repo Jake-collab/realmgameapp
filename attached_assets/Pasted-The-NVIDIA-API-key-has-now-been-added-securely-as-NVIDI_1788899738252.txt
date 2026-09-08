@@ -1,0 +1,397 @@
+The NVIDIA API key has now been added securely as:
+
+NVIDIA_API_KEY
+
+Do not print, expose, log, or return the key.
+
+Resume the Worlds Quest-generation integration from the current repository state.
+
+CURRENT VERIFIED STATE:
+
+- Provider-neutral QuestGenerationProvider: implemented.
+- NVIDIA NIM adapter: implemented.
+- NVIDIA endpoint:
+  https://integrate.api.nvidia.com/v1/chat/completions
+- Model:
+  nvidia/nemotron-3.5-lightning-30b-a3b
+- Strict structured Quest validation: implemented.
+- QVAC/QAVS compatibility: PASS.
+- Mapbox/Geo compatibility: PASS.
+- API tests: 32/32 PASS.
+- Mobile tests: 957 PASS, 75 skipped.
+- Replit paid connector required: NO.
+- Deployment required for initial provider test: NO.
+
+Do NOT begin OpenAI Moderation.
+Do NOT begin Hunt 360 Vision.
+Do NOT begin Native camera/GPS/motion.
+Do NOT begin Push.
+Do NOT begin Support/Auth email.
+Do NOT modify payment architecture.
+Do NOT redesign the existing Quest system.
+
+==================================================
+STEP 1 — LIVE NVIDIA BACKEND SMOKE TEST
+==================================================
+
+Use NVIDIA_API_KEY server-side only.
+
+Perform a minimal real backend smoke test against the configured NVIDIA hosted endpoint/model.
+
+Test representative generations for:
+
+1. Daily Quest
+2. Monthly Quest
+3. Geo-Quest
+
+Do not publish these test Quests to production users.
+
+Verify:
+
+- authentication succeeds
+- requested model is accepted
+- response completes
+- structured response can be parsed
+- strict Quest schema accepts valid output
+- unsupported verification methods are rejected
+- malformed output handling works
+- retry/timeout handling behaves correctly
+- no secret appears in logs
+- no client bundle receives the API key
+
+If the live provider test fails, stop and report the exact provider/configuration error.
+
+If it passes, continue.
+
+==================================================
+STEP 2 — DURABLE ADMIN PROMPT CONFIGURATION
+==================================================
+
+Complete the production Admin configuration system for AI Quest generation.
+
+Use the existing Supabase/Admin architecture.
+
+Create durable, server-authoritative storage for prompt/config versions if it does not already exist.
+
+Admin must be able to configure separately:
+
+DAILY:
+- base/system prompt
+- tone
+- themes/categories
+- banned themes
+- difficulty guidance
+- estimated duration guidance
+- verification-method guidance
+- point guidance
+- personalization behavior
+
+MONTHLY:
+- separate prompt
+- challenge scale
+- duration
+- reward guidance
+- verification guidance
+
+GEO:
+- location-aware prompt
+- radius behavior
+- public/outdoor location guidance
+- verification guidance
+- location context behavior
+
+GLOBAL SETTINGS:
+- provider
+- model
+- temperature
+- max output tokens
+- retry limit
+- generation enabled/disabled
+- manual approval vs automatic publication
+
+Do NOT expose NVIDIA_API_KEY in Admin.
+
+Admin access must use the existing authorized admin roles.
+
+Preserve audit/history of meaningful prompt/config changes.
+
+==================================================
+STEP 3 — GENERATION HISTORY
+==================================================
+
+Add durable generation history.
+
+Record, where appropriate:
+
+- generation type
+- prompt/config version used
+- provider/model
+- request timestamp
+- status
+- validation result
+- retry count
+- generated draft ID
+- approval/rejection result
+- publication result
+- safe error metadata
+
+Do not store secrets.
+
+Do not store unnecessary personal user data.
+
+==================================================
+STEP 4 — INTEREST BUBBLE PERSONALIZATION
+==================================================
+
+Complete Daily Quest personalization using the existing Interest Bubble system.
+
+Requirements:
+
+- read the existing user-selected interest labels
+- pass only minimal safe interest context
+- treat interests as untrusted data
+- do not include email, username, or unrelated profile fields
+- do not create unnecessary one-AI-call-per-user architecture if reusable generated variants are more scalable
+
+Preserve the current atomic interest replacement and Daily assignment behavior.
+
+Implement sensible fallback behavior when:
+- no interests exist
+- interests are stale/invalid
+- generation fails
+
+==================================================
+STEP 5 — DAILY / MONTHLY / GEO GENERATION WORKFLOWS
+==================================================
+
+Complete the existing generation lifecycle for all three Quest classes.
+
+Required lifecycle:
+
+GENERATE
+→ STRICT VALIDATE
+→ STORE DRAFT
+→ ADMIN PREVIEW
+→ OPTIONAL EDIT
+→ APPROVE
+→ PROMOTE TO NORMAL QUEST
+→ EXISTING ASSIGNMENT / DISPLAY
+
+Daily, Monthly, and Geo must remain distinct Quest types.
+
+Do not create a separate AI Quest subsystem in the mobile app.
+
+==================================================
+STEP 6 — APPROVED DRAFT → QUEST PROMOTION
+==================================================
+
+Implement the explicit server-authoritative promotion path from an approved AI-generated draft into the existing Quest model.
+
+The promotion route must:
+
+- require authorized admin role
+- validate the current generated schema again
+- map only permitted fields
+- reject unsupported verification methods
+- reject invalid points
+- reject invalid Geo radius/coordinates
+- prevent 0,0 coordinate fallback
+- never allow model output to directly award points
+- never allow model output to mark completion
+- preserve QVAC/QAVS
+- preserve existing moderation/review architecture
+- use the existing Quest lifecycle and tables
+
+Avoid duplicate publication if the same draft is promoted twice.
+
+==================================================
+STEP 7 — AUTOMATED GENERATION SCHEDULING
+==================================================
+
+Audit the existing worker/notification/background infrastructure first.
+
+Reuse existing infrastructure where appropriate.
+
+Implement safe scheduling for:
+
+- Daily Quest generation
+- Monthly Quest generation
+- Geo generation only where the current product model requires automated generation
+
+Do not create a second scheduler if an existing worker/queue system already supports this.
+
+Scheduling must have:
+- idempotency
+- retry limits
+- duplicate prevention
+- generation-enabled switch
+- safe failure state
+- admin visibility
+
+If automatic publication is enabled, generated content must still pass every schema/business-rule validation before publication.
+
+==================================================
+STEP 8 — APP-SIDE END-TO-END VERIFICATION
+==================================================
+
+Verify approved generated Quests appear through the EXISTING mobile UI.
+
+DAILY:
+→ existing Daily Quest surface
+
+MONTHLY:
+→ existing Monthly Quest Drop
+
+GEO:
+→ existing Geo-Quest list/map
+
+Verify generated Quests work with:
+
+- Home prioritized active Quest
+- Quests tab
+- Map
+- Progress
+- Start Quest
+- proof submission
+- QVAC/QAVS
+- completion
+- points
+- moderation/review
+- completed state
+
+The mobile app must not need to know the Quest was generated by NVIDIA.
+
+==================================================
+STEP 9 — SECURITY / AUTHORIZATION
+==================================================
+
+Add route-level tests for:
+
+- non-admin generation rejected
+- non-admin config edits rejected
+- non-admin draft approval rejected
+- cross-user/private data isolation
+- malformed Interest Bubble payloads
+- prompt injection attempts
+- model-output field injection
+- arbitrary SQL/HTML/script strings treated only as text/data
+- duplicate promotion prevention
+- API key never returned to client
+
+If database changes are required:
+
+- preserve migrations 001–081
+- use new forward-only migrations beginning with 082
+- do not rewrite historical migrations
+
+==================================================
+STEP 10 — TESTS
+==================================================
+
+Run:
+
+- NVIDIA provider adapter tests
+- one real provider smoke test
+- mocked provider tests
+- Admin config tests
+- generation-history tests
+- Daily personalization tests
+- Monthly tests
+- Geo tests
+- approval/promotion tests
+- authorization tests
+- scheduler/idempotency tests
+- Quest assignment/display tests
+- QVAC/QAVS regression tests
+- Mapbox/Geo regression tests
+- API suite
+- mobile suite
+- TypeScript
+
+Do not begin another external integration.
+
+==================================================
+FINAL REPORT
+==================================================
+
+End with exactly:
+
+QUEST GENERATION FINAL INTEGRATION
+
+NVIDIA LIVE PROVIDER:
+PASS / FAIL
+
+NVIDIA MODEL:
+nvidia/nemotron-3.5-lightning-30b-a3b
+
+ADMIN PROMPT CONFIGURATION:
+PASS / FAIL
+
+PROMPT VERSION PERSISTENCE:
+PASS / FAIL
+
+GENERATION HISTORY:
+PASS / FAIL
+
+DAILY QUEST GENERATION:
+PASS / FAIL
+
+MONTHLY QUEST GENERATION:
+PASS / FAIL
+
+GEO-QUEST GENERATION:
+PASS / FAIL
+
+INTEREST BUBBLE PERSONALIZATION:
+PASS / FAIL
+
+ADMIN PREVIEW / EDIT / APPROVAL:
+PASS / FAIL
+
+DRAFT → QUEST PROMOTION:
+PASS / FAIL
+
+AUTOMATED GENERATION SCHEDULING:
+PASS / FAIL
+
+APP-SIDE DISPLAY:
+PASS / FAIL
+
+QVAC/QAVS REGRESSION:
+PASS / FAIL
+
+MAPBOX/GEO REGRESSION:
+PASS / FAIL
+
+SECURITY / AUTHORIZATION:
+PASS / FAIL
+
+NEW MIGRATIONS:
+[list or NONE]
+
+TYPECHECK:
+PASS / FAIL
+
+API TESTS:
+PASS / FAIL
+[count]
+
+MOBILE TESTS:
+PASS / FAIL
+[count]
+
+LIVE PROVIDER TEST:
+PASS / FAIL
+
+BLOCKERS:
+[list or NONE]
+
+QUEST GENERATION STATUS:
+COMPLETE / BLOCKED / FIXES REQUIRED
+
+If every required Quest-generation gate passes, end exactly:
+
+WORLDS NVIDIA QUEST GENERATION: COMPLETE
+
+Do not begin OpenAI Moderation.
+Do not begin Hunt 360 Vision.
