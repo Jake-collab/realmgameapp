@@ -33,6 +33,7 @@ export function useHuntMapViewport({
   enabled = true,
 }: UseHuntMapViewportOptions) {
   const { user } = useAuth();
+  const userId = user?.id ?? '';
 
   const query = useQuery<HuntViewportResponse>({
     queryKey: huntMapKeys.viewport(
@@ -41,9 +42,10 @@ export function useHuntMapViewport({
       filter,
       approximateUserLat,
       approximateUserLng,
+      userId,
     ),
     queryFn: () =>
-      fetchHuntsInViewport(bounds!, filter, user?.id ?? null),
+      fetchHuntsInViewport(bounds!, filter, userId || null),
     enabled: enabled && !!bounds && isSupabaseConfigured(),
     staleTime: 60_000,       // 1 min — map content changes infrequently
     gcTime:    5 * 60_000,

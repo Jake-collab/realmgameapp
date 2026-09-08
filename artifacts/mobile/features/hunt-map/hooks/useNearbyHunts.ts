@@ -30,11 +30,18 @@ export function useNearbyHunts({
   enabled = true,
 }: UseNearbyHuntsOptions) {
   const { user } = useAuth();
+  const userId = user?.id ?? '';
 
   const query = useQuery<PublicHuntMapItem[]>({
-    queryKey: huntMapKeys.nearby(approximateLat, approximateLng, sortOrder, filter),
+    queryKey: huntMapKeys.nearby(
+      approximateLat,
+      approximateLng,
+      sortOrder,
+      filter,
+      userId,
+    ),
     queryFn: () =>
-      fetchNearbyHunts(approximateLat, approximateLng, filter, sortOrder, user?.id ?? null),
+      fetchNearbyHunts(approximateLat, approximateLng, filter, sortOrder, userId || null),
     enabled: enabled && isSupabaseConfigured(),
     staleTime: 60_000,
     gcTime:    5 * 60_000,

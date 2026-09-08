@@ -38,6 +38,7 @@ export const huntMapKeys = {
     filter: HuntMapFilter,
     roundedLat?: number,
     roundedLng?: number,
+    userId = '',
   ) => [
     'hunt-map',
     'viewport',
@@ -46,6 +47,7 @@ export const huntMapKeys = {
     filterKey(filter),
     roundedLat ?? 0,
     roundedLng ?? 0,
+    userId,
   ] as const,
 
   nearby: (
@@ -53,6 +55,7 @@ export const huntMapKeys = {
     roundedLng: number | null,
     sort: HuntNearbySortOrder,
     filter: HuntMapFilter,
+    userId = '',
   ) => [
     'hunt-map',
     'nearby',
@@ -60,5 +63,6 @@ export const huntMapKeys = {
     roundedLng ?? 0,
     sort,
     filterKey(filter),
+    userId,
   ] as const,
 };
