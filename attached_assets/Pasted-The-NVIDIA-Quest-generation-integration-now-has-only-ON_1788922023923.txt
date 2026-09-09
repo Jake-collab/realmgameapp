@@ -1,0 +1,276 @@
+The NVIDIA Quest-generation integration now has only ONE remaining blocker:
+
+The NVIDIA endpoint and authentication PASS, but:
+
+- LIVE DAILY: FAIL
+- LIVE MONTHLY: FAIL
+- LIVE GEO: FAIL
+- STRUCTURED OUTPUT: FAIL
+
+Everything else is already verified through migration 082.
+
+Do NOT touch the database architecture.
+Do NOT modify migrations 001–082.
+Do NOT redesign Quest, QVAC/QAVS, Mapbox, Admin authorization, or scheduling.
+Do NOT begin OpenAI Moderation yet.
+
+GOAL:
+
+Make the current NVIDIA Quest-generation provider reliably produce schema-valid Daily, Monthly, and Geo Quest objects WITHOUT weakening the existing strict validation.
+
+==================================================
+1. INSPECT THE ACTUAL FAILURE
+==================================================
+
+Capture and inspect safe samples of the raw Nemotron responses for:
+
+- Daily
+- Monthly
+- Geo
+
+Do not print secrets.
+
+Classify each failure precisely:
+
+- prose before JSON
+- prose after JSON
+- markdown fences
+- wrong field names
+- missing required fields
+- unsupported verification methods
+- invalid enum values
+- invalid points
+- invalid Geo radius
+- invalid structure/nesting
+- truncated JSON
+- model echoing the prompt/schema
+- multiple JSON objects
+- other
+
+Do not guess.
+
+==================================================
+2. MAKE OUTPUT CONTRACT MORE RELIABLE
+==================================================
+
+Keep the current model:
+
+nvidia/nemotron-3.5-lightning-30b-a3b
+
+Use the strongest structured-output controls actually supported by the current NVIDIA endpoint.
+
+Audit whether the endpoint supports any of:
+
+- response_format
+- JSON object mode
+- JSON schema mode
+- structured outputs
+- guided_json
+- guided_decoding
+- grammar/schema constraints
+
+Use only capabilities actually supported by this model/endpoint.
+
+If native schema-constrained output is available, prefer it.
+
+If not, harden the prompt so the model is told to return:
+
+- exactly one JSON object
+- no markdown fences
+- no explanation
+- no commentary
+- exact permitted field names
+- exact permitted enums
+- no additional properties
+
+Include one minimal valid example for each Quest type if doing so materially improves reliability.
+
+==================================================
+3. SAFE EXTRACTION / NORMALIZATION BOUNDARY
+==================================================
+
+Implement a narrow server-side normalization step BEFORE the existing strict validator.
+
+It may:
+
+- strip markdown code fences
+- trim leading/trailing prose
+- extract the first complete top-level JSON object
+- normalize harmless formatting differences
+- map only explicitly known aliases if those aliases are observed and documented
+
+It must NOT:
+
+- invent missing semantic fields
+- infer verification methods
+- silently change points
+- invent coordinates
+- invent Geo radius
+- accept unknown fields
+- bypass the strict schema
+- execute generated text
+
+After normalization, the existing strict schema remains authoritative.
+
+If strict validation still fails, the generation attempt must fail closed.
+
+==================================================
+4. RETRY STRATEGY
+==================================================
+
+For invalid model output, retry with a corrective prompt that contains:
+
+- the validation errors
+- the required schema
+- instruction to return ONLY corrected JSON
+
+Use a bounded retry count.
+
+Do not regenerate indefinitely.
+
+Differentiate:
+- provider/network retry
+- malformed-output repair retry
+
+==================================================
+5. TEST DAILY / MONTHLY / GEO LIVE
+==================================================
+
+Run repeated live tests, not just one lucky response.
+
+Minimum:
+
+DAILY:
+5 consecutive valid generations
+
+MONTHLY:
+5 consecutive valid generations
+
+GEO:
+5 consecutive valid generations
+
+All must pass the strict schema after the allowed normalization boundary.
+
+For Geo:
+- no fabricated 0,0
+- no silently invented precise location
+- valid radius
+- valid verification methods
+- location context remains staff/server supplied
+
+==================================================
+6. IF NEMOTRON STILL CANNOT MEET THE CONTRACT
+==================================================
+
+If the current Nemotron model still cannot achieve reliable structured output after the above:
+
+STOP before replacing it automatically.
+
+Benchmark the currently available FREE NVIDIA-hosted models suitable for structured text generation.
+
+Test at least 2 strong alternatives using the SAME strict Quest schema and representative Daily/Monthly/Geo prompts.
+
+Compare:
+
+- structured-output reliability
+- latency
+- reasoning quality
+- instruction following
+- JSON/schema compliance
+- free hosted availability
+
+Do not change the production model automatically.
+
+Report the best replacement candidate and why.
+
+==================================================
+7. REGRESSION
+==================================================
+
+After any provider/parser changes rerun:
+
+- NVIDIA adapter tests
+- AI schema tests
+- Daily tests
+- Monthly tests
+- Geo tests
+- API tests
+- mobile tests
+- TypeScript
+- QVAC/QAVS regression
+- Mapbox/Geo regression
+
+No database migration should be needed for this task.
+
+==================================================
+FINAL REPORT
+==================================================
+
+End exactly with:
+
+NVIDIA STRUCTURED QUEST OUTPUT FINAL REPAIR
+
+CURRENT MODEL:
+nvidia/nemotron-3.5-lightning-30b-a3b
+
+NATIVE STRUCTURED OUTPUT SUPPORT:
+YES / NO
+[exact supported mechanism if yes]
+
+DAILY LIVE RELIABILITY:
+PASS / FAIL
+[x/5 valid]
+
+MONTHLY LIVE RELIABILITY:
+PASS / FAIL
+[x/5 valid]
+
+GEO LIVE RELIABILITY:
+PASS / FAIL
+[x/5 valid]
+
+NORMALIZATION BOUNDARY:
+PASS / FAIL
+
+STRICT VALIDATION PRESERVED:
+YES / NO
+
+RETRY / REPAIR FLOW:
+PASS / FAIL
+
+QVAC/QAVS REGRESSION:
+PASS / FAIL
+
+MAPBOX/GEO REGRESSION:
+PASS / FAIL
+
+API TESTS:
+PASS / FAIL
+[count]
+
+MOBILE TESTS:
+PASS / FAIL
+[count]
+
+TYPECHECK:
+PASS / FAIL
+
+MODEL REPLACEMENT REQUIRED:
+YES / NO
+
+IF YES:
+BEST FREE NVIDIA ALTERNATIVE:
+[model]
+[reason]
+
+BLOCKERS:
+[list or NONE]
+
+QUEST GENERATION STATUS:
+COMPLETE / MODEL CHANGE RECOMMENDED / BLOCKED
+
+If the current Nemotron model achieves the required reliability, end exactly:
+
+WORLDS NVIDIA QUEST GENERATION: COMPLETE
+
+READY FOR OPENAI CONTENT MODERATION
