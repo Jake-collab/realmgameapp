@@ -1,0 +1,217 @@
+The NVIDIA Quest-generation implementation is now code-complete through migration 082, but the final completion gate is still blocked by two external/runtime verification issues:
+
+1. Live NVIDIA provider was unreachable for Daily, Monthly, and Geo.
+2. The local disposable Supabase container became unhealthy before fresh-database RPC/RLS verification completed.
+
+Do NOT add new Quest-generation features.
+Do NOT redesign the current AI architecture.
+Do NOT modify migrations 001–082 unless a genuine defect requires a NEW forward-only migration beginning with 083.
+Do NOT begin OpenAI Moderation.
+Do NOT begin Hunt 360 Vision.
+Do NOT deploy or publish the Worlds app.
+
+==================================================
+A. DIAGNOSE LIVE NVIDIA PROVIDER
+==================================================
+
+Verify the CURRENT NVIDIA connection without printing secrets.
+
+Check:
+
+- NVIDIA_API_KEY is actually present in the server environment
+- it is being read by the API process
+- endpoint is exactly:
+  https://integrate.api.nvidia.com/v1/chat/completions
+- model is exactly:
+  nvidia/nemotron-3.5-lightning-30b-a3b
+- Authorization header is correct
+- request body matches NVIDIA's current OpenAI-compatible API
+- timeout is not unrealistically short
+- DNS/network egress from the current Replit environment works
+- provider error status/body is captured safely without exposing secrets
+- no client-side code is involved
+
+Distinguish clearly between:
+
+- bad/missing API key
+- model unavailable
+- endpoint unavailable
+- network/DNS/egress failure
+- timeout
+- request-schema incompatibility
+- rate/quota limitation
+- provider 4xx
+- provider 5xx
+
+Do not hide the real error behind generic "provider unreachable" if a more precise safe error is available.
+
+Then run one minimal live smoke request.
+
+If that succeeds, run:
+
+- Daily
+- Monthly
+- Geo
+
+Verify valid structured Quest output survives the current strict parser/validator.
+
+If Replit itself cannot reach NVIDIA but the code/config is correct, report that as an ENVIRONMENT BLOCKER rather than changing the Quest-generation architecture.
+
+==================================================
+B. AUTHORITATIVE DISPOSABLE SUPABASE VERIFICATION
+==================================================
+
+Do not rely on the unhealthy local nested-Docker Supabase environment.
+
+Reuse the established GitHub-hosted disposable Supabase verification workflow that previously passed the Worlds database gates.
+
+Inspect and reuse:
+
+.github/workflows/quest-database.yml
+
+Update only what is necessary so the workflow tests the CURRENT repository through migration 082.
+
+Run the authoritative GitHub-hosted disposable Supabase workflow.
+
+Verify:
+
+- migrations 001–082 apply cleanly from scratch
+- migration 082 tables/functions/policies are created successfully
+- AI configuration/history tables are protected
+- only authorized admin/service-role paths can modify AI config
+- AI draft promotion RPC authorization
+- idempotent promotion
+- Quest draft creation
+- objective creation
+- Interest Bubble tagging
+- Geo public/private geometry handling
+- ordinary users cannot call promotion RPCs
+- anonymous users cannot access AI admin data
+- service-role access is limited to trusted backend paths
+- RLS and grants match intended architecture
+- existing Quest/QVAC/QAVS behavior remains intact
+- Hunt privacy/security remains intact
+- Mapbox/Geo behavior remains intact
+- revenue/security regressions remain intact where covered
+
+Do not weaken or skip connected database tests.
+
+If a genuine defect is discovered:
+- fix it with a NEW forward-only migration beginning with 083
+- rerun the entire disposable Supabase workflow from scratch
+
+==================================================
+C. FULL QUEST-GENERATION REGRESSION
+==================================================
+
+After A and B, rerun:
+
+- API typecheck
+- Admin typecheck
+- Admin build
+- API tests
+- mobile tests
+- AI generation tests
+- migration contract tests
+- authorization tests
+- promotion/idempotency tests
+- scheduling tests
+- QVAC/QAVS regression
+- Mapbox/Geo regression
+
+==================================================
+FINAL REPORT
+==================================================
+
+End exactly with:
+
+NVIDIA QUEST GENERATION FINAL GATE
+
+NVIDIA_API_KEY DETECTED:
+YES / NO
+(do not print it)
+
+NVIDIA ENDPOINT REACHABLE:
+PASS / FAIL
+
+NVIDIA AUTHENTICATION:
+PASS / FAIL / NOT REACHED
+
+LIVE DAILY:
+PASS / FAIL
+
+LIVE MONTHLY:
+PASS / FAIL
+
+LIVE GEO:
+PASS / FAIL
+
+STRUCTURED OUTPUT:
+PASS / FAIL
+
+GITHUB DISPOSABLE SUPABASE:
+PASS / FAIL
+
+WORKFLOW RUN:
+[run ID]
+
+TESTED COMMIT:
+[commit]
+
+MIGRATIONS 001-082 FROM SCRATCH:
+PASS / FAIL
+
+MIGRATION 082:
+PASS / FAIL
+
+AI CONFIG RLS:
+PASS / FAIL
+
+AI HISTORY RLS:
+PASS / FAIL
+
+DRAFT PROMOTION AUTHORIZATION:
+PASS / FAIL
+
+DUPLICATE PROMOTION PROTECTION:
+PASS / FAIL
+
+GEO GEOMETRY SECURITY:
+PASS / FAIL
+
+QVAC/QAVS REGRESSION:
+PASS / FAIL
+
+MAPBOX/GEO REGRESSION:
+PASS / FAIL
+
+API TESTS:
+PASS / FAIL
+[count]
+
+MOBILE TESTS:
+PASS / FAIL
+[count]
+
+AI TESTS:
+PASS / FAIL
+[count]
+
+TYPECHECK:
+PASS / FAIL
+
+NEW MIGRATION REQUIRED:
+YES / NO
+[number/reason]
+
+BLOCKERS:
+[list or NONE]
+
+QUEST GENERATION STATUS:
+COMPLETE / BLOCKED / FIXES REQUIRED
+
+If every required gate passes, end exactly:
+
+WORLDS NVIDIA QUEST GENERATION: COMPLETE
+
+READY FOR OPENAI CONTENT MODERATION
