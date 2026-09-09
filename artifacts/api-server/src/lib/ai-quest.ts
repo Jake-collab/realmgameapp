@@ -63,6 +63,20 @@ type ProviderCompletion = {
   promptTokens?: number;
   completionTokens?: number;
   retryable: boolean;
+  failure?: {
+    category:
+      | "missing_api_key"
+      | "timeout"
+      | "network_or_dns_egress"
+      | "authentication_or_permission"
+      | "endpoint_or_model_unavailable"
+      | "rate_or_quota_limit"
+      | "provider_4xx"
+      | "provider_5xx"
+      | "empty_response"
+      | "invalid_response";
+    status?: number;
+  };
 };
 
 /**
@@ -80,6 +94,42 @@ function isRetryableProviderStatus(status: number) {
   return status === 408 || status === 429 || status >= 500;
 }
 
+function providerFailureCategory(status: number): NonNullable<ProviderCompletion["failure"]>["category"] {
+  if (status === 401 || status === 403) return "authentication_or_permission";
+  if (status === 404) return "endpoint_or_model_unavailable";
+  if (status === 408) return "timeout";
+  if (status === 429) return "rate_or_quota_limit";
+  if (status >= 500) return "provider_5xx";
+  return "provider_4xx";
+}
+
+function providerFailureReason(failure: ProviderCompletion["failure"]) {
+  if (!failure) return "The AI provider returned no usable content.";
+  const status = failure.status ? ` (HTTP ${failure.status})` : "";
+  switch (failure.category) {
+    case "missing_api_key":
+      return "The AI provider API key is missing from the server environment.";
+    case "timeout":
+      return `The AI provider request timed out${status}.`;
+    case "network_or_dns_egress":
+      return "The AI provider request failed due to network, DNS, or egress connectivity.";
+    case "authentication_or_permission":
+      return `The AI provider rejected authentication or permissions${status}.`;
+    case "endpoint_or_model_unavailable":
+      return `The AI provider endpoint or model was unavailable${status}.`;
+    case "rate_or_quota_limit":
+      return `The AI provider rate or quota limit was reached${status}.`;
+    case "provider_4xx":
+      return `The AI provider rejected the request${status}.`;
+    case "provider_5xx":
+      return `The AI provider returned a server error${status}.`;
+    case "empty_response":
+      return "The AI provider returned an empty response.";
+    case "invalid_response":
+      return "The AI provider returned an invalid response body.";
+  }
+}
+
 export function getQuestGenerationProvider(
   environment: NodeJS.ProcessEnv = process.env,
   fetchImplementation: FetchImplementation = fetch,
@@ -94,35 +144,57 @@ export function getQuestGenerationProvider(
   return {
     async complete(input) {
       if (!apiKey || !model) {
-        return { content: null, retryable: false };
+        return { content: null, retryable: false, failure: { category: "missing_api_key" } };
       }
-      const response = await fetchImplementation(endpoint, {
-        method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({
-          model,
-          temperature: Number(environment.AI_TEMPERATURE ?? 0.4),
-          max_tokens: Number(environment.AI_MAX_OUTPUT_TOKENS ?? 2000),
-          messages: [
-            {
-              role: "system",
-              content: "You are the Worlds Quest JSON generator. Return exactly one JSON object matching the requested schema. Do not echo the input data, explain your answer, use markdown, or return any wrapper object.",
-            },
-            { role: "user", content: input.prompt },
-          ],
-          response_format: { type: "json_object" },
-        }),
-        signal: input.signal,
-      });
+      let response: Response;
+      try {
+        response = await fetchImplementation(endpoint, {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({
+            model,
+            temperature: Number(environment.AI_TEMPERATURE ?? 0.4),
+            max_tokens: Number(environment.AI_MAX_OUTPUT_TOKENS ?? 2000),
+            messages: [
+              {
+                role: "system",
+                content: "You are the Worlds Quest JSON generator. Return exactly one JSON object matching the requested schema. Do not echo the input data, explain your answer, use markdown, or return any wrapper object.",
+              },
+              { role: "user", content: input.prompt },
+            ],
+            response_format: { type: "json_object" },
+          }),
+          signal: input.signal,
+        });
+      } catch (error) {
+        return {
+          content: null,
+          retryable: error instanceof Error && error.name === "AbortError",
+          failure: {
+            category: error instanceof Error && error.name === "AbortError" ? "timeout" : "network_or_dns_egress",
+          },
+        };
+      }
       if (!response.ok) {
-        return { content: null, retryable: isRetryableProviderStatus(response.status) };
+        return {
+          content: null,
+          retryable: isRetryableProviderStatus(response.status),
+          failure: { category: providerFailureCategory(response.status), status: response.status },
+        };
       }
-      const body = await response.json() as { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+      let body: { choices?: Array<{ message?: { content?: string } }>; usage?: { prompt_tokens?: number; completion_tokens?: number } };
+      try {
+        body = await response.json() as typeof body;
+      } catch {
+        return { content: null, retryable: false, failure: { category: "invalid_response" } };
+      }
+      const content = body.choices?.[0]?.message?.content ?? null;
       return {
-        content: body.choices?.[0]?.message?.content ?? null,
+        content,
         promptTokens: body.usage?.prompt_tokens,
         completionTokens: body.usage?.completion_tokens,
         retryable: false,
+        ...(content ? {} : { failure: { category: "empty_response" as const } }),
       };
     },
   };
@@ -617,7 +689,7 @@ export async function generateQuest(
       }
       if (!completion.content) {
         if (completion.retryable && attemptCount < maxRetries) continue;
-        const item = { ...base, status: "failed" as const, attemptCount: Math.max(1, attemptCount), auditOutcome: "failed" as const, reason: "The AI provider rejected the request.", estimatedInputTokens: Math.ceil(assembled.length / 4) };
+        const item = { ...base, status: "failed" as const, attemptCount: Math.max(1, attemptCount), auditOutcome: "failed" as const, reason: providerFailureReason(completion.failure), estimatedInputTokens: Math.ceil(assembled.length / 4) };
         recordAttempt(item);
       return { ok: false as const, status: "failed" as const, reason: item.reason };
       }
@@ -642,8 +714,11 @@ export async function generateQuest(
     }
     recordAttempt({ ...base, status: "invalid", attemptCount: Math.max(1, attemptCount), auditOutcome: "failed", estimatedInputTokens: Math.ceil(assembled.length / 4), diagnostics: lastDiagnostics, reason: lastInvalidReason });
     return { ok: false as const, status: "invalid" as const, reason: lastInvalidReason };
-  } catch {
-    recordAttempt({ ...base, status: "failed", attemptCount: Math.max(1, attemptCount), auditOutcome: "failed", reason: "The AI provider could not be reached." });
-    return { ok: false as const, status: "failed" as const, reason: "The AI provider could not be reached." };
+  } catch (error) {
+    const reason = error instanceof Error && error.name === "AbortError"
+      ? "The AI provider request timed out."
+      : "The AI generation pipeline failed before Quest validation.";
+    recordAttempt({ ...base, status: "failed", attemptCount: Math.max(1, attemptCount), auditOutcome: "failed", reason });
+    return { ok: false as const, status: "failed" as const, reason };
   } finally {}
 }

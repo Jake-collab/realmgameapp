@@ -74,6 +74,36 @@ describe("AI Quest safety boundary", () => {
     assert.equal(completion.retryable, false);
   });
 
+  it("preserves safe provider failure categories without exposing response bodies", async () => {
+    const unauthorized = getQuestGenerationProvider(
+      { AI_PROVIDER: "nvidia", NVIDIA_API_KEY: "server-only-test-key" },
+      async () => new Response("", { status: 401 }),
+    );
+    const unauthorizedResult = await unauthorized.complete({ prompt: "safe prompt", signal: new AbortController().signal });
+    assert.deepEqual(unauthorizedResult.failure, { category: "authentication_or_permission", status: 401 });
+
+    const unavailable = getQuestGenerationProvider(
+      { AI_PROVIDER: "nvidia", NVIDIA_API_KEY: "server-only-test-key" },
+      async () => new Response("", { status: 404 }),
+    );
+    const unavailableResult = await unavailable.complete({ prompt: "safe prompt", signal: new AbortController().signal });
+    assert.deepEqual(unavailableResult.failure, { category: "endpoint_or_model_unavailable", status: 404 });
+
+    const networkFailure = getQuestGenerationProvider(
+      { AI_PROVIDER: "nvidia", NVIDIA_API_KEY: "server-only-test-key" },
+      async () => { throw new TypeError("fetch failed"); },
+    );
+    const networkResult = await networkFailure.complete({ prompt: "safe prompt", signal: new AbortController().signal });
+    assert.deepEqual(networkResult.failure, { category: "network_or_dns_egress" });
+
+    const invalidBody = getQuestGenerationProvider(
+      { AI_PROVIDER: "nvidia", NVIDIA_API_KEY: "server-only-test-key" },
+      async () => new Response("not-json", { status: 200 }),
+    );
+    const invalidBodyResult = await invalidBody.complete({ prompt: "safe prompt", signal: new AbortController().signal });
+    assert.deepEqual(invalidBodyResult.failure, { category: "invalid_response" });
+  });
+
   it("frames Interest Bubble and location inputs as untrusted data", () => {
     const prompt = buildGenerationPrompt({
       id: "test",
