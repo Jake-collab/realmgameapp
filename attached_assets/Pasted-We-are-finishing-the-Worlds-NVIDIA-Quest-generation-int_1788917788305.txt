@@ -1,0 +1,661 @@
+We are finishing the Worlds NVIDIA Quest-generation integration.
+
+This is a COMPLETION + REPAIR + END-TO-END VERIFICATION task.
+
+Do not begin OpenAI Moderation.
+Do not begin Hunt 360 Vision.
+Do not begin Native camera/GPS/motion.
+Do not begin Push.
+Do not begin Support/Auth email.
+Do not modify payment architecture.
+Do not redesign the existing Quest system.
+Do not redesign the existing Mapbox system.
+
+CURRENT GOAL:
+
+Make the NVIDIA Quest-generation feature fully production-ready and verify that it works correctly with the rest of Worlds.
+
+Provider:
+NVIDIA hosted API
+
+Model:
+nvidia/nemotron-3.5-lightning-30b-a3b
+
+Secret:
+NVIDIA_API_KEY
+
+Do not print, log, expose, or return the secret.
+
+Before making changes:
+- inspect the CURRENT repository
+- inspect all current Quest-generation tasks/results
+- identify exactly which parts are already complete
+- preserve working implementation
+- fix only genuine gaps
+- do not duplicate existing architecture
+
+==================================================
+1. LIVE NVIDIA OUTPUT RELIABILITY
+==================================================
+
+Make live generation reliable for:
+
+- Daily Quest
+- Monthly Quest
+- Geo-Quest
+
+The model output MUST conform to the existing strict Worlds Quest schema.
+
+Do not weaken schema validation to accommodate bad model responses.
+
+Use the strongest reliable approach supported by the current NVIDIA endpoint, including where appropriate:
+
+- explicit JSON-only instructions
+- schema/example anchoring
+- deterministic formatting guidance
+- extraction of the intended JSON object from surrounding model text
+- bounded retries for malformed output
+- timeout handling
+- validation after every attempt
+
+If the endpoint/model does not provide native structured-output guarantees, implement a safe parser/repair boundary that:
+
+- extracts only expected Quest fields
+- rejects unsupported fields
+- does not execute model-produced content
+- still runs full Zod/server validation
+- fails closed if a valid Quest cannot be recovered
+
+The model must never control:
+- authorization
+- SQL
+- point settlement
+- completion
+- user identity
+- private database fields
+
+Run real smoke tests for Daily, Monthly, and Geo.
+
+==================================================
+2. DURABLE ADMIN GENERATION CONFIGURATION
+==================================================
+
+Finish the Admin configuration system.
+
+Use durable Supabase-backed configuration.
+
+Maintain separate configuration for:
+
+DAILY
+- system/base prompt
+- tone
+- allowed themes
+- blocked themes
+- difficulty guidance
+- duration guidance
+- verification-method guidance
+- points guidance
+- Interest Bubble personalization rules
+
+MONTHLY
+- separate prompt
+- challenge scale
+- duration guidance
+- points guidance
+- verification guidance
+
+GEO
+- location-aware instructions
+- public/outdoor safety guidance
+- radius behavior
+- verification guidance
+- location-context rules
+
+GLOBAL
+- provider
+- model
+- temperature
+- output-token limit
+- retry count
+- timeout
+- generation enabled/disabled
+- manual approval vs automatic publication
+
+Requirements:
+- admin-only editing
+- version history
+- changed-by admin identity
+- timestamp
+- previous version retained
+- no API secret stored in these records
+
+==================================================
+3. GENERATION HISTORY + DRAFT STORAGE
+==================================================
+
+Persist every generation attempt appropriately.
+
+Track:
+
+- generation type
+- provider/model
+- prompt/config version
+- timestamp
+- status
+- retry count
+- validation result
+- generated draft
+- admin edit state
+- approval/rejection
+- publication state
+- safe error information
+
+Never store:
+- NVIDIA_API_KEY
+- unnecessary personal user data
+- raw authorization tokens
+
+Generation failures must not create published Quests.
+
+==================================================
+4. INTEREST BUBBLE PERSONALIZATION
+==================================================
+
+Fully connect Daily Quest generation to the existing Interest Bubble system.
+
+Requirements:
+
+- use existing user interest selections
+- send only minimal category/interest labels
+- do not send email
+- do not send username
+- do not send unrelated profile information
+- treat all interest labels as untrusted DATA, not instructions
+- prevent prompt injection from interest text
+- preserve existing atomic interest replacement logic
+
+Handle:
+
+- user with interests
+- user with no interests
+- invalid/stale interests
+- duplicate interests
+- generation-provider failure
+
+Prefer reusable generated Quest variants where reasonable instead of unnecessary one-model-call-per-user behavior.
+
+==================================================
+5. DAILY QUEST WORKFLOW
+==================================================
+
+Verify the full Daily flow:
+
+Interest Bubbles / generation context
+→ NVIDIA generation
+→ strict validation
+→ draft
+→ preview
+→ edit if desired
+→ approve
+→ normal Quest
+→ assignment
+→ existing Daily Quest UI
+
+Verify the member/free Daily allowance system continues to work exactly as already implemented.
+
+Do not bypass existing Quest eligibility or assignment rules.
+
+==================================================
+6. MONTHLY QUEST WORKFLOW
+==================================================
+
+Verify the full Monthly flow:
+
+Admin/monthly trigger or scheduler
+→ NVIDIA
+→ strict validation
+→ draft
+→ preview/edit
+→ approval
+→ normal Monthly Quest
+→ Monthly Quest Drop UI
+
+Monthly must remain distinct from Daily.
+
+Preserve existing monthly allowances/reward handling.
+
+==================================================
+7. GEO-QUEST WORKFLOW
+==================================================
+
+Fully integrate Geo generation with current Mapbox + Quest location architecture.
+
+Requirements:
+
+- use legitimate location context
+- support city/location/radius input
+- never invent and silently publish coordinates
+- no 0,0 fallback
+- validate coordinates
+- validate radius
+- preserve server-authoritative GPS
+- preserve QVAC/QAVS
+- preserve current Quest Map behavior
+- preserve Mapbox clustering/filters/HUD
+
+Geo-generated Quest must appear through the existing Geo-Quest and map system.
+
+==================================================
+8. DRAFT → REAL QUEST PROMOTION
+==================================================
+
+Finish the explicit promotion path.
+
+Only authorized admins may promote a generated draft.
+
+Promotion must:
+
+- revalidate schema
+- map only permitted fields
+- reject unknown fields
+- reject unsupported verification methods
+- reject invalid points
+- reject invalid radius
+- reject invalid coordinates
+- reject 0,0
+- preserve Quest type
+- preserve verification requirements
+- preserve moderation/review behavior
+- preserve points logic
+- preserve QVAC/QAVS
+- preserve normal Quest lifecycle
+
+Promotion must be idempotent:
+- same draft cannot create duplicate live Quests
+
+The AI must never directly:
+- publish without required gate
+- complete a Quest
+- award points
+- modify another user
+- change permissions
+
+==================================================
+9. ADMIN PREVIEW / EDIT / APPROVAL
+==================================================
+
+Ensure Admin can:
+
+- generate
+- see validation result
+- preview Quest
+- edit permitted Quest fields
+- regenerate
+- reject
+- approve
+- publish/promote
+- view generation history
+
+Admin edits must themselves pass the same business-rule validation before publication.
+
+Show meaningful errors for:
+- malformed generation
+- invalid verification method
+- invalid point value
+- invalid Geo radius
+- missing required field
+- duplicate publication
+- provider timeout
+- provider failure
+
+==================================================
+10. SCHEDULING + WORKER INTEGRATION
+==================================================
+
+Audit the current existing worker/queue architecture FIRST.
+
+Reuse it.
+
+Do not create a competing scheduler if one already exists.
+
+Implement/verify:
+
+- Daily generation scheduling
+- Monthly generation scheduling
+- Geo automated generation only if already intended by the current product requirements
+
+Required:
+- idempotency
+- duplicate prevention
+- bounded retry
+- safe failed-job state
+- generation enabled switch
+- admin visibility
+- worker heartbeat/health where existing architecture supports it
+
+Do not claim scheduled production generation is live if the worker itself still requires later deployment.
+
+Distinguish:
+CODE COMPLETE
+vs
+LIVE SCHEDULER DEPLOYMENT PENDING
+
+==================================================
+11. APP INTEGRATION
+==================================================
+
+Generated approved Quests must become completely normal Worlds Quests.
+
+Do NOT make the app depend on NVIDIA.
+
+Verify compatibility with:
+
+QUEST HOME
+- prioritized active Quest
+
+QUESTS TAB
+- Daily Quest
+- Monthly Quest Drop
+- Geo-Quest
+
+QUEST MAP
+- markers
+- clustering
+- filters
+- camera
+- active HUD
+- Geo radius/location states
+
+PROGRESS
+- active/in-action
+- completed
+- point totals
+
+QUEST LIFECYCLE
+- Start Quest
+- proof submission
+- review
+- completion
+- reward settlement
+
+The mobile client should not need to know:
+- AI provider
+- model
+- prompt version
+
+==================================================
+12. QVAC / QAVS INTEGRATION
+==================================================
+
+Regression-test all generated verification combinations against the existing systems.
+
+Allowed verification methods ONLY:
+
+- camera
+- gps
+- timer
+- integrity_confirmation
+- activity_tracking
+
+Verify generated Quests can correctly use combinations.
+
+Ensure:
+
+- all assigned verification methods are required
+- GPS remains server-authoritative
+- QAVS remains server-authoritative
+- activity distance cannot be self-reported
+- timers cannot be bypassed
+- completion cannot be client-awarded
+- points cannot be client-awarded
+
+Do not change QVAC/QAVS unless a genuine regression is found.
+
+==================================================
+13. MAPBOX / GEO REGRESSION
+==================================================
+
+Reverify Quest generation does not regress:
+
+- Quest markers
+- clustering
+- filters
+- location display
+- active Quest camera behavior
+- Geo-Quest map display
+- no 0,0 bug
+- radius validation
+- Mapbox error/fallback handling
+
+Do not touch Hunt Map functionality unless needed for regression verification.
+
+==================================================
+14. SECURITY
+==================================================
+
+Verify:
+
+- NVIDIA_API_KEY server-only
+- no NVIDIA key in Expo bundle
+- no NVIDIA key returned through Admin/mobile API
+- non-admin cannot call generation endpoints
+- non-admin cannot change prompt config
+- non-admin cannot approve/publish drafts
+- cross-user information cannot leak through personalization
+- user-supplied interests/location names treated as data
+- prompt-injection attempts cannot override system instructions
+- model-produced HTML/script/SQL is treated only as text or rejected
+- arbitrary model fields rejected
+- no generated Quest can alter authorization
+- generation routes rate-limited
+- duplicate requests deduplicated where appropriate
+
+==================================================
+15. DATABASE / MIGRATIONS
+==================================================
+
+Preserve all existing migrations through the current authoritative latest migration.
+
+Do not rewrite previously applied migrations.
+
+If schema additions/repairs are needed:
+- create NEW forward-only migration(s)
+- use the next migration number
+- add correct RLS
+- add least-privilege RPC grants
+- use fixed search_path for SECURITY DEFINER functions
+- revoke PUBLIC execute where appropriate
+- test anonymous/authenticated/admin boundaries
+
+Verify migration sequence applies successfully from scratch in the established disposable Supabase GitHub workflow.
+
+Verify production/local migration parity where the established workflow supports it.
+
+==================================================
+16. CONNECTED DATABASE VERIFICATION
+==================================================
+
+Use the established authoritative GitHub disposable Supabase workflow if Replit local Docker is blocked.
+
+Test:
+
+- prompt configuration tables
+- generation-history tables
+- draft tables
+- RLS
+- Admin authorization
+- cross-user denial
+- promotion functions
+- duplicate-promotion protection
+- Quest creation
+- Interest Bubble reads
+- scheduling records if applicable
+
+Do not weaken tests to make them pass.
+
+==================================================
+17. LIVE END-TO-END TEST
+==================================================
+
+Perform at least one safe non-production-user flow for each type:
+
+DAILY:
+live NVIDIA
+→ validated draft
+→ admin approval simulation/test
+→ real Quest record in disposable/test environment
+→ assignment/display contract verified
+
+MONTHLY:
+same flow
+
+GEO:
+same flow including coordinate/radius validation
+
+Do NOT publish test Quests to real users.
+
+==================================================
+18. FULL REGRESSION SUITE
+==================================================
+
+Run:
+
+- TypeScript
+- NVIDIA adapter tests
+- live NVIDIA smoke tests
+- structured-output tests
+- prompt/config tests
+- history tests
+- Interest Bubble tests
+- Daily tests
+- Monthly tests
+- Geo tests
+- promotion/idempotency tests
+- Admin authorization tests
+- scheduler tests
+- API suite
+- mobile suite
+- QVAC/QAVS tests
+- Quest Map tests
+- Mapbox/Geo tests
+- database/contract tests
+- disposable Supabase migration-from-scratch workflow
+
+If a failure reveals a genuine defect:
+- make the smallest safe fix
+- rerun the affected tests
+- rerun full relevant regressions
+
+==================================================
+FINAL REPORT
+==================================================
+
+End exactly with:
+
+NVIDIA QUEST GENERATION FINAL COMPLETION
+
+LIVE NVIDIA PROVIDER:
+PASS / FAIL
+
+LIVE DAILY GENERATION:
+PASS / FAIL
+
+LIVE MONTHLY GENERATION:
+PASS / FAIL
+
+LIVE GEO GENERATION:
+PASS / FAIL
+
+STRUCTURED OUTPUT RELIABILITY:
+PASS / FAIL
+
+ADMIN PROMPT CONFIG:
+PASS / FAIL
+
+PROMPT VERSIONING:
+PASS / FAIL
+
+GENERATION HISTORY:
+PASS / FAIL
+
+INTEREST BUBBLE PERSONALIZATION:
+PASS / FAIL
+
+DAILY WORKFLOW:
+PASS / FAIL
+
+MONTHLY WORKFLOW:
+PASS / FAIL
+
+GEO WORKFLOW:
+PASS / FAIL
+
+ADMIN PREVIEW / EDIT / APPROVAL:
+PASS / FAIL
+
+DRAFT → QUEST PROMOTION:
+PASS / FAIL
+
+DUPLICATE PROMOTION PROTECTION:
+PASS / FAIL
+
+SCHEDULING CODE:
+PASS / FAIL
+
+LIVE SCHEDULER DEPLOYMENT:
+PASS / PENDING / NOT REQUIRED
+
+APP-SIDE DISPLAY:
+PASS / FAIL
+
+QVAC/QAVS:
+PASS / FAIL
+
+MAPBOX/GEO:
+PASS / FAIL
+
+SECURITY / AUTHORIZATION:
+PASS / FAIL
+
+NVIDIA KEY SERVER-ONLY:
+PASS / FAIL
+
+LATEST MIGRATION:
+[number]
+
+MIGRATION-FROM-SCRATCH:
+PASS / FAIL
+
+CONNECTED DATABASE TESTS:
+PASS / FAIL
+[count]
+
+QUEST GENERATION TESTS:
+PASS / FAIL
+[count]
+
+API TESTS:
+PASS / FAIL
+[count]
+
+MOBILE TESTS:
+PASS / FAIL
+[count]
+
+TYPECHECK:
+PASS / FAIL
+
+OWNER ACTIONS STILL REQUIRED:
+[list or NONE]
+
+BLOCKERS:
+[list or NONE]
+
+QUEST GENERATION STATUS:
+COMPLETE / CODE COMPLETE WITH LIVE DEPLOYMENT PENDING / FIXES REQUIRED / BLOCKED
+
+If all Quest-generation code, database, security, app integration, and live NVIDIA provider gates pass, and only later infrastructure deployment such as the general production worker remains, end exactly:
+
+WORLDS NVIDIA QUEST GENERATION: COMPLETE
+
+READY FOR OPENAI CONTENT MODERATION
