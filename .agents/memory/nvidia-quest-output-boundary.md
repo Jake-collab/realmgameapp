@@ -22,9 +22,11 @@ The completion pipeline now records safe attempt metadata, retries malformed or
 unsafe output within a bounded limit, and fails closed for all three lanes when
 the provider is unreachable; it does not synthesize fallback candidates.
 
-**Why:** A live lane smoke on 2026-09-09 reached the NVIDIA adapter but all
-Daily, Monthly, and Geo calls were unreachable. Returning a fake or relaxed
-candidate would hide provider availability failures.
+**Why:** On 2026-09-09 the minimal NVIDIA request reached the endpoint and
+returned HTTP 200, but full Daily, Monthly, and Geo prompts produced echoed or
+non-schema JSON and one timeout. Returning a fake or relaxed candidate would
+hide provider/model compatibility failures.
 
 **How to apply:** Keep the server-side generation, durable audit attempt, and
-human review gates intact while provider availability is repaired separately.
+human review gates intact while the provider/model prompt compatibility issue
+is repaired separately.
