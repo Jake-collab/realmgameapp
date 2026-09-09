@@ -2,6 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
+import {
+  loadDurablePromptVersions,
+  persistGenerationAttempt,
+  persistPromptVersion,
+} from "./ai-quest-persistence";
 
 export const questGenerationTypes = ["daily", "monthly", "geo"] as const;
 export type QuestGenerationType = (typeof questGenerationTypes)[number];
@@ -222,6 +227,37 @@ function loadState(): LocalState {
 const state = loadState();
 const requestWindows = new Map<string, { startedAt: number; count: number }>();
 
+async function hydrateDurablePromptState() {
+  const rows = await loadDurablePromptVersions().catch(() => null);
+  if (!rows?.length) {
+    for (const type of questGenerationTypes) {
+      const initial = state.templates[type][0];
+      if (initial) void persistPromptVersion(initial).catch(() => undefined);
+    }
+    return;
+  }
+  for (const type of questGenerationTypes) {
+    const laneRows = rows.filter((row) => row.lane === type);
+    const prompts = laneRows.flatMap((row) => {
+      const parsed = promptFields.safeParse(row.prompt);
+      if (!parsed.success) return [];
+      return [{
+        ...parsed.data,
+        id: `${type}-template-v${row.version}`,
+        type,
+        version: row.version,
+        active: row.active,
+        createdAt: row.created_at,
+        updatedBy: row.changed_by ?? "system",
+        changeReason: row.change_reason,
+      } satisfies PromptVersion];
+    });
+    if (prompts.length) state.templates[type] = prompts;
+  }
+}
+
+void hydrateDurablePromptState();
+
 function persistState() {
   if (process.env.NODE_ENV === "production" && !process.env.AI_LOCAL_STATE_PATH) return;
   try {
@@ -256,6 +292,7 @@ export function createPromptVersion(
   };
   versions.push(version);
   persistState();
+  void persistPromptVersion(version).catch(() => undefined);
   return version;
 }
 
@@ -548,13 +585,17 @@ export async function generateQuest(
     estimatedOutputTokens: 0,
     estimatedCostUsd: 0,
   };
+  const recordAttempt = (item: GenerationHistoryItem, candidate?: GeneratedQuest) => {
+    recordHistory(item);
+    void persistGenerationAttempt(item, variables, candidate).catch(() => undefined);
+  };
   if (!inputCheck.valid) {
-    recordHistory({ ...base, status: "invalid", attemptCount: 0, auditOutcome: "failed", reason: `Missing: ${inputCheck.missing.join(", ") || "none"}; unknown: ${inputCheck.unknown.join(", ") || "none"}; invalid: ${inputCheck.invalid.join(", ") || "none"}` });
+    recordAttempt({ ...base, status: "invalid", attemptCount: 0, auditOutcome: "failed", reason: `Missing: ${inputCheck.missing.join(", ") || "none"}; unknown: ${inputCheck.unknown.join(", ") || "none"}; invalid: ${inputCheck.invalid.join(", ") || "none"}` });
     return { ok: false as const, status: "invalid" as const, reason: "Generation inputs failed lane validation.", missing: inputCheck.missing, unknown: inputCheck.unknown };
   }
   const config = aiConfiguration();
   if (!config.configured || !prompt) {
-    recordHistory({ ...base, status: "unavailable", attemptCount: 0, auditOutcome: "not_run", reason: "AI provider configuration is unavailable." });
+    recordAttempt({ ...base, status: "unavailable", attemptCount: 0, auditOutcome: "not_run", reason: "AI provider configuration is unavailable." });
     return { ok: false as const, status: "unavailable" as const, reason: "AI provider configuration is unavailable." };
   }
   const assembled = buildGenerationPrompt(prompt, variables);
@@ -563,6 +604,8 @@ export async function generateQuest(
   const provider = providerOverride ?? getQuestGenerationProvider();
   try {
     let completion: ProviderCompletion | undefined;
+    let lastInvalidReason = "The provider returned content that failed Quest validation.";
+    let lastDiagnostics: string[] = [];
     for (; attemptCount <= maxRetries; attemptCount += 1) {
       const controller = new AbortController();
       const defaultTimeoutMs = process.env.AI_PROVIDER === "nvidia" ? 60000 : 15000;
@@ -572,29 +615,35 @@ export async function generateQuest(
       } finally {
         clearTimeout(timer);
       }
-      if (!completion.retryable) break;
-    }
-    if (!completion?.content) {
+      if (!completion.content) {
+        if (completion.retryable && attemptCount < maxRetries) continue;
         const item = { ...base, status: "failed" as const, attemptCount: Math.max(1, attemptCount), auditOutcome: "failed" as const, reason: "The AI provider rejected the request.", estimatedInputTokens: Math.ceil(assembled.length / 4) };
-      recordHistory(item);
+        recordAttempt(item);
       return { ok: false as const, status: "failed" as const, reason: item.reason };
+      }
+      const parsed = parseStructuredProviderOutputs(completion.content)
+        .map((candidate) => generatedQuestSchema.safeParse(candidate))
+        .find((candidate): candidate is z.SafeParseSuccess<GeneratedQuest> => candidate.success && candidate.data.quest_type === type);
+      if (!parsed) {
+        lastInvalidReason = "The provider returned content that failed Quest validation.";
+        if (attemptCount < maxRetries) continue;
+        break;
+      }
+      const review = inspectCandidate(parsed.data, type);
+      if (!review.valid) {
+        lastInvalidReason = "The provider candidate failed Worlds safety validation.";
+        lastDiagnostics = review.diagnostics;
+        if (attemptCount < maxRetries) continue;
+        recordAttempt({ ...base, status: "invalid", attemptCount: Math.max(1, attemptCount + 1), auditOutcome: "failed", inputFingerprint: fingerprint(parsed.data), estimatedInputTokens: Math.ceil(assembled.length / 4), diagnostics: review.diagnostics, reason: lastInvalidReason }, parsed.data);
+        return { ok: false as const, status: "invalid" as const, reason: lastInvalidReason, review };
+      }
+      recordAttempt({ ...base, status: "candidate", attemptCount: Math.max(1, attemptCount + 1), auditOutcome: "passed", inputFingerprint: fingerprint(parsed.data), estimatedInputTokens: completion.promptTokens ?? Math.ceil(assembled.length / 4), estimatedOutputTokens: completion.completionTokens ?? Math.ceil(JSON.stringify(parsed.data).length / 4), estimatedCostUsd: 0, diagnostics: review.diagnostics }, parsed.data);
+      return { ok: true as const, status: "candidate" as const, candidate: parsed.data, review };
     }
-    const parsed = parseStructuredProviderOutputs(completion.content)
-      .map((candidate) => generatedQuestSchema.safeParse(candidate))
-      .find((candidate): candidate is z.SafeParseSuccess<GeneratedQuest> => candidate.success && candidate.data.quest_type === type);
-    if (!parsed) {
-       recordHistory({ ...base, status: "invalid", attemptCount: Math.max(1, attemptCount), auditOutcome: "failed", reason: "Provider output failed Quest validation.", estimatedInputTokens: Math.ceil(assembled.length / 4) });
-      return { ok: false as const, status: "invalid" as const, reason: "The provider returned content that failed Quest validation." };
-    }
-    const review = inspectCandidate(parsed.data, type);
-    if (!review.valid) {
-      recordHistory({ ...base, status: "invalid", attemptCount: Math.max(1, attemptCount), auditOutcome: "failed", inputFingerprint: fingerprint(parsed.data), estimatedInputTokens: Math.ceil(assembled.length / 4), diagnostics: review.diagnostics, reason: "Candidate failed deterministic safety validation." });
-      return { ok: false as const, status: "invalid" as const, reason: "The provider candidate failed Worlds safety validation.", review };
-    }
-    recordHistory({ ...base, status: "candidate", attemptCount: Math.max(1, attemptCount), auditOutcome: "passed", inputFingerprint: fingerprint(parsed.data), estimatedInputTokens: completion.promptTokens ?? Math.ceil(assembled.length / 4), estimatedOutputTokens: completion.completionTokens ?? Math.ceil(JSON.stringify(parsed.data).length / 4), estimatedCostUsd: 0, diagnostics: review.diagnostics });
-    return { ok: true as const, status: "candidate" as const, candidate: parsed.data, review };
+    recordAttempt({ ...base, status: "invalid", attemptCount: Math.max(1, attemptCount), auditOutcome: "failed", estimatedInputTokens: Math.ceil(assembled.length / 4), diagnostics: lastDiagnostics, reason: lastInvalidReason });
+    return { ok: false as const, status: "invalid" as const, reason: lastInvalidReason };
   } catch {
-    recordHistory({ ...base, status: "failed", attemptCount: Math.max(1, attemptCount), auditOutcome: "failed", reason: "The AI provider could not be reached." });
+    recordAttempt({ ...base, status: "failed", attemptCount: Math.max(1, attemptCount), auditOutcome: "failed", reason: "The AI provider could not be reached." });
     return { ok: false as const, status: "failed" as const, reason: "The AI provider could not be reached." };
   } finally {}
 }

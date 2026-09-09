@@ -17,3 +17,14 @@ content into the review pipeline.
 **How to apply:** Keep provider smoke tests separate from full schema-gated
 generation tests. Treat a failing full-generation probe as a provider
 compatibility issue, not as a reason to bypass QVAC/QAVS or review boundaries.
+
+The completion pipeline now records safe attempt metadata, retries malformed or
+unsafe output within a bounded limit, and fails closed for all three lanes when
+the provider is unreachable; it does not synthesize fallback candidates.
+
+**Why:** A live lane smoke on 2026-09-09 reached the NVIDIA adapter but all
+Daily, Monthly, and Geo calls were unreachable. Returning a fake or relaxed
+candidate would hide provider availability failures.
+
+**How to apply:** Keep the server-side generation, durable audit attempt, and
+human review gates intact while provider availability is repaired separately.

@@ -31,6 +31,14 @@ import {
   aiConfiguration,
   type QuestGenerationType,
 } from "../lib/ai-quest";
+import {
+  listDurableGenerationAttempts,
+  promoteAiQuestDraft,
+  publishQuest,
+  readDurableAiConfiguration,
+  updateDurablePromptActivation,
+  writeDurableAiConfiguration,
+} from "../lib/ai-quest-persistence";
 import { z } from "zod";
 import {
   moderationDiagnostics,
@@ -1196,7 +1204,7 @@ router.post("/admin/ai/prompts/:type/versions", requireAdmin("ai.prompts.edit"),
   });
 });
 
-router.post("/admin/ai/prompts/:type/versions/:version/:action", requireAdmin("ai.prompts.edit"), (req, res) => {
+router.post("/admin/ai/prompts/:type/versions/:version/:action", requireAdmin("ai.prompts.edit"), async (req, res) => {
   const type = req.params.type as QuestGenerationType;
   const version = Number(req.params.version);
   const action = req.params.action as "activate" | "deactivate" | "restore";
@@ -1208,6 +1216,13 @@ router.post("/admin/ai/prompts/:type/versions/:version/:action", requireAdmin("a
   if (!updated) {
     res.status(404).json({ error: "Prompt version not found." });
     return;
+  }
+  if (action === "activate" || action === "deactivate") {
+    const persisted = await updateDurablePromptActivation(type, version, action === "activate");
+    if (!persisted.persisted && supabaseAdminConfigured()) {
+      res.status(503).json({ error: "Prompt activation could not be persisted." });
+      return;
+    }
   }
   res.json({ prompt: updated, action });
 });
@@ -1319,7 +1334,7 @@ router.get("/admin/ai/candidates", requireAdmin("ai.read"), async (_req, res) =>
   }
   try {
     const rows = await supabaseAdminRequest<Array<Record<string, unknown>>>(
-      "ai_generated_content?content_type=eq.quest&select=id,output_draft,suggested_points,approval_status,reviewer_notes,reviewed_at,created_at&order=created_at.desc&limit=100",
+      "ai_generated_content?content_type=eq.quest&select=id,output_draft,suggested_points,approval_status,reviewer_notes,reviewed_at,created_at,published_quest_id&order=created_at.desc&limit=100",
     );
     res.json({
       candidates: rows.map((row) => {
@@ -1334,6 +1349,7 @@ router.get("/admin/ai/candidates", requireAdmin("ai.read"), async (_req, res) =>
           reviewNotes: typeof row.reviewer_notes === "string" ? row.reviewer_notes : null,
           reviewedAt: row.reviewed_at ?? null,
           createdAt: row.created_at,
+          publishedQuestId: row.published_quest_id ?? null,
         };
       }),
       publicationPolicy: "approval_never_publishes",
@@ -1378,6 +1394,7 @@ router.post("/admin/ai/candidates/:id/review", requireAdmin("admin.quests.manage
         id: String(updated.id),
         status: String(updated.approval_status),
         reviewedAt: updated.reviewed_at ?? null,
+        publishedQuestId: updated.published_quest_id ?? null,
       },
       message: "Review recorded. This decision does not publish a Quest or award points.",
     });
@@ -1386,24 +1403,160 @@ router.post("/admin/ai/candidates/:id/review", requireAdmin("admin.quests.manage
   }
 });
 
-router.get("/admin/ai/history", requireAdmin("ai.read"), (_req, res) => {
+router.post("/admin/ai/candidates/:id/promote", requireAdmin("admin.quests.manage"), async (req, res) => {
+  const geoContextSchema = z.object({
+    display_name: z.string().trim().min(1).max(160),
+    public_lat: z.number().finite().min(-90).max(90),
+    public_lng: z.number().finite().min(-180).max(180),
+    public_radius_meters: z.number().int().min(25).max(10_000).default(500),
+    address_hint: z.string().trim().max(240).optional(),
+    validation_lat: z.number().finite().min(-90).max(90),
+    validation_lng: z.number().finite().min(-180).max(180),
+    validation_radius_meters: z.number().int().min(25).max(10_000).default(50),
+  }).strict();
+  const input = z.object({ geoContext: geoContextSchema.optional() }).strict().safeParse(req.body ?? {});
+  if (!input.success) {
+    res.status(400).json({ error: "Valid administrator-supplied Geo context is required.", issues: input.error.issues });
+    return;
+  }
+  if (!supabaseAdminConfigured()) {
+    res.status(503).json({ error: "Quest promotion requires trusted Supabase access." });
+    return;
+  }
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (!z.string().uuid().safeParse(id).success) {
+    res.status(400).json({ error: "A valid AI candidate ID is required." });
+    return;
+  }
+  try {
+    const candidateRows = await adminRead<Array<{ output_draft: unknown; approval_status: string; published_quest_id: string | null }>>(
+      `ai_generated_content?id=eq.${encodeURIComponent(id)}&content_type=eq.quest&select=output_draft,approval_status,published_quest_id&limit=1`,
+    );
+    const candidate = candidateRows[0];
+    if (!candidate) {
+      res.status(404).json({ error: "AI candidate not found." });
+      return;
+    }
+    const parsed = generatedQuestSchema.safeParse(candidate.output_draft);
+    if (!parsed.success) {
+      res.status(422).json({ error: "The stored candidate no longer passes Quest schema validation." });
+      return;
+    }
+    const review = inspectCandidate(parsed.data, parsed.data.quest_type);
+    if (!review.valid) {
+      res.status(422).json({ error: "The stored candidate no longer passes Worlds safety validation.", diagnostics: review.diagnostics });
+      return;
+    }
+    if (parsed.data.quest_type === "geo" && !input.data.geoContext) {
+      res.status(400).json({ error: "Geo promotion requires explicit administrator-supplied location context." });
+      return;
+    }
+    const adminId = req.adminPrincipal?.userId;
+    if (!adminId || !z.string().uuid().safeParse(adminId).success) {
+      res.status(403).json({ error: "A trusted administrator identity is required for promotion." });
+      return;
+    }
+    const questId = await promoteAiQuestDraft(
+      id,
+      adminId,
+      input.data.geoContext,
+    );
+    res.status(201).json({
+      questId,
+      status: "draft",
+      message: "Approved AI content was promoted to a normal Quest draft. Publish it explicitly after the normal review gate.",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Quest promotion failed.";
+    if (/Only an approved|approved|unlinked|Geo context|Unsupported|Invalid|Points|Quest must/i.test(message)) {
+      res.status(422).json({ error: message });
+      return;
+    }
+    res.status(503).json({ error: "The approved AI candidate could not be promoted." });
+  }
+});
+
+router.post("/admin/quests/:id/publish", requireAdmin("admin.quests.manage"), async (req, res) => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (!z.string().uuid().safeParse(id).success) {
+    res.status(400).json({ error: "A valid Quest ID is required." });
+    return;
+  }
+  if (!supabaseAdminConfigured()) {
+    res.status(503).json({ error: "Quest publication requires trusted Supabase access." });
+    return;
+  }
+  try {
+    const adminId = req.adminPrincipal?.userId;
+    if (!adminId || !z.string().uuid().safeParse(adminId).success) {
+      res.status(403).json({ error: "A trusted administrator identity is required for publication." });
+      return;
+    }
+    const quest = await publishQuest(id, adminId);
+    res.json({ quest, status: "published", message: "Quest published through the normal Quest catalog lifecycle." });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Quest publication failed.";
+    res.status(/Only draft|not found/i.test(message) ? 422 : 503).json({ error: message });
+  }
+});
+
+router.get("/admin/ai/history", requireAdmin("ai.read"), async (_req, res) => {
+  try {
+    const durable = await listDurableGenerationAttempts();
+    if (durable) {
+      res.json({ items: durable, persistence: "supabase" });
+      return;
+    }
+  } catch {
+    // Use local development history when Supabase is intentionally disconnected.
+  }
   res.json({ items: listGenerationHistory(), persistence: "local-development-only" });
 });
 
-router.get("/admin/ai/settings", requireAdmin("ai.settings.read"), (_req, res) => {
+router.get("/admin/ai/settings", requireAdmin("ai.settings.read"), async (_req, res) => {
+  const durable = await readDurableAiConfiguration().catch(() => null);
+  const globalConfig = durable?.find((item) => item.lane === "global")?.config;
+  const laneConfig = durable?.filter((item) => item.lane !== "global") ?? [];
   res.json({
     provider: aiConfiguration(),
     settings: {
-       generationEnabled: aiConfiguration().configured,
-      automatedGenerationEnabled: false,
-      outputTokenLimit: Number(process.env.AI_MAX_OUTPUT_TOKENS ?? 2000),
-      temperature: Number(process.env.AI_TEMPERATURE ?? 0.4),
-      requestTimeoutMs: Number(process.env.AI_REQUEST_TIMEOUT_MS ?? 15000),
-       maxRetries: Math.min(3, Math.max(0, Number(process.env.AI_MAX_RETRIES ?? 1))),
-      dailyRequestLimit: 100,
-      monthlyRequestLimit: 1000,
+      generationEnabled: globalConfig?.generationEnabled ?? aiConfiguration().configured,
+      automatedGenerationEnabled: globalConfig?.automatedGenerationEnabled ?? false,
+      outputTokenLimit: globalConfig?.outputTokenLimit ?? Number(process.env.AI_MAX_OUTPUT_TOKENS ?? 2000),
+      temperature: globalConfig?.temperature ?? Number(process.env.AI_TEMPERATURE ?? 0.4),
+      requestTimeoutMs: globalConfig?.requestTimeoutMs ?? Number(process.env.AI_REQUEST_TIMEOUT_MS ?? 60000),
+      maxRetries: globalConfig?.maxRetries ?? Math.min(3, Math.max(0, Number(process.env.AI_MAX_RETRIES ?? 1))),
+      dailyRequestLimit: globalConfig?.dailyRequestLimit ?? 100,
+      monthlyRequestLimit: globalConfig?.monthlyRequestLimit ?? 1000,
+      manualApprovalRequired: globalConfig?.manualApprovalRequired ?? true,
+      durable: Boolean(durable),
     },
+    laneConfiguration: laneConfig,
   });
+});
+
+router.put("/admin/ai/settings", requireAdmin("ai.settings.edit"), async (req, res) => {
+  const input = z.object({
+    generationEnabled: z.boolean(),
+    automatedGenerationEnabled: z.boolean(),
+    outputTokenLimit: z.number().int().min(256).max(16_000),
+    temperature: z.number().min(0).max(1),
+    requestTimeoutMs: z.number().int().min(5_000).max(120_000),
+    maxRetries: z.number().int().min(0).max(3),
+    dailyRequestLimit: z.number().int().min(1).max(10_000),
+    monthlyRequestLimit: z.number().int().min(1).max(100_000),
+    manualApprovalRequired: z.literal(true),
+  }).strict().safeParse(req.body);
+  if (!input.success) {
+    res.status(400).json({ error: "Valid AI settings are required. Manual approval cannot be disabled.", issues: input.error.issues });
+    return;
+  }
+  const result = await writeDurableAiConfiguration("global", input.data, req.adminPrincipal?.userId ?? "staff");
+  if (!result.persisted) {
+    res.status(503).json({ error: "Durable AI settings require trusted Supabase access." });
+    return;
+  }
+  res.json({ settings: input.data, version: result.version, message: "AI settings saved with manual approval retained." });
 });
 
 router.get("/admin/moderation/diagnostics", requireAdmin("moderation.read"), async (_req, res) => {

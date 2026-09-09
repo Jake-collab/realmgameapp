@@ -486,3 +486,47 @@ describe("Supabase migration filename preflight", () => {
     );
   });
 });
+
+describe("NVIDIA Quest generation completion migration contract", () => {
+  const completionMigration = fs.readFileSync(
+    path.resolve(__dirname, "../supabase/migrations/082_ai_generation_completion.sql"),
+    "utf8",
+  );
+
+  test("stores durable configuration, prompt history, attempts, and leased jobs", () => {
+    expect(completionMigration).toContain("CREATE TABLE IF NOT EXISTS ai_generation_config");
+    expect(completionMigration).toContain("CREATE TABLE IF NOT EXISTS ai_generation_config_versions");
+    expect(completionMigration).toContain("CREATE TABLE IF NOT EXISTS ai_generation_prompt_versions");
+    expect(completionMigration).toContain("CREATE TABLE IF NOT EXISTS ai_quest_generation_attempts");
+    expect(completionMigration).toContain("CREATE TABLE IF NOT EXISTS ai_scheduler_jobs");
+    expect(completionMigration).toContain("attempt_count INTEGER NOT NULL DEFAULT 0");
+    expect(completionMigration).toContain("lease_expires_at");
+  });
+
+  test("keeps AI content server-only and prompt history immutable", () => {
+    expect(completionMigration).toContain("ai_generation_prompt_history_guard");
+    expect(completionMigration).toContain("NEW.prompt <> OLD.prompt");
+    expect(completionMigration).toContain("REVOKE ALL ON ai_generation_config");
+    expect(completionMigration).toContain("TO service_role");
+    expect(completionMigration).not.toContain("GRANT SELECT ON ai_quest_generation_attempts");
+  });
+
+  test("promotes only approved content into an unpublished normal Quest draft", () => {
+    expect(completionMigration).toContain("CREATE OR REPLACE FUNCTION promote_ai_quest_draft");
+    expect(completionMigration).toContain("c.approval_status <> 'approved'");
+    expect(completionMigration).toContain("(d->>'quest_type')::quest_type,'draft'");
+    expect(completionMigration).toContain("published_quest_id=qid");
+    expect(completionMigration).toContain("required_distance_meters");
+    expect(completionMigration).toContain("activity_type");
+    expect(completionMigration).not.toContain("(d->>'quest_type')::quest_type,'published'");
+  });
+
+  test("requires explicit staff Geo context and stores exact geometry outside public location data", () => {
+    expect(completionMigration).toContain("Geo quests require explicit administrator geo context");
+    expect(completionMigration).toContain("quest_locations");
+    expect(completionMigration).toContain("quest_geofences");
+    expect(completionMigration).toContain("ST_SetSRID(ST_MakePoint");
+    expect(completionMigration).toContain("validation_lat");
+    expect(completionMigration).toContain("validation_lng");
+  });
+});

@@ -334,8 +334,10 @@ type AiResponse = {
   plan?: { diagnostics?: string[]; replacementAllowed?: boolean; publishRequiresReview?: boolean };
   results?: Array<{ ok?: boolean; candidate?: Record<string, unknown>; review?: { diagnostics?: string[] } }>;
   draft?: { id: string; status: string; createdAt: string; reviewRequired: boolean };
-  candidates?: Array<{ id: string; title: string; type: string | null; difficulty: string | null; points: number | null; status: string; reviewNotes: string | null; reviewedAt: string | null; createdAt: string }>;
+  candidates?: Array<{ id: string; title: string; type: string | null; difficulty: string | null; points: number | null; status: string; reviewNotes: string | null; reviewedAt: string | null; createdAt: string; publishedQuestId?: string | null }>;
   candidate?: { id: string; status: string; reviewedAt: string | null };
+  questId?: string;
+  status?: string;
   message?: string;
   comparison?: { changedFields?: string[]; fields?: Array<{ field: string; changed: boolean; left: string; right: string }> };
 };
@@ -352,7 +354,10 @@ type AiPrompt = {
 
 async function aiFetch(path: string, init?: RequestInit): Promise<AiResponse> {
   const response = await fetch(`/api/admin/ai${path}`, { credentials: 'include', ...init, headers: { 'content-type': 'application/json', ...(init?.headers || {}) } });
-  if (!response.ok) throw new Error(response.status === 503 ? 'AI services are unavailable until configured.' : 'AI request was not authorized.');
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: string } | null;
+    throw new Error(body?.error || (response.status === 503 ? 'AI services are unavailable until configured.' : 'AI request was not authorized.'));
+  }
   return response.json() as Promise<AiResponse>;
 }
 
@@ -378,6 +383,7 @@ export function AIPage({ data }: { data: AdminData }) {
   const [approximateArea, setApproximateArea] = useState('');
   const [selectedVersion, setSelectedVersion] = useState('');
   const [compareVersion, setCompareVersion] = useState('');
+  const [settingsDraft, setSettingsDraft] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     const requiredPermission = location === '/ai/generate'
@@ -412,6 +418,7 @@ export function AIPage({ data }: { data: AdminData }) {
       setPrompt(result.prompt);
       setSelectedVersion(String(result.prompt.version));
     }
+    if (result?.settings) setSettingsDraft(result.settings);
   }, [result]);
 
   const generate = async () => {
@@ -466,6 +473,75 @@ export function AIPage({ data }: { data: AdminData }) {
       setMessage(value.message ?? 'Review recorded. It does not publish a Quest.');
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Candidate review could not be saved.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const promoteCandidate = async (candidate: NonNullable<AiResponse['candidates']>[number]) => {
+    setLoading(true);
+    setMessage('');
+    try {
+      let body: Record<string, unknown> = {};
+      if (candidate.type === 'geo') {
+        const displayName = window.prompt('Public location name');
+        const publicLat = Number(window.prompt('Approximate public latitude'));
+        const publicLng = Number(window.prompt('Approximate public longitude'));
+        const validationLat = Number(window.prompt('Staff-only validation latitude'));
+        const validationLng = Number(window.prompt('Staff-only validation longitude'));
+        if (!displayName || ![publicLat, publicLng, validationLat, validationLng].every(Number.isFinite)) {
+          throw new Error('Geo promotion needs a public name and valid administrator-supplied coordinates.');
+        }
+        body = { geoContext: { display_name: displayName, public_lat: publicLat, public_lng: publicLng, validation_lat: validationLat, validation_lng: validationLng } };
+      }
+      const value = await aiFetch(`/candidates/${encodeURIComponent(candidate.id)}/promote`, { method: 'POST', body: JSON.stringify(body) });
+      setResult((current) => ({
+        ...current,
+        ...value,
+        candidates: current?.candidates?.map((item) => item.id === candidate.id ? { ...item, publishedQuestId: value.questId ?? item.publishedQuestId, status: 'promoted_draft' } : item),
+      }));
+      setMessage(value.message ?? `Promoted Quest draft ${value.questId}.`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Candidate promotion failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const publishCandidateQuest = async (questId: string) => {
+    setLoading(true);
+    setMessage('');
+    try {
+      const response = await fetch(`/api/admin/quests/${encodeURIComponent(questId)}/publish`, { method: 'POST', credentials: 'include', headers: { 'content-type': 'application/json' }, body: '{}' });
+      const value = await response.json().catch(() => null) as { error?: string; message?: string } | null;
+      if (!response.ok) throw new Error(value?.error || 'Quest publication failed.');
+      setMessage(value?.message || 'Quest published through the normal Quest catalog lifecycle.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Quest publication failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const saveSettings = async () => {
+    setLoading(true);
+    setMessage('');
+    try {
+      const response = await aiFetch('/settings', { method: 'PUT', body: JSON.stringify({
+        generationEnabled: Boolean(settingsDraft.generationEnabled),
+        automatedGenerationEnabled: Boolean(settingsDraft.automatedGenerationEnabled),
+        outputTokenLimit: Number(settingsDraft.outputTokenLimit),
+        temperature: Number(settingsDraft.temperature),
+        requestTimeoutMs: Number(settingsDraft.requestTimeoutMs),
+        maxRetries: Number(settingsDraft.maxRetries),
+        dailyRequestLimit: Number(settingsDraft.dailyRequestLimit),
+        monthlyRequestLimit: Number(settingsDraft.monthlyRequestLimit),
+        manualApprovalRequired: true,
+      }) });
+      setResult((current) => ({ ...current, ...response }));
+      setMessage('Durable AI settings saved. Manual approval remains required.');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'AI settings could not be saved.');
     } finally {
       setLoading(false);
     }
@@ -534,10 +610,10 @@ export function AIPage({ data }: { data: AdminData }) {
   const title = location === '/ai' ? 'AI Quest Studio' : location === '/ai/prompts' ? 'Prompt templates' : location === '/ai/settings' ? 'AI settings' : 'Generate Quest candidates';
   return (
     <div className="page-wrap">
-      <PageHeader eyebrow="AI studio / Quest content" title={title} description="AI creates reviewable Quest candidates only. It never publishes content or writes to the points ledger." />
+      <PageHeader eyebrow="AI studio / Quest content" title={title} description="AI creates reviewable Quest candidates. Promotion creates a normal draft, and publication remains a separate authorized gate." />
       {message && <div className="notice" style={{ marginTop: 20 }}><AlertTriangle /><span>{message}</span></div>}
       {location === '/ai/generate' ? (
-        <section className="panel" style={{ marginTop: 25 }}>
+         <section className="panel" style={{ marginTop: 25 }}>
           <div className="panel-header"><div><div className="panel-title">Generate candidates</div><div className="panel-kicker">TEST GENERATION — NOT SAVED</div></div><span className="tag orange">Draft only</span></div>
           <div className="toolbar">
             <label className="field">Quest type<select value={type} onChange={(event) => setType(event.target.value as typeof type)}><option value="daily">Daily</option><option value="monthly">Monthly</option><option value="geo">Geo</option></select></label>
@@ -552,7 +628,7 @@ export function AIPage({ data }: { data: AdminData }) {
           {result && <pre className="code-panel">{JSON.stringify(result, null, 2)}</pre>}
         </section>
       ) : location === '/ai/prompts' ? (
-        <section className="panel" style={{ marginTop: 25 }}>
+         <section className="panel" style={{ marginTop: 25 }}>
           <div className="panel-header"><div><div className="panel-title">Independent Quest prompt templates</div><div className="panel-kicker">Every save creates a new version; history is never overwritten</div></div><span className="tag blue">Version {prompt.version ?? 1}</span></div>
            <div className="toolbar"><label className="field">Quest lane<select value={type} onChange={(event) => setType(event.target.value as typeof type)}><option value="daily">Daily</option><option value="monthly">Monthly</option><option value="geo">Geo</option></select></label><label className="field">Version<input value={selectedVersion} onChange={(event) => setSelectedVersion(event.target.value)} inputMode="numeric" /></label><button className="btn btn-quiet" onClick={() => void changeVersion('activate')} disabled={loading || !data.session.data.permissions.includes('ai.prompts.edit')}>Activate</button><button className="btn btn-quiet" onClick={() => void changeVersion('deactivate')} disabled={loading || !data.session.data.permissions.includes('ai.prompts.edit')}>Deactivate</button><button className="btn btn-quiet" onClick={() => void changeVersion('restore')} disabled={loading || !data.session.data.permissions.includes('ai.prompts.edit')}>Restore as new</button></div>
            <div className="toolbar" style={{ marginTop: 10 }}><label className="field">Compare with<input value={compareVersion} onChange={(event) => setCompareVersion(event.target.value)} inputMode="numeric" placeholder="Another version" /></label><button className="btn btn-quiet" onClick={() => void comparePrompts()} disabled={loading || !selectedVersion || !compareVersion}>Compare immutable versions</button></div>
@@ -569,10 +645,17 @@ export function AIPage({ data }: { data: AdminData }) {
           </div>
           <div className="panel-footer"><span className="identity-handle">Supported types: Daily, Monthly, Geo · no secrets or private user data are available to templates.</span><button className="btn btn-primary" onClick={() => void savePrompt()} disabled={loading || !data.session.data.permissions.includes('ai.prompts.edit')}>Save new version</button></div>
         </section>
-      ) : (
+       ) : location === '/ai/settings' ? (
+         <section className="panel" style={{ marginTop: 25 }}>
+           <div className="panel-header"><div><div className="panel-title">Durable generation configuration</div><div className="panel-kicker">Supabase-backed, versioned, and manual-approval-only</div></div><span className={`tag ${result?.settings?.durable ? 'green' : 'orange'}`}>{result?.settings?.durable ? 'Durable' : 'Needs Supabase'}</span></div>
+           {loading ? <TableSkeleton columns={3} /> : result?.settings ? <><div className="form-grid">{([
+             ['outputTokenLimit', 'Output token limit'], ['temperature', 'Temperature'], ['requestTimeoutMs', 'Timeout (ms)'], ['maxRetries', 'Retry count'], ['dailyRequestLimit', 'Daily request limit'], ['monthlyRequestLimit', 'Monthly request limit'],
+           ] as const).map(([key, label]) => <label className="field" key={key}>{label}<input type="number" value={String(settingsDraft[key] ?? '')} onChange={(event) => setSettingsDraft((current) => ({ ...current, [key]: Number(event.target.value) }))} /></label>)}</div><div className="toolbar"><label className="field"><span>Generation enabled</span><input type="checkbox" checked={Boolean(settingsDraft.generationEnabled)} onChange={(event) => setSettingsDraft((current) => ({ ...current, generationEnabled: event.target.checked }))} /></label><label className="field"><span>Automated scheduling enabled</span><input type="checkbox" checked={Boolean(settingsDraft.automatedGenerationEnabled)} onChange={(event) => setSettingsDraft((current) => ({ ...current, automatedGenerationEnabled: event.target.checked }))} /></label></div><div className="notice"><LockKeyhole /><span>Manual approval is permanently required. Scheduled generation can only create review drafts; it cannot publish or award points.</span></div><div className="panel-footer"><span className="identity-handle">Provider credentials remain server-only and are never editable here.</span><button className="btn btn-primary" onClick={() => void saveSettings()} disabled={loading || !data.session.data.permissions.includes('ai.settings.edit')}>Save durable settings</button></div></> : <UnavailableState />}
+         </section>
+       ) : (
         <section className="panel" style={{ marginTop: 25 }}>
           <div className="panel-header"><div><div className="panel-title">{location === '/ai/prompts' ? 'Independent Quest prompts' : 'Configuration status'}</div><div className="panel-kicker">Server-controlled and reviewable</div></div><span className={`tag ${result?.provider?.configured ? 'green' : 'orange'}`}>{result?.provider?.configured ? 'Configured' : 'Unavailable'}</span></div>
-           {loading ? <TableSkeleton columns={3} /> : result ? <><div className="notice"><LockKeyhole /><span>Approval keeps a candidate in human-controlled content review. It never publishes a Quest or awards points.</span></div><div className="table-wrap" style={{ marginTop: 18 }}><table className="data-table"><thead><tr><th>Candidate</th><th>Lane</th><th>Reward</th><th>Review</th><th>Action</th></tr></thead><tbody>{result.candidates?.length ? result.candidates.map((candidate) => <tr key={candidate.id}><td><strong>{candidate.title}</strong><div className="identity-handle">{new Date(candidate.createdAt).toLocaleString()}</div></td><td>{candidate.type ?? '—'} · {candidate.difficulty ?? '—'}</td><td>{candidate.points ?? '—'} pts</td><td><StatusBadge status={candidate.status} />{candidate.reviewNotes && <div className="identity-handle">{candidate.reviewNotes}</div>}</td><td>{candidate.status === 'pending_review' && <div className="toolbar"><button className="btn btn-quiet" disabled={loading || !canManageQuestCandidates} onClick={() => void reviewCandidate(candidate.id, 'approved')}>Approve</button><button className="btn btn-quiet" disabled={loading || !canManageQuestCandidates} onClick={() => void reviewCandidate(candidate.id, 'needs_revision')}>Request changes</button><button className="btn btn-quiet" disabled={loading || !canManageQuestCandidates} onClick={() => void reviewCandidate(candidate.id, 'rejected')}>Reject</button></div>}</td></tr>) : <tr><td colSpan={5}>No saved AI Quest candidates are awaiting review.</td></tr>}</tbody></table></div></> : <UnavailableState />}
+           {loading ? <TableSkeleton columns={3} /> : result ? <><div className="notice"><LockKeyhole /><span>Approval keeps a candidate in human-controlled content review. Promotion creates a normal draft; publication remains explicit and separate.</span></div><div className="table-wrap" style={{ marginTop: 18 }}><table className="data-table"><thead><tr><th>Candidate</th><th>Lane</th><th>Reward</th><th>Review</th><th>Action</th></tr></thead><tbody>{result.candidates?.length ? result.candidates.map((candidate) => <tr key={candidate.id}><td><strong>{candidate.title}</strong><div className="identity-handle">{new Date(candidate.createdAt).toLocaleString()}</div></td><td>{candidate.type ?? '—'} · {candidate.difficulty ?? '—'}</td><td>{candidate.points ?? '—'} pts</td><td><StatusBadge status={candidate.status} />{candidate.reviewNotes && <div className="identity-handle">{candidate.reviewNotes}</div>}{candidate.publishedQuestId && <div className="identity-handle">Quest draft {candidate.publishedQuestId}</div>}</td><td>{candidate.status === 'pending_review' && <div className="toolbar"><button className="btn btn-quiet" disabled={loading || !canManageQuestCandidates} onClick={() => void reviewCandidate(candidate.id, 'approved')}>Approve</button><button className="btn btn-quiet" disabled={loading || !canManageQuestCandidates} onClick={() => void reviewCandidate(candidate.id, 'needs_revision')}>Request changes</button><button className="btn btn-quiet" disabled={loading || !canManageQuestCandidates} onClick={() => void reviewCandidate(candidate.id, 'rejected')}>Reject</button></div>}{candidate.status === 'approved' && !candidate.publishedQuestId && <button className="btn btn-primary" disabled={loading || !canManageQuestCandidates} onClick={() => void promoteCandidate(candidate)}>Promote to Quest draft</button>}{candidate.publishedQuestId && <button className="btn btn-primary" disabled={loading || !canManageQuestCandidates} onClick={() => void publishCandidateQuest(candidate.publishedQuestId!)}>Publish Quest</button>}</td></tr>) : <tr><td colSpan={5}>No saved AI Quest candidates are awaiting review.</td></tr>}</tbody></table></div></> : <UnavailableState />}
         </section>
       )}
     </div>

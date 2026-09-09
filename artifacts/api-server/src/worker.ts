@@ -2,6 +2,7 @@ import { logger } from "./lib/logger";
 import { ExpoPushProvider, NoopPushProvider } from "./lib/notifications";
 import { SupabaseNotificationStore } from "./lib/durable-notifications";
 import { readServerEnvironment } from "./lib/config";
+import { runAiSchedulerCycle } from "./lib/ai-scheduler";
 
 const environment = readServerEnvironment();
 const notificationStore = new SupabaseNotificationStore();
@@ -63,6 +64,7 @@ const run = async () => {
     const recovered = await notificationStore.recoverInterruptedWork();
     const results = await notificationStore.runDue();
     const delivery = await notificationStore.flushQueued(provider);
+    const aiGeneration = await runAiSchedulerCycle(notificationStore.workerId);
     let maintenance: unknown = null;
     const maintenanceIntervalMs = environment.SCHEDULER_MAINTENANCE_INTERVAL_SECONDS * 1000;
     if (Date.now() - lastMaintenanceAt >= maintenanceIntervalMs) {
@@ -81,6 +83,7 @@ const run = async () => {
         recovered,
         delivery,
         maintenance,
+        aiGeneration,
         queue: lastQueueHealth,
         consecutiveCycleFailures,
         totalCycleFailures,
